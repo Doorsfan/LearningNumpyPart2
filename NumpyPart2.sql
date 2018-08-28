@@ -87,9 +87,10 @@ register them or catalog them. */
 /*In case of changing attributes, we can utilize ALTER_TABLE statements. */
 CREATE TABLE IF NOT EXISTS example (name VARCHAR(20), x_attribute INTEGER(10), y_attribute INTEGER(10));
 
+
 /* In terms of the Create if not exists attribute, it mainly applies to checking for table existence. */
 
-SET sql_notes = 1;
+#SET sql_notes = 1;
 
 /*If we wish, ,we can denote to find out what the attributes of a Table is, with Describe. */
 
@@ -180,21 +181,119 @@ SELECT * FROM example WHERE name LIKE '%xam%';
 
 #We can also select based on numerical samplings or comparisons
 
-SELECT * FROM example WHERE (y_attribute IS NOT NULL) AND (name LIKE 'Some_T%i__'); #Showcasing wildcard char and regex of 2 chars pattern length
+#SELECT * FROM example WHERE (y_attribute IS NOT NULL) AND (name LIKE 'Some_T%i__'); #Showcasing wildcard char and regex of 2 chars pattern length
 /* The above interplays so that % is wildchar, __ is specific length of pattern, as in, pattern of length 2 */
 
 #We can also utilize regex to locate for beginning and end, with ^ and $, where each is beginning/end respectively
-SELECT * FROM example WHERE REGEXP_LIKE(name, '^E');
+#SELECT * FROM example WHERE REGEXP_LIKE(name, '^E');
 
-SELECT * FROM example WHERE REGEXP_LIKE(name, 'k$'); #Ends with k
+#SELECT * FROM example WHERE REGEXP_LIKE(name, 'k$'); #Ends with k
 
-SELECT * FROM example WHERE REGEXP_LIKE(name, '^.{3,9}$'); #Checks a range of length of the name attribute from beginning to end, length interval of 3 to 9
+#SELECT * FROM example WHERE REGEXP_LIKE(name, '^.{3,9}$'); #Checks a range of length of the name attribute from beginning to end, length interval of 3 to 9
 
-SELECT DISTINCT name FROM example WHERE REGEXP_LIKE(name, '^.{3,9}$');
+#SELECT DISTINCT name FROM example WHERE REGEXP_LIKE(name, '^.{3,9}$');
+
 #We could keep compounding different operations to check for values, patterns etc.
 
-SELECT DISTINCT name, x_attribute FROM example WHERE x_attribute < 100 ORDER BY x_attribute ASC, name ASC;
+#SELECT DISTINCT name, x_attribute FROM example WHERE x_attribute < 100 ORDER BY x_attribute ASC, name ASC;
+
 #The ordering in terms of Descending and Ascending is a matter of a compounded stature where we can just throw on more and more
 #orders of operations in terms of integrations of Structure and differentiate how they should be partitioned.
 
-#https://dev.mysql.com/doc/refman/8.0/en/date-calculations.html
+#If we were interested, we could ordane TIMESTAMPDIFF to integrate accessing of Date denotations akin to CURDATE()
+
+#For instance, in the documentation it is showcased as:
+# SELECT name, birth, CURDATE(), TIMESTAMPDIFF(YEAR, birth, CURDATE()) AS age FROM pet;
+#
+# Where the mosti mportant part is just to denote the CURDATE() function and the TIMESTAMPDIFF() which interacts with date stamps
+#Computing a differential
+
+CREATE TABLE IF NOT EXISTS datestuff (name VARCHAR(20), age INTEGER(20), first_date DATE, second_date DATE);
+
+#DELETE FROM datestuff;
+DELETE FROM datestuff;
+
+INSERT IGNORE INTO datestuff VALUES ('Base_1', 100, '2018-10-10', CURDATE()); #Insert some basic date operations
+INSERT IGNORE INTO datestuff VALUES ('Base_2', 15, '2018-09-11', CURDATE()); 
+INSERT IGNORE INTO datestuff VALUES ('Base_3', NULL, '2018-05-11', CURDATE());
+INSERT IGNORE INTO datestuff VALUES ('Base_4', 5, '2011-01-11', CURDATE());
+INSERT IGNORE INTO datestuff VALUES ('Base_5', 100, NULL, CURDATE());  
+
+SELECT name AS variable_name, age AS x_variable, TIMESTAMPDIFF(MONTH, first_date, second_date) AS months_differing FROM datestuff 
+WHERE TIMESTAMPDIFF(MONTH, first_date, second_date) IS NOT NULL ORDER BY name; 
+#As shown above, we can compute more and more "compounded" statements based on the Query Structure.
+#
+#The hiearchial principle of subcomposition in the query is based on the complexity of the Query, as we can chain the commands.
+#However, we'll get into that later.
+
+#We can subaccess the different dates by virtue of Month, Year, day, and intervals etc.
+
+#In terms of Truth values - we run with binary denotation of truth/false values
+SELECT first_date IS NOT NULL FROM datestuff; #0 denotes a False outcome, 1 is a True outcome
+
+#As far as Operations of Regex goes, we can utilize Grep, vi and sed of which are extensions
+
+SELECT name, COUNT(*) FROM datestuff GROUP BY age; #Now, if we had different structures and different parts of which we wish to
+#integrate - we can do so - by better sub partitioning in the pattern of different structure pieces.
+#To which we can perform count across a specific axis etc.
+
+#In case you attempt to ordane selects past the point of Counts, we have to consider the
+# ONLY_FULL_GROUP_BY attribute. Of which defines if only full groupings are to be accounted for.
+
+#If the ONLY_FULL_GROUP_BY is not activated, the query is as if all the rows are a single group.
+#But the nature of the naming of each column is nondeterministic.
+
+CREATE TABLE IF NOT EXISTS secondtable (name VARCHAR(20), age INTEGER(20), misc VARCHAR(20) , third_date DATE);
+
+DELETE FROM secondtable;
+
+
+INSERT IGNORE INTO secondtable VALUES ('SecondBase_1', 100, 'Example_1', CURDATE());
+INSERT IGNORE INTO secondtable VALUES ('SecondBase_2', 100, 'Example_2', CURDATE());
+INSERT IGNORE INTO secondtable VALUES ('SecondBase_3', 100, 'Example_3', CURDATE());
+INSERT IGNORE INTO secondtable VALUES ('SecondBase_4', 100, 'Example_4', CURDATE());
+INSERT IGNORE INTO secondtable VALUES ('SecondBase_5', 100, 'Example_5', CURDATE());
+
+
+
+
+#We can access the hierarchy in terms of the databases with the class names and the sub attribute namings etc.
+SELECT illustration.datestuff.name as datestuff_name, illustration.secondtable.name as second_table_name,
+illustration.secondtable.age as cross_over_age
+FROM illustration.datestuff, illustration.secondtable WHERE illustration.datestuff.age = illustration.secondtable.age;
+
+# The above causes the inherent pattern of querying across:
+# Cycle from every element on base table -> Cycle through across every element of target Table
+# TABLE[0][0-Length of sub-table denoted by element chosen] -> TABLE[1][0-length of sub-table denoted by element chosen]
+#
+# So, in our case - since both tables are 5 elements, this is 25 operations, as it cycles through 5x5 operations
+# 2 of them co-align, so that means we have 5x2 results, 10 results
+#
+
+#We could omit the structure referal of doing explicit calls to explicit paths - however, that would fall back to local handle
+#designation parameter interpretation - i.e, ambiguity is introduced into the Schematic.
+
+#If we need to, we can run MySQL In batch mode as well, which allows us to integrate so that we are not running in a interactive mode.
+#This is needed if we are to run for instance Cron Jobs.
+
+#Run from CMD:
+#
+# mysql < batch-file , case of special chars being issues - run with -e
+#
+# The CMD line can also look like:
+#
+# mysql -h host -u user -p < batch-file
+# enter password: --------
+
+#We can also then pipe the output to either page more or have a further outputting file
+#
+# mysql < batch-file | more
+#
+# mysql < batch-file > mysql out
+
+#We can also trigger MySQL scripts from CMD prompt of MySQL:
+#
+# mysql> source filename
+# mysql> \ filename
+
+#https://dev.mysql.com/doc/refman/8.0/en/examples.html
