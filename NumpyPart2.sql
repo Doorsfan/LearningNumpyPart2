@@ -187,15 +187,15 @@ SELECT * FROM example WHERE name LIKE '%xam%';
 #We can also utilize regex to locate for beginning and end, with ^ and $, where each is beginning/end respectively
 #SELECT * FROM example WHERE REGEXP_LIKE(name, '^E');
 
-#SELECT * FROM example WHERE REGEXP_LIKE(name, 'k$'); #Ends with k
+SELECT * FROM example WHERE REGEXP_LIKE(name, 'k$'); #Ends with k
 
-#SELECT * FROM example WHERE REGEXP_LIKE(name, '^.{3,9}$'); #Checks a range of length of the name attribute from beginning to end, length interval of 3 to 9
+SELECT * FROM example WHERE REGEXP_LIKE(name, '^.{3,9}$'); #Checks a range of length of the name attribute from beginning to end, length interval of 3 to 9
 
-#SELECT DISTINCT name FROM example WHERE REGEXP_LIKE(name, '^.{3,9}$');
+SELECT DISTINCT name FROM example WHERE REGEXP_LIKE(name, '^.{3,9}$');
 
 #We could keep compounding different operations to check for values, patterns etc.
 
-#SELECT DISTINCT name, x_attribute FROM example WHERE x_attribute < 100 ORDER BY x_attribute ASC, name ASC;
+SELECT DISTINCT name, x_attribute FROM example WHERE x_attribute < 100 ORDER BY x_attribute ASC, name ASC;
 
 #The ordering in terms of Descending and Ascending is a matter of a compounded stature where we can just throw on more and more
 #orders of operations in terms of integrations of Structure and differentiate how they should be partitioned.
@@ -203,7 +203,7 @@ SELECT * FROM example WHERE name LIKE '%xam%';
 #If we were interested, we could ordane TIMESTAMPDIFF to integrate accessing of Date denotations akin to CURDATE()
 
 #For instance, in the documentation it is showcased as:
-# SELECT name, birth, CURDATE(), TIMESTAMPDIFF(YEAR, birth, CURDATE()) AS age FROM pet;
+SELECT name, birth, CURDATE(), TIMESTAMPDIFF(YEAR, birth, CURDATE()) AS age FROM pet;
 #
 # Where the mosti mportant part is just to denote the CURDATE() function and the TIMESTAMPDIFF() which interacts with date stamps
 #Computing a differential
@@ -258,6 +258,7 @@ INSERT IGNORE INTO secondtable VALUES ('SecondBase_5', 100, 'Example_5', CURDATE
 
 
 #We can access the hierarchy in terms of the databases with the class names and the sub attribute namings etc.
+
 SELECT illustration.datestuff.name as datestuff_name, illustration.secondtable.name as second_table_name,
 illustration.secondtable.age as cross_over_age
 FROM illustration.datestuff, illustration.secondtable WHERE illustration.datestuff.age = illustration.secondtable.age;
@@ -296,4 +297,47 @@ FROM illustration.datestuff, illustration.secondtable WHERE illustration.datestu
 # mysql> source filename
 # mysql> \ filename
 
+#Showcasing some basic structural composition of base integrations
+
+CREATE TABLE IF NOT EXISTS Shoes (
+	Size INT(4) UNSIGNED ZEROFILL DEFAULT '0000' NOT NULL, #The base it goes for is 0000, numeral designated will simply inject unto the beginning
+	owner  CHAR(20) 					   DEFAULT '' 		NOT NULL, #The base string appended to, is ''
+	price   DOUBLE(16,2) 				DEFAULT '0.00' NOT NULL, #The default in terms of Pricing is just a 0.00
+	PRIMARY KEY(Size, owner));                            #The primary keys bound to the table
+
+CREATE TABLE IF NOT EXISTS People (
+	Age INT(4) UNSIGNED ZEROFILL DEFAULT '00' NOT NULL,
+	Name CHAR(20) 					  DEFAULT '' NOT NULL,
+	Last_Name CHAR(20) 			  DEFAULT '' NOT NULL,
+	PRIMARY KEY(Name, Last_Name));
+
+INSERT IGNORE INTO People VALUES
+	(30, 'Adrian', 'Markovich'), (50, 'Bonny', 'Taylor'), (60, 'Camille', 'Johnsonn'), (10, 'Zoe', 'Quinn'),
+	(15, 'Alexander', 'The Great'), (49, 'Alice', 'Cooper'), (100, 'Daniel', 'Markov'), (18, 'Alexander', 'The Great'),
+	(150, 'Daniel', 'Markov'); #Since Name and Last_Name are primary keys, they are implicitly Unique. I.e, duplications are ignored.
+
+
+INSERT IGNORE INTO Shoes VALUES
+	(34, 'Adrian', 3.45), (33, 'Bonny', 5.99), (32, 'Camille', 12.55), (35, 'Quinn', 1.10),
+	(41, 'Alexander', 10.00), (44, 'Alice', 12.33), (43, 'Daniel', 23.31);
+	
+SELECT MAX(Size) AS Largest_Shoe_Size FROM Shoes;
+
+#We can, if we so wish - denote to structure sub-queries of selectional structure.
+
+SELECT illustration.Shoes.Size AS size, illustration.Shoes.Price AS price, illustration.Shoes.owner AS owner_name FROM illustration.people, illustration.Shoes 
+WHERE illustration.people.name = illustration.Shoes.owner ORDER BY price LIMIT 2; #We can impose limits as well 
+
+SELECT owner AS owner_name, size AS largest_size FROM Shoes ORDER BY size DESC LIMIT 1; #Find the person with the biggest shoe size
+
+#there is ways to circumvent the denotation of selecting the whole set and simply do a more specific Query in terms of Sorting and Grouping
+#Albeit, that is a more advanced partition.
+
+
+SELECT name, last_name, Age, size FROM People, Shoes WHERE name = illustration.Shoes.owner AND age % 5 = 0;
+#We can also involve operators in our selection of AND statements.
+
+
+
 #https://dev.mysql.com/doc/refman/8.0/en/examples.html
+
