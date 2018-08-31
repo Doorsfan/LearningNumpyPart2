@@ -337,6 +337,108 @@ SELECT owner AS owner_name, size AS largest_size FROM Shoes ORDER BY size DESC L
 SELECT name, last_name, Age, size FROM People, Shoes WHERE name = illustration.Shoes.owner AND age % 5 = 0;
 #We can also involve operators in our selection of AND statements.
 
+#If we wish, we can implement further denotations in terms of assigned variables
+
+#Runs assignment from selected variables
+SELECT @min_size:=MIN(size), @max_size:=MAX(size) FROM Shoes;
+
+SELECT * FROM Shoes WHERE size=@min_size OR size=@max_size; #Get all the columns that trigger on having the size of assigned variables, in a or fashion
+
+#In terms of creations of Tables - if we denote a References clause - that's a ignored section which only acts a indirecty way of comment or reminder.
+
+#If we were to search based on optimized standardization of Query parsing - We can use an OR, bound to a single key
+#Another way, is to do a Union between two Queries of Selects
+
+SELECT size FROM Shoes WHERE size > 10
+UNION
+SELECT owner FROM Shoes WHERE owner LIKE '%onn%';
+#Kind of a poor example, but combines the two queries of performing where Size and owner is checked up on.
+
+CREATE TABLE IF NOT EXISTS purchased_ice_cream (name CHAR(20), price INT(4) UNSIGNED ZEROFILL, date_of_purchase DATE);
+
+#Omit ignore into, to allow for duplications
+INSERT INTO purchased_ice_cream VALUES("Vanilla", 10, "2018-08-01");
+INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-08-02");
+INSERT INTO purchased_ice_cream VALUES("Strawberry", 20, "2017-07-03");
+INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-08-04");
+INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-08-05");
+INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-08-06");	
+							
+INSERT INTO purchased_ice_cream VALUES("Caramell", 30, "2011-09-07");
+INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-02-08");
+INSERT INTO purchased_ice_cream VALUES("Strawberry", 20, "2015-03-09");
+INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2016-04-10");
+INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-06-11");
+INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2011-08-12");
+
+SELECT name, price, BIT_COUNT(BIT_OR(1<<DAY(date_of_purchase))) AS Unique_dates_of_purchase, COUNT(DAY(date_of_purchase)) AS amount_of_purchases FROM purchased_ice_cream GROUP BY name, price;
+#The above showcases that we can run Queries against amount of purchases, on what amount of different days, unique or not, etc.
+#We can of course also designate to be a factor of uniqueness to count in terms of BIT_COUNT, but we could also count by virtue of
+#other methods.
+
+#And we can, if we so wish - utilize Auto_Increment - which interplays so that it defaults to what value was designated last
+#based on insertion operations
+
+CREATE TABLE IF NOT EXISTS example_of_auto_increment(id INT(10) NOT NULL AUTO_INCREMENT,
+	name CHAR(30) NOT NULL,
+	x_attribute CHAR(30) DEFAULT '' NOT NULL,
+	y_attribute CHAR(30) DEFAULT '' NOT NULL,
+	PRIMARY KEY (id)
+);
+#When something is a Numerical akin to ID and we have auto_increment,
+#We do not need to have a default designation - as the handle in terms of defaulting is implicit
+#in designation to last numerical call or 0, depending on context.
+
+INSERT IGNORE INTO example_of_auto_increment (id, name, x_attribute) VALUES
+	(1, 'Shoe', 'Brown'),
+	(2, 'Pasta', 'Tasty'),
+	(3, 'Mug', 'Cheramic'),
+	(1001, 'Sickle', 'Ripping'),
+	(5, 'Frown', 'Sad'),
+	(100, 'Locks', 'Unbreakable'),
+	(10, 'Fox', 'Jumped over the Rice'),
+	(11, 'Box', 'Square');
+
+INSERT INTO example_of_auto_increment (name) VALUES
+	('Shoe');
+INSERT INTO example_of_auto_increment (name) VALUES
+	('Shoe_box');
+INSERT INTO example_of_auto_increment (id, name) VALUES
+	(NULL,'Glove_box');
+#Simply runs auto-increment to reflect of where the last designated default handle was put in terms of Value designation
+#We can also designate Null values as auto_increment generation if NOT NULL has been designated.
+
+#If we wish to find out the latest Automatic generated ID, we can access it with LAST_INSERT_ID()
+
+#We can further Enumerate structures by virtue of utilizing the MyISAM Engine designation of Tables.
+
+CREATE TABLE IF NOT EXISTS isam_example (
+	groupings ENUM('Shoe', 'Sock', 'Pants') NOT NULL,
+	id INT NOT NULL AUTO_INCREMENT,
+	color CHAR(30) NOT NULL,
+	PRIMARY KEY (groupings,id)
+) ENGINE=MyISAM;
+
+INSERT IGNORE INTO isam_example (groupings, color) VALUES
+	('Shoe', 'Brown'), ('Shoe', 'Green'), ('Shoe', 'Yellow'),
+	('Sock', 'Rainbow'), ('Sock', 'White'),
+	('Pants', 'Black'), ('Pants', 'Grey'),('Pants', 'Red'), ('Pants', 'Green');
+
+SELECT * FROM isam_example ORDER BY groupings, id;
+
+#If we wish to configure the Apache logging format to adhere to MySQL's structure - we can do so by virtue of
+#putting the following into the Apache configuration file:
+#
+# LogFormat \
+# 				"\"%h\",%{%Y%m%d%H%M%S}t,%>s, \"%b\", "%{Content_Type}o\", \
+# 				\"%U\", \"%{Referer}i\",\"%{User-Agent}i\""
+
+#Where of the loading of a log file might look as follows:
+#
+# LOAD DATA INFILE '/local/access_log' INTO TABLE tbl_name
+# FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
+
+ 
 
 
 #https://dev.mysql.com/doc/refman/8.0/en/examples.html
