@@ -667,4 +667,213 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 
 #We can also utilize PATH variables, akin to MYSQL_HOST, USER or MYSQL_PWD.
 
+#The following section showcases the Path parameters in terms of connections
+#They are bound to URI type strings or data dictionaries
+
+#scheme:Specifies the connection protocol to use. To account for a specific protocol, use mysqlx, mysql for classic
+#MySQL protocol connections. If a protocol is not specified - the server attempts to guess the protocol.
+
+#user: Specifies the MySQL user account to be used for the authentication process.
+
+#password: Specifies the password to be used for the authentication process. Do not store hte PW in the connection path
+
+#host: Specifies the server instance the connection refers to. Can be either an IpV4 address, an IpV6 address or a hostname. If not specified,
+#localhost is used by default.
+
+#port: Specifies a network port which the target MySQL server is listening on for connections. If not specified, 33060 is used by default
+#for X protocol connections.
+
+#3306 is the default for classic MySQL protocol connections.
+
+#socket: path to a Unix socket or Windows named-pipe. The values are local file paths and must be encoded in URI type strings,
+#using % encodings or surrounding the path with ()'s - as full resolution of path is then realized, instead of needing to escape for explicit stature.
+
+#To connect as root@localhost using Unix sockets, we can use /tmp/mysqld.sock we can use % or ()'s:
+
+#()'s:
+#root@localhost?socket=(/tmp/mysqld.sock)
+
+#%'s:
+#root@localhost?socket=%2Ftmp%2Fmysqld.sock
+
+#Basically in the case of % escaping, we replace the direct symbols with underlying unicode translations
+#akin to accessing of typing/other structuring.
+#It resolves to /, regardless.
+
+#schema: specifies the database to be set as default when a connection is established.
+
+#?attribute=value: Specifies a data dictionary that contains options.
+
+#The params are case insensitive and can only be defined once.
+#If defined more than once, a error is generated.
+
+#When a dictionary is used, the following options are also valid:
+#
+#ssl-mode: the SSL mode to be used for the connection.
+#
+#ssl-ca: the path to the X.509 cert authority in PEM format.
+#
+#ssl-capath: the path to the directory that contains the X.509 certs authorities in PEM format.
+#
+#ssl-cert:The path to the X.509 certs in PEM format.
+#
+#ssl-key: The path to the X.509 key in PEM format.
+#
+#ssl-crl: The path to file that contains certificate revocation lists
+#
+#ssl-crlpath: The path to the directory that contains certificate revocation list files.
+#
+#ssl-cipher: the SSL cipher to use.
+#
+#tls-version: List of protocols permitted for secure connections.
+#
+#auth-method: Authentication method used for the connection. Defaults to AUTO, meaning that the server attempts to guess.
+#Can be one of the following:
+#
+#AUTO, MYSQL41, SHA256_MEMORY, FROM_CAPABILITIES, FALLBACK, PLAIN
+
+#Whenever we use a X Protocol connection, any configured auth-method is overridden to this sequence of authentication methods:
+#MYSQL41, SHA256_MEMORY, PLAIN.
+
+#get-server-public-key. 
+#Requests the public key from the server required for RSA key-paired based password exchange.
+#
+#use this when connecting to the MySQL 8.0 servers over classic MySQL protocol with SSL mode DISABLED.
+#You must specify the protocol in this case, for example:
+#
+#mysql://user@localhost:3306?get-server-key=true
+
+#server-public-key-path: The path name to a file containing a client-side copy of the public key required for RSA key pair-based password exchange.
+#Use when connecting to MySQL 8.0 servers over classic MySQL protocol with SSL mode DISABLED.
+
+#The ?attribute=value options data dictionary can contain are the following options:
+#
+#mycnfPath: the path to the MySQL configuration file of the instance.
+#
+#outputMycnfPath: alternative output path to write the MySQL configuration file of the instance.
+#
+#password: the password to be used by the connection.
+#
+#clusterAdmin: the name of the InnoDB cluster administrator used to be created. The supported format is the standard
+#MySQL account name format.
+#
+#clusterAdminPassword: the password for the innoDB cluster admin account.
+#
+#clearReadOnly: a boolean value used to confirm that super_read_only must be disabled.
+#
+#interactive: A boolean of which disables the interactive wizards of assignments of variables/non-assignments etc.
+
+#restart: A boolean of which is used to indicate that a remote restart of the target instance should be performed to finalize operations.
+
+#The following is a covering of how to connect using a URI string
+
+#We can specify a connection using a URI type string format. Such strings can be used with
+#the MySQL Shell --uri command option, along with the MySQL Shell \connect command
+
+#This also applies to tools like MySQL Routers and Connectors of whom implement X DevAPI.
+
+#A typical URI type string has the following format:
+
+#[scheme://][user[:[password]]@]target[:port][/schema][?attribute1=value1&attribute2=value2]
+
+#Note, that reserved keywords must be escaped, akin to:
+#% - %25
+#@ - %40
+
+#Some examples of connections being made with this formatting:
+#
+#A classical MySQL protocol connection to a local server instance listening at port 3333
+#mysql://user@localhost:3333
+#
+#A X Protocol connection to a local server instance listening at port 33065
+#mysqlx://user@localhost:33065
+#
+#A X protocol connection to a remote server instance, using a host name, an IpV4 address and an IpV6 address.
+#
+#mysqlx://user@server.example.com/
+#mysqlx://user@198.51.100.14:123 IPV4 address
+#mysqlx://user@[2001:db8:85a3:8d3:1319:8a2e:370:7348]
+#
+#We can also specify a optional path which represents a DB schema
+#mysqlx://user@198.51.100.1/world%5Fx Basically, the encoding/escaping of chars akin to %5Fx is Hexadecimal and akin.
+#mysqlx://user@198.51.100.2:33060/world
+
+#Where of the following example illustrates a connection to a localhost, SSL integration with certs,
+#key and cert.
+#
+#The example is just to illustrate the difference between escaping of characters and paranthesis integration
+#
+#ssluser@127.0.0.1?ssl-ca=%2Froot%2Fclientcert%2Fca-cert.pem\
+#&ssl-cert=%2Froot%2Fclientcert%2Fclient-cert.pem\
+#&ssl-key=%2Froot%2Fclientcert%2Fclient-key
+
+#ssluser@127.0.0.1?ssl-ca=(/root/clientcert/ca-cert.pem)\
+#&ssl-cert=(/root/clientcert/client-cert.pem)\
+#&ssl-key=(/root/clientcert/client-key)
+
+#Denote, the above documentation assumes that the integration does require a Password based on Syntax interaction.
+#
+#To account for a passwordless structure of where we can access the structure without a explicit PW,
+#i.e - pw-less or integrated unto Unix socket connections, we must use the following Syntax:
+#
+#mysqlx://user:@localhost
+
+#We can also utilize Dictionaries in terms of connection details towards a server, with the
+#shell.connect() or dba.createCluster() MySQL Shell commands and with MySQL Connectors that implement the X DevAPI.
+
+#Unlike URI strings, we need not escape characters in a Dictionary structure composition.
+
+#If no PW is specified in the dict, none is promted for.
+
+#Some examples are as follows:
+
+#A X protocol connection to a local server @ port 33065
+#{user:'user', host:'localhost', port:33065}
+
+#A classic MySQL protocol X protocol connection, local server @ 3333
+#{user:'user', host:'localhost', port:3333}
+
+#An X protocol connection to a remote server instance, using a host name, an IPv4 address and an IPv6 address, is showcased:
+#
+#{user:'user', host:'server.example.com'}
+#{user:'user', host:198.51.100.14:123}
+#{user:'user', host:[2001:db8:85a3:8d3:1319:8a2e:370:7348]}
+#
+#We can also display an optional schema to represent a DB
+#
+#{user:'user', host:'localhost', schema:'world'}
+#
+# The above showcasing requires a PW.
+# Showcasing case of no PW integration required
+#
+# {user:'user', password:'', host:'localhost'}
+
+#There are a number of ways that we can specify program options:
+
+#CMD line after the instegated command
+
+#Options file to integrate options before running the program
+
+#List the options in the environment variables
+
+#Since the options are iteratively parsed, on duplications, the last one in the ordering is commited:
+
+#mysql -h example.com -h localhost <- Will resolve to -h Localhost, since repetition of -h command parsing
+
+#In the case of conflicting or related options are given - the later in the ordering is taken, instead of the earlier
+#mysql --column-names --skip-column-names
+
+#The ordering of processing is:
+#Environment variables
+#option files
+#command line
+
+#for the server, mysqld-auto.cnf takes highest prio (i.e, last)
+
+#https://dev.mysql.com/doc/refman/8.0/en/command-line-options.html
+#
+
+
+
+
 #https://dev.mysql.com/doc/refman/8.0/en/connecting-using-path.html
