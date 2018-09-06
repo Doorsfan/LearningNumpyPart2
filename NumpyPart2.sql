@@ -870,6 +870,289 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 
 #for the server, mysqld-auto.cnf takes highest prio (i.e, last)
 
+#The following designates and showcases the usage of options on the CMD line
+
+#Options are given after the cmd name
+
+#A option argument begins with one or two dashes, depending on the format of the option.
+#
+#An example is the help command:
+#
+#-? (short) or --help (long)
+
+#Option namings and designations are case sensitive. Example showcasing this:
+#
+# -v (verbose) or -V (version)
+
+#Of course, sometimes options need arguments, as is showcased:
+#
+#-h localhost 
+#
+#or
+#
+#--host=localhost
+
+#Delegation of parameters in long formatted PWs are separated with a =
+#
+#--password=<some value goes here> #Incinuates that we are to connect with said PW
+#
+#--password #Prompts for PW
+
+#In the case of shortcutting the letter designation of password prompts, the dynamics can be seen as follows:
+#
+#mysql -ptest #Will attempt to access with a PW value of test, to whatever DB it defaults to
+#
+#mysql -p test #Will attempt to access the test DB, with no pw defined
+
+#Do denote, that in terms of commands _ and - are synonymous in terms of interpretation
+#
+#--skip-grant-tables is the same as --skip_grant_tables
+
+#We can also utilize suffixes in terms of utilization of commands.
+
+#The notations are as follows: K, M, G (1024^1, 1024^2, 1024^3)
+#
+#In 8.0.14 or beyond:
+#T,P,E (1024^4, 1024^5, 1024^6)
+
+#For instance, if we wish to ping the server 1024 times intertwined with the power:
+
+#mysqladmin --count=1K --sleep=10 ping 
+#Denotes to ping 1024 times, 10 seconds interval
+
+#If using filenames as option values, do not use ~
+
+#When we denote to make queries on the CMD line, we use "" encapsulation, for instance
+#
+#mysql -u root -p --execute="SELECT User, Host FROM mysql.user" #Connect using the user of root, prompt for pw, execute the escaped Query
+#
+
+#Different levels of escaping might be needed, in terms of " or '
+#
+#Multiple statements can be passed in the option value on the CMD line separated by semicolons:
+#
+#mysql -u root -p -e "SELECT VERSION();SELECT NOW()"
+
+#If we wish - we can disable/enable certain parts:
+
+#Disabling:
+#--disable-column-names
+#--skip-column-names
+#--column-names=0
+
+#Enabling:
+#--column-names
+#--enable-column-names
+#--column-names=1
+
+#We can also use TRUE, OFF, FALSE - Non-case sensitive
+
+#If we denote the --loose, it is a option of denoting that the program do not exit upon an error or unrecognized command, instead it does so with a warning
+#
+#mysql --no-such-option #Would cause an error, unrecognized command
+#
+#mysql --loose-no-such-option #Would exit with a warning, despite unrecognized command
+
+#We can also limit session values, akin to memory allocation - as follows, in mysqld:
+#
+#--maximum-max_heap_table_size=32M - Prevents a client from making the heap table size limit larger than 32M.
+#
+#--maximum cannot be applied to system vars that are global in scope:
+#
+#--maximum-back_log=200 #Gives an error because attempted designation to a global system var
+
+#In case of if we wish to denote what options files are read, we can use --verbose and --help
+#
+#a MySQL program with --no-defaults reads no option files other than .mylogin.cnf
+#
+#A server started with the persisted globals load system var disabled does not read mysqld-auto.cnf
+
+#The login path group options allow for the following:
+#
+#host,user,password,port and socket
+
+#To  define what login path to read from in the .mylogin.cnf - we can use the --login-path option.
+
+# If we wish to specify another login path file name, we can set the MYSQL_TEST_LOGIN_FILE environment variable.
+# This variable is used by mysql-test-run.pl and is recognized by other mysql clients.
+
+#There is a second config file, that is auto managed by the server - that is called:
+#
+#mysqld-auto.cnf file in the data directory. This is a JSON file that contains persisted system var settings.
+#
+#It is created by the server upon execution of SET PERSIST or PERSIST_ONLY.
+#
+#One should not manage said fail alone, and leave that to the server.
+
+#On Windows systems, the files are read in the following order:
+#
+# NAME 																	PURPOSE
+#
+# %WINDIR%\my.ini, %WINDIR%\my.cnf 							Global options
+
+# C:\my.ini, C:\my.cnf 											Global options
+
+# BASEDIR\my.ini, BASEDIR\my.cnf 							Global options
+
+# defaults-extra-file 											The file specified with --defaults-extra-file (if any)
+
+# %APPDATA%\MySQL\.mylogin.cnf 								Login path options (clients only)
+
+# DATADIR\mysqld-auto.cnf 										System variables persisted with SET PERSIST or PERSIST_ONLY (server only)
+
+#The %WINDIR% and %APPDATA% are basically system path designations that are found by utilization of Regex,
+#to find them, we can simply echo their  designation in the cmd line:
+#
+# C:\> echo %WINDIR% #Showcases where the Windows directory is
+#
+# C:\> echo %APPDATA% #Showcases where the Appdata dir is
+
+#BASEDIR refers to the MySQL base install dir. usually, it is at C:\PROGRAMDIR\MySQL\MySQL 8.0 Server
+#where the Programdir, is the program files dir.
+
+#DATADIR is the MySQL data dir. It is used to find mysqld-auto.cnf - the default being the data dir loc
+#built in when MySQL was compiled - but can be changed with --datadir specified as a option-file.
+
+#It can also be changed by virtue of cmd line designation before the mysqld-auto.cnf is processed.
+
+#On Unix, the ordering of the startup is as follows:
+#
+# FILE NAME 						PURPOSE
+# /etc/my.cnf 						Global options
+# /etc/mysql/my.cnf 				Global options
+# SYSCONFDIR/my.cnf 				Global options
+# $MYSQL_HOME/my.cnf 			Server-specific options (server only)
+# defaults-extra-file 			The file specified with --defaults-extra-file, if any
+# ~/.my.cnf 						User-specific options
+# ~/.mylogin.cnf 					User-specific login path options (clients only)
+# DATADIR/mysqld-auto.cnf 		System variables persisted with SET PERSIST or PERSIST_ONLY (server only)
+
+#As per usual, the ~ denotes the home dir, the set system var of $HOME
+#
+# SYSCONFDIR is the dir specified with the SYSCONFDIR option to CMake when MySQL was built.
+# By default, this is the etc file dir
+
+# MYSQL_HOME is an env variable containing the path to the dir in which the server-specific my.cnf file
+# resides.
+#
+# If MYSQL_HOME is not set and you start the server using mysqld_safe, mysqld_safe sets it to BASEDIR, the MySQL base install dir.
+
+# DATADIR refers to the MySQL data dir. As used to find mysqld-auto.cnf, its default value is the data dir location built in when
+# MySQL was compiled.
+#
+# can be changed with --datadir specified as an option-file or command-line option processed before mysqld-auto.cnf is processed.
+
+# If multiple instances are given, the latest is taken.
+#
+# The one exception is mysqld, where the first is taken of the --user option as security precaution.
+
+#The following integration rules adheres to the manually edited files - not standing in terms of the .mylogin.cnf which is
+# created using mysql_config_editor and is encrypted. 
+#
+# This too accounts for mysqld_auto.cnf, which the server creates in JSON.
+
+#In terms of Options files, the following rules are adhered to:
+
+# Any cmd line integrated on CMD line is done with --, in option files we omit thoose.
+
+# Empty lines are ignored. Comments start with ; or #
+
+# [group] denotes a group subsectioning. Holds until end of file or different Group designation.
+
+#Leading and trailing spaces are deleted. We can have spaces around the =
+
+#We are allowed to use the following escape sequences:
+#
+# \b, \t, \n, \r, \\ and \s
+#
+# they are in order:
+#
+# backspace, tab, newline, carriage return, backslash and space
+
+#The chars are only escaped if they are not valid commands. i.e, \s is not escaped - \S is, due to invalid command.
+
+#The above implies that we can write a \ as either: \\ or \
+
+#The escape rules in terms of opton files is denoted as conversion unto "(char)" upon errornous registration of a command.
+#As in, if \x is not a command, it's converted to "x"
+
+#Note: In option files, on Windows - \ can be written as / as well
+
+#Examples of usage:
+
+#basedir="C:\\Program Files\MySQL\MySQL Server 8.0"
+#basedir="C:\\Program Files\\MySQL\\MySQL Server 8.0"
+#basedir="C:/Program Files/MySQL/MySQL/MySQL Server 8.0"
+#basedir=C:\\Program\sFiles\\MySQL\\MySQL\sServer\s8.0
+
+#If a option name denotation is the same as a program name, then that group applies specifically to that program.
+#Akin to:
+#
+# [mysqld] and [mysql] applying to mysqld and mysql respectively.
+
+# [client] is read by all client programs provided in MySQL distributions.
+
+# Do note, we have to be careful about level of options that we put in in terms of Client,
+# that it is understood by all levels of the clients. If not understood, the client will raise an exception and quit.
+
+#In terms of ordering of hierarchy in terms of options, we go from:
+#
+#Highest global reach
+#
+# More specific
+#
+# Most specific
+#
+# For instance:
+#
+# [client]
+# port=3306
+# socket=/tmp/mysql.sock
+#
+# [mysqld]
+# port=3306
+# socket=/tmp/mysql.sock
+# key_buffer_size=16M
+# max_allowed_packet=128M
+#
+# [mysqldump]
+# quick
+
+#Another example of a option file:
+
+#[client]
+# Send out a standardized password for all client level integrations
+# password="my password"
+
+#[mysql]
+#no-auto-rehash
+#connect_timeout=2
+
+#We can target versionings as well:
+#
+#[mysqld-8.0]
+#sql_mode=TRADITIONAL
+
+#To include specific files or even dirs, we can use !include and !includedir
+#
+# !include /home/mydir/myopt.cnf #reads that specific config file
+#
+# !include /home/mydir #reads all the option files in mydir
+
+#On Windows, the extensions included are .ini and .cnf
+#
+#Linux is .cnf
+#
+#Past that, MySQL does not guarantee ordering of integration
+
+#As far as Grouping goes contra Parsing, as we iterate - we integrate what actually is
+#targeted by the respective groupings - akin to that if MySQLD is reading something - it will
+#trigger thoose respective groups.
+
+
+
+
+
 #https://dev.mysql.com/doc/refman/8.0/en/command-line-options.html
 #
 
