@@ -1149,14 +1149,152 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #targeted by the respective groupings - akin to that if MySQLD is reading something - it will
 #trigger thoose respective groups.
 
+#Past this, we can come to talk about CMD line options that affect option-file handling
 
-
-
-
-#https://dev.mysql.com/doc/refman/8.0/en/command-line-options.html
+#The following commands, to function properly - must be given before other options, except for:
+#
+# --print-defaults can be used after --defaults-file, --defaults-extra-file or --login-path
+#
+# On Windows, if the server is started with the --defaults-file and --install options,
+# --install must be first.
 #
 
+#--defaults-extra-file=file_name - reads this option file after the global option file 
+#
+# On Unix, this is read before the user option file 
 
+# On all platforms, this is read before the login path file.
 
+# The parameter name in terms of file name, is treated as a relative path towards the CWD.
+# To fundamentally assess greater control, we can denote the full explicit path, if we want
 
-#https://dev.mysql.com/doc/refman/8.0/en/connecting-using-path.html
+# --defaults-file=file_name - reads the given option file.
+# 
+# Note: even with the above, mysqld refers to mysqld-auto.cnf and client refers to .mylogin.cnf
+
+# --defaults-group-suffix=str
+#
+# Denotes a default suffix of grouping name to read.
+#
+# For instance - a parameter name of "dogs" would groups that have a suffix of "dogs",
+# like - [options_dogs]
+
+# --login-path=name
+#
+# Reads options from the named login path in the .mylogin.cnf login path file.
+# This specific group denotes which MySQL server to connect to and which account to authenticate as.
+#
+# To create or modify this login path file - use the mysql_config_editor
+
+#This path is read even if --no-defaults is set.
+#
+# The given command is appended unto the already list of defaulted programs, as can be showcased:
+#
+# mysql --login-path=somextra
+#
+# Would end up with mysql reading [client] and [mysql] from the option files,
+# and [client], [mysql], and [mypath] from the login path file.
+
+#To specify an alternate login path file name, set the MYSQL_TEST_LOGIN_FILE env variable
+
+#--no-defaults
+#
+# Prevents default option files from being read.
+# Will still read .mylogin.cnf
+
+#--print-defaults
+#
+#Prints the program name and all of the options that it gets from the option files.
+#PWs are masked.
+
+# --max_allowed_packet=32M #Can be specified in Bytes.
+#
+# Still power denotation in terms of K, M, G (1024^1, 1024^2, 1024^3) and T,P,E (1024^4, 1024^5, 1024^6)
+#
+# In option files:
+#
+# [mysql]
+# max_allowed_packet=32M #can be specified in bytes
+
+#- and _ are treated as equals in the context of variable names
+#
+# example:
+#
+# [mysqld]
+# key_buffer_size=512M
+# 
+# is identical to
+#
+# [mysqld]
+# key-buffer-size=512M
+
+#In terms of variable naming, we can give ambigious naming that can be autocompleted,
+#However, it's just a better idea to denote a option name htat is fully declared.
+
+# mysql --max=1000000 would be interpreted as ambigious as it would not be clear to what it means, in terms of
+# meaning max_allowed_packet or max_join_size
+# to which we would be warned.
+
+#Server setup denotation of commands do not support arithmetic interpretation in terms of intialization
+#
+# mysql --max_allowed_packet=16M #Allowed in server startup
+# mysql --max_allowed_packet=16*1024*1024 #Not allowed, due to being a operation
+
+# At runtime, when the server is running etc, though:
+# SET GLOBAL max_allowed_packet=16M; #Not allowed in a runtime env.
+# SET GLOBAL max_allowed_packet=16*1024*1024;
+
+#For options that do not require a value, we can omit the assignment operator in notation (=):
+#
+# mysql --host=somehost --user=someguy #Usable with default value integrations
+#
+# mysql --host tonfisk --user jon #Usable with non-default value integrations
+
+# In terms of omitting variables names, can cause errors akin to skipping, as showcased:
+#
+# mysql --host --user jon #Will give an error in trying to access host --user
+
+#An example of denoting of where to log errors, in terms of a UNIX system
+# NOTE: For safety, use = assignment in variable name contexts
+
+# mysqld_safe --log-error=my-errors & #The & is just a background designation operator for UNIX systems
+#
+#For default isntallation and relative pathing, this gives to:
+# '/usr/local/mysql/var/my-errors.err'
+
+#The next section will be about setting ENV Vars
+
+#We can denote environment variables in terms of Usernames, ports, exporting etc:
+#
+# SET USER=your_name
+#
+# For unix systems, accounting for sh, ksh, bash, zsh:
+#
+# MYSQL_TCP_PORT=3306
+# export MYSQL_TCP_PORT
+#
+# For csh and tcsh:
+#
+# setenv MYSQL_TCP_PORT 3306
+
+#The above are allocated to session. To denote for more permanent startup status:
+#
+# Windows -> Control panel
+#
+# Unix (Bash) -> .bashrc or .bash_profile for bash 
+# Unix (tcsh) -> .tcshrc
+
+#An example of modifying the path denotation variable in Bash
+#
+# #Assume /usr/local/mysql/bin is the installation path
+# 
+# PATH=${PATH}:/usr/local/mysql/bin #put in .bashrc file to allow for easy access to MySQL setup in terms of options
+
+#Note, the .bashrc is for login shells, and .bash_profile is for nonlogin shells
+
+#In the case of tcsh:
+# setenv PATH ${PATH}:/usr/local/mysql/bin
+
+#The next section is mysqld_safe
+
+#https://dev.mysql.com/doc/refman/8.0/en/mysqld-safe.html
