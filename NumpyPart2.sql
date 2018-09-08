@@ -1297,4 +1297,297 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 
 #The next section is mysqld_safe
 
-#https://dev.mysql.com/doc/refman/8.0/en/mysqld-safe.html
+#Some Unix systems involve usage of a MySQL Server startup that is safer,
+#i.e - mysqld_safe
+
+#These features include things like restarting the server and logging runtime info to an error log.
+
+#On some specific UNix systems, akin to RPM or Debian, include systemd support for managing MySQl server
+#startup/shutdown.
+
+#If we wish to override the default options and specify a explicit name of the server we wish to run
+#we can specify --mysqld or --mysqld-version option to mysqld_safe.
+
+#You can also use --ledir to indicate the dir where mysqld_safe should look for the server.
+
+#The options in terms of mysqld_safe is the same as mysqld
+
+#If the option is unknown to mysqld_safe, they are passed to mysqld if it's done on the cmd line
+#
+#However, if this is done in a option file - specified to [mysqld_safe] as a group
+#they are ignored.
+
+#mysqld_safe will read all of the options from the [mysqld], [server] and [mysqld_safe] sections
+#in option files.
+
+#Note, for backwards compability cases - mysqld_safe also reads [safe_mysqld] sections
+
+#The following denotes the options for mysqld_safe
+
+# Format 	 					Desc
+#	
+# --basedir 					path to MySQL installation dir
+# --core-file-size 			Size of core file that mysqld should be able to create
+# --datadir 					path to the data dir
+# --defaults-extra-file 	Read named option file in addition to usual option files
+#
+# --defaults-file 			Read only named option file
+# --help 						display help message and exit
+# --ledir 					 	Path to directory where server is located
+# --log-error 					Write error log to named file
+#
+# --malloc-lib 						Alternative malloc library to use for mysqld
+# --mysqld 								Name of server program to start (in ledir directory)
+# --mysqld-safe-log-timestamps 	Timestamp format for logging
+# --mysqld-version 					Suffix for server program name
+# --nice 								Use nice program to set server scheduling priority
+# --no-defaults 						Read no option files
+#
+# --open-files-limit 				Number of files that mysqld should be able to open
+# --pid-file 							Path name of server process ID file
+# --plugin-dir 						Directory where plugins are installed
+# --port 								Port number on which to listen for TCP/IP connections
+
+# --skip-kill-mysqld 				Do not try to kill stray mysqld processes
+# --skip-syslog 						Do not write error messages to syslog; use error log file
+# --socket 								Socket file on which to listen for Unix socket connections
+
+# --syslog 								Write error messages to syslog
+# --syslog-tag 						Tag suffix for messages written to syslog
+# --timezone 							Set TZ time zone environment variable to named value
+# --user 								Run mysqld as user having name user_name or numeric user ID user_id
+
+#Some further covering in terms of different parts
+#
+#--help - Display a help message and exit
+#
+#--basedir=dir_name - The path to the MySQL install dir
+
+#--core-file-size=size - The size of the core file that mysqld should be able to create. 
+#The value of the option is passed to ulimit -c
+#
+# If we disable innodb buffer pool in core file, we can reduce the core file size.
+
+#--datadir=dir_name - The path to the data dir
+
+#--defaults-extra-file=file_name - Read this option file in addition to the usual option files.
+#
+# If the file is not found, does not exist or permissions are not given - the server exists with an error.
+#
+# file_name is interpreted as relative to the current dir if given as a relative path name rather than
+# a full path name. 
+#
+#This must be the first option on the cmd line if used.
+
+#--defaults-file=file_name
+#
+#Use only the given option file. If the file does not exist or is otherwise inaccessible, the server exits with an error.
+#
+#file_name is interpreted as relative to the current dir if given as a relative path name rather than a explicit one.
+#
+#This must be the first option on the cmd line if used
+
+#--ledir=dir_name - 
+#
+#If mysqld_safe cannot find the server, use this option to indicate the path name to the dir where the server is located.
+#
+#This command can only be given on cmdline, not in option files. On platforms that use systemd, the value can be specified
+#in the value of MYSQLD_OPTS.
+
+#--log-error=file_name
+#
+#Write the error log to the given file
+
+#--mysqld-safe-log-timestamps
+#
+#This option is the one that controls the format of timestamps in the log output produced by mysqld_safe.
+#
+#If the value does not belong to any of the following, a warning is logged and resorts to UTC formatting.
+#
+#UTC,utc - ISO 8601 UTC format (this is the same as --log timestamps=UTC for the server) - Defaults to this
+
+#SYSTEM, system - ISO 8601 local time format (same as --log timestamps=SYSTEM for the server)
+
+#HYPHEN, hyphen - YY-MM-DD h:mm:ss format, as in mysqld_safe for MySQL 5.6
+
+#LEGACY, legacy - YYMMDD hh:mm:ss format, as in mysqld_safe prior to MySQL 5.6
+
+#--malloc-lib=[lib name]
+#
+#The name of the library to use for memory allocation instead of the system malloc() library. 
+#
+#The option value must be one of the dirs:
+# /usr/lib
+# /usr/lib64
+# /usr/lib/i386-linux-gnu
+# /usr/lib/x86_64-linux-gnu
+
+#The --malloc-lib option works by modifying the LD_PRELOAD env value to affect dynamic linking to enable
+#the loader to find the memory-allocation library when mysqld runs.
+
+#Some notes on this:
+
+#If the option is not given, or is given without a value (--malloc-lib=), LD_PRELOAD is not modified
+#and no attempt is made to use tcmalloc.
+
+#If the option is given as --malloc-lib=tcmalloc, mysqld_safe looks for a tcmalloc library in /usr/lib
+#
+#If tcmalloc is found, its path name is added to the beginning of the the LD_PRELOAD value for mysqld.
+#
+#If tcmalloc is not found, mysqld_safe aborts with an error.
+
+#If the option is given as --malloc-lib=/path/to/some/library, that full path is added to the beginning
+#of the LD_PRELOAD value.
+#
+#If said path is not legitimate - as in nonexistent or unreadable, mysqld_safe aborts with an error.
+
+#For the cases of where mysqld_safe adds a path name to LD_PRELOAD - it adds the path to the beginning of any
+#existing value the variable already has.
+
+#NOTE: In case that our system manage using systemd, mysqld_safe is not available.
+#Thus - we instead specify the allocation lib by setting LD_PRELOAD in /etc/sysconfig/mysql.
+
+#In terms of Linux, we can use the libtcmalloc_minimal.so lib on any platform for which a tcmalloc
+#package is installed in /usr/lib by adding the following lines to my.cnf:
+#
+# [mysqld_safe]
+# malloc-lib=tcmalloc
+
+#To use a specific tcmalloc lib, specify its full path name:
+#
+# [mysqld_safe]
+# malloc-lib=/opt/lib/libtcmalloc_minimal.so
+
+#--mysqld=prog_name
+#
+#The name of the server program (in the ledir directory) that you want to start.
+#
+#This option is needed if you use the MySQL binary distirbution but have the data
+#dir outside of the binary distribution.
+#
+#If mysqld_safe cannot find the server, use the --ledir option to indicate the path name
+#to the dir where the server is located.
+#
+#This command is only available on cmd line, not in option files. On platforms that use systemd,
+#the value can be specified in the value of MYSQLD_OPTS.
+
+#--mysqld-version=suffix
+#
+#This option is similar to the --mysqld option, but you specify only the suffix for the server program name.
+#The base name is assumed to be mysqld.
+#
+#--nice=priority
+#
+#Use the nice program to set the server's scheduling prio to the given value.
+
+#--no-defaults
+#
+#Do not read option files. Can be used to prevent crashing of attempting to access invalid paths/errors raised are simply offset
+#as in the failed files are not read.
+
+#--open-files-limit=count
+#
+#The number of files that mysqld should be able to open. This options value is passed to ulimit -n.
+#
+#NOTE: This call requires root permissions in terms of level of started the program.
+
+#--pid-file=file_name
+#
+#The path name that mysqld should use for its process ID file.
+
+#--plugin-dir=dir_name
+#
+#The path name of the plugin dir
+
+#--port=port_num
+#
+#The port number that the server should use when listening for TCP/IP connections. The port number
+#must be 1024 or higher lest the server is started by root priveleges.
+
+#--skip-kill-mysqld
+#
+#An option to disallow killings of stray mysqld processes at startup.
+#Works only on Linux.
+
+#--socket=path
+#The Unix socket file that the server should use when listening for local connections.
+
+#--syslog, --skip-syslog
+#
+# --syslog: Causes error messages to be sent to syslog on systems that support the logger program.
+
+# --skip-syslog: suppresses the use of syslog; messages are written to a error log file.
+
+#If syslog is used for error logging, daemon.err facility/severity is used for all log messages.
+
+#However, the above is deprecated in terms of controlling mysqld.
+#To control the facility, use the server log syslog facility system var.
+
+#--syslog-tag=tag: also deprecated, use the server log syslog tag system var.
+
+#--timezone=timezone - Sets the TZ time zone environment var to the given option value.
+#Legal time zone specs is relative to OS doc specs
+
+#--user={<USER> name|<USER> id}
+#
+#Run the mysqld server as the user having the name user_name or the numeric user ID user_id.
+#(<USER> in this context refers to a system login account - not a part of the MySQL users in teh grant tables.)
+
+#Illustration of forced ordering in terms of --defaults-file or --defaults-extra-file:
+#
+# mysqld_safe --port=port_num --defaults-file=file_name #Will ignore the default file command, due to not first place ordering
+#
+# mysqld_safe --defaults-file=file_name --port=port_num
+
+#To have a decent run with mysqld_safe - one of the following conditions need to be true:
+#
+# If we executed mysqld_safe from the MySQL Install dir - the server and DB must be able to be found in terms of
+# a relative path to the working dir.
+#
+# For binary distributions, mysqld_safe looks for bin and data in the CWD
+
+# For source distris, it looks for libexec and var dirs
+
+# If the above fails, it attempts by absolute paths akin to:
+#
+# /usr/local/libexec
+#
+# or 
+#
+# /usr/local/var
+
+#These locations are determined upon config when installing MySQL.
+
+#An example of running MySQL anywhere, based on relative pathing, assuming initial path is done to the MySQL Install dir:
+#
+# cd mysql_installation_directory
+# bin/mysqld_safe & #Delegate to background job
+
+#If this fails, we can delegate with --ledir or --datadir to indicate dirs for the server and DB.
+
+#The default attempts to attempting to start is 5/second, by utility of sleep and date.
+#If this is exceeded - it waits 1 full second before going at it again.
+
+#Error messages go to syslog and stdout.
+#To direct options - use syslog.
+
+#The following covers server interaction on the CMD line.
+#Naming refers to local installation naming, such as mysqld or mysql.
+#I will simply refer to it as mysql here.
+
+#This pertains to Linux systems.
+
+#To start/Stop the script:
+#
+# mysql start #To start
+# mysql stop  #To stop
+
+#To run the server as some specific user, we can config the /etc/my.cnf - adding a user option to
+# the [mysqld] group.
+
+#To start or stop MySQL Automatically on the server - we can add start and stop commands in /etc/rc*
+
+#If we use the Linux server RPM package (MySQL-server-VERSION.rpm) or a native Linux package, it may be installed
+# in the /etc/init.d dir with the name mysqld or mysql.
+
+#https://dev.mysql.com/doc/refman/8.0/en/mysql-server.html
