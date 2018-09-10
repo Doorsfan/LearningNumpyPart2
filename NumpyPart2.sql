@@ -1689,6 +1689,432 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # mysqld_multi --example #more examples
 
+#The search order for option files are as follows:
+#
+# --no-defaults - no option files read
+#
+# --defaults-file=<file name> - onl the named file is read
+
+# Beyond this standard prio is taken, incl. --defaults-extra-file=<file name>
+
+#Option files read are searched for [mysqld_multi] and [mysqldN] option groups.
+#
+# The [mysqld_multi] can be used for options to mysqld_multi itself
+
+# The [mysqldN] groups can be used for options passed to specific mysqld instances.
+
+# The [mysqld] or [mysqld_safe] groups can be used for common options read by all instances of mysqld or
+# mysqld_safe.
+
+# We can specify a --defaults-file=<file name> option to use a different config file for that instance
+# To which the sourceo f [mysqld] or [mysqld_safe] is redirected to this file.
+
+# The following options are what pertain to mysqld_multi:
+#
+# --help - Displays a help message and exits
+#
+# --example - Display a sample option file
+#
+# --log=<file name> - Specify the name of the log file. If hte file exists, log output is appended to it.
+#
+# --mysqladmin=<prog name> - the mysqladmin binary to be used to stop servers
+#
+# --mysqld=<prog name> - The mysqld binary to be used. We can specify mysqld_safe for this option.
+# if we do - we can include mysqld or ledir in the corresponding [mysqldN] option group.
+#
+# These options are to indicate the name of the server that mysqld_safe should start and the path
+# name of the dir where the server is located.
+#
+# For instance:
+#
+# [mysqld38]
+# mysqld = mysqld-debug
+# ledir = /opt/local/mysql/libexec
+
+# --no-log - Print log info to stdout rather than the log file. By default, it goes to log.
+
+# --password=<password> - The PW of the MySQL acc to use when invoking mysqladmin. Non-optional, for this program.
+
+# --silent - Silent mode, no warnings
+
+# --tcp-ip - Connect to each MySQL server through the TCP/IP port instead of the Unix socket file.
+# (If a socket file is missing, the server might still be running, but accessible only through the TCP/IP port)
+#
+# By default, the connections are made through the Unix socket file. Affects stop and report operations.
+
+# --user=<user name> - User name of the MySQL acc to use when invoking mysqladmin
+
+# --verbose - Verbose mode
+
+# --version - Version info and exit
+
+#NOTE: Use seperate dirs when splintering with mysqld servers.
+#
+# Make sure of clearance of reading/writing of each file dir.
+#
+#Splintering does not give performance increasing in terms of the threading pooling
+
+#We also have to make sure that privs to SHUTDOWN is given, and that we have the same connection params for all
+#parts involved. 
+
+#Showcasing of targetting and giving privs to each resp. server:
+#
+# mysql -u root -S /tmp/mysql sock -p #Will prompt for pw
+# CREATE USER 'name_to_be_given_to_multi_admin'@'your_server' IDENTIFIED BY 'multipass'
+#
+# GRANT SHUTDOWN ON *.* TO 'name_to_be_given_to_multi_admin'@'your_server'
+#
+# The above, is shorthand for giving shutdown privleges on all fronts in terms of the given user account 
+#
+# The above must be repeated for every mysqld server.
+# We must also have multi_admin rights from where we connect with mysqld_multi
+
+# The respective socket files in terms of Unix and TCP/IP port must be different for every mysqld.
+#
+# If the host has multiple network addresses, we can use --bind-address to cause different servers
+# to listen to different interfaces
+
+# The --pid-file option is important for if we use mysqld_safe to start mysqld (for example, --mysqld=<mysqld_safe>
+# We need to have a seperate pid file for every respective mysqld.
+
+# The advantage of using mysqld_safe instead of mysqld is that mysqld_safe monitors its mysqld process,
+# allowing us to have restarts in case of kill signals (kill -9) or segmentation faults.
+
+#To be allowed to use --user for mysqld, we have to run the mysqld_multi as root
+#Designating options in the option file, does not matter.
+
+# if we try to run mysqld whilst not root, we get a warning and it's run under our own Unix acc
+
+#The following is an example of having a option file to use with mysqld_multi:
+
+# The order of the mysqld programs are started or stopped depends on the order in the opt file
+# The sequence need not be unbroken 
+
+# [mysqld_multi] #The base mysqld_multi structure
+# mysqld 		= /usr/local/mysql/bin/mysqld_safe
+# mysqladmin 	= /usr/local/mysql/bin/mysqladmin
+# user 			= multi_admin
+# password 		= my_password
+
+# [mysqld2] #The splinters
+# socket 		= /tmp/mysql.sock2
+# port 			= 3307
+# pid-file 		= /usr/local/mysql/data2/hostname.pid2
+# datadir 		= /usr/local/mysql/data2
+# language 		= /usr/local/mysql/share/mysql/english
+# user 			= unix_user1
+
+# [mysqld3]
+# mysqld 		= /path/to/mysqld_safe
+# ledir 			= /path/to/mysqld-binary/
+# mysqladmin 	= /path/to/mysqladmin
+# socket 		= /tmp/mysql.sock3
+# port 			= 3308
+# pid-file 		= /usr/local/mysql/data3/hostname.pid3
+# datadir 		= /usr/local/mysql/data3
+# language 		= /usr/local/mysql/share/mysql/swedish
+# user 			= unix_user2
+
+# [mysqld4]
+# socket 		= /tmp/mysql.sock4
+# port 			= 3309
+# pid-file 		= /usr/local/mysql/data4/hostname.pid4
+# datadir 		= /usr/local/mysql/data4
+# language 		= /usr/local/mysql/share/mysql/estonia
+# user 			= some_user_5
+
+# [mysqld6]
+# socket 		= /tmp/mysql.sock6
+# port 			= 3311
+# pid-file 		= /usr/local/mysql/data6/hostname.pid6
+# datadir 		= /usr/local/mysql/data6
+# language 		= /usr/local/mysql/share/mysql/japanese
+# user 			= unix_user4
+
+#The next section covers MySQL installation related things, akin to:
+# comp_err, ssl_rsa, tzinfo_to_sql, mysql_upgrade etc.
+
+#comp_err:
+
+# Creates the errmsg.sys file that is used by mysqld to determine the error message to display
+# for different error codes.
+
+# comp_err normally is run automatically when MySQL is built. It compiles the errmsg.sys file
+# from the text file located at sql/share/errmsg-utf8.txt in the MySQL source distr.
+
+# It also generates mysqld_error.h, mysqld_ername.h and sql_state.h header files
+
+# To invoke comp_err:
+
+# comp_err [options]
+
+# Supports the following options:
+
+# --help, -? - Displays a help message and exit
+
+# --charset=<dir name>, -C dir_name - The char set directory. The default is ../sql/share/charsets
+
+# --debug=<debug options>, -# <debug options> - Write a debug log. 
+# A typical debug_options string is d:t:O, <file name>
+# the default is:
+# d:t:O, /tmp/comp_err.trace
+
+# --debug-info, -T - Print debug info when the program exits
+
+# --header file=<file name>, -H <file_name> - name of the error header file. 
+# defaults to: mysqld_error.h
+
+# --in file=<file name>, -F <file_name> - The name of the input file.
+# defaults to: ../sql/share/errmsg-utf8.txt
+
+# --name file=<file name>, -N <file_name> - The name of the error name file.
+# Defaults to: mysqld_ername.h
+
+# --out dir=<dir name>, -D <dir name> - Name of output base dir
+# Defaults to: ../sql/share/
+
+# --out file=<file name>, -O <file name> - Name of the output file
+# Defaults to: errmsg.sys
+
+# --statefile=<file name>, -S <file_name> - Name of the SQLSTATE header file.
+# Defaults to: sql_state.h
+
+# --version, -V #Displays version info and exits
+
+# mysql_secure_installation:
+#
+# Allows us to set pw for root accs, remove root accs outside of localhost, remove anon users, remove the test DB
+# (The test DB can be accessed by anon users/all users) - we can also remove permits of dbs with name that starts with
+# test_
+
+# Base usage:
+# mysql_secure_installation
+
+# Doing this, will prompt for an action.
+
+# We can utilize validate_password to check PW strength.
+
+# Showcasing of using cmd line and options files to connect:
+#
+# mysql_secure_installation --host::1 --port=3307
+
+#The following options can be defined by cmd line or in option file groups of:
+# [mysql_secure_installation] 
+# [client]
+
+#The options of the mysql_secure_installation are as follows:
+#
+# FORMAT 													DESC
+#
+# --defaults-extra-file 				Read named option file in addition to usual option files
+# --defaults-file 						Read only named option file
+# --defaults-group-suffix 				Option group suffix value
+# --help 									Display help messages n exit
+# --host 									Host to connect to (IP address or host name)
+# --no-defaults 							Read no option files
+# --password 								Accepted but ignored. Prompt occurs regardless
+# --port 									TCP/IP port number for connection
+# --print-defaults 						Print default options
+#
+# --protocol 								Connection protocol to use
+# --socket 									For connections to localhost, the Unix socket file to use
+# --ssl-ca 									File that contains list of trusted SSL Certs Auths
+# --ssl-capath 							Dir that contains trusted SSL Cert Auth cert files
+# --ssl-cert 								File that contains X.509 certificate
+# --ssl-cipher 							List of permitted ciphers for connection encryption
+#
+# --ssl-crl 								File that contains cert revocation list files
+# --ssl-crlpath 							Dir that contains cert revocation list files
+# --ssl-fips-mode 						Whether to enable FIPS mode on the client side
+#
+# --ssl-key 								file that contains X.509 key
+# --tls-version 							Protocols permitted for encrypted connections
+# --use-default 							Execute with no user interactivity
+# --user 									MySQL user name to use when connecting to the server
+
+# Further explaining of subsections:
+#
+# --help, -? - Display a help message and exit
+# --defaults-extra-file=<file name> - Reads this option file after the global option file, but before the user option file.
+# --defaults-file=<file name> - use only the given option file. If the file does not exist or is inaccessible, errors occur.
+# 										  Pathing is: relative (default), full on explicit designation
+# --defaults-group-suffix=<str> - Additional groupings to read in terms of suffix regex designation (i.e, all of the defaults + suffix matches)
+# --host=<host_name>, -h <host_name> - Connect to the MySQL Server on the given host.
+#
+# --no-defaults - Do not read any option files. If program startup fails due to reading unknown options from an option file, --no-defaults can be used to
+# prevent them from being read.
+#
+# As per usual, if .mylogin.cnf exists - it is read, regardless of options.
+
+# --password=<password>, -p <password> - The option is accepted but ignored. mysql_secure_installation always prompts for PW.
+# --port=<port num>, -P <port_num> - TCP/IP port to use for the connection
+
+# --print-defaults - Print the program name and all options that it gets from option files
+# --protocol={TCP|SOCKET|PIPE|MEMORY} - The connection protocol to use for connecting to the server.
+# --socket=<path>, -S <path> - What Unix socket/Windows pipe to use when connecting to localhost.
+# --ssl* - Connect using SSL, implies need to specify SSL keys and certs.
+
+# --ssl-fips-mode={OFF|ON|STRICT} - Controls whether to enable FIPS mode on the client side.
+# Denotes what cryptographic operations are permitted - not actually used to establish encrypted connections.
+
+# OFF - Disables FIPS mode.
+# ON - Enables FIPS mode.
+# STRICT - Enable "strict" FIPS mode.
+
+# If the OpenSSL FIPS Object Module is not available, the onl permitted value is OFF.
+# Attempting to ordane ON or STRICT, causes warning at startup, resorting to non-FIPS mode.
+
+# --tls-version=<protocol list> - Protocols permitted by the client for encrypted connections. The value is a comma-separated list
+# containg one or more protocol names.
+#
+# The protocols used depend on the SSL lib used to compile MySQL.
+
+# --use-default - Execute noninteractively. Can be used for unattended installation operations
+
+# --user=<user name>, -u <user_name> - MySQL user name when connecting to the server.
+
+#Next section covers: mysql_ssl_rsa_setup - Creating SSL/RSA files
+#
+# creates the SSL certificate and key files and RSA key-pair files required to support secure
+# connections using SSL and secure password exchange using RSA over unencrypted connections,
+# if those files are missing.
+#
+# Can also be used to create new SSL files if existing ones have expired.
+#
+# Note, these forms of certs are self-signed - i.e, not safe. This is more about the principle of creation/usage,
+# not the factual gain of security in terms of usage.
+#
+# To invoke mysql_ssl_rsa_setup:
+#
+# mysql_ssl_rsa_setup [options]
+#
+# The typical options are --datadir to specify where to create the files, and --verbose to see the openssl commands
+# that mysql_ssl_rsa_setup executes.
+#
+# mysql_ssl_rsa_setup attempts to create SSL and RSA files using a default set of file names. It works as follows:
+#
+# > checks for the openssl binary at the locations specified by the PATH env var.
+# > If not found - nothing happens.
+#
+# If openssl is present, mysql_ssl_rsa_setup looks for default SSL and RSA files in the MySQL data dir specified
+# by the --datadir option or the compiled-in data dir if the --datadir option is not given.
+#
+# > Checks the data dir for SSL files with the following names:
+# ca.pem
+# server-cert.pem
+# server-key.pem
+#
+# > If any of the above exist, no SSL files are created. Otherwise, openssl is invoked to create them, for a total of:
+#
+# ca.pem 			#Self-signed CA cert
+# ca-key.pem 		#CA private key
+# server-cert.pem #Server cert
+# server-key.pem 	#Server private key
+# client-cert.pem #Client cert
+# client-key.pem 	#Client private key
+#
+# > Checks data dir for RSA files with the following names:
+#
+# private_key.pem 	#Private member of private/public key pair
+# public_key.pem 		#Public member of private/public key pair
+
+# If any of the above is present, mysql_ssl_rsa_setup creates no RSA files.
+# Otherwise, invokes openSSL to create them.
+#
+# The files enable secure PW exchange using RSA over unencrypted connections for
+# accounts authenticated by the sha256_password or caching_sha2_password plugin
+
+# When starting the MySQL Server, it automatically uses the SSL files created by mysql_ssl_rsa_setup
+# to enable SSL if no explicit SSL options are given other than --ssl (possibly also --ssl-cipher)
+#
+# If we prefer to designate the files explicitly, invoke the clients with the --ssl-ca, --ssl-cert and
+# --ssl-key options to name the ca.pem, client-cert.pem and client-key.pem files, respectively
+#
+# The server also automatically uses the RSA files created by mysql_ssl_rsa_setup to enable RSA, if none are explicitly given
+#
+# If the server has activated SSL, the client uses SSL by default for the connection.
+#
+# Also, to circumvent the read/write permission problems in terms of locations of Certs,
+# due to that the initialized data dir permissions is restricted to the System account that runs the server.
+#
+# To make the files available, copy them to a dir that is readable (but not writable) by clients:
+#
+# For local clients, the MySQL install is assumed, thus, we can use a relative path in terms of implied referal in copying:
+#
+# cp ca.pem client-cert.pem client-key.pem
+#
+# For remote clients, we distribute the files using a secure channel to ensure they are not tampered with.
+#
+# If the SSL files have expired - we can use mysql_ssl_rsa_setup to create new ones:
+#
+# > Stop the server
+# > Rename or remove the existing SSL files. You may wish to make a backup of them first.
+# (RSA's do not expire)
+# > Run mysql_ssl_rsa_setup with the --datadir option to specify where to create the new files.
+# >Restart the server
+
+# mysql_ssl_rsa_setup supports the following CMD line options - can be specified on the CMD line or 
+# in the [mysql_ssl_rsa_setup] and [mysqld] groups of an option file.
+
+# Options for mysql_ssl_rsa_setup :
+#
+# FORMAT 			DESC
+# --datadir 		Path to data directory
+# --help 			Display help messagee and exit
+# --suffix 			Suffix for X.509 cert Common Name attribute
+# --uid 				Name of effective user to use for file permissions
+# --verbose 		Verbose mode
+# --version 		Display version info and exit
+
+# Further explonation of the commands:
+#
+# --help, ? - Display a help message and exit
+# --datadir=<dir name> - The path to the directory that mysql_ssl_rsa_setup should check for default SSL and RSA files and in
+# which it should create files if they are missing. 
+#
+# Defaults to compiled-in data dir
+#
+# --suffix=<str> - Suffix of the common name attribute in X.509 certs. The suffix value is limit to 17 chars.
+# The default is based on the MySQL version number.
+#
+# --uid=<name>, -v - The name of the user who should be the owner of any created files. The value is a user name,
+# not a numeric user ID. 
+#
+# In case this is absent, files created by mysql_ssl_rsa_setup are owned by the user who executes it. This option is 
+# valid only if you execute the program as root on a system that supports the chown() system call.
+#
+# --verbose, -v - Verbose mode. Tells about if it skipped SSL, RSA file creation and openssl commands being run.
+#
+# --version, -V - Display version info and exit.
+
+#Next covers mysql_tzinfo_to_sql - The time Zone tables
+#
+# Loads the time zone tables in the mysql db. It is used on systems that have a zoneinfo DB (set of files that describe time zones)
+#
+# Examples of such OS's: Linux, FreeBSD, Solaris, and OS X. One likely location for these is the /usr/share/zoneinfo dir
+# (/usr/share/lib/zoneinfo on Solaris).
+#
+# mysql_tzinfo_to_sql can be invoked several ways:
+# mysql_tzinfo_to_sql <tz_dir>
+# mysql_tzinfo_to_sql <tz_file> <tz_name>
+# mysql_tzinfo_to_sql --leap <tz_file>
+
+#Exampel of invocation:
+# mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql #Pipe the output to mysql from the zoneinfo dir path name, access mysql with root user
+
+# mysql_tzinfo_to_sql reads the systems time zone files and generates SQL statements from them. mysql processes them to load the time zone tables.
+# 
+# The second syntax, loads a single time zone file <tz_file> that corresponds to a time zone name tz_name:
+#
+# mysql_tzinfo_to_sql <tz_file> <tz_name> | mysql -u root mysql
+#
+# If we need to account for leap seconds, use the third syntax noted in the above ordering.
+
+#To account for the newly initialized data and to circumvent previously cached time zone data 
+# we have to restart the server.
+
+#Next up, is mysql_upgrade
+ 
+
 #https://dev.mysql.com/doc/refman/8.0/en/mysqld-multi.html
 
-#https://dev.mysql.com/doc/refman/8.0/en/mysql-server.html
