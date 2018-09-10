@@ -1590,4 +1590,105 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #If we use the Linux server RPM package (MySQL-server-VERSION.rpm) or a native Linux package, it may be installed
 # in the /etc/init.d dir with the name mysqld or mysql.
 
+#If we do not have the server installed, we can copy a version of it
+#
+#cp mysql.server /etc/init.d/mysql  #Copy the server to the designated folder
+#chmod +x /etc/init.d/mysql
+
+#Depending on our system and integration of Unix - we can use chkconfig to activate it to run at system startup
+#
+# chkconfig --add mysql
+#
+# Sometimes, we need a different version
+#
+# chkconfig --level 345 mysql on
+
+#If it is a version of FreeBSD, the scripts should generally go in /usr/local/etc/rc.d/
+#
+#Install the mysql.server script as /usr/local/etc/rc.d/mysql.server.sh to enable automatic startup
+
+#The base name file pattern must be *.sh to trigger, otherwise it is silently ignored.
+
+#Sometimes, some operative systems use /etc/rc.local or /etc/init.d/boot.local to start additional
+#services on startup.
+#
+#To utilize it, append something akin to the following to a startup file:
+#
+# /bin/sh -c 'cd /usr/local/mysql; ./bin/mysqld_safe --user=mysql &'
+
+#mysql.server reads from [mysql.server] and [mysqld] sections of option files.
+#
+#We can add options for mysql.server in a global /etc/my.cnf, it might look as follows:
+#
+# [mysqld]
+# datadir=/usr/local/mysql/var
+# socket=/var/tmp/mysql.sock
+# port=3306
+# user=mysql
+
+# [mysql.server]
+# basedir=/usr/local/mysql
+
+#The following are mysql.server option-file options
+#
+# Option Name 								Desc 														Type
+# basedir 						Path to MySQL installation dir 								Directory name
+# datadir 						Path to MySQL data directory 									Directory name
+# pid-file 						File in which server should write its process ID  		File name
+# service-startup-timeout 	How long to wait for server startup 						Integer
+
+#The following is explonations of the different parts:
+#
+#basedir=<dir name> # The path to the MySQL installation dir
+#
+#datadir=<dir name> # The path to the MySQL data dir
+#
+#pid-file=<file name> # The path name of the file in which the server should write its process ID.
+#
+## if this option is not given, it defaults to <host_name>.pid
+# This file value overrides the mysqld_safe specified in [mysqld_safe] option file group
+#
+# For safety in terms of the server value starting designations, we can specify both
+# in [mysqld_safe] and [mysqld] groups.
+
+# service-startup-timeout=<seconds>
+#
+# How many seconds to wait for confirmation of server startup.
+# If the server does not start within said limit, mysql.server exits with an error.
+# Defaults to 900.
+#
+# Negative is forever (no timeout), 0 is to not wait at all.
+
+#The following is related to mysqld_multi - which is to manage multiple MySQL servers
+
+#The mysqld_multi is designed to handle/listen to different connections on different Unix sockets files 
+# and TCP/IP ports.
+
+#The mysqld_multi searches for groups that are called [mysqldN] in my.cnf
+#
+# Or in the file named by the --defaults-file option
+#
+#N refers to the group number, to which can also be represented as GNR.
+#It can be any positive integer.
+
+#Each respective numeral represents a server/connection - they have their own values
+#
+#To invoke mysqld_multi - we can use the following syntax:
+#
+# mysqld_multi [options] {start|stop|reload|report} [GNR[, GNR] ...]
+
+#If no list exists - mysqld_multi performs the operation for all servers in the option file.
+#
+#We can perform more specific numerals in terms of listing of gnr's, operations and listing of options
+
+#Some examples of utilization of starting multiple servers, groupings etc:
+#
+# mysqld_multi start 17 #Just starts nr 17
+#
+# mysqld_multi stop 8, 10-13 #8, 10,11,12,13
+#
+# mysqld_multi --example #more examples
+
+#https://dev.mysql.com/doc/refman/8.0/en/mysqld-multi.html
+
 #https://dev.mysql.com/doc/refman/8.0/en/mysql-server.html
