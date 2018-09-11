@@ -2114,7 +2114,522 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # we have to restart the server.
 
 #Next up, is mysql_upgrade
- 
 
-#https://dev.mysql.com/doc/refman/8.0/en/mysqld-multi.html
+#mysql_upgrade is a utility in terms of integrating updates to tables and capacities in terms of between versionings
+
+#If mysql_upgrade finds that a table has a possible incompability - it performs a table check and, if issues are found
+#attempts a table repair.
+
+#The mysql_upgrade runs updating in terms of the MySQL tables
+
+#The base initialization of command is:
+
+#mysql_upgrade [options]
+
+#After we have run mysql_upgrade - we need to stop and restart it.
+
+#If we have multiple MySQL servers running - we can invoke mysql_upgrade with connection parameters
+#as can be showcased:
+#
+# mysql_upgrade --protocol=tcp -P 3306 [other_options]
+# mysql_upgrade --protocol=tcp -P 3307 [other_options]
+# mysql_upgrade --protocol=tcp -P 3308 [other_options]
+
+#In terms of running on localhost on Unix, the --protocol=tcp options forces a connection
+#using TCP/IP rather than the Unix socket file
+
+#NOTE: In case of disabled_storage_engines sys var set to disable certain storage engines (for instance, MyISAM)
+#mysql_upgrade might fail as follows:
+#
+# mysql_upgrade: [ERROR] 3161: Storage engine MyISAM is disabled (Table creation is disallowed)
+#
+# To handle it, restart the server with disabled_storage_engines disabled.
+# We can then run mysql_upgrade successfully. 
+#
+# After that, restart the server with disabled_storage_engines set to its original value
+
+#mysql_upgrade runs a version comparison in terms of a file named mysql_upgrade_info in the data dir.
+#
+#This is used to quickly check whether all tables have been checked for this release so that
+#table-checking is skipped.
+#
+#To ignore this file, run --force
+
+#Unless we invoked with --skip-sys-schema - then mysql_upgrade installs the sys schema and upgrades it.
+#
+# However, if there exists one and has no version view - we have to rename it/remove it and then
+#run the upgrade.
+
+#If we wish, we can upgrade specific individual tables with ALTER TABLE ... UPGRADE PARTITIONING
+
+#mysql upgrade can fail to upgrade due to expired PWs, which we can reset with the following:
+
+#mysql -u root -p #Then reset the PW with alter user
+#ALTER USER USER() IDENTIFIED BY 'root-password';
+
+#Run the mysql_upgrade again after having exited:
+#mysql_upgrade [options]
+
+#The following options are the ones that mysql_upgrade supports
+#
+# They are found in [mysql_upgrade] and [client]groups of an option file.
+#
+# FORMAT 																		DESC
+# --bind-address 					Use specified network interface to connect to MySQL Server
+# --character-sets-dir 			Directory where character sets are installed
+# --compress 						Compress all information sent between client and server
+#
+# --debug 							Write debugging log
+# --debug-check 					Print debugging information when program exits
+# --debug-info 					Print debugging information, memory and CPU statistics when program exits
+# --default-auth 					Authentication plugin to use
+# --default-character-set 		Specify default character set
+# --defaults-extra-file 		Read named option file in addition to usual option files
+#
+# --defaults-file 				Read only named option file
+# --defaults-group-suffix 		Option group suffix value
+# --force 							Force execution even if mysql_upgrade has already been executed for current version of MySQL
+# --get-server-public-key 		Request RSA public key from server
+#
+# --help 							display help messages and exit
+# --host 							Connect to MySQL server on given host
+# --login-path 					Read login path options from .mylogin.cnf
+# --max-allowed-packet 			Maximum packet length to send or recieve from server
+#
+# --net-buffer-length 			Buffer size for TCP/IP and socket communication
+# --no-defaults 					Read no option files
+# --password 						Password to use when connecting to server
+# --pipe 							On Windows, connect to server using named pipe
+# --plugin-dir 					Directory where plugins are installed
+#
+# --port 							TCP/IP port number for connection
+# --print-defaults 				Print default options
+# --protocol 						Connection protocol to use
+# --server-public-key-path 	Path name to file containing RSA public key
+#
+# --shared-memory-base-name 	The name of shared memory to use for shared-memory connections
+# --skip-sys-schema 				Do not install or upgrade the sys schema
+# --socket 							For connections to localhost, the Unix socket file to use
+# --ssl-ca 							File that contains list of trusted SSL Certificate Authorities
+# --ssl-capath 					Directory that contains trusted SSL Certificate Authority certificate files
+#
+# --ssl-cert 						File that contains X.509 certificate
+# --ssl-cipher 					List of permitted ciphers for connection encryption
+# --ssl-crl 						File that contains certificate revocation lists
+# --ssl-crlpath 					Directory that contains certificate revocation list files
+#
+# --ssl-fips-mode 				Whether to enable FIPS mode on the client side
+# --ssl-key 						File that contains X.509 key
+# --ssl-mode 						Security state of connection to server
+# --tls-version 					Protocols permitted for encrypted connections
+#
+# --upgrade-system-tables 		Update only system tables, not data
+# --user 							MySQL user name to use when connecting to server
+# --verbose 						Verbose mode
+# --version-check 				Check for proper server version
+# --write-binlog 					Write all statements to binary log
+
+#The showcasing in terms of Options and what they do:
+#
+# --help - Display a short help message and exit
+# --basedir=<dir name> - The path to the MySQL installation dir
+# --bind-address=<ip address> - On a computer having multiple network interfaces, use this to decide which one to use for connecting
+# --character-sets-dir=<dir name> - The dir where char sets are installed
+#
+# --compress, -C - Compress all info between client and server, if both support compression.
+# --debug[=<debug options>], -# [<debug options>] - Writes a debug log. Typical: d:t:o, <file_name>
+# Defaults to: d:t:O,/tmp/mysql_upgrade.trace
+# --debug-check - Print some debugging information when the program exits
+# --debug-info, -T - Print debugging information and memory and CPU usage stats when the program exits
+#
+# --default-auth=<plugin> - A hint about the client-side auth plugin to use.
+# --default-character-set=<charset name> - Use <charset_name> as the default character set
+# --defaults-extra-file=<file name> - Read this option file after the global option file but (on Unix) before the user option file.
+# --defaults-file=<file name> - Use only the given option file. If the file does not exist or inaccessible - error is raised. Path is relative if given as such, Full otherwise.
+#
+# --defaults-group-suffix=<str> - Read not only the usual option groups, but also groups with usual names and suffix of <str>.
+#   										 Normally reads [client] and [mysql_upgrade] - treats str input as suffix regex.
+# --force - 							 Ignore the mysql_upgrade_info and force run
+#
+# --get-server-public-key 			 Requests the public key required for the RSA key-pair PW exchange.
+# 											 Applies to the clients whom authenticate with caching_sha2_password auth plugin.
+# 											 In case of usage of this plugin - the server does not send the public key lest requested.
+# 											 The option is ignored for accs that do not authenticate with said plugin.
+# 					
+# 											 If a secure connection is rendered to the server, RSA exchange is not used - as such, this command is then ignored.
+#
+# 											 If --server-public-key-path=<file name> is given and specifies a valid public key file, it takes precedence over
+# 											 --get-server-public-key
+#
+# --host=<host name>, 				 Connect to the MySQL on the given host. 
+# -h <host name>
+# --login-path=<name> 				 Read options from the named login path in the .mylogin.cnf login path file.
+# 											 The login path is the group option that specifies which MySQL server to connect to
+# 											 and which acc to authenticate as.
+#
+# --max-allowed-packet=<value> 	 The max size of the buffer for client/server communication. Defaults to 24MB. Min is 2kb, max is 2Gb.
+# --net-buffer-length=<value> 	 The initial size of the buffer for client/server comm. Default is 1MB - 1kb. The min 4KB, max 16MB
+# --no-defaults 						 Do not read any option files. Prevents exception raising failures
+# 							
+# 											 Exception is .mylogin.cnf file, if it exists - is read in all cases (reading PW from File)
+# --password[=<password>], 		  
+# -p [<password>]	  					 PW. -p prevents space after input, --password without value prompts for it
+#
+# --pipe, -W 							 On Windows, connect to the server using a named pipe. Applies only if the server supports named-pipe connections
+# --plugin-dir=<dir name> 			 The dir in which to look for plugins. Use if --default-auth is used for an Auth plugin, but it is not found.
+# --port=<port num>, 
+# -P <port_num> 						 The TCP/IP port number to use for the connection.
+# --print-defaults 					 Print the program name and all options that it gets from option files.
+#
+# --protocol=
+#{TCP|SOCKET|PIPE|MEMORY} 			 The connection protocol to use for connecting to the server. 
+# 											 It is useful when the other connection parameters normally would cause
+# 											 a protocol to be used other than the one you want.
+#
+# --server-public-key-path=       The path name to a file containing a client-side copy of the public key required by the server
+# <file name> 							 for RSA key pair-based PW exchange. The file must be in PEM format.
+#              
+# 											 This option applies to clients that authenticate with the sha256_password or caching_sha2_password
+# 											 authentication plugin. This is ignored for accounts that do not authenticate with one of those plugins.
+#
+# 											 It is also ignored if RSA-based pw exchange is not used, as is the case when the client connects to
+# 											 the server using safe connections (SSL)
+#
+# 											 If --server-public-key-path=<file name> is given and specifies a valid public key file, it takes
+# 											 precedence over --get-server-public-key.
+#
+# 											 For Sha256_pw, this applies only if we used SSL to build the MySQL.
+#
+# --shared-memory-base-name= 		 On Windows, the shared memory name to use, for connections made using shared memory to a local server.
+# <name> 								 Defaults to MySQL. Case-sensitive. Must startup with --shared-memory to enable shared-memory connections.
+#
+# --skip-sys-schema 					 mysql_upgrade installs the sys schema if it is not installed, and upgrades it to the current version otherwise.
+#                                 This suppresses that behavior.
+#
+# --socket=<path>, -S <path> 		 Connections to localhost, Unix socket file to use - Windows, the named pipe to use.
+# --ssl* 								 Options that begin with --ssl specify whether to connect the server using SSL and indicate where to 
+# 											 find SSL keys and certs.
+#
+# --ssl-fips-mode={OFF|ON|STRICT} Controls whether to enable FIPS mode on the client side. The --ssl-fips-mode option differs from other
+# 										    --ssl-xxx options in that it is not used to establish encrypted connections, but rather to affect which
+# 											 cryptographic operations are permitted.
+#
+# 											 The options are: OFF (Disable FIPS mode), ON (Enable FIPS mode), STRICT (Enable "strict" FIPS mode).
+# 											 
+# 											 If the OpenSSL FIPS Object Module is not available, the only permitted value is OFF. 
+# 											 Going against it, produces a warning and starts in non-FIPS mode.
+#
+# --tls-version=<protocol list> 	 The protocols permitted by the client for encrypted connections. The value is a comma-separated list 
+# 											 containing one or more protocol names. 
+# 												
+#                                 The protocols that can be named for this option depend on the SSL library used to compile MySQL.
+#
+# --upgrade-system-tables, -s 	 Upgrade only the system tables, do not upgrade the data.
+#
+# --user=<user name>,  				 The MySQL user name to use when connecting to the server. defaults to root.
+# -u <user_name>
+# 
+# --verbose 							 Verbose mode
+#
+# --version-check, -k 				 Check the version of the server to which mysql_upgrade is connecting to verify that it is
+# 											 the same as the version for which mysql_upgrade was built.
+# 
+# 											 This option is enabled by default - to disable it, use --skip-version-check
+#
+# --write-binlog 						 By default, binary logging by mysql_upgrade is disabled. Invoke the program with 
+# 											 --write-binlog if you want its actions to be written to  the binary log.
+#
+# 											 When the server is running with global transactions identifiers (GTIDs) enabled
+# 										    (gtid mode=ON), do not enable binary logging by mysql_upgrade.
+#
+# The next section covers mysql on the cmd line
+#
+# If used interactively, query results are presented in an ASCII table format.
+# If not, it's in a tab-separated format.
+#
+# If there is not enough memory, use --quick. Forces usage of one row at a time instead of 
+# buffering in memory and retrieving everything. Utilizes mysql_use_result() C api in the client/server lib,
+# instead of the mysql_store_result()
+#
+# Examples of simple usages:
+#
+# mysql <db_name>
+#
+# mysql --user=<user_name> --password <db_name> #Causes prompt
+#
+# Ctrl+C stops current query or partial inputs.
+# To finish a query on the cmd line, end with ;, \g or \G and Enter
+#
+# We can execute SQL statements in a script file (batch file) as follows:
+# mysql db_name < script sql > output tab
+#
+# On Unix, the client logs statements executed interactively to a history file.
+#
+# The next section covers mysql options for the Cmd line or [client] and [mysql] groups of an option file.
+#
+# FORMAT 								DESC
+# --auto-rehash 						Enable automatic rehashing
+# --auto-vertical-output 			Enable automatic vertical result set display
+# --batch 								Do not use history file
+# --binary-as-hex 					Display binary values in hexadecimal notation
+#
+# --binary-mode 						Disable \r\n - to - \n translation and treatment of \0 as end-of-query
+# --bind-address 						Use specified network interface to connect to the MySQL Server
+# --character-sets-dir 				Directory where character sets are installed
+# --column-names 						Write column names in results
+# --column-type-info 				Display result set metadata
+# --comments 							Whether to retain or strip comments in statements sent to the server
+#
+# --compress 							Compress all information sent between client and server
+# --connect-expired-password 		Indicate to server that client can handle expired-password sandbox mode
+# --connect_timeout 					Number of seconds before connection timeout
+# --database 							The database to use
+# --debug 								Write debugging log; supported only if MySQL was built with debugging support
+#
+# --debug-check 						Print debugging information when program exits
+# --debug-info 						Print debugging information, memory and CPU stats when the program exits
+# --default-auth 						Authentication plugin to use
+# --default-character-set 			Specify default character set
+#
+# --defaults-extra-file 			Read named option file in addition to usual option files
+# --defaults-file 					Read only named option file
+# --defaults-group-suffix 			Option group suffix value
+# --delimiter 							Set the statement delimiter
+# --enable-cleartext-plugin 		Enable cleartext authentication plugin
+#
+# --execute 							Execute the statement and quit
+# --force 								Continue even if an SQL error occurs
+# --get-server-public-key 			Request RSA public key from server
+# --help 								Display help message and exit
+# --histignore 						Patterns specifying which statements to ignore for logging
+# --host 								Connect to MySQL server on given host
+#
+# --html 								Produce HTML output
+# --ignore-spaces 					Ignore spaces after function names
+# --init-command 						SQL statement to execute after connecting
+# --line-numbers 						Write line numbers for errors
+# --local-infile 						Enable or disable for LOCAL capability for LOAD DATA INFILE
+#
+# --login-path 						Read login path options from .mylogin.cnf
+# --max_allowed_packet 				Maximum packet length to send to or recieve from the server
+# --max_join_size 					The automatic limit for rows in a join when using --safe-updates
+# --named-commands 					Enable named mysql commands
+# --net_buffer_length 				Buffer size for TCP/IP and socket communication
+#
+# --no-auto-rehash 					Disable automatic rehashing
+# --no-beep 							Do not beep when errors occur
+# --no-defaults 						Read no option files
+# --one-database 						Ignore statements except those for the default DB named on the cmd line
+# --pager 								Use the given command for paging query output
+# --password 							Password to use when connecting to server
+#
+# --pipe 								On Windows, connect to server using named pipe
+# --plugin-dir 						Directory where plugins are installed
+# --port 								TCP/IP port number for connection
+# --print-defaults 					Print default options
+# --prompt 								Set the prompt to the specified format
+# --protocol 							Connection protocol to use
+#
+# --quick 								Do not cache each query result
+# --raw 									Write column values without escape conversion
+# --reconnect 							If the connection to the server is lost, automatically try to reconnect
+# --i-am-a-dummy, --safe-updates Allow only UPDATE and DELETE statements that specify key values
+#
+# --select_limit 						The automatic limit for SELECT statements when using --safe-updates
+# --server-public-key-path 		Path name to file containing RSA public key
+# --shared-memory-base-name 		The name of shared memory to use for shared-memory connections
+# --show-warnings 					Show warnings after each statement if there are any
+# --sigint-ignore 					Ignore SIGINT signals (typically the result of typing Ctrl+C)
+#
+# --silent 								Silent mode
+# --skip-auto-rehash 				Disable automatic rehashing
+# --skip-column-names 				Do not write column names in results
+# --skip-line-numbers 				Skip line numbers for errors
+# --skip-named-commands 			Disable named mysql commands
+# --skip-pager 						Disable paging
+#
+# --skip-reconnect 					Disable reconnecting
+# --socket 								For connections to localhost, the Unix socket file or Windows named pipe to use
+# --ssl-ca 								File that contains list of trusted SSL Cert Auths
+# --ssl-capath 						Dir that contains trusted SSL Cert Auth cert files
+# --ssl-cert 							File that contains X.509 cert
+#
+# --ssl-cipher 						List of permitted ciphers for connection encryption
+# --ssl-crl 							File that contains certificate revocation lists
+# --ssl-crlpath 						Directory that contains cert revocation list files
+# --ssl-fips-mode 					Whether to enable FIPS mode on the client side
+# --ssl-key 							File that contains X.509 key
+# --ssl-mode 							Security state of connection to server
+#
+# --syslog 								Log interactive statements to syslog
+# --table 								Display output in tabular format
+# --tee 									Append a copy of output to named file
+# --tls-version 						Protocols permitted for encrypted connections
+# --unbuffered 						Flush the buffer after each query
+#
+# --user 								MySQL user name to use when connecting to server
+# --verbose 							Verbose mode
+# --version 							Display version information and exit
+# --vertical 							Print query output rows vertically (one line per column value)
+# --wait 								If the connection cannot be established, wait and retry instead of aborting
+# --xml 									Produce XML output
+#
+
+# Further explonation of the interactions:
+#
+# --help, -? - Display a help message and exit
+# --auto-rehash - Enable automatic rehashing. On by default, enables database, table and column name completion.
+# 					   Use --disable-auto-rehash to disable rehashing. That causes mysql to start faster, but you must
+# 						issue the rehash command or its \# shortcut if you want to use name completion.
+#
+# 						To cycle through completion of names, write the first part and press Tab to cycle Regex matchings.
+# 						Does not trigger unless there is a default DB.
+#
+# 						The above requires a MySQL client that is compiled with the readline library. Typically, the readline
+# 						library is not available on Windows.
+#
+# --auto-vertical-output - Cause result sets to be displayed vertically if they are too wide for the current window, and using
+# 									normal tabular format otherwise. (Applies to statements terminated by ; or \G)
+#
+# --batch, -B 				 - Print results using tab as the column separator, with each row on a new line. With this option, mysql
+# 									does not use the history file.
+#
+# 									Batch mode results in nontabular output format and escaping of special characters. Escaping may be
+# 									disabled by using raw mode; see the description for the --raw option.
+#
+# --binary-as-hex 			When this option is given, mysql displays binary data using hexadecimal notation (0x value).
+# 									This occurs whether the overall output display format is tabular, vertical, HTML or XML.
+#
+# --binary-mode 				This option helps when processing mysqlbinlog output that may contain BLOB values.
+# 									By default, mysql translates \r\n in statement strings to \n and interprets \0 as
+# 									the statement terminator.
+#
+# 									This option disables both features. Also disables all mysql commands except charset and delimiter
+# 									in non-interactive mode (for input piped to mysql or loaded using the source command)
+#
+# --bind-address= 			On a computer having multiple network interfaces, use this option to select which interface to use
+#   <ip address> 				for connecting to the MySQL server.
+#
+# --character-sets-dir= 	The directory where char sets are installed.
+#   <dir name>
+#
+# --column-names 				Write column names in results
+#
+# --column-type-info 		Display result sets metadata
+#
+# --comments, -c 				Whether to strip or preserve comments in statements sent to the server. (DEPRECATED)
+# 									Defaults to --skip-comments (strip comments), enable with --comments (preserves them)
+# 
+# 									Note: Commands and queries directed towards the server - are just hints. Server yields final say.
+# 														
+# --compress, -C 				Compress all information sent between client and the server if both support compression.
+#
+# --connect-expired- 		Indicate to the server that the client can handle sandbox mode if the account used to connect has an expired PW.
+#   password 					Can be useful for noninteractive invocations of mysql because normally the server disconnects noninteractive clients
+# 									that attempt to connect using an account with an expired PW.
+#
+# --database=<db_name>, 	The DB to use. Useful primarily in a option file.
+#   -D <db_name>
+#
+# --debug[=<debug_options>], Write a debugging tool. A typical <debug_options> string is d:t:o, <file_name>. Defaults to d:t:o, /tmp/mysql.trace
+#   -# [<debug options>]     Available only if MySQL was built using WITH_DEBUG.
+#
+# 									  MySQL release binaries are NOT designed for this option.
+#
+# --debug-check 				Print some debugging information when the program exits.
+#
+# --debug-info, -T 			Print debugging information and memory and CPU usage stats when the program exits.
+#
+# --default-auth=<plugin>  A hint about the client-side auth plugin to use
+#
+# --default-character-set  Use charset_name as the default char set for the client and connection.
+# =<charset_name> 			This option can be useful if the OS uses one char set and the mysql client by default
+# 									uses another.
+#
+# 									In this case, output may be formatted incorrectly. You can usually fix such issues by using
+# 									this option to force the client to use the system char set instead.
+#
+# --defaults-extra-file 	Read this option file after the global option file but (On Unix) before user option files.
+# =<file name> 				If not found/inaccessible, error raised. Relative if not full path specified, explicit otherwise.
+#
+# --defaults-file 			Use only the given option file. .mylogin.cnf is still read. If not found/inaccessible, error raised.
+# =<file name>
+#
+# --defaults-group-suffix  Read not only the usual option groups, but also groups with the usual names and a suffix of <str>.
+# =<str> 						Regex triggering of suffix sorting, basically.
+#
+# --delimiter=<str> 			Set the statement delimiter. The default is the semicolon char (;)
+#
+# --disable-named-commands Disable named commands. Use the \* format only, or use named commands only at the beginning of a line ending with (;)
+# 									Starts with this option enabled by default.
+#
+# 								   Even with this option, long-format commands still work from the first line.
+#
+#--enable-cleartext-plugin Enables the mysql_clear_password cleartext authentication plugin.
+#
+# --execute=<statement>, 	Execute the statement and quit. The default output format is like that produced with --batch.
+#  -e <statement>
+# 									If this option is done, the history file is not used by MySQL.
+#
+# --force, -f 					Continue even if an error is raised
+#
+# --get-server-public-key  Request from the server the public key required for RSA key pair-based PW exchange.
+# 									This option applies to clients that authenticate with the caching_sha2_password authentication plugin.
+#
+# 									For that plugin, the server does not send the public key unless requested. This option is
+# 									ignored for accounts that do not authenticate with that plugin. 
+#
+# 									It is also ignored if RSA-based PW exchange is not used, as is the case when the client connects
+# 									to the server using a secure connection.
+#
+# 									If --server-public-key-path=<file name> is given and specifies a valid public key file,
+# 									it takes precedence over --get-server-public-key
+#
+# --histignore 				Colon-seperated list of one or more patterns specifying statements to ignore for logging purposes.
+# 									The patterns are added to the default pattern list ("*IDENTIFIED*:*PASSWORD*")
+#
+# 									The value specified for this option affects logging of statements written to the history file, and
+# 									to syslog if the --syslog option is given.
+#
+# --host=<host name>, 		Connect to the MySQL server on the given host.
+# -h <host name>
+#
+# --html, -H 					Produce HTML Output
+#
+# --ignore-spaces, -i 		Ignore spaces after function names. The effect of this is described in the discussion
+# 									for the IGNORE_SPACE SQL mode
+#
+# --init-command=<str> 		SQL statements to execute after connecting to the server. If auto-reconnect is enabled, the statement
+# 									is executed again after reconnection occurs.
+#
+# --line-numbers 				Write line numbers for errors. Disable this with --skip-line-numbers.
+#
+# --local-infile[={0|1}] 	Enable or disable LOCAL capability for LOAD DATA INFILE. For mysql, this capability is disabled by default.
+# 									With no value, the option enables LOCAL. This option may be given as --local-infile=0 or --local-infile=1 
+# 									to explicitly disable or enable LOCAL.
+#
+# 									Enabling local data loading also requires that the server permits it.
+#
+# --login-path=<name> 		Read options from the named login path in the .mylogin.cnf login path file.
+# 									A "login path" is an option group containing options that specify which MySQL server
+# 									to connect to and which account to authenticate as.
+#
+# 									To create or modify a login path file, use the mysql_config_editor.
+#
+# --named-commands, -G 		Enables named mysql commands. Long-format commands are permitted, not just short-format commands.
+# 									For example, quit and \q both are recognized. Use --skip-named-commands to disable named commands.
+#
+# --no-auto-rehash, -A 		This has the same effect as --skip-auto-rehash.
+#
+# --no-beep, -b 				No beep @ errors
+#
+# --no-defaults 				Do not read any option files. Prevents error causing files. 
+# 									.mylogin.cnf is read regardless.
+#
+# --one-database, -o 		
+
+#https://dev.mysql.com/doc/refman/8.0/en/mysql-command-options.html
+#
+
+#https://dev.mysql.com/doc/refman/8.0/en/mysql-upgrade.html
 
