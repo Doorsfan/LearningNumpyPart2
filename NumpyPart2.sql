@@ -2626,10 +2626,548 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # --no-defaults 				Do not read any option files. Prevents error causing files. 
 # 									.mylogin.cnf is read regardless.
 #
-# --one-database, -o 		
-
-#https://dev.mysql.com/doc/refman/8.0/en/mysql-command-options.html
+# --one-database, -o 		Ignore statements except those that occur while the default DB is the one named on the CMD line.
+# 									This option is rudimentary and should be used with care.
 #
+# 									Statement filtering is based only on USE statements.
+#
+# 									Initially, mysql executes statements in the input because specifying a DB <db_name>
+# 									on the CMD line is the equivalent to inserting USE <db name> at the beginning of the input.
+#
+# 									Then, for each USE statement encountered, mysql accepts or rejects following statements depending on
+# 									whether the database named is the one on the CMD line.
+#
+# 									The content of hte statement is irrelevant.
+#
+# 									Assuming the following Query:
+# 									DELETE FROM db2.t2; USE db2; DROP TABLE db1.t1; CREATE TABLE db1.t1 (i INT); USE db1;
+# 									INSERT INTO t1 (i) VALUES(1); CREATE TABLE db2.t1 (j INT);
+#
+# 									If the command to process it, is: 
+# 									mysql --force --one-database db1, mysql
+#
+# 									The DELETE statement is executed because the default database is db1, even though the statement
+# 									names a table in a different database.
+#
+# 									The DROP TABLE and CREATE TABLE statements are not executed because the default database is not db1,
+# 									even though the statements named a table in db1
+#
+# 									The INSERT and CREATE TABLE statements are executed because the default database is db1, even though
+# 									the CREATE TABLE statement names a table in a different database.
+#
+# --pager[=<command>] 		Use the given command for paging query output. If the command is omitted, the default pager is the value of
+# 									your PAGER environment variable.
+#
+# 									Valid pagers are less, more, car [> filename>], and so forth. This option works only on Unix and only
+# 									in interactive mode. To disable it - use --skip-pager.
+#
+# --password=[=<password>] The password to use when connecting to the server. If you use the short option form (-p), you cannot
+#   ,-p[<password>]        have a space between the option and the PW.
+#
+# 									If you omit the PW value following the --password or -p option on the command line, mysql prompts for one.
+#
+# --pipe, -W 					On Windows, connect to the server using a named pipe. This option applies only if the server supports named-pipe
+# 									connections.
+#
+# --plugin-dir=<dir name> 	The dir in which to look for plugins. Specify this option if the --default-auth option is used to specify an authentication
+# 									plugin but mysql does not find it.
+#
+# --port=<port num>, 		The TCP/IP port number to use for the connection. 
+#  -P <port_num>
+#
+# --print-defaults 			Print the program name and all options that it gets from option files.
+#
+# --prompt=<format str> 	Set the prompt to the specified format. The default is mysql>. The special sequences
+# 									that the prompt can contain are described later.
+#
+# --protocol={TCP|SOCKET 	The connection protocol to use for connecting to the server. It is useful when the other connection
+#   |PIPE|MEMORY} 			parameters normally would cause a protocol to be used other than the one you want.
+#
+# --quick, -q 					Do not cache each query result, print each row as it is received. This may slow down the server if the output is suspended.
+# 									With this option, mysql does not use the history file.
+#
+# --raw, -r 					For tabular output, the "boxing" around columns enables one column value to be distinguished from another.
+# 									For nontabular output (such as is produced in batch mode or when the --batch or --silent option is given),
+# 									special chars are escaped in the output so they can be identified easily.
+#
+# 									Newline, tab, NUL, and backslash are written as \n, \t, \0, and \\. The --raw disables the char escaping.
+#
+# Showcasing of differences:
+# mysql> SELECT CHAR(92); #Select ORD numeral 92 char, which is \
+# +-------------------+
+# | 		CHAR(92) 	 | 
+# +-------------------+
+# | 			\ 			 |
+# +-------------------+
+#
+# mysql -s #Silent mode
+# mysql> SELECT CHAR(92); #Select ORD numeral 92, silent, escape enabled
+# CHAR(92)
+# \\
+#
+# mysql -s -r #Silent raw mode
+# mysql> SELECT CHAR(92);
+# CHAR(92)
+# \
+#
+# --reconnect
+# If the connection to the server is lost, automatically try to reconnect. A single reconnect attempt 
+# is made each time the connection is lost.
+#
+# To surpress the reconnection behavior, use --skip-reconnect.
+#
+# --safe-updates, --i-am-a-dummy, -U
+# Permit only those UPDATE and DELETE statements that specify which rows to modify by using key values.
+# If you have set this option in an option file, you can override it by using --safe-updates on
+# on the cmd line.
+#
+# --secure-auth
+# This option was removed in MySQL 8.0.3
+#
+# --server-public-key-path=<file name>
+# The path name to a file containing a client-side copy of the public key required by the server for RSA key pair-based password exchange.
+# The file must be in PEM format.
+# This option applies to clients that authenticate with the sha256_password or caching_sha2_password authentication plugin.
+# 
+# This option is ignored for accounts that do not authenticate with one of those plugins. It is also ignored for instances of
+# RSA-based PW exchange not being used.
+#
+# If --server-public-key-path=<file name> is defined and is valid, it takes precedence over --get-server-public-key
+# It is only available if MySQL was built using OpenSSL.
+#
+# --shared-memory-base-name=<name>
+# On Windows, the shared-memory name to use, for connections made using shared memory to a local server.
+# The default is MySQL. Case-sensitive.
+# 
+# Must start with --shared-memory to enable shared-memory connections.
+#
+# --show-warnings
+# Causes warnings to be shown after each statement if there are any. This option applies to interactive and batch mode.
+#
+# --sigint-ignore
+# Ignore SIGINT signals (typically the result of using CTRL+C)
+#
+# --silent, -s
+# Silent mode. Produces less output. 
+# This option can be given multiple times to produce less and less output.
+# Results in nontabular output format and escaping of special characters. 
+# Escaping may be disabled by using
+# raw mode. (--raw)
+# 
+# --skip-column-names, -N
+# Do not write column names in results
+#
+# --skip-line-numbers, -L
+# Do not write line numbers for errors. Useful when you want to compare result files that include error messages.
+#
+# --socket=<path>, -S <path> 
+# For connections to localhost, the Unix socket file to use - or on Windows, the name of the named pipe to use.
+#
+# --ssl*
+# Options that begin with --ssl specify whether to connect to the server using SSL and indicate where to find
+# SSL keys and certs.
+#
+# --ssl-fips-mode={OFF|ON|STRICT}
+# Controls whether to enable FIPS mode on the client side.
+# The --ssl-fips-mode option differs from other --ssl-xxx options in that it is not used to
+# establish encrypted connections, but rather to affect which cryptographic ops are permitted.
+#
+# These --ssl-fips-mode values are permitted:
+# 		OFF - disables fips mode
+# 		ON  - enables fips mode
+#     STRICT - Enable "strict" FIPS mode.
+#
+# If the OpenSSL FIPS Object Module is not available, the only permitted value for --ssl-fips-mode is OFF.
+# In this case, setting --ssl-fips-mode to ON or STRICT - produces a warning, and defaults to OFF.
+#
+# --syslog, -j
+# Causes mysql to send interactive statements to the system logging facility.
+# On Unix, this is syslog; on Windows, it is the Windows Event Log.
+#
+# The destination where logged messages appear is system dependent. 
+#
+# On Linux, the destination is often the /var/log/messages file.
+#
+# a sample of output generated on Linux by using --syslog.
+# Each line is usually one line:
+#
+# Mar 	7 12:39:25 myhost MysqlClient[20824]:
+# 		SYSTEM_USER:'oscar', MYSQL_USER:'my_oscar', CONNECTION_ID:23,
+# 		DB_SERVER:'127.0.0.1', DB:'--', QUERY:'USE test;'
+# Mar 	7 12:39:28 myhost MysqlClient[20824]:
+# 		SYSTEM_USER:'oscar', MYSQL_USER:'my_oscar', CONNECTION_ID:23,
+# 		DB_SERVER:'127.0.0.1', DB:'test', QUERY:'SHOW TABLES;'
+#
+# --table, -t
+# Display output in table format. This is the default for interactive use, but can be used to produce
+# table output in batch mode.
+#
+# --tee=<file name>
+# Append a copy of output to the given file. This option works only in interactive mode.
+#
+# --tls-version=<protocol list>
+# The protocols permitted by the client for encrypted connections. 
+# The value is a comma-separated list containing one or more protocol names.
+# The protocols that can be named for this option depend on the SSL lib used to compile MySQL.
+# 
+# --unbuffered, -n
+# Flush the buffer after each query.
+#
+# --user=<user name>, -u <user_name>
+# The MySQL user name to use when connecting to the server.
+#
+# --verbose, -v
+# Verbose mode. Can be given multiple times.
+#
+# --version, -V
+# Version info and exit
+#
+# --vertical, -E
+# Print query output rows vertically (one line per column value).
+# Without this option, you can specify vertical output for individual statements
+# by terminating them with \G.
+#
+# --wait, -w
+# If the connection cannot be established, wait and retry insteaed of aborting.
+#
+# --xml, -X
+# Produce XML output
+# <field name="column_name">NULL</field>
+#
+# The output when --xml is used with mysql matches that of mysqldump --xml.
+#
+# An example of output is as follows:
+#
+# mysql --xml -uroot -e "SHOW VARIABLES LIKE 'version%'"
+# <?xml version="1.0"?>
+# 
+# <resultset statement="SHOW VARIABLES LIKE 'version%'" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+# <row>
+# <field name="Variable_name">version</field>
+# <field name="Value">5.0.40-debug</field>
+# </row>
+#
+# <row>
+# <field name="Variable_name">version_comment</field>
+# <field name="Value">Source distribution</field>
+# </row>
+#
+# <row>
+# <field name="Variable_name">version_compile_machine</field>
+# <field name="Value">i686</field>
+# </row>
+#
+# <row>
+# <field name="Variable_name">version_compile_os</field>
+# <field name="Value">suse-linux-gnu</field>
+# </row>
+# </resultset>
+#
+# We can also set the following variables by using --<var_name>=<value>
+# 
+# connect_timeout - Number of seconds before connection timeout (Defaults to 0)
+# max_allowed_packet - Maximum size of the buffer for client/server communication. defaults to 16MB, max is 1GB.
+# max_join_size - Automatic limit for rows in a join when using --safe-update. Defaults 1 million
+# net_buffer_length - The buffer size for TCP/IP and socket communication (default is 16KB)
+# select_limit - Automatic limit for SELECT statements when using --safe-updates. (default is 1000)
 
-#https://dev.mysql.com/doc/refman/8.0/en/mysql-upgrade.html
+#The following section covers mysql commands:
+#
+# Showcasing of the results of writing help on the cmd line
+#
+# mysql> help
+#
+# List of all MySQL commands:
+# Note that all text commands must be first on line and end with ';'
+# ? 			(\?) 	Synonym for 'help'.
+# clear 		(\c)  Clear the current input statement.
+# connect  	(\r) 	Reconnect to the server. Optional arguments are db and host.
+# delimiter (\d) 	Set statement delimiter
+# edit 		(\e) 	Edit command with $EDITOR.
+# ego 		(\G) 	Send command to mysql server, display result vertically
+#
+# exit 		(\q) 	Exit mysql. same as quit.
+# go 			(\g) 	Send command to mysql server
+# help 		(\h) 	Display this help
+# nopager 	(\n) 	Disable pager, print to stdout
+# notee 		(\t) 	Do not write into outfile
+#
+# pager 		(\P) 	Set PAGER [to_pager]. Print the query results via PAGER
+# print 		(\p) 	Print current command
+# prompt 	(\R) 	Change your mysql prompt
+# quit 		(\q) 	Quit mysql
+# 
+# rehash 	(\#) 	Rebuild completion hash
+# source 	(\.) 	Execute an SQL script file. Takes a file name as an argument.
+# status 	(\s) 	Get status information from the server.
+# system 	(\!) 	Execute a system shell command
+#
+# tee 		(\T) 	Set outfile [to_outfile]. Append everything into given outfile.
+# use 		(\u) 	Use another database. Takes database name as argument
+# charset 	(\C) 	Switch to another charset. Might be needed for processing binlog with multi-byte charsets.
+#
+# warnings 	(\W) 	Show warnings after every statement
+# nowarning (\w) 	Don't show warnings after every statement.
+# resetconnection(\x) 	show warnings after every statement
+#
+# If MySQL is invoked with the --binary-mode option, all mysql commands are disabled except charset and delimiter
+# in non-interactive mode (for input piped to mysql or loaded using the source command)
+#
+# Each command has both a long and short form. Long is not case-sensitive. Short is.
+#
+# Long can be followed by an optional semicolon terminator, but short should not.
+#
+# We are not allowed to use multiple line comments with /* ... */
+#
+# the following showcases the different commands in terms of long format and short format
+#
+# help [arg], \h [arg], \? [arg], ? [arg]
+# 
+# Displays a help message listing the available mysql commands.
+# The arg input to help, acts as regex match in server-side help commands.
+#
+# charset <charset_name>, \C <charset_name>
+#
+# Changes the default character set and issues a SET_NAMES statement. This enables the character set to remain
+# synchronized on the client and server if mysql is run with auto-reconnect enabled (not recommended),
+# as the specified char set is used for reconnects.
+# 
+# clear, \c
+# Clear the current input. Use this if you change your mind about executing the statement that you are entering.
+#
+# connect [<db_name> <host_name>]], \r [<db name> <host name>]]
+#
+# Reconnect to the server. The optional database name and host name arguments may be given to specify the default
+# DB or the host where the server is running.
+#
+# If omitted, the current values are used.
+#
+# delimiter <str>, \d <str>
+# 
+# Change the string that mysql interprets as the separator between SQL statements. The default is the semicolon char (;)
+#
+# The delimiter string can be specified as an unquoted or quoted argument on the delimiter command line. Quoting can be done
+# with either single quote ('), double quote (") or backtick (`) chars.
+#
+# To include a quote within a quoted string, either quote the string with a different quote character or
+# escape the quote with a (\) char.
+#
+# Backslash should be avoided outside of quoted strings because it is the escape character for MySQL.
+# For an unquoted argument, the delimiter is read up to the first space or end of line.
+#
+# For a quoted argument, the delimiter is read up to the matching quote on the line.
+#
+# mysql interprets instances of the delimiter string as a statement delimiter anywhere it occurs, except within
+# quoted strings.
+#
+# Be careful about defining a delimiter that might occur within other words. For example, if you define
+# the delimiter as X, you will be unable to use the word <INDEX> in statements.
+#
+# Mysql interprets this as <INDE> followed by the delimiter X.
+#
+# When the delimiter recognized by mysql is set to something other than the default of ;,
+# instances of that character are sent to the server without interpretation.
+#
+# However, the server itself still interprets ; as a statement delimiter and process statements
+# accordingly. This behavior on the server side comes into play for multiple-statement execution,
+# for parsing the body of stored procedures and functions, triggers and events.
+#
+# edit, \e
+# Edit the current input statement. mysql checks the values of the EDITOR and VISUAL env variables
+# to determine which editor to use.
+#
+# The default editor is vi if neither variable is set.
+#
+# The edit command works only in Unix.
+#
+# ego, \G
+# Send the current statement to the server to be executed and display the result using vertical format.
+#
+# exit, \q
+# Exit mysql
+#
+# go, \g
+# Send the current statement to the server to be executed.
+#
+# nopager, \n
+# Disable output paging. See the description for pager.
+#
+# The nopager command works only in Unix.
+#
+# notee, \t
+# Disable output copying to the tee file. See the description for tee.
+#
+# nowarning, \w
+# Disable display of warnings after each statement.
+#
+# pager [<command>], \P [<command>]
+# Enable output paging. By using the --pager option when you invoke mysql, it is possible to browse or search query
+# results in interactive mode with Unix programs such as less, more, or any other similar program.
+#
+# If you specify no value for the option, mysql checks the value of the PAGER environment variable and sets the
+# pager to that. Pager functionality works only in interactive mode.
+#
+# Output paging can be enabled interactively with the pager command and disabled with nopager.
+# The command takes an optional argument; if given, the paging program is set to that.
+#
+# With no arg, the pager is set to the pager that was set on the command line, or stdout if no pager was specified.
+#
+# Output paging works only in Unix because it uses the popen() function, which does not exist on Windows.
+# For Windows, the tee option can be used instead to save query output, although it is not as convenient
+# as pager for browsing output in some situations.
+#
+# print, \p
+# Print the current input statement without executing it
+#
+# prompt [<str>], \R [<str>]
+# Reconfigure the mysql prompt to the given string. The special character sequences that can be used in the
+# prompt are described later in this section.
+#
+# If you specify the prompt command with no argument, mysql resets the prompt to the default of mysql>.
+#
+# quit, \q
+# Exit mysql.
+#
+# rehash, \#
+# Rebuild the completion hash that enables database, table and column name completion while you are entering statements.
+# (See the description for the --auto-rehash option)
+#
+# resetconnection, \x
+# Reset the connection to clear the session state.
+#
+# Resetting a connection has effects similar to mysql_change_user() or an auto-reconnect except that
+# the connection is not closed and reopened, and re-authentication is not done.
+#
+# Showcasing of example:
+#
+# SELECT LAST_INSERT_ID(3); #gives 3
+# SELECT LAST_INSERT_ID(); #gives 3, still set to this
+# resetconnection; #Resets defaults
+# SELECT LAST_INSERT_ID(); #Gives 0, reset has been done
 
+# source <file_name>, \. <file_name>
+# Read the named file and execute the statements contained therein. On Windows, you can specify
+# path name separators as / or \\.
+#
+# Quote characters are taken as part of the file name itself. For best results, the name should not
+# include space characters.
+#
+# status, \s
+# Provide status information about the connection and the server you are using.
+# If you are running in --safe-updates mode, status also prints the values for the
+# mysql variables that affect your queries.
+#
+# system <command>, \! <command>
+# Execute the given command using your default cmd interpreter.
+# Works only on Unix.
+#
+# tee [<file_name>], \T [<file_name>]
+# By using the --tee option when you invoke mysql, you can log statements and their output.
+# All the data displayed on the screen is appended into a given file.
+#
+# This can be very useful for debugging purposes also. mysql flushes results to the file
+# after each statement, just before it prints its next prompt.
+#
+# Tee functionality works only in interactive mode.
+#
+# You can enable this feature interactively with the tee command. Without a parameter,
+# the previous file is used. The tee file can be disabled with the notee command.
+#
+# Executing tee again re-enables logging.
+#
+# use <db_name>, \u <db_name>
+# Use <db_name> as the default DB.
+#
+# warnings, \W
+# Enable display of warnings after each statement (if there are any)
+#
+# Tips about the pager command:
+# 
+# Example of writing only to a file:
+# pager cat > /tmp/log.txt
+#
+# We can also pass options with the pager
+# pager less -n -i -S
+#
+# Example of piping to different files mounted on two different systems, still displaying to screen using less:
+# pager cat | tee /dr1/tmp/res.txt \
+# 			| tee /dr2/tmp/res2.txt | less -n -i -S
+#
+# We can also combine the tee and pager functions. Have a tee file enabled and pager set to less, and you are
+# able to browse the results using the less program and still have everything appended into a file the same time.
+#
+# The difference between the Unix tee used with the pager command and the mysql built-in tee command is that the
+# built-in tee works even if you do not have the Unix tee available.
+#
+# The built-in tee logs everything that is printed on the screen, where as the Unix tee used with pager
+# does not log equal amounts.
+#
+# Additionally, tee file logging can be turned on and off interactively from within mysql. This is useful
+# when you want to log some queries to a file, but not others.
+#
+# The prompt command reconfigures the default mysql> prompt. The string for defining the prompt can
+# contain the following special sequences:
+#
+# Option 					Desc
+# \C 				The current connection identifier
+# \c 				A counter that increments for each statement you issue
+# \D 				The full current date
+# \d 				The default database
+# \h 				The server host
+#
+# \l 				The current delimiter
+# \m 				Minutes of the current time
+# \n 				A newline char
+# \O 				The current month in three letter format (Jan, Feb, etc.)
+# 
+# \o 				The current month in numeric format
+# \P 				am/pm
+# \p 				The current TCP/IP port or socket file
+# \R 				The current time, in 24-hour military time(0-23)
+#
+# \r 				The current time, standard 12-hour time (1-12)
+# \S 				Semicolon
+# \s 				Seconds of the current time
+# \t 				A tab char
+#
+# \U 				Your full user_name@host_name acc name
+# \u 				Your user name
+# \v 				The server version
+# \w 				The current dat of the week in three letter format (Mon, Tue, etc.)
+#
+# \Y 				The current year, four digits
+# \y 				The current year, two digits
+# \_ 				A space
+# \ 				A space (space after the \)
+# \' 				Single quote
+# \" 				Double quote
+# \\ 				A literal backslash char
+#
+# \x 				x, for any "x" not listed above
+
+# There is a number of ways we can change the prompt:
+#
+# An environment variable: 
+# export MYSQL_PS1="(\u@\h) [\d]> "
+#
+# A cmd line option. Can set the prompt with --prompt on the cmd line:
+# mysql --prompt="(\u@\h) [\d]> "
+# (user@host) [database]>
+#
+# Using an option file. Prompt option in the [mysql] group, such as /etc/my.cnf or the .my.cnf in the home dir:
+# [mysql]
+# prompt(\\u@\\h) [\\d]>\\_
+#
+# \\ is used in the option file for explicit escaping.
+#
+# We can also set it interactively, by using prompt or \R
+
+# prompt (\u@\h) [\d]>\_
+# PROMPT set to '(\u@\h) [\d]>\_'
+# (user@host) [database]>
+# (user@host) [database]> prompt
+# Returning to default PROMPT of mysql>
+# mysql>
+#
+#The next part covers Mysql logging
+#
