@@ -3360,7 +3360,263 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # mysql ignores Unicode byte order mark (BOM) chars at the beginning of input files.
 
 #MYSQL tips section next
+
+# Input-Line Editing
+#
+# mysql supports input-line editing, which enables you to modify the current input line in place or recall previous input lines.
+# For example, up/down arrows moves between previous entered lines.
+#
+# To change the set of key sequences permitted by a given input library, define key bindings in the library startup file.
+# .editrc for libedit and .inputrc for readline
+#
+# in Libedit:
+# CTRl+W - deletes everything before current cursor pos.
+# CTRL+U - the entire line.
+#
+# in readline:
+# Ctrl+W - deletes the word before the cursor
+# CTRl+U - deletes everything before the current cursor pos.
+
+# Unicode on Windows:
+# provided through UTF-16LE APIs reading from and to the console.
+# The mysql client for Windows is able to use these APIs.
+# 
+# The Windows installer creates an item in the MySQL menu named MySQL command line client - Unicode.
+# This item invokes the mysql client with properties set to communicate through the console to
+# the MySQL server using Unicode.
+#
+# Open the console window
+# Go to console window properties - select font tab - choose Lucidia Console or some other compatible UNICODE font.
+#
+# This is called for, due to console windows start by default using a DOS raster font that is uncalled for Unicode.
+#
+# Execute mysql with --default-character-set=utf8 (or utf8mb4) option.
+# It is nessecary because utf16le cannot be used as client char set, amongst others.
+#
+# With said changes, Windows will use the Windows API to communicate with the console using UTF-16LE,
+# and communicate with the server using UTF-8.
+#
+# To avoid said steps each time we run mysql, we can create a shortcut that invokes mysql.exe
+# The shortcut should set the console font to Lucida Console or some other compatible
+# Unicode font, and pass the --default-character-set=utf8 to mysql.
+#
+# Alternatively, we have a shortcut for the console font - with the char set in the [mysql] group in a my.ini file:
+# [mysql]
+# default-character-set=utf8
+#
+# The following covers Displaying Query Results Vertically
+# 
+# Just end the query with \G instead of ;
+# mysql> SELECT * FROM mails WHERE LENGTH(txt) < 300 LIMIT 300,1\G
+# 
+# ******************************* 1. row ****************************
+# 
+#   msg_nro: 3068
+# 		 date: 2000-03-01 23:29:50
+# time_zone: +0200
+# mail_from: Monty
+#     reply: monty@no.spam.com
+#   mail_to: "Thimble Smith" <tim@no.spam.com>
+# 	 	  sbj: UTF-8
+# 		  txt: >>>>> "Thimble" == Thimble Smith Writes:
+#
+# Thimble> Hi, i think this is a good idea. Is anyone familiar 
+# Thimble> with UTF-8 or Unicode? Otherwise, i'll put this on my
+# Thimble> TODO list and see what happens.
+#
+# Yes, please do that
+# 
+# Regards,
+# Monty
+# 		 file: inbox-jani-1
+# 		 hash: 190402944
+
+# Using the --safe-updates Option
+# 
+# For beginners, a useful startup option is --safe-updates (or --i-am-a-dummy, which has the same effect).
+# It is helpful for cases when you might have issued a DELETE FROM <tbl_name> statement, but if we forgot the Where part.
+#
+# By --safe-updates, we enforce key referal to commit to delete updates.
+#
+# The query sent upon startup is the following:
+# 
+# SET sql_safe_updates=1, sql_select_limit=1000, max_join_size=1mil
+#
+# The SET statement has the following effects:
+#
+# You are not permitted to execute an UPDATE or DELETE statement unless you specify a key constraint in the
+# WHERE clause or provide a LIMIT clause (or both)
+#
+# Example:
+#
+# UPDATE <tbl_name> SET <not_key_column>=<val> WHERE <key_column>=<val>;
+#
+# UPDATE <tbl_name> SET <not_key_column>=<val> LIMIT 1;
+#
+# The server limits all large SELECT results to 1,000 rows unless the statement includes a LIMIT clause.
+# 
+# The server aborts multiple-table SELECT statements that probably need to examine more than 1 mil row combos.
+#
+# We can override the defaults by using --select_limit and --max_join_size options:
+#
+# mysql --safe-updates --select_limit=500 --max_join_size=10000
+#
+# Disabling mysql Auto-Reconnect
+#
+# If the mysql client loses its connection to the server while sending a statement, it immediately and automatically
+# tries to reconnect once to the server and send the statement again.
+#
+# However, even if mysql succeeds in reconnecting, your first connection has ended and all your previous session objects/settings
+# are lost.
+#
+# Temporary tables, the autocommit mode, user-defined vars and session vars.
+#
+# Any current transactions roll back. 
+#
+# An example of loss of designation:
+#
+# mysql> SET @a=1;
+# mysql> INSERT INTO t VALUES(@a); #Gets error
+#
+# mysql> SELECT * FROM t; #a is now Null
+
+#To terminate with an error, start mysql with --skip-reconnect
+
+# The next section covers mysqladmin - Client to administer a MySQL server
+#
+# Invoked:
+#
+# mysqladmin [<options>] <command> [<command-arg>] [<command> [<command-arg>]] ...
+#
+# mysqladmin supports the following commands. Some of the commands take an argument following the cmd name:
+#
+# create <db_name> - creates a DB with <db_name>
+# debug - Tell the server to write debug information to the error log. Connnected user must have SUPER privs.
+# drop <db_name> - Delete the DB named <db_name> and all of its tables.
+# extended-status - Display the server status vars and their values.
+# flush-hosts - Flush all information in the host cache
+#
+# flush-logs [<log_type> ...] - Flush all logs. The mysqladmin flush-logs cmd permits optional log types to be given,
+# to specify which logs to flush.
+#
+# Following the flush-logs command, you can provide a space-separated list of one or more of the following log types:
+# binary, engine, error, general, relay, slow
+#
+# These correspond to the log types that can be specified for the <FLUSH LOGS> SQL statement.
+#
+# flush-privileges - Reload the grant tables (same as reload)
+#
+# flush-status - Clear status vars
+#
+# flush-tables - Flush all tables
+#
+# flush-threads - Flush the thread cache
+#
+# kill id, id, ... - Kill server threads. If multiple thread ID values are given, there must be no spaces in the list.
+# 							To kill threads belonging to other users, the connected user must have the CONNECTION_ADMIN or SUPER privs.
+#
+# password <new_pw> - Sets a new PW. This changes the PW to <new_pw> for the account that you use with mysqladmin for connecting to the server.
+# 							 Thus, the next time you invoke mysqladmin (or any other client program) using the same account, you need to specify the new PW.
+#
+# NOTE: Setting a pw using mysqladmin should be considered <insecure>. On some systems, your PW becomes visibile to system status programs such as 
+# ps that may be invoked by other users to display cmd lines. MySQL clients typically overwrite the cmd-line pw argument with 0's during init seq.
+#
+# There is still a brief interval during which the value is visible. Also, on some systems this overwriting strategy is ineffective and the PW
+# remains visible to ps.
+#
+# If the <new_pw> contains spaces or other chars that are special to your cmd line, you need to enclose it with ""
+# On windows, be sure to use "" rather than '', '' are not stripped from the PW.
+#
+# Simply use config files for PWs.
+#
+# ping - Check whether the server is available. The return status from mysqladmin is 0 if the server is running, 1 if it is not.
+# Even errors produce 0 - as it does not denote that the server is offline.
+#
+# processlist - Show a list of active server threads. This is the same as SHOW PROCESSLIST. If Verbose is given, the output is like that
+# of SHOW FULL PROCESSLIST.
+
+# reload - Reload the grant tables.
+#
+# refresh - Flush all tables and close and open log files.
+#
+# shutdown - Stop the server
+#
+# start-slave - Start replication on a slave server
+#
+# status - Display a short server status message
+#
+# stop-slave - Stop replication on a slave server
+#
+# variables - Display the server system vars and their values
+#
+# version - Display version info from the server
+#
+# All commands can be shortened to any unique prefix:
+#
+# mysqladmin proc stat #Prints ID, user, host, db, command, Time, State, Info
+# #Also prints stats
+#
+# The mysqladmin status command result displays the following values:
+# 
+# Uptime - Number of seconds the MySQL server has been running
+# Threads - Number of active threads (clients)
+# Questions - The number of questions (queries) from clients since the server was started.
+# Slow queries - Number of queries that have taken more than long query time seconds.
+#
+# Opens - The number of tables the server has opened
+# Flush tables - The number of flush-*, refresh and reload commands the server has executed
+# Open tables - Number of tables that currently are open
+
+# If you execute mysqladmin shutdown when connecting to a local server using a Unix socket file, mysqladmin waits until
+# the server's process ID file has been removed, to ensure that the server has stopped properly.
+#
+# The following options are supported in terms of mysqladmin - of which can be specified on the cmd line or in the [mysqladmin] and [client] groups of a option file.
+#
+# mysqladmin Options
+#
+# Format 									Desc
+# --bind-address 							Use specified network interface to connect to MySQL Server
+# --compress 								Compress all information sent between client and server
+# --connect_timeout 						Number of seconds before connection timeout
+# --count 									Number of iterations to make for repeated command execution
+#
+# --debug 									Write debugging log
+# --debug-check 							Print debugging information when program exits
+# --debug-info 							Print debugging information, memory and CPU stats when the program exits.
+#
+# --default-auth 							Authentication plugin to use.
+# --default-character-set 				Specify default character set
+# --defaults-extra-file 				Read named option file in addition to usual option files
+# --defaults-file 						Read only named option file
+#
+# --defaults-group-suffix 				Option group suffix value
+# --enable-cleartext-plugin 			Enable cleartext authentication plugin
+# --force 									Continue even if an SQL error occurs
+# --get-server-public-key 				Request RSA public key from server
+# --help 									Display help message and exit
+#
+# --host 									Connect to MySQL Server on given host
+# --login-path 							Read login path options from .mylogin.cnf
+# --no-beep 								Do not beep when errors occur
+# --no-defaults 							Read no option files
+# --password 								Password to use when connecting to server
+# --pipe 									On Windows, connect to server using named pipe
+# --plugin-dir 							Directory where plugins are installed
+#
+# --port										TCP/IP port number for connection
+# --print-defaults 						Print default options
+# --protocol 								Connection protocol to use
+# --relative 								Show the difference between the current and previous values when used with the --sleep option
+# --secure-auth 							Do not send PWs to server in old formats (REMOVED)
+# --server-public-key-path 			Path name to file containing RSA public key
+#
+# --shared-memory-base-name 			Name of the shared memory to use for shared-memory connections
+# --show-warnings 						
+
+#https://dev.mysql.com/doc/refman/8.0/en/mysqladmin.html
+
+#
+# 
+
+
 #https://dev.mysql.com/doc/refman/8.0/en/mysql-tips.html
-
-
-# https://dev.mysql.com/doc/refman/8.0/en/mysql-logging.html
