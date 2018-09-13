@@ -3171,3 +3171,196 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 #The next part covers Mysql logging
 #
+# The mysql client can do these types of logging for statements executed interactively:
+#
+# Unix -> mysql writes the statements to a history file. By default, the file is named .mysql_history in your home dir.
+# To specify a different file, set the value of the MYSQL_HISTFILE env variable.
+#
+# On all platforms, if the --syslog option is given, mysql writes the statements to the system logging facility.
+# Unix -> syslog
+# Windows -> Windows Event Log
+#
+# the destination where logged messages appear is system dependent. On Linux, the destination is often
+# the /var/log/messages file.
+#
+# How Logging Occurs:
+#
+# For each enabled logging destination - statement logging occurs as is shown:
+# 
+# Statements are logged only when executed interactively. Statements are noninteractive, for example, when read
+# from a file or a pipe. It is also possible to suppress statement logging by using the --batch or --execute option.
+#
+# Statements are ignored and not logged if they match any pattern in the "ignore" list. Shown later.
+#
+# mysql logs each nonignored, nonempty statement line individually.
+#
+# If a nonignored statement spans multiple lines (not including the terminating delimiter), mysql concatenates
+# the lines to form the complete statement, maps newlines to spaces and then logs the result + a delimiter.
+#
+# For instance:
+# SELECT
+# 	'Today is'
+#  ,
+#  CURDATE()
+#  ;
+#Gives:
+# SELECT 'Today is' , CURDATE();
+
+# mysql ignores for logging purposes statements that match any pattern in the "ignore" list.
+# By default, the pattern list is "*IDENTIFIED*:*PASSWORD*", to ignore statements that identify as PWs.
+
+# Two chars are significant in terms of the regex pattern: ? (Single wildcard char), * any sequence of zero or more chars.
+#
+# To specify additional patterns, use the --histignore option or set the MYSQL_HISTIGNORE env variable.
+# Option value takes precedence.
+#
+# The value should be a colon separated list, which are appended to the default list.
+# An example of a pattern delimiter defined on the cmd line, to ignore UPDATE and DELETE:
+#
+# mysql --histignore="*UPDATE*:*DELETE*"
+#
+# If we do not wish to maintain a hist file, cause it can contain PW info, we can remove it and do one of hte following:
+#
+# Set the MYSQL_HISTFILE env var to /dev/null - put in one of the shell startup files, causing deployment of options at the startup.
+# 
+# Create .mysql_history as a symbolic link to /dev/null; - only needs to be done once:
+#
+# ln -s /dev/null $HOME/.mysql_history
+#
+# syslog Logging Characeristics
+#
+# If the --syslog option is given, mysql writes interactive statements to the system logging facility.
+# Message logging has the following characteristics:
+#
+# Logging occurs at the "informational" level. 
+# This corresponds to the LOG_INFO priority for syslog on Unix/Linux syslog capability and to 
+# EVENTLOG_INFORMATION_TYPE for the Windows Event Log.
+#
+# Message size limit is 1024 bytes.
+#
+# Messages consists of the identifier MysqlClient followed by these values:
+#
+# SYSTEM_USER - The system user name (login name) or -- if the user is unknown.
+# 
+# MYSQL_USER  - The MySQL user name (specified with the --user option) or -- if the user is unknown.
+#
+# CONNECTION_ID - The client connection identifier. This is the same as the CONNECTION_ID() function value within the session.
+#
+# DB_SERVER - The server host or -- if the host is unknown
+# 
+# DB - The default database or -- if no DB has been selected.
+#
+# QUERY - The text of the logged statement.
+#
+# Example of output generated on Linux by using --syslog. Formatted for readability, each logged message takes a single line:
+#
+# Mar 	7 12:39:25 myhost 	MysqlClient[20824]:
+# 		SYSTEM_USER:'oscar', MYSQL_USER:'my_oscar', CONNECTION_ID:23,
+# 		DB_SERVER:'127.0.0.1', DB:'--', QUERY:'USE test;'
+# Mar 	7 12:39:28 myhost 	MysqlClient[20824]:
+# 		SYSTEM_USER:'oscar', MYSQL_USER:'my_oscar', CONNECTION_ID:23,
+# 		DB_SERVER:'127.0.0.1', DB:'test', QUERY:'SHOW TABLES;'
+
+# The following section covers the mysql Server-Side Help
+#
+# mysql> help <search_string>
+#
+# For this operation to work, the help tables in the mysql database must be initialized with the help topic information.
+#
+# If no value is found, an error is thrown.
+#
+# To see a list of categories:
+# 
+# mysql> help contents
+# You asked for help about help category: "Contents"
+# For more info, type 'help <item>', where <item> is one of the following categories:
+#
+# Account management
+# Administration
+# Data Definition
+# Data Manipulation
+# Data Types
+# Functions
+# Functions and Modifiers for Use with GROUP BY
+# Geographic Features
+# Language Structure
+# 
+# Plugins
+# Storage Engines
+# Stored Routines
+# Table Maintenance
+# Transactions
+# Triggers
+#
+# If multiple tags coincide, a list of the topics are shown:
+#
+# help logs
+# Many help items for your request exist
+# To make a more specific request, please type 'help <item>'
+# where <item> is one of the following topics:
+# 		SHOW
+# 		SHOW BINARY LOGS
+# 		SHOW ENGINE
+# 		SHOW LOGS
+#
+# Use a topic as the search string to see the help entry for that topic:
+#
+# mysql> help show binary logs
+# Name: 'SHOW BINARY LOGS'
+# Description:
+# Syntax:
+# SHOW BINARY LOGS
+# SHOW MASTER LOGS
+#
+# Lists the binary log files on the server. This statement is used as
+# part of the procedure described in [purge-binary-logs] - which shows how to determine which logs can be purged.
+#
+# mysql> SHOW BINARY LOGS;
+# +------------------------------+
+# | Log_name 	    |   File_size |
+# +------------------------------+
+# | binlog.000015  |    724935   |
+# | binlog.000016  | 	733481 	|
+# +------------------------------+
+
+# The search string can contain the wildcard char % and _. These have the same meaning as for pattern-matching,
+# such as % as any sequencing following but yields designated part in respective parting before that
+#
+# EXAMPLE% Finds anything that begins with EXAMPLE
+# %EXAMPLE Finds anything that ends with EXAMPLE
+#
+# mysql> HELP rep%
+# Many help items for your request exist
+# To make a more specific request, please type 'help <item>'
+# where <item> is one of the following topics:
+#
+# REPAIR TABLE
+# REPEAT FUNCTION
+# REPEAT LOOP
+# REPLACE
+# REPLACE FUNCTION
+#
+# The following showcases of how to execute SQL statements from a Text File
+#
+# Typically the mysql client is interactively done as:
+#
+# shell> mysql <db_name>
+#
+# However - we can run a script from a file, unto a DB - as follows:
+#
+# shell> mysql <db_name> < <text_file>
+#
+# If we include a USE <db_name> statement as the first statement in the file, no DB name must be done on the cmd line.
+#
+# If mysql is already running - we can execute a SQL script file using the source command or \. command:
+#
+# mysql> source <file_name>
+# mysql> \ <file_name>
+
+# mysql ignores Unicode byte order mark (BOM) chars at the beginning of input files.
+
+#MYSQL tips section next
+#https://dev.mysql.com/doc/refman/8.0/en/mysql-tips.html
+
+
+# https://dev.mysql.com/doc/refman/8.0/en/mysql-logging.html
