@@ -3611,12 +3611,54 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # --server-public-key-path 			Path name to file containing RSA public key
 #
 # --shared-memory-base-name 			Name of the shared memory to use for shared-memory connections
-# --show-warnings 						
+# --show-warnings 						Show warnings after statement execution.
+# --shutdown_timeout 					The maximum number of seconds to wait for server shutdown
+# --silent 									Silent mode
+# --sleep 									Execute commands repeatedly, sleeping for delay in between
+# --socket 									For connections to localhost, the Unix socket file to use
+# --ssl-ca 									File that contains list of trusted SSL Cert Auths
+#
+# --ssl-capath 							Directory that contains trusted SSL cert Auth cert files
+# --ssl-cert 								File that contains X.509 cert
+# --ssl-cipher 							List of permitted ciphers for connection encryption
+# --ssl-crl 								File that contains cert revocation lists
+#
+# --ssl-crlpath 							Dir that contains cert revocation list files
+# --ssl-fips-mode 						Whether to enable FIPS mode on the client side
+# --ssl-key 								File that contains X.509 key
+# --ssl-mode 								Security state of connection to server
+# --tls-version 							Protocols permitted for encrypted connections
+# --user 									MySQL user name to use when connecting to server
+# --verbose 								Verbose mode
+#
+# --version 								Display version information and exit
+# --vertical 								Print query output rows vertically (one line per column value)
+# --wait 									If the connection cannot be established, wait and retry instead of aborting
+
+# The following showcases short commands for some of the above of whom are listed:
+#
+# --help, -? - Display a help msg and exit
+# --bind-address=<ip address> - A computer having multiple network interfaces, use this option to select which interface to use for connecting to the MySQL Server.
+# --character-sets-dir=<dir name> - The dir where char sets are installed.
+# --compress, -C - Compress all information sent between the client and server if both support compression.
+# --count=<N>, -c <N> - The number of iterations to make for repeated command execution if the --sleep option is given.
+# --debug[=<debug options>], -# [<debug_options>] - Write a debugging log. A typical <debug_options> string is d:t:o, <file_name>.
+# 									     Defaults to d:t:o, /tmp/mysqladmin.trace
+# --debug-check - Prints some debugging information when the program exits.
+# --debug-info - Print debugging info, memory, CPU usage stats when the program exits.
+# --default-auth=<plugin> - A hint about the client side auth to use.
+#
+# --default-character-set=<charset name> - Use <charset_name> as the default char set.
+# --defaults-extra-file=<file name> - Read this option file after global, but before user option files on Unix.
+# 												  If not found or not permissioned, error raised. Relative if relative, Absolute otherwise.
+# --defaults-file=<file name> - Use only the given option file. If the file does not exist or is otherwise inaccessible, an error occurs.
+# 										  relative if relative, full otherwise.
+#
+# 										  The exception is .mylogin.cnf
+#
+# --defaults-group-suffix=<str> - read also groups with suffix regex match to str.
+# --enable-cleartext-plugin - Enables cleartext authentication plugin.
+# --force, -f - Do not ask for confirmation for the drop <db_name> command. with several commands, Continue even if an error occurs.
+# --get-server-public-key - 
 
 #https://dev.mysql.com/doc/refman/8.0/en/mysqladmin.html
-
-#
-# 
-
-
-#https://dev.mysql.com/doc/refman/8.0/en/mysql-tips.html
