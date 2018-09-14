@@ -3962,8 +3962,195 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # The next section covers mysqldump
 #
-# 
-# --
+# The mysqldump client utility performs logical backups, producing a set of SQL statements that can be executed
+# to reproduce the original database object definitions and table data. 
+#
+# It dumps one or more MySQL databases for backup or transfer to another SQL server.
+#
+# mysqldump can also generate output in CSV, text or XML.
+#
+# mysqldump requires at least the SELECT privlege for dumped tables, SHOW VIEW for dumped views, TRIGGER for dumped triggers
+# LOCK TABLES if the --single-transaction option is not used.
+#
+# Certain options might require other privs as noted in the option desc.
+#
+# To reload a dump file, you must have the privs required to execute the statements that it contains, such as
+# the appropriate CREATE privs for objects created by those statements.
+#
+# mysqldump output can include ALTER DATABASE statements that change the database collation.
+# These may be used when dumping stored programs to preserve their char encodings.
+#
+# To reload a dump file containing such statements, the ALTER priv for the affected DB is required.
 
+# For instance, a dump made by PowerShell will be in UTF16 - which is not a permitted connection char encoding.
+# To account for this - use --result-file to have it written in ASCII:
+#
+# mysqldump [<options>] --result-file=dump.sql
+#
+# mysqldump advantages include the convenience and flexibility of viewing or even editing the output before restoring.
+# You can clone DBs and create slight variations, kind of like branching, in a way.
+#
+# The backup step can take a reasonable time - however, restoring the data can be very slow because replaying
+# the SQL involves disk I/O for insertion, index creation and so on.
+#
+# If we have a lot of tables using InnoDB tables or a mix of InnoDB and MyISAM - we can use mysqlbackup from MySQL Enterprise Backup.
+#
+# It has the best performance for InnoDB.
+#
+# Otherwise, for large scale backup operations - utilize physical allocation.
+#
+# mysqldump can retrieve and dump table contents row by row, or it can retrieve the entire content from a table
+# and buffer it in memory before dumping it.
+#
+# Buffering in memory can be a problem if you are dumping large tables. To dump tables row by row, use the --quick
+# option (or --opt, which enables --quick).
+#
+# The --quick (implicitly activated by --opt) is on by default, so to enable memory buffering - use --skip-quick
+#
+# If you are using a recent version of mysqldump to generate a dump to be reloaded into a very old MySQL server,
+# use the --skip-opt option instead of the --opt or --extended-insert option.
+#
+# There is in general three ways of using mysqldump - one for a set of one or more tables, a set of one or more complete DBs,
+# or an entire MySQL server -
+#
+# mysqldump [<options>] <db_name> [<tbl_name> ...] #Omitting table names infers to dump the entire db
+# mysqldump [<options>] --databases <db_name>
+# mysqldump [<options>] --all-databases
+
+# mysqldump supports the following options - which can be specified on the cmd line or in the [mysqldump] and [client] groups
+# of an option file.
+#
+# Format 									Description
+# --add-drop-database 				Add DROP DATABASE statement before each CREATE DATABASE statement
+# --add-drop-table 					Add DROP TABLE statement before each CREATE TABLE statement
+# --add-drop-trigger 				Add DROP TRIGGER statement before each CREATE TRIGGER statement
+# --add-locks 							Surround each table dump with LOCK TABLES and UNLOCK TABLES statements
+#
+# --all-databases 					Dump all tables in all databases
+# --allow-keywords 					Allow creation of column names that are keywords
+# --apply-slave-statements 		Include STOP SLAVE prior to CHANGE MASTER statement and START SLAVE at end of Output
+# --bind-address						Use specified network interface to connect to MySQL Server
+# --character-sets-dir 				Directory where char sets are installed
+# --column-statistics 				Write ANALYZE TABLE statements to generate statistics histograms
+#
+# --comments 							Add comments to dump file
+# --compact 							Produce more compact output
+# --compatible 						Produce output that is more compatible with other database systems or with older MySQL servers
+# --complete-insert 					Use complete INSERT statements that include column names
+# --compress 							Compress all information sent between client and server
+# --create-options 					Include all MySQL-specific table options in CREATE TABLE statements
+# 
+# --databases 							Interpret all name arguments as database names
+# --debug 								Write debugging log
+# --debug-check 						Print debugging information when program exits
+# --debug-info 						Print debugging information, memory, CPU stats when program exits
+# --default-auth 						Authentication plugin to use
+# --default-character-set 			Specify default character set
+# --defaults-extra-file 			Read named option file in addition to usual option files
+#
+# --defaults-file 					Read only named option file
+# --defaults-group-suffix 			Option group suffix value
+# --delete-master-logs 				On a master replication server, delete the binary logs after performing the dump operation
+# --disable-keys 						For each table, surround INSERT statements with statements to disable and enable keys
+# --dump-date 							Include dump date as "Dump completed on" comment, if comments option is given
+# --dump-slave 						Include CHANGE MASTER statement that lists binary log coordinates of slave's master
+# --enable-cleartext-plugin 		Enable cleartext authentication plugin
+#
+# --events 								Dump events from dumped databases
+# --extended-insert 					Use multiple-row INSERT syntax
+# --fields-enclosed-by 				This option is used with the --tab option and has the same meaning as the corresponding clause for LOAD DATA INFILE
+# --fields-escaped-by 				This option is used with the --tab option and has the same meaning as the corresponding clause for LOAD DATA INFILE
+# --fields-optionally-escaped-by -||- (Denotes "same as above", basically)
+# --fields-terminated-by 			-||-
+# --flush-logs 						Flush MySQL server log files before starting dump
+#
+# --flush-privileges 				Emit a FLUSH PRIVILEGES statement after dumping mysql database
+# --force 								Continue even if an SQL error occurs during a table dump
+# --get-server-public-key 			Request RSA public key from server
+# --help 								Display help message and exit
+# --hex-blob 							Dump binary columns using hexadecimal notation
+# --host 								Host to connect to (IP address or hostname)
+# --ignore-error 						Ignore specified errors
+#
+# --ignore-table 						Do not dump given table
+# --include-master-host-port 		Include MASTER_HOST/MASTER_PORT options in CHANGE MASTER statement procured by --dump-slave option enabled
+# --insert-ignore 					Write INSERT IGNORE rather than INSERT statements
+# --lines-terminated-by 			This option is used with the --tab option and has the same meaning as the corresponding clause for LOAD DATA INFILE
+# --lock-all-tables 					Lock all tables across all databases
+# --lock-tables 						Lock all tables before dumping them
+# --log-error 							Append warnings and errors to named file
+# --login-path 						Read login path options from .mylogin.cnf
+# --master-data 						Write the binary log file name and position to the output
+# --max_allowed_packet 				Maximum packet length to send to or receive from server
+#
+# --net_buffer_length 				Buffer size for TCP/IP and socket communication
+# --network-timeout 					Increase network timeouts to permit larger table dumps
+# --no-autocommit 					Enclose the INSERT statements for each dumped table within SET autocommit = 0 and COMMIT statements
+# --no-create-db 						Do not write CREATE DATABASE statements
+# --no-create-info 					Do not write CREATE TABLE statements that re-create each dumped table
+# --no-data 							Do not dump table contents
+# --no-defaults 						Read no option files
+# --no-set-names 						Same as --skip-set-charset
+# --no-tablespaces 					Do not write any CREATE LOGFILE GROUP or CREATE TABLESPACE statements in output
+# --opt 									Shorthand for --add-drop-table --add-locks --create-options --disable-keys --extended-insert
+# 															  --lock-tables --quick --set-charset
+# 
+# --order-by-primary 				Dump each table's rows sorted by its primary key, or by its first unique index
+# --password 							Password to use when connecting to server
+# --pipe 								On Windows, connect to server using named pipe
+# --plugin-dir 						Dir where plugins are installed
+# --port 								TCP/IP port number for connection
+# --print-defaults 					Print default options
+# --protocol 							Connection protocol to use
+# --quick 								Retrieve rows for a table from the server a row at a time
+# --quote-names 						Quote identifiers within backtick characters
+#
+# --replace 							Write REPLACE statements rather than INSERT statements
+# --result-file 						Direct output to a given file
+# --routines 							Dump stored routines (procedures and functions) - from dumped databases
+# --secure-auth 						Do not send passwords to server in old (REMOVED)
+# --server-public-key-path 		Path name to file containing RSA public key 
+# --set-charset 						Add SET NAMES default_character_set to output
+# --set-gtid-purged 					Whether to add SET @@GLOBAL.GTID_PURGED to output
+# --shared-memory-base-name 		The name of shared memory to use for shared-memory connections
+# --single-transaction 				Issue a BEGIN SQL statement before dumping data from server
+#
+# --skip-add-drop-table 			Do not add a DROP TABLE statement before each CREATE TABLE statement
+# --skip-add-locks 					Do not add locks
+# --skip-comments 					Do not add comments to dump file
+# --skip-compact 						Do not produce more compact output
+# --skip-disable-keys 				Do not disable keys
+# --skip-extended-insert 			Turn off extended-insert
+# --skip-opt 							Turn off options set by --opt
+# --skip-quick 						Do not retrieve rows for a table from the server a row at a time
+# --skip-quote-names 				Do not quote identifiers
+# --skip-set-charset 				Do not write SET NAMES statement
+# --skip-triggers 					Do not dump triggers
+#
+# --skip-tz-utc 						Turn off tz-utc
+# --socket 								For connections to localhost, the Unix socket file to use
+# --ssl-ca 								File that contains list of trusted SSL Cert Auths
+# --ssl-capath 						Dir that contains trusted SSL Cert Auth cert files
+# --ssl-cert 							File that contains X.509 cert
+# --ssl-cipher 						List of permitted ciphers for connection encryption
+# --ssl-crl 							File that contains certificate revocation lists
+# --ssl-crlpath 						Dir that contains cert revocation list files
+#
+# --ssl-fips-mode 					Whether to enable FIPS mode on the client side
+# --ssl-key 							File that contains X.509 key
+# --ssl-mode 							Security state of connection to server
+# --tab 									Produce tab-separated data files
+# --tables 								Override --databases or -B option
+# --tls-version 						Protocols permitted for encrypted connections
+# --triggers 							Dump triggers for each dumped table
+# --tz-utc 								Add SET TIME_ZONE='+00:00' to dump file
+#
+# --user 								MySQL user name to use when connecting to server
+# --verbose 							Verbose mode
+# --version 							Display version info and exit
+# --where 								Dump only rows selected by given WHERE condition
+# --xml 									Produce XML output
+#
+# The mysqldump command logs into a MySQL server to extract information. 
 
 #https://dev.mysql.com/doc/refman/8.0/en/mysqladmin.html
