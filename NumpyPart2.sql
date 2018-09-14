@@ -3659,6 +3659,311 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # --defaults-group-suffix=<str> - read also groups with suffix regex match to str.
 # --enable-cleartext-plugin - Enables cleartext authentication plugin.
 # --force, -f - Do not ask for confirmation for the drop <db_name> command. with several commands, Continue even if an error occurs.
-# --get-server-public-key - 
+# --get-server-public-key - Request RSA public key from server.
+# --help - Display help message and exit
+# --host - Connect to MySQL server on given host
+# --login-path - Read login path options from .mylogin.cnf
+#
+# --no-beep - Do not beep when errors occur
+# --no-defaults - Read no option files
+# --password - Password to use when connecting to server
+# --pipe - On Windows, connect to server using named pipe
+# --plugin-dir - Directory where plugins are installed
+# --port - TCP/IP port number for connection
+# --print-defaults - Print default options
+#
+# --protocol - Connection protocol to use
+# --relative - Show the difference between the current and previous values when used with the --sleep option
+# --secure-auth - Do not send passwords to server in old format (REMOVED)
+# --server-public-key-path - Path name to file containing RSA public key
+# --shared-memory-base-name - The name of shared memory to use for shared-memory connections
+#
+# --show-warnings - Show warnings after statement execution
+# --shutdown_timeout - The maximum number of seconds to wait for server shutdown
+# --silent - Silent mode
+# --sleep - Execute commands repeatedly, sleeping for delay seconds in between
+# --socket - For connections to localhost, the Unix socket file to use
+# --ssl-ca - File that contains list of trusted SSL Cert Auths
+# --ssl-capath - Directory that contains trusted SSL Cert Auth cert files
+# --ssl-cert - File that contains X.509 cert
+#
+# --ssl-cipher - List of permitted ciphers for connection encryption
+# --ssl-crl - File that contains certificate revocation lists
+# --ssl-crlpath - Dir that contains the cert revocation list files
+# --ssl-fips-mode - Whether to enable FIPS modeon the client side
+# --ssl-key - File that contains X.509 key
+# --ssl-mode - Security state of connection to server
+# --tls-version - Protocols permitted for encrypted connections
+# --user - MySQL user name to use when connecting to server
+#
+# --verbose - Verbose mode
+# --version - Display version information and exit
+# --vertical - Print query output rows vertically (one line per column value)
+# --wait - If the connection cannot be established, wait and retry instead of aborting
+
+#Basically, a lot of these options in terms of shorthand are repeats - thus, i will omit them.
+
+#Next up, is mysqlcheck 
+#
+# The mysqlcheck client performs table maintenance: checks, repairs, optimizes and analyzes tables.
+#
+# Each table is locked and therefore unavailable to other sessions while it is being processed, although for
+# check ops, the table is locked with a READ lock only
+#
+# mysqlcheck must be used when the mysqld server is running, which means that you do not have to stop the server
+# to perform table maintenance.
+#
+# mysqlcheck uses the SQL statements CHECK TABLE, REPAIR TABLE, ANALYZE TABLE and OPTIMIZE TABLE in a convenient way for
+# the user. It determines which statements to use for the operation you want to perform, then sends the statements to 
+# the server to be executed.
+#
+# Not all storage engines do not support all four maintenance operations.
+#
+# Note: We are wise to make backups in terms of tables - in case of error in file parsing
+#
+# The three general ways of invoking mysqlchecks:
+#
+# mysqlcheck [<options>] <db_name> [<tbl_name ...>]
+# mysqlcheck [<options>] --databases <db_name> ...
+# mysqlcheck [<options>] --all-databases
+#
+# If the tbl name option is ommitted, or --databases or --all-databases options are used - entire DBs are checked.
+#
+# mysqlcheck has a special feature compared to other client programs.
+# The default behavior of checking tables (--check) can be changed by renaming the binary.
+#
+# If you want to have a tool that repairs tables by default, you should just make a copy of mysqlcheck 
+# named mysqlrepair, or make a symbolic link to mysqlcheck named mysqlrepair.
+#
+# The following names can be used to change mysqlcheck default behavior
+#
+# Command 			Meaning
+# mysqlrepair 		Default option is --repair
+# mysqlanalyze 	Default option is --analyze
+# mysqloptimize 	Default option is --optimize
+
+# mysqlcheck supports the following options, which can be specified on the command file or in the
+# [mysqlcheck] and [client] groups of an option file.
+#
+# Format 										Desc
+# 
+# --all-databases 		Check all tables in all DBs
+# --all-in-1 				Execute a single statement for each DB that names all the tables from that DB
+# --analyze 				Analyze the tables
+# --auto-repair 			If a checked table is corrupted, automatially fix it
+# --bind-address 			Use specified network interface to connect to MySQL Server
+# --character-sets-dir 	Dir where char sets are installed
+# --check 					Check the tables for errors
+#
+# --check-only-changed 	Check only tables that have changed since the last check
+# --check-upgrade 		Invoke CHECK TABLE with the FOR UPGRADE option
+# --compress 				Compress all information sent between client and server
+# --databases 				Interpret all arguments as DB names
+# --debug 					Write debugging log
+# --debug-check 			Print debug info when program exits
+# --debug-info 			Print debug info, memory and CPU stats @ exit
+#
+# --default-auth 			Authentication plugin to use
+# --default-character-set 			Specify default char set
+# --defaults-extra-file Read named option file in addition to usual option files
+# --defaults-file 		Read only named option file
+# --defaults-group-suffix 		Option group suffix value
+# --enable-cleartext-plugin 	Enable cleartext auth plugin
+# --extended 						Check and repair tables
+# --fast 							Check only tables that have not been closed properly
+# --force 							Continue even if an SQL error occurs
+#
+# --get-server-public-key 		Request RSA public key from server 		
+# --help 							Display help message and exit
+# --host 							Connect to MySQL server on given host
+# --login-path 					Read login path options from .mylogin.cnf
+# --medium-check 					Do a check that is faster than an --extended operation
+# --no-defaults 					Read no option files
+# --optimize 						Optimizes the tables
+# --password 						Password to use when connecting to server
+#
+# --pipe 							On Windows, connect to server using named pipe
+# --plugin-dir 					Dir where plugins are installed
+# --port 							TCP/IP port number for connection
+# --print-defaults 				Print default options
+# --protocol 						Connection protocol to use
+# --quick 							The fastest method of checking
+#
+# --repair 							Perform a repair that can fix almost anything except unique keys that are not unique
+# --secure-auth 					Do not send PW to server in old format (REMOVED)
+# --server-public-key-path 	Path name to file containing RSA public key
+# --shared-memory-base-name 	Name of shared memory to use for shared-memory connections
+# --silent 							Silent mode
+# --skip-database 				Omit this database from performed operations
+# --socket 							For connections to localhost, the Unix socket file to use
+# --ssl-ca 							File that contains list of trusted SSL Cert Auths
+#
+# --ssl-capath 					Dir that contains trusted SSL Cert Auth cert files
+# --ssl-cert 						File that contains X.509 cert
+# --ssl-cipher 					List of permitted ciphers for connection encryption
+# --ssl-crl 						File that contains cert revocation lists
+# --ssl-crlpath 					Dir that contains cert revocation list files
+# --ssl-fips-mode 				Whether to enable FIPS mode on the client side
+#
+# --ssl-key 						File that contains X.509 key
+# --ssl-mode 						Security state of connection to server
+# --tables 							Overrides the --database or -B option
+# --tls-version 					Protocols permitted for encrypted connections
+# --use-frm 						For repair operations on MyISAM tables
+# --user 							MySQL user name to use when connecting to server
+# --verbose 						Verbose mode
+# --version 						Display version information and exit
+# --write-binlog 					Log ANALYZE, OPTIMIZE, REPAIR statements to binary log, 
+# 										--skip-write-binlog adds NO_WRITE_TO_BINLOG to these statements.
+# 
+# --help, -? - Displays a help message and exits
+# --all-databases, -A - Check all tables in all databases. This is the same as using the --databases option and naming all the databases
+# 								on the CMD line, except for the INFORMATION_SCHEMA and performance_schema DBs of whom are not checked.
+#
+# 								To check them, explicitly name them with the --databases option
+#
+# --all-in-1, -1 - Instead of issuing a statement for each table, execute a single statement for each DB that names all the tables from that DB to be processed.
+# --analyze, -a - Analyzes the tables
+# --auto-repair - If a checked table is corrupted, automatically fix it. Any necessary repairs are done after all the tables have been checked.
+# --bind-address=<ip_address> - On a computer having multiple network interfaces, use this option to select which interface to use for connecting to the MySQL Server.
+# --character-sets-dir=<dir name> - The dir where char sets are installed
+#
+# --check, -c - Check the tables for errors. This is the default operation.
+# --check-only-changed, -C - Check only tables that have changed since the last check or that have not been closed properly.
+# --check-upgrade, -g - invoke the CHECK_TABLE with the FOR UPGRADE option to check tables for incompabilities with the current version of the server.
+# --compress - Compress all information sent between the client and the server if both support it.
+# --databases, -B - Process all tables in the named databases. Normally, mysqlcheck treats the first name argument on the cmd line as a DB name
+# 						  and any following names as table names. With this option, it treats all name args as DB names.
+# --debug[=<debug_options>], -# [<debug_options>] - Write a debugging log. A typical debug_options string is d:t:o, <file_name>. Default is d:t:o
+# --debug-check - Print some debug info when the program exits
+# 
+# --debug-info - Print debugging info, memory and CPU usage stats when the program exits.
+# --default-character-set=<charset_name> - Use <charset_name> as default char set
+# --defaults-extra-file=<file name> - Read this option file after the global option file, but on Unix, before hte user option file.
+# 												  If not found or inaccessible, an error occurs. Interpreted as relative, lest declared full path.
+# --defaults-file=<file name> - Use only the given option file. If the file does not exist or is otherwise inaccessible, an error occurs.
+# 										  <file_name> is relative, lest explicit. Still reads .mylogin.cnf
+#
+# --defaults-group-suffix=<str> - Regex pattern against suffix inclusion in addition to default groupings.
+#
+# --extended, -e - If you are using this option to check tables, it ensures that they are 100% consistent but takes a long time.
+# 						 If used in conjunction with repair - it may produce garbage as well.
+#
+# --default-auth=<plugin> - A hint about the client-side auth plugin to use.
+#
+# --enable-cleartext-plugin - Enable the <mysql_clear_password> cleartext auth plugin
+#
+# --fast, -F - Check only tables that have not been closed properly
+#
+# --force, -f - Continue even if an SQL error occurs.
+#
+# --get-server-public-key - Request from the server public key required for RSA key pair-based PW exchange.
+# 									 Applies to clients that authenticate with the <caching_sha2_password> auth plugin.
+# 									 For said plugin, the server does not send the public key unless requested.
+#
+# 									 Is ignored for accs that do not authenticate with that plugin. 
+# 									 Also ignored if RSA-based PW exchange is not used, as is when clients use secure connections.
+# 	
+# 									 If --server-public-key-path=<file_name> is given and valid - it's > in prio over --get-server-public-key
+#
+# --host=<host name>,  		 Connect to the MySQL server on the given host.
+#  -h <host_name>
+# 
+# --login-path=<name> 		 Read options from the named login path in the .mylogin.cnf login path file.
+# 									 A "login path" is an option group containing options that specify which MySQL
+# 									 server to connect to and which account to authenticate as.
+#
+# 								    To create or modify a login path file, use the mysql_config_editor utility.
+#
+# --medium-check, -m 		 Do a check that is faster than a --extended operation. This finds only 99.99% of all errors,
+# 									 which should be enough in most cases.
+#
+# --no-defaults 				 Do not read option files. Prevents errors thrown due to errornous parsing.
+# 									 .mylogin.cnf is read in all cases.
+#
+# --optimize, -o 				 Optimize the tables
+#
+# --password[=<password>],  The PW to use when connecting to the server. Short option (-p) requires no space between option and PW.
+#  -p [<password>] 			 If omitted, prompts afterwards for it.
+#
+# --pipe, -W 					 Connect to the server using a named pipe. Only applies if server supports named-pipes
+#
+# --plugin-dir=<dir_name> 	 The dir in which to look for plugins. Specify if --default-auth is used for auth plugin but mysqlcheck can't find it
+#
+# --port=<port num>,        The TCP/IP port number to use for the connection. 
+#  -P <port num>
+#
+# --print-defaults 			 Print the program name and all options that it gets from option files.
+#
+# --protocol= 					 The connection protocol to use for connecting to the server. It is useful when the other connection params
+# {TCP|SOCKET|PIPE|MEMORY}  normally would cause a protocol to be used other than the one you want.
+#
+# --quick, -q 					 If you are using this option to check tables, it prevents the check from scanning the rows to check
+# 								    for incorrect links. The fastest check method.
+#
+# 									 If attempting to repair tables, it tries only to repair the index tree.
+#
+# --repair, -r 				 Perform a repair that can fix almost anything except unique keys that are not unique.
+#
+# --secure-auth 				 REMOVED.
+#
+# --server-public-key-path= The path name to a file containing a client-side copy of the public key required by the server for RSA
+#   <file name> 				 key pair-based PW exchange.
+#
+# 								    File must be in PEM format. Applies to clients that authenticate with the sha256_password or caching_sha2_password
+# 									 auth plugin. Ignored for accounts that do not authenticate with one of those plugins.
+#
+# 									 Also ignored if RSA based PW exchange is not used, as in secure connection.
+# 									 sha256_password only applies with MySQL being built with OpenSSL.
+# 									 
+# 									 If --server-public-key-path=<file name> is given and specified as a valid public key,
+# 									 it takes precedence over --get-server-public-key
+#
+# --shared-memory-base-name= On Windows, the shared memory name to use - for connections made using shared memory to a local server.
+# <name>  						 Defaults to MySQL. Shared name is case-sensitive.
+#
+# 									 Server must be started with the --shared-memory option to enable shared-memory connections.
+#
+# --silent, -s 				 Silent mode. Print only error messages.
+#
+# --skip-database=<db name> Do not include the named DB (case-sensitive) in the operations performed by mysqlcheck.
+#
+# --socket=<path>,  			 For connections to localhost, the Unix socket file to use, or on Windows, the name of the named pipe to use.
+#  -S <path>
+#
+# --ssl* 						 Options that begin with --ssl specify whether to connect to the server using SSL and indicate where to find SSL keys and certs.
+#
+# --ssl-fips-mode= 			 Controls whether to enable FIPS mode on the client side. Defines which Cryptographic ops are permitted.
+# {OFF|ON|STRICT} 			 allows:
+#
+# 									 OFF - Disabled, ON - Enabled, STRICT - "strict" FIPS mode
+#
+# --tables 						 Overrides the --databases or -B option. All names following are regarded as table names.
+#
+# --tls-version= 				 The protocols permitted by the client for encrypted connections. Comma separated list containing one or more protocol names.
+#  <protocol list> 			 Protocols that can be named, depend on the SSL Lib used to Compile MySQL.
+#
+# --use-frm 					 For repair operations on MyISAM tables, get the table structure from the data dictionary so that the table can be repaired even
+# 									 if the .MYI header is corrupted.
+#
+# --user=<user name>, 		 The MySQL user name to use when connecting to the server. 
+#  -u <user_name>
+#
+# --verbose, -v 				 Verbose mode. Prints info about various stages of program ops.
+#
+# --version, -V 				 Display version info and exit.
+#
+# --write-binlog 				 Enabled by default, so that ANALYZE_TABLE, OPTIMIZE_TABLE, and REPAIR_TABLE statements generated by mysqlcheck are written to 
+# 									 the binary log.
+#
+# 									 Use --skip-write-binlog to cause NO_WRITE_TO_BINLOG to be added to the statements so that they are not logged.
+# 									 Use --skip-write-binlog when these statements should not be sent to replication slaves or run when using the binary
+# 									 logs for recovery from backup.
+#
+# The next section covers mysqldump
+#
+# 
+# --
+
 
 #https://dev.mysql.com/doc/refman/8.0/en/mysqladmin.html
