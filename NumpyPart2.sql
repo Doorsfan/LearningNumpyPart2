@@ -4152,5 +4152,78 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # --xml 									Produce XML output
 #
 # The mysqldump command logs into a MySQL server to extract information. 
-
-#https://dev.mysql.com/doc/refman/8.0/en/mysqladmin.html
+# The following options relate to how the connection interacts with the MySQL Server, local or remote:
+#
+# --bind-address=<ip address> - On a computer having multiple network interfaces, use this option to select which interface to use for connecting to the MySQL server.
+# --compress, -C - Compress all information sent between the client and the server if both support compression.
+# --default-auth=<plugin> - A hint about the client-side authentication plugin to use.
+# --enable-cleartext-plugin - Enable the <mysql_clear_password> cleartext authentication plugin
+# --get-server-public-key - Request as per before:
+#
+# 									 Request from the server the public key required for RSA key pair-based PW exchange.
+# 									 This option applies to clients that authenticate with the <caching_sha2_password> authentication plugin.
+#              
+#                           For that plugin, the server does not send the public key unless requested. This option is ignored
+# 									 for accounts that do not authenticate with that plugin. Also ignored for non RSA based PWs, i.e secure connections.
+#
+# 									 If --server-public-key-path=<file name> is given and specifies a valid public key file - it takes precedence over
+# 									 --get-server-public-key.
+#
+# --host=<host_name>, 		 Dump data from the MySQL server on the given host. Defaults localhost 
+#  -h <host_name>
+#
+# --login-path=<name> 		 Read options from the named login path in the .mylogin.cnf login path file.
+# 									 A "login path" is an option group containing options that specify which MySQL Server
+# 									 to connect to and which account to authenticate as.
+#
+# 									 To create or modify a login path file, use the mysql_config_editor utility.
+# 									 
+# --network-timeout, -M 	 Enable large tables to be dumped by setting max_allowed_packet to its maximum value
+# 									 and network read and write timeouts to a large value.
+#
+# 									 This option is enabled by default. To disable, use --skip-network-timeout
+#
+# --password[=<password>],  The password to use when connecting to the server. If you use the short option form (-p), no space req
+#  -p [<password>] 			 Prompt kicks in if no pw - can specify PW in a option file
+#
+# --pipe, -W 					 On Windows, connect to the server using a named pipe. Applies only if the server supports named-pipe connections
+#
+# --plugin-dir=<dir_name> 	 The dir of where to look for plugins. Specify if the --default-auth option is used to specify an authentication plugin but mysqldump does not find it.
+#
+# --port=<port_num>, 		 The TCP/IP port number to use for the connection
+# 	-P <port_num>
+#
+# --protocol= 					 The connection protocol to use for connecting to the server. 
+# {TCP|SOCKET|PIPE|MEMORY}
+#
+# --secure-auth 				 REMOVED
+#
+# --server-public-key-path  Same as before
+#   =<file name>
+#
+# --socket=<path>, 			 For connections to <localhost>, the Unix socket file to use - or Windows, name of the named pipe to use 
+#  -S <path>
+#
+# --ssl* 						 Options that begin with --ssl specify whether to connect to the server using SSL, indicate where to find SSL keys and Certs.
+#
+# --ssl-fips-mode= 			 Whether to enable FIPS mode on the client side. Which cryptographic ops are permitted.
+#  {OFF|ON|STRICT} 			 OFF: Disable FIPS mode. ON: Enable FIPS mode. STRICT: Enable "strict" FIPS mode.
+#
+# --tls-version= 				 The protocols permitted by the client for encrypted connections. 
+# <protocol list> 			 The value is a comma-separated list containing one or more protocol names. Allowed values depend on the SSL lib used to Compile MySQL.
+#
+# --user=<user_name>, 		 User name to use for connecting
+#  -u <user_name>
+#
+# --max_allowed_packet= 	 Maximum size of the buffer for client/server comm. Defaults to 24MB, max is 1GB.
+#   <value>
+#
+# --net_buffer_length 		 The initial size of the buffer for client/server communication. When creating multiple-row INSERT
+# 									 statements (as with the --extended-insert or --opt option), mysqldump creates rows up to <net_buffer_length>
+# 									 bytes long. If we increase this, the MySQL Server in terms of net_buffer_length, must be at least this large.
+#
+# The following options pertain to option files and what to read:
+#
+# 
+#
+# https://dev.mysql.com/doc/refman/8.0/en/mysqldump.html
