@@ -4246,8 +4246,216 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #                       or --all-databases option is given.
 #
 # --no-create-info,   - Do not write <CREATE TABLE> statements that create each dumped table.
-#  -t
-#  
+#  -t 						This option does not exclude statements creating log file groups or tablespaces from mysqldump output.
+# 								However, you can use the --no-tablespaces option for this.
 #
+# --replace 				Write REPLACE statements rather than INSERT statements.
+# 
+# The following options pertain to debuging
 #
+# --allow-keywords - Permit creation of column names that are keywords. This works by prefixing each column name with the table name.
+# --comments, -i 	 - Write additional information in the dump file such as program version,server version and host.
+# 							This option is enabled by default. To suppress this additional information, use --skip-comments.
+# --debug 				 
+# [=<debug_options>], Writes a debugging log. A typical <debug_options> string is d:t:o, <file_name>. Defaults to d:t:o, /tmp/mysqldump.trace
+#-# [<debug options>]	
+#
+# --debug-check 	 - Print some debugging information when the program exits
+# --debug-info 	 - Print debugging information, memory and CPU stats when the program exits.
+# --dump-date 		 - If the --comments option is given, mysqldump produces a comment at the end of the dump of the following form:
+# 							-- Dump completed on <DATE>
+# 						
+# 						   However, the date causes dump files taken at different times to appear to be different, even if data is identical.
+# 							--dump-date and --skip-dump-date control whether the date is added to the comment.
+# 							Defaults to --dump-date (include date in comment), --skip-dump-date to suppress
+#
+# --force, -f 		 - Ignore all errors, continue even if an SQL error occurs during a table dump.
+# 							Can for instance ignore view errornous referential addresses - if underlying table has been dropped.
+#
+# 							Without --force, mysqldump exits with an error message.
+# 						   --force causes mysqldump to print the error message - but also writes an SQL comment
+# 							containing the view definition to the dump output and continues executing.
+#
+# 							If --ignore-error is also given, --force takes higher prio
+#
+# --log-error= 		Log warnings and errors by appending them to the named file. Defaults to no logging.
+#	<file_name>
+#
+# --skip-comments 	See the description for the --comments options
+#
+# --verbose, -v 		Verbose mode
+#
+# The following options pertain to some help options
+#
+# --help, -? - Display a help message and exit
+# --version, -V - Display version info and exit
+#
+# The following options pertain to char sets in relation to national language settings
+#
+# --character-sets-dir=<dir_name> - The dir where character sets are installed.
+# --default-character-set= 		 - Use <charset_name> as default char set. If none specified, defaults to UTF8.
+#  <charset_name>
+# --no-set-names, -N 				 - Turns off the --set-charset setting, the same as specifying --skip-set-charset
+# --set-charset 						 - Write SET NAMES <default character set> to the output. Enabled by default. 
+# 												To suppress the SET NAMES, use --skip-set-charset
+#
+# The following options pertain to Replication and akin
+#
+# The mysqldump command is frequently used to create an empty instance, or an instance including data, on a slave server
+# in a replication configuration.
+#
+# The following options apply to dumping and restoring data on replication master and slave servers:
+#
+# --apply-slave-statements - For a slave dump produced with the --dump-slave option, add a STOP SLAVE statement before the
+# 									  CHANGE MASTER TO statement and a START SLAVE statement at the end of the output.
+#
+# --delete-master-logs 		- On a master replication server, delete the binary logs by sending a PURGE BINARY LOGS statement to the server
+# 									  after performing the dump operation. Automatically enables --master-data.
+#
+# --dump-slave[=<value>] 	- Similar to --master-data except that it is used to dump a replication slave server to produce a dump file
+# 									  that can be used to set up another server as a slave that has the same master as the dumped server.
+#
+# 									  It causes the dump output to include a CHANGE MASTER TO statement that indicates the binary log coords
+# 									  (file name and pos) of the dumped slave's master.
+#
+# 									  The CHANGE MASTER TO statement reads the values of Relay_Master_Log_File and Exec_Master_Log_Pos
+# 									  from the SHOW SLAVE STATUS output and uses them for MASTER_LOG_FILE and MASTER_LOG_POS respectively.
+#
+# 									  Thoose are the master server coords to which the slave is to replicate from.
+#
+# 									  NOTE: Inconsistencies in the sequence of transactions from the relay log which have been executed can
+# 									  cause the wrong coords to be used.
+#
+# 									  This option causes the coords from the master to be used rather than those of the dumped server, as is 
+# 									  done by the --master-data option.
+#
+# 									  In addition - specifying this option causes the --master-data option to be overridden, if used, and ignored.
+#
+#  								  WARNING: Do not use in conjunction with dumped server coords which yields gtid mode=ON and MASTER_AUTOPOSITION=1
+#
+#  								  The option value is handled the same way as for --master-data:
+#                            no value or 1 - Causes a CHANGE MASTER TO statement to be written to the dump
+# 									  2 - Causes the statement to be written but encased in SQL comments (same effect as --master-data 
+# 									  in enabling or disabling other options and in how locking is handled)
+#
+# 									  This option causes mysqldump to stop the slave SQL thread before the dump and restart it again after.
+# 									  With --dump-slave - the --apply-slave-statements and --include-master-host-port options can also be used.
+#
+# --include-master-host-port For the CHANGE MASTER TO statement in a slave dump produced with --dump-slave option, add MASTER_HOST and MASTER_PORT
+# 									  options for the host name and TCP/IP port number of the slave's master.
+#
+# --master-data[=<value>] 	  Use this option to dump a master replication server to produce a dump file that can be used to set up another server
+# 									  as a slave of the master.
+#
+# 									  Causes the dump output to include a CHANGE_MASTER_TO statement that indicates the binary log coords (file name and pos) 
+# 									  of the dumped server. Said coords are the master server coords from which the slave should start replicating after the dump
+# 									  is loaded into the slave.
+# 							
+# 									  If the option value is 2 - the CHANGE_MASTER_TO statement is written as an SQL comment, and is informative only.
+# 									  Has no effect when the dump file is reloaded.
+#
+# 									  If the option value is 1 - the statement is not written as a comment and takes effect when the dump file is reloaded.
+# 									  If none is specified - it defaults to 1.
+#
+# 									  Requires the RELOAD privilege and the binary log must be enabled.
+#
+# 									  The --master-data option automatically turns off --lock-tables. 
+# 									  Also turns on --lock-all-tables, unless --single-transaction also is specified.
+# 									  If --single-transaction is also specified - a global read lock is acquired only for a short time
+# 									  at the beginning of the dump.
+#
+# 									  Any action on logs happens at the exact moment of the dump.
+# 									  We can also set up a slave by dumping an existing slave of the master, using the --dump-slave option
+# 									  - overriding the --master-data - causing both to be ignored.
+#
+# --set-gtid-purged=<value>  Enables control over global transaction ID (GTID) information written to the dump file, by indicating whether
+# 									  to add a SET @@global.gtid purged statement to the output.
+#
+# 									  May also cause a statement to be written to the output that disables binary logging while the dump file is being
+# 									  reloaded.
+#
+# 									  Default: AUTO.
+#									  OFF  : Add no SET statement to the output.
+# 									  ON   : Add a SET statement to the output. An error occurs if GTIDs are not enabled on the server.
+# 								     AUTO : Add a SET statement to the output if GTIDs are enabled on the server.
+#
+# 									  A partial dump from a server that is using GTID-based replication requires the --set-gtid-purged={ON|OFF} option
+# 									  to be specified.
+
+# 									  If we wish to deploy a new replication slave using only some of the data from the dumped server, use ON.
+
+# 									  If we wish to repair the table in terms of copying within a topology or copy between disjoint topologies
+# 									  of which remain so - Use OFF.
+# 
+# 									  The --set-gtid-purged option has the following effect on binary logging when the dump file is reloaded:
+#
+# 									  --set-gtid-purged=OFF : SET @@SESSION.SQL_LOG_BIN=0; is not added to the output.
+# 									  --set-gtid-purged=ON  : SET @@SESSION.SQL_LOG_BIN=0; is added to the output
+# 									  --set-gtid-purged=AUTO: SET @@SESSION.SQL_LOG_BIN=0; is added to the output if GTIDs are enabled on the server you are backing up. (If AUTO evalutes to ON)
+#
+# 									  NOTE: It is not recommended to load a dump file when GTIDs are enabled on the server (gtid mode=ON), if your dump file
+# 									  includes system tables.
+#
+# 								     mysqldump issues DML instructions for the system tables which use the non-transactional MyISAM storage engine,
+#								     and this combination is not permitted when GTIDs are enabled.
+#
+# 									  Also be aware that loading a dump file from a server with GTIDs enabled - into another server with GTIDs enabled -
+# 									  causes different transaction identifiers to be generated.
+# 
+# The following options specify how to represent the entire dump file or certain kinds of data in the dump file.
+# They also control whether certain optional info is written to the dump file:
+#
+# --compact - Produce more compact output. This option enables the --skip-add-drop-table, --skip-add-locks, --skip-comments,
+# 																						 --skip-disable-keys, --skip-set-charset options.
+# --compatible=<name> - Produce output that is more compatible with other database systems or with older MySQL servers.
+# 								Only permitted value for this is ansi - has the same meaning as for the Server SQL mode option.
+# --complete-insert, -c Use complete INSERT statements that include column names
+#
+# --create-options 		Include all MySQL-specific table options in the CREATE TABLE statements.
+#
+# --fields-terminated-by=<...>, 				Options used with the --tab option and have the same meaning as the corresponding FIELDS
+# --fields-enclosed-by=<...>, 				clauses for LOAD DATA INFILE.
+# --fields-optionally-enclosed-by=<...>,
+# --fields-escaped-by=<...>
+#
+# --hex-blob 				Dump binary columns using hexadecimal notation ('abc' becomes 0x616263).
+# 								Affected data types are BINARY, VARBINARY, BLOB types and BIT.
+#
+# --lines-terminated-by=<...> 				Used with the --tab option and has the same meaning as the corresponding LINES clause for LOAD DATA INFILE.
+#
+# --quote-names, -Q 		Quote identifiers, such as DB, table and column names - within ` chars. If the ANSI_QUOTES SQL mode is on, identifiers are quoted with "
+# 								Enabled by default. Can be disabled with --skip-quote-names, but this option should be given after any option such as --compatible that may
+# 								enable --quote-names. i.e - Order this command after others
+#
+# --result-file= 		   Direct output to the named file. Result file is created and its previous contents overwritten, even if an error occurs while generating dump.
+#  <file_name>, 			Used on Windows to prevent \n from becoming \r\n
+#
+# --tab=<dir_name>, 	   Produce tab-separated text-format data files. For each dumped table, mysqldump creates a <tbl_name>.sql file that contains 
+#  -T <dir_name> 			the CREATE TABLE statements - of which create the table and the server writes a <tbl_name>.txt that contains its data.
+# 								The option value is the dir in which to write the files.
+#
+# 								NOTE: Should only be used when mysqldump is run on the same machine as the mysqld server.
+# 										The server creates *.txt files in the dir that we specify - the dir must be writable by the server
+# 										and the MySQL acc that we use must have the FILE privs.
+#
+# 									   Because mysqldump creates *.sql in the same dir, it must be writable by the system login acc.
+#
+# 								By default - the .txt data files are formatted using tab chars between column values and a newline at the end of each line.
+# 								The format can be specified explicitly using the --fields-<xxx> and --lines-terminated-by options.
+#
+# 								Column values are converted to the character set specified by the --default-character-set option.
+#
+# --tz-utc 					Enables TIMESTAMP columns to be dumped and reloaded between servers in different time zones.
+# 								mysqldump sets its connection time zone to UTC and adds SET TIME_ZONE='+00:00' to the dump file.
+# 			
+# 								Without this - TIMESTAMP columns are dumped and reloaded in the time zones local to the source and
+# 								destination servers - Which causes discrepencies in values if the servers are in different timezones.
+#
+# 								Also protects against changes due to daylight saving time.
+# 								Enabled by default - disable with --skip-tz-utc
+#
+# --xml, -X 				
+#  -r <file_name>
+
+
 # https://dev.mysql.com/doc/refman/8.0/en/mysqldump.html
