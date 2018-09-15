@@ -4222,8 +4222,32 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 									 statements (as with the --extended-insert or --opt option), mysqldump creates rows up to <net_buffer_length>
 # 									 bytes long. If we increase this, the MySQL Server in terms of net_buffer_length, must be at least this large.
 #
-# The following options pertain to option files and what to read:
-#
+# The following options pertain to option files and which option files to read:
 # 
+# --defaults-extra-file=<file name> - Same as before, read before user option file on unix but after global, permissions, etc.
+# --defaults-file=<file name> - Use only given option. Relative if relative, still use .mylogin.cnf - error if inaccessible.
+# --defaults-group-suffix=<str> - Regex match against suffix in grouping 
+# --print-defaults - Print the program name and all options that it gets from option files.
+#
+# Scenarios of where you'd use mysqldump include setting up an entire new MySQL instance (including DB tables), and replacing
+# data inside an existing instance with existing DBs and tables.
+#
+# The following options let you specify which things to tear down and what to set up when restoring a dump - by utilizing
+# DDL statements in the dump file.
+#
+# --add-drop-database - Write a <DROP DATABASE> statement before each <CREATE DATABASE> statement. 
+# 							   Usually used with a --all-databases or --databases option
+# --add-drop-table 	 - Write a <DROP TABLE> statement before each <CREATE TABLE> statement.
+# --add-drop-trigger  - Write a <DROP TRIGGER> statement before each <CREATE TRIGGER> statement.
+#
+# --all-tablespaces,  - Adds to a table dump all SQL statements needed to create any tablespaces used by an NDB table.
+#                       Otherwise not included from mysqldump, only relevant to NDB cluster tables, not supported by MySQL 8.0
+# --no-create-db, -n  - Suppress the <CREATE DATABASE> statements that are otherwise included in the output if the --databases
+#                       or --all-databases option is given.
+#
+# --no-create-info,   - Do not write <CREATE TABLE> statements that create each dumped table.
+#  -t
+#  
+#
 #
 # https://dev.mysql.com/doc/refman/8.0/en/mysqldump.html
