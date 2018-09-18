@@ -4728,6 +4728,175 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # The following options section pertains to mysqlimport - which is used for data imports.
 #
-#  
+# The mysqlimport client provides a CMD line interface to the LOAD DATA INFILE SQL statement.
+# Most options to mysqlimport correspond directly to clauses of LOAD DATA INFILE syntax.
 #
+# To invoke mysqlimport, the syntax is generally:
+#
+# mysqlimport [<options>] <db_name> <textfile1> [<textfile2>]
+#
+# For each text file named on the cmd line - mysqlimport strips any extension from the file name and uses
+# the result to determine the name of the table into which to import the file's contents.
+#
+# For example - files named patient.txt, patient.text and patient all would be imported into a table called patient.
+#
+# We can define the following options on the cmd line or the [mysqlimport] and [client] groups of an option file.
+#
+# 		FORMAT 											Desc
+# --bind-address  			Use specified network interface to connect to MySQL Server
+# --columns 					This option takes a comma-separated list of column names as its value
+# --compress 					Compress all information sent between client and server
+# --debug 						Write debug log
+# --debug-check 				Print debug info when program exits
+# --debug-info 				Print debug info, memory and CPU stats when the program exits
+# --default-auth 				Auth plugin to use
+#
+# --default-character-set 	Specify default character set
+# --defaults-extra-file 	Read named option file in addition to usual option files
+# --defaults-file 			Read only named option file
+# --defaults-group-suffix 	Option group suffix value
+# --delete 						Empty the table before importing the text file
+#
+# --enable-cleartext- 		Enable cleartext auth plugin
+#   plugin
+# --fields-enclosed-by 		keeps the same for several structures adhering to the following
+# --force 						Continue even if an SQL error occurs
+# --get-server-public-key 	Request RSA public key from server
+# --help 						Displays help message and exits
+# --host 						Connect to MySQL server on given host
+#
+# --ignore 						See the desc file for the --replace option
+# --ignore-lines 				Ignore the first N lines of hte data file
+# --lines-terminated-by 	Same as other terminated by dynamics
+# --local 						Read input files locally from the client host
+# --lock-tables 				Lock all tables for writing before processing any text files
+#
+# --login-path 				Read login path options from .mylogin.cnf
+# --low-priority 				Use LOW_PRIORITY when loading the table
+# --no-defaults 				Read no option files
+# --password 					PW to use when connecting to server
+# --pipe 						On Windows, connect to the server using named pipe
+#
+# --plugin-dir 				Dir where plugins are installed
+# --port 						TCP/IP number for connection
+# --print-defaults 			Print default options
+# --protocol 					Connection protocol to use
+# --replace 					The --replace and --ignore options control handling of input rows that duplicate
+# 									existing rows on unique key values
+# --secure-auth 				REMOVED
+#
+# --server-public-key-path Path name to file containing RSA public key
+# --shared-memory-base- 	Name of the shared memory to use for shared-memory connections
+#   name
+# --silent 						Produce output only when errors occur
+# --socket 						For connections to localhost, the Unix file socket to use
+#
+# --ssl-ca 						File that contains list of trusted SSL Cert Auths
+# --ssl-capath 				Dir that contains trusted SSL Cert Auth cert files
+# --ssl-cert 					File that contains X.509 cert
+# --ssl-cipher 				List of permitted ciphers for connection encryption
+# --ssl-crl 					File that contains cert revocation lists
+# --ssl-crlpath 				Dir that contains cert revocation list files
+#
+# --ssl-fips-mode 			Whether to enable FIPS mode on the client side
+# --ssl-key 					File that contains X.509 key
+# --ssl-mode 					Security state of connection to the server
+# --tls-version 				Protocols permitted for encrypted connections
+# --use-threads 				Number of threads for parallel file-loading
+# --user 						MySQL user name to use when connecting to server
+# --verbose 					Verbose mode
+# --version 					Display v info and exit
+
+# --help, -? - Display help and exit
+# --bind-adress=<ip address> - On a computer having multiple network interfaces, use this option to select which interface to use for connecting to the MySQL serv.
+# --character-sets-dir=<dir name> - The dir where char sets are installed
+# --columns=<column list>, 		 - This option takes a comma-separated list of column names as its value. The order of the column names indicates how to match
+#  -c <column_list> 						data file columns with table columns
+# --compress, -C 						 - Compress all information sent between client and the server if both support compression
+# --debug[=<debug options>], 		 - Write a debugging log. A typical <debug_options> string is d:t:o, <file_name>. Default is d:t:o
+#  -# [<debug_options>]
+# --debug-check 						 - Print some debugging information when the program exits
+# --debug-info 						 - Print debugging info, memory info, CPU usage etc. when the program exits
+# 
+# --default-character-set= 		 - Use <charset_name> as the default char set
+#  <charset_name>
+#
+# --default-auth=<plugin> 			 - Hint about client-side auth plugin to use
+#
+# --defaults-extra-file= 			 - Same as previous file ordering partition
+#  <file name>
+#
+# --defaults-file=<file name> 	 - Use only given option file, .mylogin.cnf is still read - path is relative if relative, full otherwise
+#
+# --defaults-group-suffix= 		 - Suffix regex against group names
+# 	 <str>
+#
+# --delete, -D 						 - Empty the table before importing the text file
+#
+# --enable-cleartext-plugin 		 - Enable the mysql_clear_password cleartext auth plugin
+#
+# Ommited a few due to repetition
+#
+# --host=<host name>, 				 - Import data to mysql server on the given host - defaults to Local
+#  -h <host_name>
+#
+# --ignore, -i 						 - --replace, basically
+#
+# --ignore-lines=<N> 				 - Ignore the N first lines of hte data file
+#
+# --lines-terminated-by=<...> 	 - This option has the same meaning as the corresponding clause for LOAD DATA INFILE.
+# 												For example - to import Windows files that have lines terminated with carriage return/linefeed pairs,
+# 												use --lines-terminated-by="\r\n".
+#
+# --local, -L 							 - Default, files are read by the server on the server host. With this option, mysqlimport reads input files locally
+# 												on the client host. Enabling local data loading also requires that the server permits it.
+#
+# --lock-tables, -l 					 - Lock all tables for writing before processing any text files. Ensures that all tables are synched on the server.
+#
+# --login-path=<name> 				 - Read options from the named login path in the .mylogin.cnf login path file.
+# 												A "login path" is an option group containing options that specify which MySQL server to connect to
+# 												and which acc to auth as. Used with mysql_config_editor
+#
+# --low-priority 						 - Use LOW_PRIORITY when loading the table. This affects only storage engines that use only table-level locking
+# 												(such as MyISAM, MEMORY, and MERGE)
+#
+# --no-defaults 						 - Same as other no-defaults
+#
+# SKIP A FEW BECAUSE REPEAT
+#
+# --replace, -r 						  - The --replace and --ignore options control handling of input rows that duplicate existing rows on unique key values.
+# 												 If given - new rows replace existing rows that have the same unique key value.
+# 												 --ignore skips - If neither is given, an error occurs when running into a duplication and ignores the rest of the file.
+#
+# //SKIPPED REPEATAL
+#
+# --use-threads=<N> 						- Load files in parallel using <N> threads
+#
+# Example of showcasing of usage:
+#
+# mysql -e 'CREATE TABLE imptest(id INT, n VARCHAR(30))' test #Create the table
+# ed #Linux text editor interaction
+# a
+# 100 		Max Sydow
+# 101 		Count Dracula
+#
+# w imptest.txt #Write to imptext.txt
+# 32
+# q
+# od -c imptest.txt #Dump octal format unto text file and utilize -c to run the command as this program in terms of interpretation
+# <Octal format for String chars> <id value> <String structure> #The first string value of 100 max Sydow
+# etc.
+#
+# mysqlimport --local test imptest.txt #connect to local, select a table called test and insert the imptest info
+# test.imptest: Records: 2 Deleted: 0 Skipped: 0 warning: 0 #Imports into table
+# mysql -e 'SELECT * FROM imptest' test #Select all from imptext, escape chars with -e
+# +----------------------------------+
+# | id 	| 	n 								 |
+# +------+---------------------------+
+# |  100 | Max Sydow 					 |
+# |  101 | Count Dracula 				 |
+# +------+---------------------------+
+#
+# The next section pertains to mysqlpump - which is used for DB backups
+# https://dev.mysql.com/doc/refman/8.0/en/mysqlpump.html
 # https://dev.mysql.com/doc/refman/8.0/en/mysqldump.html
