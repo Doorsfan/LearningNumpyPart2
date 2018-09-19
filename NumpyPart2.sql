@@ -4897,6 +4897,274 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # |  101 | Count Dracula 				 |
 # +------+---------------------------+
 #
-# The next section pertains to mysqlpump - which is used for DB backups
+#
+# The following section covers mysqlpump - which breaks down DBs etc. into logical backups, which comes in the form of
+# a set of SQL statements that can rebuild the system you broke down.
+#
+# Can dump one or several DBs.
+#
+# The features covers things akin to:
+#
+# Parallel processing of DBs, and of objects within DBs
+# Better control over which DB and DB objects (tables, stored programs, user accs) to dump
+# Dumping of user accs as account-management statements (CREATE USER, GRANT) - rather than as inserts into the mysql DB
+# 
+# Capability of creating compressed output
+# Progress indicator (estimates)
+# In terms of dump file reloading, faster secondary index creation for InnoDB tables by adding indexes after rows are inserted
+#
+# mysqlpump requires at least the SELECT privilege for dumped tables, SHOW VIEW for dumped views, TRIGGER for dumped triggers
+# LOCK TABLES if the --single-transaction option is not used
+#
+# The SELECT priv on the mysql system db is required to dump user defs. Certain options might require other privs
+# as noted in the option desc.
+#
+# To reload a dump file - you must have the privs reqed to execute the statements that it contains - such as appropiate CREATE privs
+# for objects created by said statements.
+#
+# When dumping, use --result-file to circumvent UTF-16 encoding
+#
+# mysqlpump [<options>] > dump.sql #UTF-16, not allowed as server conn Char set
+#
+# mysqlpump [<options>] --result-file=dump.sql
+#
+# By default, mysqlpump dumps all the DBs, except a few. Can use --all-databases to do all
+#
+# To dump more specifically - following syntax holds:
+#
+# mysqlpump <db_name>
+# mysqlpump <db_name> <tbl_name1, tbl_name2>
+#
+# To treat all name args as DB names - use the --databases option:
+#
+# mysqlpump --databases <db_name1, db_name2>
+#
+# By default, mysqlpump does not dump user acc defs - even if you dump the mysql system DB that contains the grant tables.
+# To dump grant table contents as logical definitions in the form of CREATE USER and GRANT statements - use the --users option
+# and suppress all DB dumping
+#
+# mysqlpump --exclude-databases=% --users
+#
+# The % above is wildchar regex against any name sequence in the context above
+#
+# mysql has different options for including/excluding DBs, tables, stored programs and user defs.
+#
+# To reload a dump file - execute the statements that it contains. For instance:
+#
+# mysqlpump [<options>] > dump.sql
+# mysql < dump.sql
+#
+# FORMAT 										Desc
+# --add-drop-database 				Add DROP DATABASE statement before each CREATE DATABASE statement
+# --add-drop-table 					Add DROP TABLE statement before each CREATE TABLE statement
+# --add-drop-user 					Add DROP USER statement before each CREATE USER statement
+# --add-locks 							Surround each table dump with LOCK TABLES and UNLOCK TABLES statements
+# --all-databases 					Dump all DBs
+#
+# --bind-address 						Use specified network interface to connect to MySQL Server
+# --character-sets-dir 				Dir where char sets are installed
+# --column- statistics 				Write ANALYZE TABLE statements to generate stats histograms
+# --complete-insert 					Use complete INSERT statements that include column names
+# --compress 							Compress all information sent between client and server
+#
+# --compress-output 					Output compress algo
+# --databases 							Interpret all name args as DB names
+# --debug 								Write debugging log
+# --debug-check 						Print debugging info when program exits
+# --debug-info 						Print debug info, memory and CPU stats when program exits
+# --default-auth 						Auth plugin to use
+#
+# --default-character-set 			Specify default char set
+# --default-parallelism 			Default number of threads for parallel processing
+# --defaults-extra-file 			Read named option file in addition to usual option files
+# --defaults-file 					Read only named option file
+#
+# --defaults-group-suffix 			Option group suffix regex
+# --defer-table-indexes 			For reloading, defer index creation until after loading table rows
+# --events 								Dump events from dumped databases
+# --exclude-databases 				Databases to exclude from dump
+# --exclude-events 					Events to exclude from dump
+#
+# --exclude-routines 				Routines to exclude from dump
+# --exclude-tables 					Tables to exclude from dump
+# --exclude-triggers 				Triggers to exclude from dump
+# --exclude-users 					Users to exclude from dump
+# --extended-insert 					Use multiple-row INSERT syntax
+#
+# --get-server-public-key 			Request RSA public key from server
+# --help 								Display help and exit
+# --hex-blob 							Dump binary columns using hexadecimal notation
+# --host 								Host to connect to (IP address or hostname)
+# --include-databases 				DBs to include in dump
+#
+# --include-events 					Events to include in dump
+# --include-routines 				Routines to include in dump
+# --include-tables 					Tables to include in dump
+# --include-triggers 				Triggers to include in dump
+# --include-users 					Users to include in dump
+#
+# --insert-ignore 					Write INSERT IGNORE rather than INSERT statements
+# --log-error-file 					Append warnings and errors to named file
+# --login-path 						Read login path options from .mylogin.cnf
+# --max-allowed-packet 				Maximum packet length to send or recieve from server
+# --net-buffer-length 				Buffer size for TCP/IP and socket communication
+# --no-create-db 						Do not write CREATE DATABASE statements
+# --no-create-info 					Do not write CREATE TABLE statements that re-create each dumped table
+#
+# --no-defaults 						Read no option files
+# --parallel-schemas 				Specify schema-processing parallelism
+# --password 							Password to use when connecting to server
+# --plugin-dir 						Dir where plugins are installed
+# --port 								TCP/IP port number for connection
+# --print-defaults 					Print default options
+#
+# --protocol 							Connection protocol to use
+# --replace 							Write REPLACE statements rather than INSERT statements
+# --result-file 						Direct output to a given file
+# --routines 							Dump stored routines (procedures and functions) from dumped DBs
+# --server-public-key-path 		Path name to file containing RSA public key
+#
+# --set-charset 						Add SET NAMES default_char_set to output
+# --set-gtid-purged 					Whether to add SET @@GLOBAL.GTID_PURGED to output
+# --single-transaction 				Dump tables within single transaction
+# --skip-definer 						Omit DEFINER and SQL SECURITY clauses from view and stored program CREATE statements
+# --skip-dump-rows 					Do not dump table rows
+# --socket 								For connections to localhost, the Unix socket file to use
+# --ssl-ca 								File that contains list of trusted SSL Cert Auths
+# --ssl-capath 						Dir that contains trusted SSL Cert Auth cert files
+#
+# --ssl-cert 							File that contains X.509 cert
+# --ssl-cipher 						List of permitted ciphers for connection encryption
+# --ssl-crl 							File that contains cert revocation lists
+# --ssl-crlpath 						Dir that contains cert revocation list files
+# --ssl-fips-mode 					Whether to enable FIPS mode on the client side
+# --ssl-key 							File that contains X.509 key
+#
+# --ssl-mode 							Security state of connection to server
+# --tls-version 						Protocols permitted for encrypted connections
+# --triggers 							Dump triggers for each dumped table
+# --tz-utc 								Add SET TIME_ZONE='+00:00' to dump file
+# --user 								MySQL user name to use when connecting to server
+# --users 								Dump user accs
+#
+# --version 							Display version info and exit
+# --watch-progress 					Display progress indicator
+#
+# The following is further designation of options:
+#
+# --help, -? - Display a help message and exit
+# --add-drop-database - Write a DROP DATABASE statement before each CREATE DATABASE statement.
+# --add-drop-table - Write a DROP TABLE statement before each CREATE TABLE statement
+# --add-drop-user - Write a DROP USER statement before each CREATE USER statement
+#
+# --add-locks - Surround each table dump with LOCK_TABLES and UNLOCK_TABLES statements. Causes faster inserts when dump is loaded
+#
+# 					 Does not work with parallelism because INSERT statements from different tables can be interleaved,
+# 					 UNLOCK TABLES following the end of the inserts for one table could release locks on tables for which inserts remain.
+#
+# 					 i.e - --add-locks and --single-transaction are mutually exclusive
+#
+# --all-databases, - Dump all databases. Exclusive towards --databases. Defaults to dumping all, except few.
+#  -A
+#
+# 							< MySQL 8.0 - includes mysql system db, also mysql.proc and mysql.event tables - with routines and events
+# 							>= MySQL 8.0 - mysql.event and mysql.proc tables are not used. To include, use --routines and -events explicitly
+#
+# --bind-address   - On a computer having multiple network interfaces - use this option to select which interface to use for connecting to the MySQL server 
+#  =<ip address>
+#
+# --character-sets-dir - The dir where char sets are installed
+#  =<path>
+#
+# --column-statistics - Add ANALYZE TABLE statements to the output to generate histogram statistics for dumped tables when the dump file is reloaded.
+# 								This option is disabled by default because histogram generation for large tables can take a long time.
+#
+# --complete-insert 	 - Write complete INSERT statements that include column names
+#
+# --compress, -C 		 - Compress all information sent between the client and server if both support compression
+#
+# --compress-output=  - By default, mysqlpump does not compress output. This option specifies output compressiion using the specified algo.
+#  <algorithm> 		   Permitted are LZ4 and ZLIB.
+#
+# 								To uncompress compressed output - you must have an appropiate utility. If the system commands iz4 and openssl zlib are not about,
+# 								MySQL includes iz4_decompress and zlib_decompress utilities that can be used to decompress mysqlpump output that was
+# 								compressed using the --compress-output=LZ4 and --compress-output=ZLIB.
+#
+# --databases, -B 	 - Normally, mysqlpump treats the first name arg on the cmd line as a db name and any following names as table names.
+# 								With this option - it treats all name args as db names. CREATE DATABASE statements are included in the output before
+# 								each new DB.
+#
+# 								--all-databases and --databases are exclusive.
+#
+# --debug[=<debug options>] - Write a debugging log. A typical <debug_options> is d:t:o, <file_name>. Defaults to d:t:O, /tmp/mysqlpump.trace
+#  -# [<debug_options>
+#
+# --debug-check - Print some debugging when the program exits
+#
+# --debug-info, -T - Print debugging info, memory and stats usage when the program exits.
+#
+# --default-auth - Hint about the client-side auth plugin to use 
+#  =<plugin>
+#
+# --default-character-set= - Use <charset_name> as the default char set - if none specified, defaults to UTF8
+#   <charset_name>
+#
+# --default-parallelism=<N> - The default number of threads for each parallel processing queue. Defaults to 2.
+#
+# 										--parallel-schemas also affects parallelism - and can be used to override the default numbers of threads.
+#
+# 										If we use --default-parallelism=0 and no --parallel-schemas - mysqlpump runs a single-threaded process and 
+# 										creates no queues.
+# 	
+#  									With parallelism enabled - it is possible for output from different databases to be interleaved
+#
+# --defaults-extra-file=    - Read this option file after the global option file but (on Unix) before the user option file.
+#   <file name> 					Relative if relative, absolute if absolute - failure to access throws an error
+#
+# --defaults-file= 			 - Use only the given option file. If it does not exist or cannot be accessed - error is thrown.
+#   <file name> 					.mylogin.cnf is still read
+#
+# 										Relative if relative, absolute if absolute etc.
+#
+# --defaults-group-suffix=  - Regex match against suffix in groupings
+#  <str>
+#
+# --defer-table-indexes 	 - In the dump output, defer index creation for each table until after its rows have been loaded.
+# 										This works for all storage engines - but for InnoDB applies only for secondary indexes.
+#
+# 										Enabled by default, --skip-defer-tables-indexes to disable.
+#
+# --events 							Include Event Scheduler events for the dumped databases in the output. 
+# 										Event dumping requires the EVENT privs for those DBs.
+#
+# 										The output generated by using --events contains CREATE EVENT statements to create the events.
+# 										On by default - use --skip-events to disable it
+#
+# --exclude-databases= 		 - Do not dump the DBs in said list. This option stacks.
+#  <db_list>
+#
+# --exclude-events= 			 - Do not dump the DBs in <event list>. Stacks.
+#  <event_list>
+#
+# --exclude-routines/tables/triggers/users - Do not dump events/tables/triggers/users in said list. Stacks.
+#
+# --extended-insert=<N> 	 - Write INSERT statements using multiple-row syntax that includes several VALUES lists.
+# 										Results in smaller dump file and speeds up inserts when the file is reloaded.
+#
+# 										Option value indicates number of rows to include in each INSERT statement. Defaults to 250.
+# 										This means the total of 250 rows are bound to a INSERT statement in terms of list relation.
+#
+# --hex-blob 					-  Binary colums are converted to hexadecimal. BINARY, VARBINARY, BLOB and BIT are affected.
+#
+# --host=<host name>,      -  Dump data from the MySQL server on the given host.
+#  -h <host name>
+#
+# --include-databases/events/routines/tables/triggers/user= Dump the databases/events/routines/tables/triggers/users in the respective list. Stacks. 		-  
+# 	 <db_list>
+#
+# --insert-ignore 			- Write INSERT IGNORE instead of INSERT statements.
+#
+# --
+#
 # https://dev.mysql.com/doc/refman/8.0/en/mysqlpump.html
-# https://dev.mysql.com/doc/refman/8.0/en/mysqldump.html
+#  -T
