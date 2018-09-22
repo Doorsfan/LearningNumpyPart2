@@ -5578,4 +5578,658 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # The following covers mysqlslap , used for diagnostics to emulate client load for a MySQL Server and to report timing of each stage.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/mysqlslap.html
+# The interaction is emulating as if multiple clients are accessing the server.
+#
+# mysqlslap [<options>]
+#
+# Some options such as --create or --query enables you to specify a string containing an SQL statement or a file containing statements.
+# If it specifies a file - it must contain one statement per line. (Implicit delimiter is \n)
+#
+# Use the --delimiter to specify a different delimiter - which allows us to span multiple lines or place multiple statements on a single line.
+# Comments cannot be included in terms of mysqlslap
+#
+# It runs in three stages:
+#
+# Create schema, table and optionally any stored programs or data to use for the test. This stage uses a single client connection
+# 
+# Run the load test. Can use many client connections
+#
+# Clean up (disconnect, drop table if specified) - uses a single client connection
+#
+# An example of 50 clients, 200 selects for each - created query integrated:
+#
+# mysqlslap --delimiter=";" 
+#   --create="CREATE TABLE a (b int);INSERT INTO a VALUES (23)"
+#   --query="SELECT * FROM a" --concurrency=50 --iterations=200
+#
+# Let mysqlslap build the query SQL statements with a table of two INT and Three VARCHAR columns.
+# Use five clients querying 20 times each. 
+#
+# Do not create the table or insert the data (that is - use previous test's schema and data):
+#
+# mysqlslap --concurrency=5 --iterations=20 #5 clients, 20 times each
+#   --number-int-cols=2 --number-char-cols=3 #2 int, 3 char
+#   --auto-generate-sql #Auto build the query statements
+#
+# Tell the program to load the create, insert and query SQL statements from the specified files - where the
+# create.sql has multiple table creation statements delimited by ';' and multiple insert statements delimited by
+# ';'
+#
+# In this instance, the Query file has multiple queries delimited by ';'. Run all of em, then run all
+# the queries in the query file with five clients (five times each):
+#
+# mysqlslap --concurrency=5
+#   --iterations=5 --query=query.sql --create=create.sql
+#   --delimiter=";"
+#
+# mysqlslap supports the following options - which can be specified on the cmd line or in the [mysqlslap] and [client]
+# groups of an option file.
+#
+# Format 										Desc
+# --auto-generate-sql 			Generate SQL statements automatically when they are not supplied in files or using command options
+# --auto-generate-sql 			Add AUTO_INCREMENT column to automatically generated tables
+#  -add-autoincrement
+# --auto-generate-sql-/[execute-number, guild-primary, load-type, secondary-indexes, unique-query-number, unique-write-number, write-number]
+# 										
+# 										Number of queries/GUID based primary key to auto generate tables/Test load type
+# 										Number of secondary indexes to add to automated generated tables/
+# 									   Number of unique queries for automated tests/
+# 										Number of unique queries for --auto-generate-sql-write-number/
+# 										Number of row inserts to perform on each thread
+# --commit 							Number of statements to execute before committing
+# --compress 						Compression of info between client and server
+#
+# --concurrency 					Number of clients to simulate when issuing the SELECT statement
+# --create 							File or string containing the statement to use for creating the table
+# --create-schema 				Schema in which to run the tests
+# --csv 								Generate output in comma-separated values format
+# --debug 							Write debugging log
+#
+# --debug-check 					Print debugging information when program exits
+# --debug-info 					Print debugging information, memory and CPU stats when exiting
+# --default-auth 					Auth plugin to use
+# --defaults-extra-file 		Read named option file in addition to usual option files
+# --defaults-file 				Read only named option file
+#
+# --defaults-group-suffix 		Option group suffix value
+# --delimiter 						Delimiter to use in SQL statements
+# --detach 							Detach (close and reopen) each connection after each <N> statements
+# --enable-cleartext-plugin 	Enable cleartext auth plugin
+#
+# --engine 							Storage engine to use for creating the table
+# --get-server-public-key 		Request RSA public key from server
+# --help 							Display help msg and exit
+# --host 							Connect to MySQL servers or given host
+# --iterations 					Number of times to run the tests
+# --login-path 					Read login path options from .mylogin.cnf
+# --no-defaults 					Read no option files
+# --no-drop 						Do not drop any schema created during the test run
+#
+# --number-char-cols 			Number of VARCHAR columns to use if --auto-generate-sql is specified
+# --number-int-cols 				Number of INT columns to use if --auto-generate-sql is specified
+# --number-of-queries 			Limit each client to approx this number of queries
+# --only-print 					Do not connect to databases, mysqlslap only prints what it would have done
+# --password 						Password to use when connecting to server
+# --pipe 							On Windows, connect to server using named pipe
+#
+# --plugin-dir 					Dir where plugins are installed
+# --port 							TCP/IP port number for connection
+# --post-query 					File or string containing the statement to execute after the tests have completed
+# --pre-query 						File or string containing the statements to execute before running the tests
+# --pre-system 					String to execute using system() before running the tests
+# --print-defaults 				Print default options
+# --protocol 						Connection protocol to use
+#
+# --query 							File or string containing the SELECT statement to use for retrieving data
+# --secure-auth 					REMOVED
+# --server-public-key-path 	Path name to file containing RSA public key
+# --shared-memory-base-name 	The name of shared memory to use for shared-memory connections
+# --silent 							Silent mode
+# --socket 							For connections to localhost, the Unix socket file to use
+#
+# --sql-mode 						Set SQL mode for client session
+# --ssl-ca 							File that contains list of trusted SSL cert auths
+# --ssl-capath 					Dir that contains trusted SSL Cert Auth cert files
+# --ssl-cert 						File that contains X.509 cert
+# --ssl-cipher 					List of permitted ciphers for connection encryption
+# --ssl-crl 						File that contains cert revocation lists
+# --ssl-fips-mode 				Enabling fips mode on client side
+#
+# --ssl-key 						File that contains X.509 key
+# --ssl-mode 						Security state of connection to server
+# --tls-version 					Protocols permitted for encrypted connections
+# --user 							MySQL user name to use when connecting to server
+# --verbose 						Verbose mode
+# --version 						Display version info and exit
+#
+# --help, -? - Display help and exit
+# --auto-generate-sql, -a - Generate SQL statements automatically when they are not supplied in files or using command options
+# --auto-generate-sql-add-autoincrement - Add an AUTO_INCREMENT column to automatically generated tables
+# --auto-generate-sql-execute-number=<N> - Specifies how many queries to generate automatically
+#
+# --auto-generate-sql-guid-primary - Add a GUID based primary key to automatically generated tables
+# --auto-generate-sql-load-type=<type> - Specify the test load type. The permissible values are:
+#
+# 													  read - Scans tables
+# 													  write - Inserts into tables
+# 													  key - Read primary keys
+# 													  update - update primary keys
+# 													  mixed - half inserts, half scanning selects.
+#
+# 													  Defaults to mixed.
+#
+# --auto-generate-sql-secondary-indexes= - Specifies how many secondary indexes to add to automatically generated tables. Defaults to none.
+#  <N>
+# --auto-generate-sql-unique-query-number= - How many different queries to generate for automatic tests. For example - if you run a key
+#  <N> 													test that performs 1000 selects - you can use this option with a value of 1000 to run 1000 unique Queries.
+#  													   Defaults to 10.
+#
+# --auto-generate-sql-unique-write-number= - How many different queries to generate for --auto-generate-sql-write-number. Defaults to 10.
+#  <N>
+# --auto-generate-sql-write-number=<N> 	 - How many row inserts to perform. Defaults to 100.
+# --commit=<N> 									 - How many statements to execute before committing. Defaults to 0.
+# --compress, -C 									 - Compress all info sent between client and server, if both support compression.
+# --concurrency=<N>, -c <N> 					 - Number of parallel clients to simulate
+# --create=<value> 								 - File or string containing statement to use for creating the table
+# --create-schema=<value> 						 - The schema in which to run the tests. If --auto-generate-sql is also denoted - mysqlslap drops the schema
+# 															at the end of the test run.
+#
+# 															To avoid - use --no-drop as well.
+# --csv[=<file name>] 							 - Generate output in comma separated values format. Output goes to named file - or to STD out if no file
+# --debug[=<debug options>], 					 - Write a debug log. A typical <debug_options> is d:t:o, <file_name> - defaults to d:t:o, /tmp/mysqlslap.trace
+#  -# [<debug_options>]
+# --debug-check 									 - Print some debug info when the program exits
+# --debug-info, -T 								 - Print debug info, memory and CPU usage stats when exiting.
+# --default-auth=<plugin> 						 - A hint about the client side auth plugin to use
+# --defaults-extra-file= 						 - Read this option file after the global option file but (on Unix) before the user option file. 
+#   <file name>  										If it does not exist/not found - error is thrown. Relative path is interpreted, absolute as absolute
+# --defaults-file= 								 - Use only the given option file. relative if relative, absolute if absolute.
+#   <file name> 										Still reads .mylogin.cnf
+# --defaults-group-suffix 						 - Read not only the usual option groups - but also the regex suffix
+#   =<str>
+# --delimiter=<str>, 							 - Delimiter to use in the SQL statement supplied in files or using the CMD options.
+#  -F <str>
+# --detach=<N> 									 - Detach (close and reopen) each connection afer each <N> statements. Default is 0 (connections are not detached)
+#
+# --enable-cleartext-plugin 					 - Enable the mysql_clear_password cleartext auth plugin
+# --engine=<engine name>, 						 - Storage engine to use for creating tables 
+#  -e <engine_name>
+# --get-server-public-key 						 - Request from the server the RSA public key that it uses for key pair-based PW exchange.
+# 															Applies to clients that connect with caching_sha2_password Auth plugin.
+#
+# 															etc.
+#
+# --host=<host name>, 							 - Connect to the MySQL server on the given host.
+#  -h <host_name>
+# --iterations=<N>, 								 - Number of times to run the tests
+#  -i <N>
+# --login-path=<name> 							 - Read options from the named login path in the .mylogin.cnf path file.
+# --no-drop 										 - Prevent mysqlslap from dropping any schema it creates during the test run.
+# --no-defaults 									 - Do not read any option files. Exception is .mylogin.cnf
+# --number-char-cols=<N>, 						 - Number of VARCHAR columns to use if --auto-generate-sql is specified
+#  -x <N>
+# --number-int-cols=<N>, 						 - Number of INT columns to use if --auto-generate-sql is specified
+#  -y <N>
+# --number-of-queries=<N> 						 - Limit each client to approximately this many queries. Query counting takes into account
+# 															the statement delimiter. 
+# 															
+# 															For example - if you invoke mysqlslap as follows, the ; delimiter
+# 															is recognized so that each instance of the query string counts as two queries.
+# 					
+# 															As a result - 5, in this case - not 10 - are inserted.
+#
+# 															mysqlslap --delimiter=";" --number-of-queries=10
+# 																--query="use test;insert into t values(null)"
+#
+# --only-print 									 - Do not connect to DBs. Only prints what it would have done.
+# --password[=<password>],  					 - Normal dynamics
+#  -p [<password>]
+# --pipe, -W 										 - Connect to the server using a named pipe. Applies only if the server supports named-pipe connections
+# --plugin-dir=<dir name> 						 - The dir in which to look for plugins.
+# --port=<port num>, 							 - TCP/IP port number to use for the connection
+#  -P <port_num>
+# --post-query=<value> 							 - File or string containing the statement to execute after the tests have completed.
+# 															Execution is not counted for timing purposes.
+# --post-system=<str> 							 - String to execute using system() after the tests have completed.
+# 															Not counted for timing purposes.
+# --pre-query=<value> 							 - File or string containing the statement to execute before running the tests.
+# --pre-system=<str> 							 - The string to execute using system() before running the tests. Not counted for timing purposes
+#
+# --print-defaults 								 - Print the program name and all options that it gets from option files.
+# --protocol={TCP|SOCKET|PIPE|MEMORY} 		 - Connection protocol to use for connecting to the server.
+# --query=<value>, 								 - File or string containing the SELECT statements to use for retrieving data
+#  -q <value>
+# --secure-auth 									 - REMOVED
+# --server-public-key-path=<file name> 	 - Path name to file containing client-side copy of the public key etc.
+# --shared-memory-base-name=<name> 			 - On Windows, shared-memory name to use for connections made using shared memory to a local server.
+#  														Only applies if the server supports shared-memory connections.
+# --silent, -s 									 - Silent mode. No output.
+# --socket=<path>, -S <path> 					 - For connections to localhost, the Unix socket file to use or on Windows - the named pipe to use.
+# --sql-mode=<mode> 								 - Set the SQL mode for the client session
+# --ssl* 											 - Indications of where to find certs, keys and wether to connect with SSL
+# --ssl-fips-mode={OFF|ON|STRICT} 			 - Wether to enable FIPS mode on the client side.
+# --tls-version=<protocol list> 				 - The protocols permitted by the client for encrypted connections.
+# --user=<user name>, 							 - The MySQL user name to use when connecting to the server
+#  -u <user_name>
+#
+# --verbose, -v 									 - Verbose mode. Stacks.
+# --version, -V 									 - Display version info and exit.
+#
+# The following section covers Administrative and Utility programs
+#
+# The following pertains to ibd2sdi - InnoDB Tablespace SDI Extraction Utility
+#
+# ibd2sdi is a utility for extracting serialized dictionary information (SDI) from InnoDB tablespace files.
+# SDI data is present all persistent InnoDB tablespace files.
+#
+# ----------------------------------------------
+# SDI:
+#
+# Dictionary object metadata in a serialized form. SDI is stored in JSON format.
+#
+# >= 8.0.3, SDI is present in all InnoDB tablespace files except for temp tablespace and undo tablespace files.
+# The presence of SDI in tablespace files provides metadata redundancy. For example - dictionary object metadata
+# can be extracted from tablespace files using the ib2sdi utility if the data dictionary becomes unavailable.
+#
+# For a MyISAM table, SDI is stored in a .sdi metadata file in the schema dir. 
+# An SDI metadata file is required to perform an IMPORT TABLE operation.
+# 															
+# ----------------------------------------------
+#
+# ibd2sdi can be run on:
+# file-per-table tablespace files (*.ibd files), 
+# general tablespace files (*.ibd files),
+# system tablespace files (ibdata* files),
+# data dict tablespace (mysql.ibd) 
+#
+# It is not supported for use with temp tablespaces or undo tablespaces.
+#
+# ib2sdi can be used at runtime or while the server is offline. 
+# During DDL operations, ROLLBACK operations, and to undo log purge operations related to SDI.  
+# There may be a short interval of time when ibd2sdi fails to read SDI data stored in the tablespace.
+#
+# ibd2sdi performs an uncommitted read of SDI from the specified tablespace. Redo logs and undo logs are not accessed.
+# To invoke the ibd2sdi:
+#
+# ib2sdi [<options>] <file_name1> [<file_name2> <file_name3> ...]
+#
+# ibd2sdi supports multi-file tablespaces like the InnoDB system tablespace - but it cannot be run on more
+# than one tablespace at a time.
+#
+# For multi-file tablespaces:
+#
+# ibd2sdi <ibdata1 ibdata2>
+#
+# The files of a multi-file tablespace must be specified in order of the ascending page number.
+# If two successive files have the same space ID - the later file must start with the 
+# last page number of the previous file + 1.
+#
+# ibd2sdi outputs SDI (containing id, type and data fields) in JSON format.
+#
+# ibd2sdi Options
+#
+# ibd2sdi supports the following options:
+#
+# --help, -h
+#
+# ibd2sdi --help
+# USAGE: 	/ibd2sdi [-v] [-c <strict-check>] [-d <dump file name>] [-n] <filename1> [<filenames>]
+# See http://dev.mysql.com/doc/refman/8.0/en/ibd2sdi.html for usage hints:
+#
+# -h, --help - Display help and exit
+# -v, --version - Display version info and exit
+# -#, --debug[=<name>] - Output debug log. see -> http://dev.mysql.com/doc/refman/8.0/en/dbug-package.html
+# -d, --dump-file=<name> - Dump the tablespace SDI into the file passed by user.
+# 									Without the filename, it will default to stdout
+# -s, --skip-data - Skip retrieving data from SDI records. Retrieve only id and type
+# -i, --id=<#> - Retrieve the SDI record matching the id passed by user
+# -t, --type=<#> - Retrieve the SDI records matching the type passed by user
+# -c, --strict-check=<name>
+# 		Specify the strict checksum algo by the user.
+# 		Allowed values are innodb, crc32, none
+# -n, --no-check - Ignore the checksum verification
+# -p, --pretty - Pretty format the SDI output. 
+#     If false, SDI would be not human readable but it will be of less size
+# 		(Defaults to on;  use --skip-pretty to disable)
+#
+# Variables (--variable-name=<value>) and boolean options {FALSE|TRUE} 
+# debug 			(NO DEFAULT)
+# dump-file 	(NO DEFAULT)
+# skip-data 	FALSE
+# id 				0
+# type 			0
+# strict-check crc32
+# no-check 		FALSE
+# pretty 		TRUE
+#
+# --version, -v - Displays MySQL version info. 
+#
+#  ibd2sdi --version
+#  ibd2sdi Ver 8.0.3-dmr for Linux on x86_64 (Source distri)
+#
+# --debubg[=<debug options>], - Prints a debug log.
+#  -# [<debug_options>]
+#  
+# 	ibd2sdi --debug=d:t /tmp/ibd2sdi.trace
+#
+# --dump-file=, -d - Dumps serialized dictionary info (SDI) into the specified dump file. 
+#   If a dump file is not specified, the  tablespace SDI is dumped to stdout.
+#
+#   ibd2sdi --dump-file=<file_name>  ../data/test/t1.ibd
+# 
+# --skip-data, -s - Skip retrieval of data field values from the serialized dictionary information (SDI) and only
+#                   retrieves ID, type field values - which are primary keys for SDI records.
+#
+# 						  ibd2sdi --skip-data ../data/test/t1.ibd
+# 						  ["ibd2sdi"
+#
+# 						  {
+# 								"type": 1,
+# 							   "id": 330
+# 						  }
+# 						  ,
+# 						  {
+# 								"type": 2,
+# 								"id": 7
+# 						  }
+# 						  ]
+#
+# --id=#, -i #
+# 
+# 	Retrieves SDI matching the specified table or tablespace object id. 
+#  An object id is unique to the object type.
+#
+#  Table and tablespace object id's are also found in the id column of the mysql.tables and
+#  mysql.tablespace data dir tables.
+#
+#  ibd2sdi --id=7 ../data/test/t1.ibd
+#  ["ibd2sdi"
+#  ,
+#  {
+# 		"type": 2,
+# 		"id": 7,
+# 		"object":
+# 			{
+# 		"mysqld_version_id": 80003,
+# 		"dd_version": 80003,
+# 		"sdi_version": 1,
+# 		"dd_object_type": "Tablespace",
+# 		"dd_object": {
+# 			"name": "test/t1",
+# 			"comment": "",
+# 			"options": "",
+# 			"se_private_data": "flags=16417;id=2;server_version=80003;space_version=1;"
+# 			"engine": "InnoDB",
+# 			"files": [
+# 				{
+# 					"ordinal_position": 1,
+# 					"filename": "./test/t1.ibd",
+# 					"se_private_data": "id=2;"
+# 				}
+# 			]
+# 		}
+#  }
+#  }
+#  ]
+#
+# --type=#, -t # - Retrieves SDI matching the specified object type. SDI is provided for table (type=1) and tablespace (type=2) objects:
+# 
+# ibd2sdi --type=2 ../data/test/t1.ibd
+# ["ibd2sdi"
+# ,
+# {
+# 		"type": 2,
+# 		"id": 7,
+# 		"object":
+# 			{
+# 		"mysqld_version_id": 80003,
+# 		"dd_version": 80003,
+# 		"sdi_version": 1,
+# 		"dd_object_type": "Tablespace",
+# 		"dd_object": {
+# 			"name": "test/t1",
+# 			"comment": "",
+# 			"options": "",
+# 			"se_private_data": "flags=16417;id=2;server_version=80003;space_version=1;"
+# 			"engine": "InnoDB",
+# 			"files": [
+# 				{
+# 					"ordinal_position": 1,
+# 					"filename": "./test/t1.ibd",
+# 					"se_private_data": "id=2;"
+# 				}
+# 			]
+# 		}
+# }
+# }
+# ]
+#
+# --strict-check, -c - Specifies a strict checksum algo for validating the checksum of pages that are read.
+#   Options include innodb, crc32 and none.
+#
+# Strict of innodb - ibd2sdi --strict-check=innodb ../data/test/t1.ibd
+# 
+# Strict of crc32 - ibd2sdi -c crc32 ../data/test/t1.ibd
+#
+# If --strict-check is not specified, validation is performed against non-strict innodb, crc32 and none.
+#
+# --no-check, -n - Skip checksum validation for pages that are read - ibd2sdi --no-check ../data/test/t1.ibd
+#
+# --pretty, -p - Outputs SDI in JSON pretty print format. Enabled by default. 
+#   If disabled, SDI is not human readable but is smaller in size. Use --skip-pretty to disable
+# 
+#   ibd2sdi --skip-pretty ../data/test/t1.ibd
+#
+# The following covers innochecksum - Offline InnoDB File Checksum Utility
+#
+# Innochecksum prints checksums for InnoDB files. 
+#
+# This tool reads an InnoDB tablespace file, calculates the checksum for each page, 
+# compares the calculated checksum to the stored checksum and reports mismatches, 
+# which indicate damaged pages.
+#
+# Originally developed to speed up verifying the integrity of tablespace files after power
+# outages but can also be used after file copies.
+#
+# Because checksum mismatches cause InnoDB to deliberately shut down a running server,
+# it may be preferable to use this tool rather than waiting for an in-production server to encounter the damaged pages.
+#
+# Innochecksum cannot be used on tablespace files that the server already has open.
+# For such files, you should use CHECK TABLE to check tables within the tablespace.
+#
+# Attempting to run innochecksum on a tablespace that the server already has open will
+# result in an "Unable to lock file" error.
+#
+# If checksum mismatches are found - you would normally restore the tablespace from backup
+# or start the server and attempt to use mysqldump to make a backup of the tables within the tablespace.
+#
+# innochecksum [<options>] <file_name>
+#
+# innochecksum supports the following options. For options that refer to page numbers, the numbers are zero-based:
+#
+# --help, -? 
+# innochecksum --help
+#
+# --info, -I
+# Synonym for --help. Displays command line help.
+# innochecksum --info
+#
+# --version, -V
+# Displays version info
+# innochecksum --version
+#
+# --verbose, -v
+# Verbose mode; prints progress indicator to log file every five seconds. 
+# 
+# innochecksum --verbose - Verbose mode on
+#
+# innochecksum --verbose=FALSE - Verbose mode off
+#
+# --verbose and --log can be specified at the same time:
+#
+# innochecksum --verbose --log=/var/lib/mysql/test/logtest.txt
+#
+# To locate the progress indicator info in the log file - you can preform the following search:
+#
+# cat ./logtest.txt | grep -i "okay"
+#
+# Prints lines simply put of status, progress, etc.
+#
+# --count, -c - Prints a count of the number of pages in the file and exit.
+# innochecksum --count ../data/test/tab1.ibd
+#
+# --start-page=<num>, -s <num> - Starts at this page number:
+#
+#  innochecksum --start-page=600 ../data/test/tab1.ibd
+#
+#  innochecksum -s 600 ../data/test/tab1.ibd
+#
+# --end-page=<num>, - End at this page number
+#  -e <num>
+# 							 --end-page=700 ../data/test/tab1.ibd
+#
+# 							 --p 700 ../data/test/tab1.ibd
+# 
+# --page=<num>, -p <num> - Check only this page number.
+# 									innochecksum --page=701 ../data/test/tab1.ibd
+#
+# --strict-check, -C - Specify a strict checksum algo. Options include innodb, crc32 and none.
+#
+# 							  innochecksum --strict-check=innodb ../data/test/tab1.ibd #use innodb checksum
+#
+# 							  innochecksum -C crc32 ../data/test/tab1.ibd
+#
+# 							  The following conditions apply:
+#
+# 							  If you do not specify --strict-check - innochecksum validates against innodb, crc32 and none.
+#
+# 							  If none: only checksums generated by none are allowed
+# 							  If innodb: only checksums generated by innodb are allowed
+# 							  If crc32: only checksums generated by crc32 are allowed
+#
+# --no-check, -n - Ignore the checksum verification when rewriting a checksum. This option may only be used with the innochecksum
+# 						 --write option. If the --write option is not specified - innochecksum will terminate.
+#
+# 						 Example of innodb checksum rewritten to replace invalid checksum:
+#
+# 						 innochecksum --no-check --write innodb ../data/test/tab1.ibd
+#
+# --allow-mismatches, - The max number of checksum mismatches allowed before innochecksum terminates.
+#  -a 						Defaults to 0. If --allow-mismatches=<N>, where N>=0 - N mismatches are permitted and innochecksum terminates at N+1.
+#
+# 								When --allow-mismatches is set to 0, innochecksum terminates on the first checksum mismatch.
+#
+# 								In this example, an existing innodb checksum is written to set --allow-mismatches to 1.
+#
+# 								innochecksum --allow-mismatches=1 --write innodb ../data/test/tab1.ibd
+#
+# 								With --allow-mismatches set to 1, if there is a mismatch at page 600 and another at page 700 out of 1k pages
+#
+# 								If a mismatch at 600 and 700, it's updated for 0-599 - and 601-699 - terminates at second.
+# 								Leaves 600 and 700-999 unchanged
+#
+# --write=<name>, 	 - Rewrite a checksum. When rewriting an invalid checksum, the --no-check option must be used together with
+# 								the --write option.
+#
+# 								The --no-check option tells innochecksum to ignore verification of the invalid checksum.
+# 								You do not have to specify the --no-check option if the current checksum is valid.
+#
+# 								An Algo must be specified when using the --write option. Possible values are:
+#
+# 								innodb - Checksum calculated in software, using the original algo from InnoDB
+# 								crc32 - Checksum calculated using the crc32, possibly done with a hardware assist
+# 								none - A constant number
+#
+# 								The --write option rewrites entire pages to disk. If the new checksum is identical to the existing
+# 								checksum, the new checksum is not written to disk in order to minimize I/O.
+#
+# 								innochecksum obtains an exclusive lock when the --write option is used.
+#
+# 								In this example, a crc32 checksum is written for tab1.ibd:
+#
+# 								innochecksum -w crc32 ../data/test/tab1.ibd
+#
+# 								Here, we replace the invalid crc32 checksum:
+#
+# 								innochecksum --no-check --write crc32 ../data/test/tab1.ibd
+#
+# --page-type-summary, - Display a count of each page type in a tablespace. Example:
+#  -S 						 innochecksum --page-type-summary ../data/test/tab1.ibd
+#
+# 								 Sample output for --page-type-summary:
+#
+# 								 File::./data/test/tab1.ibd
+# 								 ====================PAGE TYPE SUMMARY===================
+# 								 #PAGE_COUNT PAGE_TYPE
+# 								 ========================================================
+# 								 		2 		 Index page
+# 										0      Undo log page
+# 										1 		 Incode page
+# 										0 		 Insert buffer free list page
+# 										2 		 Freshly allocated page
+# 										1 		 Insert buffer bitmap
+# 									   0 		 System page
+# 										0 		 Transaction system page
+# 										1 		 File Space Header
+# 										0 		 Extent descriptor page
+# 										0 		 BLOB page
+# 										0 		 Compressed BLOB page
+# 									   0 		 Other type of page
+# 								 =========================================================
+# 								 Additional information:
+# 								 Undo page type: 0 insert, 0 update, 0 other
+# 								 Undo page state: 0 active, 0 cached, 0 to_free, 0 to_purge, 0 prepared, 0 other
+#
+# --page-type-dump,   - Dump the page type info for each page in a tablespace to stderr or stdout. Example:
+#  -D 						innochecksum --page-type-dump=/tmp/a.txt ../data/test/tab1.ibd
+#
+# --log, -l 			 - Log output for the innochecksum tool. A log file name must be provided.
+# 								Log output contains checksum values for each tablespace page.
+#
+# 								For uncompressed tables, LSN values are also provided. The --log replaces the --debug option,
+# 								which was available in earlier releases. Example usage:
+#
+# 								innochecksum --log=/tmp/log.txt ../data/test/tab1.ibd
+#
+# 								innochecksum -l /tmp/log.txt ../data/test/tab1.ibd
+#
+# - Option
+# Specify this to read from STD input.
+# 								Specify the - option to read from STD input. 
+# 								
+# 								If the - option is missing when "read from standard in" is expected
+# 								innochecksum will output innochecksum usage information indicating that the
+# 								"-" option was omitted. Examples of usage:
+#
+# 								cat t1.ibd | innochecksum -
+#
+# 								In this example, innochecksum writes the crc32 checksum algorithm to a.ibd without
+# 								changing the original t1.ibd file.
+#
+# 								cat t1.ibd | innochecksum --write=crc32 - > a.ibd
+#
+# The following section covers the case of running innochecksum on Multiple User-defined Tablespace files
+#
+# User defined tablespace files are denoted (.ibd)
+#
+# The following examples demonstrate how to run innochecksum on multiple user-defined tablespace files
+#
+# innochecksum ./data/test/*.ibd #Run innochecksum for all tablespace (.ibd) files in a DB called "test"
+#
+# innochecksum ./data/test/t*.ibd #Run innochecksum for all tablespace files (.ibd files) that start with t
+#
+# innochecksum ./data/*/*.ibd #Run innochecksum for all tablespace files (.ibd files) in the data dir
+#
+# Running innochecksum on multiple user-defined tablespace files is not supported on Windows OS, as Windows shells
+# such as cmd.exe do not support glob pattern expansion.
+#
+# On Windows systems, innochecksum must be run separately for each user-defined tablespace file.
+# 
+# cmd> innochecksum.exe t1.ibd
+# cmd> innochecksum.exe t2.ibd
+# cmd> innochecksum.exe t3.ibd
+#
+# The following section covers innochecksum on Multiple System Tablespace Files
+#
+# https://dev.mysql.com/doc/refman/8.0/en/innochecksum.html
+#
