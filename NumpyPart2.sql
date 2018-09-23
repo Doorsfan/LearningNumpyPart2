@@ -6430,6 +6430,284 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # The following pertains to myisamchk General Options
 #
-# https://dev.mysql.com/doc/refman/8.0/en/myisamchk-general-options.html
+# --help, -? - Display help and exit. Options are grouped by type of operation
+# --HELP, -H - Displays help and exit. Presented in a single list.
+# --debug=<debug options>, - Write a debugging log. Typical string is d:t:o, <file_name>. Defaults to d:t:o, /tmp/myisamchk.trace
+#  -# <debug_options>
+# --defaults-extra-file=<file name> - Read this option file after global option file but (On Unix) before the User option file.
+# 												  Relative if relative, absolute if absolute - if cannot access file, error is thrown
+# --defaults-file=<file name> - Use only the given option file. Relaive if relative, absolute if absolute - error thrown if inaccessible.
+# --defaults-group-suffix - Read not only the usual option groups, but also suffix regex. Normally only reads [myisamchk]
 #
+# --no-defaults - Do not read any option files. .mylogin.cnf is read if exists 
+# --print-defaults - Print the program name and all options that it gets from option files
+# --silent, -s - Silent mode. Write output only when errors occur - stacks twice (-ss)
+# --verbose, -v - Verbose mode. Prints more info about what the program does. Can be used with -d and -e. Stacks.
+# --wait, -w - Instead of terminating with an error if the table is locked - wait until the table is unlocked before continuing.
+# 					If you are running mysqld with external locking disabled - the table can be locked only by another myisamchk cmd
+#
+# We can also define the following variables with the general syntax of --var_name=value:
+#
+# 		Var 					 Default
+# decode_bits 				 9
+# ft_max_word_len 		 version-dependent
+# ft_min_word_len 		 4
+# ft_stopword_file 		 built-in-list
+# key_buffer_size 		 523264
+# myisam_block_size 		 1024
+# myisam_sort_key_blocks 16
+# read_buffer_size 		 262136
+# sort_buffer_size 		 2097144
+# sort_key_blocks 		 16
+# stats_method 			 nulls_unequal
+# write_buffer_size 		 262136
+#
+# The possible myisamchk vars and their default values can be examined with myisamchk --help:
+#
+# myisam_sort_buffer_size is used when the keys are repaired by sorting keys, which is the normal case when you use
+# --recover. 
+#
+# sort_buffer_size is a deprecated synonym for myisam_sort_buffer_size
+#
+# key_buffer_size is used when you are checking the table with --extend-check or when the keys are repaired by inserting
+# keys row by row into the table 
+#
+# Repairing through the key buffer is used in the following cases:
+#
+# You use --safe-recover
+#
+# The temp files needed to sort the keys would be more than twice as big as when creating the key file directly.
+# This is usually the case when you have large key values for CHAR, VARCHAR or TEXT columns - because the sort operation
+# needs to store the complete key values as it proceeds.
+#
+# If we have  a lot of tmp space and we can force myisamchk to repair by sorting - we can use the --sort-recover option.
+#
+# Repairing through the key buffer takes much less disk space than using sorting, but is also much slower.
+#
+# If we wish to have fast repairs - we can set the key_buffer_size and myisam_sort_buffer_size var to about 25%
+# of our available memory.
+#
+# Only one of em is used at a time.
+#
+# myisam_block_size is the size used for index blocks.
+#
+# stats_method influences how NULL values are treated for index stats collection when the --analyze option is given.
+# It acts like the myisam_stats_method system var.
+#
+# ft_min_word_len and ft_max_word_len indicate the min and max word length for FULLTEXT indexes on MyISAM tables.
+# ft_stopword_file names the stopword file. 
+#
+# If we use myisamchk to perform an operation that modifies table indexes (such as repair or analyze), the FULLTEXT
+# indexes are rebuilt using the default full-text param values for min and max word length and the stopword file unless specified otherwise.
+# This can cause Queries to fail.
+# 
+# This can occur due to that said params are known only by the server.
+# They are not stored in MyISAM index files. 
+#
+# To avoid the problem if you have modified the min or max word length or the stopward file in the server, specify
+# the same ft_min_word_len, ft_max_word_len and ft_stopword_file values to myisamchk that we use for mysqld.
+#
+# For example - if we have set the min word length to 3 - we can repair a table with myisamchk as follows:
+#
+# myisamchk --recover --ft_min_word_len=3 <tbl_name.MYI>
+#
+# To ensure that myisamchk and the server uses the same values for full-text params - we can place each one in both the
+# [mysqld] and [myisamchk] sections of a option file:
+#
+# [mysqld]
+# ft_min_word_len=3
+#
+# [myisamchk]
+# ft_min_word_len=3
+#
+# An alternative to using myisamchk is to use the REPAIR TABLE, ANALYZE TABLE, OPTIMIZE TABLE or ALTER TABLE.
+#
+# The above statements are executed by the server.
+#
+# The following section covers myisamchk Check options
+#
+# myisamchk supports the following options for table checking ops:
+#
+# --check, -c - Check the table for errors. Default operation if you specify no option that selects an operation type explicitly
+# --check-only-changed, -C - Check only tables that have changed since the last check
+# --extend-check, -e - Check the table extensively. Very slow. Extreme case usage. Can raise key_buffer_Size to help speed.
+# --fast, -F - Check only tables that have not been closed properly
+# --force, -f - Do a repair operation automatically if myisamchk finds any errors in the table. Same as --recover or -r
+# --information, -i - Print info stats about the table that is being checked
+# --medium-check, -m - Faster than --extend-check.
+# --read-only, -T - Do not mark the table as checked - useful if you use myisamchk to check a table that is in use by some other app that does not use locking 
+# 						  - such as mysqld when run with external locking disabled
+# --update-state, -U - Store info in the .MYI file to indicate when the table was checked and whether the table crashed. Should be used to get full benefit
+# 							  of the --check-only-changed option - but you should not use this option if the mysqld server is using the table and you run it with external locking off.
+#
+#
+# The following section covers myisamchk Repair Options
+#
+# myisamchk supports the following options for table repair operations (operations performed when an option such as --recover or --safe-recover is given):
+#
+# --back, -B - Make a backup of the .MYD file as <file_name-time.BAK>
+# --character-sets-dir=<dir name> - The dir where char sets are installed
+# --correct-checksum - Correct the checksum info for the table
+# --data-file-length=<len>, -D <len> - The max length of the data file (when re-creating data file when it is "full")
+# --extend-check, -e - Do a repair that tries to recover every possible row from the data file.
+# 							  Normally - this also finds a lot of garbage rows.  Extreme case usage.
+# --force, -f - Overwrite old intermediate files (files with names like <tbl_name.TMD>) instead of aborting
+#
+# --keys-used=<val>, - For myisamchk - the option value is a bit value that indicates which indexes to update.
+#  -k <val> 			  Each binary bit of the option value corresponds to a table index - where the first index is bit 0.
+# 							  
+# 							  An option value of 0 disables updates to all indexes, which can be used to get faster inserts.
+#							  Deactivated indexes can be reactivated by using myisamchk -r.
+#
+# --no-symlinks, -l  - Do not follow symbolic links. Normally myisamchk repairs the table that a symlink points to. 
+# 							  Deprecated past 4.0 because symlinks are not removed during repair operations.
+#
+# --max-record-length= - Skip rows larger than the given length if myisamchk cannot allocate memory to hold them.
+#  <len>  							  
+#
+# --parallel-recover,  - Use the same technique as -r and -n, but create all the keys in parallel - using different threads. (beta)
+#  -p 
+#
+# --quick, -r 			  - Achieve a faster repair by modifying only the index file - not the data file.
+# 								 You can specify this option twice to force myisamchk to modify the original data file in case of duplicate keys.
+#
+# --recover, -r 		  - Do a repair that can fix almost any problem except unique keys that are not unique.
+# 								 Use this to recover tables.
+#
+# 								 Data remains intact if this fails. If it fails, use --safe-recover instead.
+#
+# --safe-recover,  	  - Do a repair using an old recovery method that reads through all rows in order and updates all index trees
+#  -o 						 based on the rows found.
+#
+# 								 Slower than --recover, uses less memory though.
+#
+# --set-collation=     - Specify the collation to use for sorting table indexes. The char set is implied by the first part of the collation name.
+#  <name> 
+#
+# --sort-recover, 	  - Force myisamchk to use sorting to resolve the keys even if temp files would be v large
+#  -n
+#
+# --tmpdir=<dir name>, - The path of the dir to be used for storing temp files. If not set - myisamchk uses the value of the TMPDIR env var.
+#  -t <dir name> 			 --tmpdir can be set to a list of dir paths that are used successivly on rotation for creating temp files.
+#								 Separation char is : on Unix, ; on Windows.
+#
+# --unpack, -u - Unpack a table that was packed with myisampack.
+#
+# The following covers myisamchk options for actions other than table checks and repairs:
+#
+# --analyze, -a - Analyze the distribution of key values. This improves join performance by enabling the join optimizer to better choose the order
+# 						in which to join the tables and which indexes it should use.
+#
+# 						To obtain information about the key distribution - use a myisamchk --description --verbose <tbl name> command or
+# 						the SHOW INDEX FROM <tbl_name> statement.
+#
+# --block-search=<offset> - Find the record that a block at the given offset belongs to.
+#  -b <offset>
+#
+# --description, -d - Print some descriptive info about the table. Specifying the --verbose option once or twice produces more info.
+#
+# --set-auto-increment [=<value>], - Force AUTO_INCREMENT numbering for new records to start at the given value (or higher - if there exists
+#  -A [<value>] 							 records with AUTO_INCREMENT values this large).
+#
+# 												 If <value> is not specified, <AUTO_INCREMENT> numbers for new records begin with the largest value in the table + 1.
+#
+# --sort-index, -S 	- 	Sort the index tree blocks in high-low order. Optimizes seeks and makes table scans that use indexes faster.
+#
+# --sort-records=<N>, - Sort records according to a particular index. This makes your data much more localized and may speed up range-based
+#  -R <N> 					SELECT and ORDER BY operations that use this index.
+#
+# 								May be very slow at first use.
+#
+# 								To determine table index number - use SHOW INDEX, which displays a table's indexes in the same order
+# 								that myisamchk sees them. Indexes are numbered beginning with 1.
+#
+# 								If keys are not packed (PACK_KEYS=0) - they have the same length - so when myisamchk sorts and moves records,
+# 								it just overwrites record offsets in the index.
+#
+# 								If keys are packed (PACK_KEYS=1), myisamchk must unpack key blocks first - then re-create indexes and pack
+# 								the key blocks again. (re-creating indexes is faster than updating offsets for each index - in this case)
+#
+# The following covers how to obtain table info with myisamchk:
+#
+# To obtain a desc of a MyISAM table or stats about it - use the commands shown here. The output from these commands is explained later in this section.
+#
+# myisamchk -d <tbl name> - Runs myisamchk in "describe mode" to produce a description of your table. 
+# 									 If you start the MySQL server with external locking disabled - myisamchk may report an
+# 									 error for a table that is updated while it runs.
+#
+# 									 However - because myisamchk does not change the table in describe mode - there is no risk of destroying data.
+#
+# myisamchk -dv <tbl name> - Adding -v runs myisamchk in verbose mode so that it produces more info about the table. Stacks.
+# myisamchk -eis <tbl name> - Shows only the most important information from a table. This operation is slow because it must read the entire table.
+# myisamchk -eiv <tbl name> - This is like -eis, but tells you what is being done.
+#
+# The <tbl_name> arg can be either the name of a MyISAM table or the name of its index file. Multiple args can be given.
+# 
+# Assume following table Structure:
+#
+# CREATE TABLE person
+# (
+#   id 			INT NOT NULL AUTO_INCREMENT,
+# 	 last_name 	VARCHAR(20) NOT NULL,
+#   first_name VARCHAR(20) NOT NULL,
+#   birth 		DATE,
+#   death 		DATE,
+#   PRIMARY KEY  (id),
+#   INDEX (last_name, first_name),
+#   INDEX (birth)
+# ) MAX_ROWS = 10000000 ENGINE=MYISAM;
+#
+# Suppose also that the table has these data and index file sizes:
+# -rw-rw---- 	1 mysql 	mysql 	9347072 Aug 19 11:47 person.MYD
+# -rw-rw---- 	1 mysql 	mysql 	6066176 Aug 19 11:47 person.MYI
+#
+# An example of myisamchk -dvv would then output:
+# 
+# MyISAM file: 	person
+# Record format: 	Packed
+# Character set: 	utf8mb4_0900_ai_ci (255)
+# File-version: 	1
+# Creation time: 	2017-03-30 21:21:30
+# Status: 			checked, analyzed, optimized, keys, sorted index pages
+# Auto increment key: 				1 	Last value: 			306688
+# Data records: 				 306688 	Deleted blocks: 			  0
+# Datafile parts: 			 306688 	Deleted data: 				  0
+# Datafile pointer (bytes): 		4 	Keyfile pointer (bytes):  3
+# Datafile length: 			9347072  Keyfile length: 	  6066176
+# Max datafile length:  4294967294  Max keyfile length: 17179867159
+# Recordlength: 					  54  
+#
+# table description:
+# Key Start Len Index 	Type 					Rec/key 			Root Blocksize
+# 1 	2 		4 	 unique 	long 					1 								 1024
+# 2 	6 		80  multip. varchar prefix 	0 								 1024
+# 		87 	80 			varchar 				0
+# 3 	168 	3 	 multip. uint24 NULL 		0 								 1024
+#
+# Field Start Length 	Nullpos 	Nullbit 	Type
+# 1 	  1 	  1 
+# 2 	  2 	  4 									no zeros
+# 3 	  6 	  81 									varchar
+# 4 	  87 	  81 									varchar
+# 5 	  168   3 				1 			1 		no zeros
+# 6 	  171   3 				1 			2 		no zeros
+#
+# Explanations for the types of information myisamchk produces are given here. "Keyfile" refers to the index file.
+# "Record" and "row" are synonymous - as are "field" and "column"
+#
+# The initial part of the table desc contains these values:
+#
+# MyISAM file - Name of the MyISAM (index) file
+# Record format - The format used to store table rows. The preceding examples use Fixed length.
+# 						Other possible values are Compressed and Packed. (Packed corresponds to what SHOW TABLE STATUS reports as Dynamic)
+# Character set - The table default char set
+# File-version  - Version of MyISAM format. Always 1.
+# Creation time - When the data file was created
+# Recover time  - When the index/data file was last reconstructed
+# Status 		 - Table status flags. Possible values are crashed, open, changed, analyzed, optimized keys and sorted index pages.
+# Auto increment key, Last value - The key number associated the table's AUTO_INCREMENT column, and most recently generated value. Does not appear if none found.
+# Data records  - Number of rows in the table
+# Deleted blocks - How many deleted blocks still have reserved space. can optimize tables to minimize this space.
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/myisamchk-table-info.html
 #
