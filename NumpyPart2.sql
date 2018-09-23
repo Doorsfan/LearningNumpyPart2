@@ -6231,5 +6231,205 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # The following section covers innochecksum on Multiple System Tablespace Files
 #
-# https://dev.mysql.com/doc/refman/8.0/en/innochecksum.html
+# By default - there is only one InnoDB system tablespace file (ibdata1) but multiple files for the system
+# tablespace can be defined using the innodb data file path option.
+#
+# In the following example, three files for the system tablespace are defined using the innodb data file path option:
+# ibdata1, ibdata2 and ibdata3
+#
+# ./bin/mysqld --no-defaults --innodb-data-file-path="ibdata1:10M;ibdata2:10M;ibdata3:10M:autoextend"
+#
+# The three above files form a logical system tablespace.
+#
+# To run innochecksum on multiple files that form one logical system tablespace - innochecksum requires the
+# - option to read the tablespace file from Standard input - which equates to concatenating multiples files to creating one.
+#
+# To run the above, we would use:
+#
+# cat ibdata* | innochecksum -
+#
+# Windows CMD shell does not support globbing patterns - thus each file must be run seperately.
+#
+# The following covers myisam_ftdump - Used to display Full-Text Index information:
+#
+# myisam_ftdump displays info about FULLTEXT indexes in MyISAM tables.
+# It reads MyISAM index files directly - so it must be run on the server host where the table is located.
+#
+# Before using myisam_ftdump, be sure to issue a FLUSH TABLES statement first if the server is running.
+#
+# myisam_ftdump scans and dumps the entire index - which is not fast. Does not need to be run often, however.
+#
+# To invoke the myisam_ftdump:
+#
+# myisam_ftdump [<options>] <tbl_name> <index_num>
+#
+# We can also specify the table name by naming its index file (a file with .MYI suffix).
+#
+# If we do not invoke the myisam_ftdump in the dir where the table files are located - the table
+# or index file name must be preceded by the path name to the table's DB dir.
+#
+# Index numbers begin with 0.
+#
+# Assume the base of:
+#
+# CREATE TABLE mytexttable
+# (
+# 	 id 	INT NOT NULL, #Index 0
+#   txt  TEXT NOT NULL, #Index 1
+#   PRIMARY KEY (id),
+#   FULLTEXT (txt)
+# ) ENGINE=MyISAM;
+#
+# If the cwd is test DB dir, invoke myisam_ftdump:
+#
+# myisam_ftdump mytexttable 1
+#
+# If our path name to the test DB dir is /usr/local/mysql/data/test - you can also specify the table
+# name arg using that path name.
+#
+# myisam_ftdump /usr/local/mysql/data/test/mytexttable 1
+#
+# We can also use myisam_ftdump to generate a list of index entries in order of frequency of occurence
+# on Unix systems:
+#
+# myisam_ftdump -c mytexttable 1 | sort -r #-c is count, pipe the output and sort it - -r here is Recursive calling
+#
+# On Windows, can use:
+#
+# myisam_ftdump -c mytexttable 1 | sort /R - same as above, except /R is Recursive interaction on Windows
+#
+# The following options are supported by myisam_ftdump:
+#
+# --help, -h -? - Display a help message and exit
+#
+# --count, -c - Calculate per-word stats (counts and global weights)
+#
+# --dump, -d - Dump the index, include data offset and word weights
+#
+# --length, -l - Report length distribution
+#
+# --stats, -s - Report global index stats. Default operation if not other operation is specified
+#
+# --verbose, -v - Verbose. 
+#
+# The following section covers - myisamchk - a MyISAM Table-Maintenance Utility
+#
+# The myisamchk utility gets information about the DB, checks, repairs or optimizes them.
+#
+# myisamchk works with MyISAM tables (tables with .MYD and .MYI files for storing data and indexes)
+#  
+# We can also use the CHECK TABLE and REPAIR TABLE to check and repair MyISAM tables.
+#
+# NOTE: Not supported for partitioned tables, have backups in case of Errors.
+#
+# General syntax of myisamchk:
+#
+# myisamchk [<options>] <tbl_name> ...
+#
+# myisamchk defaults to checking tables - to get more info or correct tables - specify options.
+#
+# Path of file is relative if relative, Absolute if Absolute
+#
+# myisamchk *.MYI #Checks all files in CWD
+#
+# Absolute path check:
+#
+# myisamchk /path/to/database_dir/*.MYI
+#
+# * wildcarding is also allowed for Folders.
+#
+# An example of running a fast check on all MyISAM tables:
+#
+# myisamchk --silent --fast /path/to/datadir/*/*.MYI
+#
+# An example of repairing any corrupt tables and checking:
+#
+# myisamchk --silent --force --fast --update-state \
+# 	  --key_buffer_size=64M --myisam_sort_buffer_size=64M \
+# 	  --read_buffer_size=1M --write_buffer_size=1M \
+# 	  /path/to/datadir/*/*.MYI
+#
+# Assumes >= 64M memory allocation
+#
+# When checking tables - no other operations are to be run on them. I.e - they must be locked - or server completely dead.
+#
+# Otherwise, we might get:
+#
+# warning: Clients are using or have not closed table properly
+#
+# This can occur if the table has not been closed or it has been updated - Iterating over it and modifying it in this state,
+# can cause corruption and loss of data in terms of MyISAM tables.
+#
+# If mysqld is running - you must force it to flush table modifications, to clear buffered memory with FLUSH TABLES.
+# 
+# We could also just use CHECK TABLE to check tables.
+#
+# myisamchk supports the following options - can be specified on CMD or in the [myisamchk] group of an option file.
+#
+# FORMAT 					DESC
+# --analyze 				Analyze the distribution of key values
+# --backup 					Make a backup of the .MYD file as file_name-time.BAK
+# --block-search 			Find the record that a block at the given offset belongs to
+# --check 					Check the table for errors
+# --check-only-changed 	Check only tables that have changed since the last check
+#
+# --correct-checksum 	Correct the checksum information for the table
+# --data-file-length 	Maximum length of the data file (when re-creating data file when it is full)
+# --debug 					Write debugging log
+# --decode_bits 			?
+#
+# --defaults-extra-file Read named option file in addition to usual option files
+# --defaults-file 		Read only named option file
+# --defaults-group 		Option group suffix value
+#  -suffix 
+# --description 			Print some descriptive info about the table
+# --extend-check 			Do very thorough table check or repair that tries to recover every possible row from the data file
+# 
+# --fast 					Check only tables that have not been closed properly
+# --force 					Do a repair operation automatically if myisamchk finds any errors in the table
+# --force 					Overwrite old temporary files. For use with the -r or -o option
+# --ft_max_word_len 		Max word length for FULLTEXT indexes
+# --ft_min_word_len 		Min word length for FULLTEXT indexes
+# --ft_stopword_file 	Use stopwords from this file instead of built-in list
+# --HELP/--help 					Display help message and exit
+# 
+# --information 			Print info stats about the table that is checked
+# --key_buffer_size 		Size of buffer used for index blocks for MyISAM tables
+# --keys-used 				A bit-value that indicates which indexes to update
+# --max-record-length 	Skip rows larger than the given length if myisamchk cannot allocate memory to hold them
+# --medium-check 			Do a check that is faster than an --extend-check operation
+#
+# --myisam_block_size 	Block size to be used for MyISAM index pages
+# --myisam_sort_ 			The buffer that is allocated when sorting the index when doing a REPAIR or when creating indexes with CREATE INDEX or ALTER TABLE
+#  buffer_size
+# --no-defaults 			Read no option files
+# --parallel-recover 	Same as -r and -n, but creates all keys in parallel using different threads
+# --print-defaults 		Print default options
+# --quick 					Achieve a faster repair by not modifying the data file
+# --read_buffer_size 	Each thread that does a sequential scan allocates a buffer of this size for each table it scans
+#
+# --read-only 				Do not mark the table as checked
+# --recover 				Do a repair that can fix almost any problem except unique keys that are not unique
+# --safe-recover 			Do a repair using a old recovery method that reads through all rows in order and updates all index trees based on the rows found
+# --set-auto-increment 	Force AUTO_INCREMENT numbering for new records to start at the given value
+# --set-collation 		Specify the collation to use for sorting table indexes
+# --silent 					Silent mode
+# --sort_buffer_size 	The buffer that is allocated when sorting the index when doing a REPAIR or when creating indexes with CREATE INDEX or ALTER TABLE
+# --sort-index 			Sort the index tree blocks in high-low order
+# --sort_key_blocks 		?
+#
+# --sort-records 			Sort records according to a particular index
+# --sort-recover 			Force myisamchk to use sorting to resolve the keys even if the temporary files would be very large
+# --stats_method 			Specifies how MyISAM index stats collection code should treat NULLs
+# --tmpdir 					Dir to be used for storing temp files
+# --unpack 					Unpack a table that was packed with myisampack
+# --update-state 			Store information in the .MYI file to indicate where the table was checked and whether the table crashed.
+# --verbose 				Verbose mode
+# --version 				Display version information and exit
+# --write_buffer_size 	Write buffer size
+#
+# The following pertains to myisamchk General Options
+#
+# https://dev.mysql.com/doc/refman/8.0/en/myisamchk-general-options.html
+#
 #
