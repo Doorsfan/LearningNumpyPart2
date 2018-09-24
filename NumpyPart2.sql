@@ -6708,6 +6708,631 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # Auto increment key, Last value - The key number associated the table's AUTO_INCREMENT column, and most recently generated value. Does not appear if none found.
 # Data records  - Number of rows in the table
 # Deleted blocks - How many deleted blocks still have reserved space. can optimize tables to minimize this space.
+# Datafile parts - For dynamic-row format, this indicates how many data blocks there are. For an optimized table without fragmented rows, this is the same as Data records.
 # 
-# https://dev.mysql.com/doc/refman/8.0/en/myisamchk-table-info.html
+# Deleted data - How many bytes of unreclaimed deleted data there are. You can optimize your table to minimize this space.
+# Datafile pointer - The size of the data file pointer, in bytes. Usually is 2,3,4 or 5. Most manage with 2 - cannot be controlled with MySQL.
+# 							For fixed tables - this is row address. For dynamic tables, this is byte address.
+# Keyfile pointer - Size of the index file pointer, in bytes. Usually 1,2 or 3. Most manage with 2 - auto calculated by MySQL. is always a block address.
+# Max datafile length - How long the table data file can become, in bytes.
+# Max keyfile length - How long the table index can become, in bytes.
+# Recordlength - How much space each row takes, in bytes.
 #
+# The table desc part of the output includes a list of all keys in the table. For each key, myisamchk displays some low-level info:
+#
+# Key - This key's number. This value is shown only for the first column of the key. If this value is missing, the line corresponds to the
+# second or later column of a multiple-column key.
+#
+# For the table shown in the example, there are two table description lines for the second index.
+# This indicates that it is a multiple-part index with two parts.
+#
+# Start - Where in the row this portion of the index starts.
+# Len - How long this portion of the index is. For packed numbers, this should always be the full length of the column.
+# 		  For strings - it may be shorter than the full length of the indexed column - because you can index a prefix of a string column.
+#
+# 		  The total length of a multiple-part key is the sum of the Len values for all key parts.
+# Index - Whether a key value can exist multiple times in the index. Possible values are unique or multip. (multiple)
+# Type - What data type this portion of the index has. This is a MyISAM data type with the possible values packed, stripped or empty.
+# Root - Address of the root index block.
+# Blocksize - The size of each index block. By default is 1024, but the value may be changed at compile time when MySQL is built from source.
+# Rec/key - This is a statistical value used by the optimizer. It tells how many rows there are per value for this index.
+# 				A unique index always has a value of 1. This may be updated after a table is loaded (or greatly changed) with myisamchk -a.
+#
+# 				If this is not updated at all,a default value os 30 is given.
+#
+# The last part of the output provides info about each column:
+#
+# Field - The column number.
+# Start - The byte position of the column named within table rows.
+# Length - The length of the column in bytes.
+# Nullpos, Nullbit - For columns that can be NULL, MyISAM stores NULL values as a flag in a byte.
+# 							Depending on how many nullable columns there are, there can be one or more bytes used for this purpose.
+# 							The Nullpos and Nullbit values - if nonempty, indicate which byte and bit contains that flag indicating whether the column is NULL.
+#
+# 							The position and number of bytes used to store NULL flags is shown in the line for field 1. This is why there are
+# 							six Field lines for the person table even though it has only five columns.
+#
+# Type - The data type. The value may contain any of the following descriptors:
+# 			constant - all rows have the same value.
+# 			no endspace - Do not store endspace.
+# 			no endspace, not_always - Do not store endspace and do not do endspace compression for all values
+# 			no endspace, no empty - Do not store endspace. Do not store empty values
+# 			table-lookup - The column was converted to an ENUM.
+# 			zerofill(N) - The most significant N bytes in the value are always 0 and are not stored.
+#
+# 			no zeros - Do not store zeros.
+# 			always zero - Zero values are stored using one bit.
+#
+# Huff tree - The number of the Huffman tree associated with the column.
+# Bits - The number of bits used in the Huffman tree.
+#
+# The Huff tree and Bits fields are displayed if the table has been compressed with myisampack.
+#
+# an example of a myisamchk -eiv output:
+#
+# Checking MyISAM file: person
+# Data records: 	306688 		Deleted blocks: 				0
+# - check file-size
+# - check record delete-chain
+# No recordlinks
+# - check key delete-chain
+# block_size 1024:
+# - check index reference
+# - check data record references index: 1
+# Key: 	1: 	Keyblocks used: 98% Packed: 	0% 	Max levels: 3
+# - check data record references index: 2
+# Key: 	2: 	Keyblocks used: 99% Packed: 	97% 	Max levels: 3
+# - check data record references index: 3
+# Key: 	3: 	Keyblocks used: 98% Packed: 	-14%  Max levels: 3
+# Total: 		Keyblocks used: 98% Packed: 	89%
+#
+# - check records and index references
+# *** LOTS OF ROW NUMBERS DELETED ***
+#
+# Records: 		  306688 	M.recordlength: 		25 Packed: 			83%
+# Recordspace used: 97% 	Empty space: 			2% Blocks/Record: 1.00
+# Record blocks: 306688 	Delete blocks: 		0
+# Record data:  7934464 	Deleted data: 			0
+# Lost space: 	  256512 	Linkdata: 		1156096
+# 
+# User time 43.08, System time 1.68
+# Maximum resident set size 0, Integral resident set size 0
+# Non-physical pagefaults 0, Physical pagefaults 0, Swaps 0
+# Blocks in 0 out 7, Messages in 0 out 0, Signals 0
+# Voluntary context switches 0, Involuntary context switches 0
+# Maximum memory usage: 1046926 bytes (1023k)
+#
+# myisamchk -eiv output includes the following info:
+#
+# data records - Number of rows in the table
+# Deleted blocks - How many deleted blocks still have reserved space. You can optimize your table to minimize this space.
+# Key - The key number
+# Keyblocks used - What percentage of the keyblocks are used. When a table has just been reorganized with myisamchk, the values
+# 						 are very high (very near theoretical maximum)
+# Packed - MySQL tries to pack key values that have a common suffix. This can only be used for indexes on CHAR and VARCHAR columns.
+# 			  For long indexed strings that have similar leftmost parts - this can significantly reduce the space used.
+#
+# 			  In the preceeding example - the second key is 40 bytes long and a 97% reduction in space is achieved.
+#
+# Max levels - How deep the B-tree for this key is. Large tables with long key values get high values
+# Records - How many rows are in the table.
+# M.recordlength - The average row length. This is the exact row length for tables with fixed-length rows, because all rows have the same length.
+# Packed - MySQL strips spaces from the end of strings. The Packed value indicates the percentage of savings achieved by doing this.
+# Recordspace used - What percentage of the data file is used.
+# Empty space - What percentage of the data file is unused.
+# Blocks/Record - Average number of blocks per row (that is - how many links a fragmented row is compsoed of). This is always 1.0 for fixed-format tables.
+#						This value should stay as close to 1.0 as possible. If it gets too large - you can reorganize the table.
+# Recordblocks - How many blocks (links) are used. For fixed-format tables, this is the same as the number of rows.
+# Deleteblocks - How many blocks (links) are deleted
+#
+# Recorddata - How many bytes in the data file are used
+# Deleted data - How many bytes in the data file are deleted (unused)
+# Lost space - If a row is updated to a shorter length - some space is lost. This is the sum of all such losses - in bytes.
+# Linkdata - When the dynamic table format is used, row fragments are linked with pointers (4 to 7 bytes each).
+# 				 Linkdata is the sum of the amount of storage used by all such pointers.
+#
+# The following section covers myisamchk Memory Usage:
+#
+# Memory allocation is important when you run myisamchk. myisamchk uses no more memory than its memory-related vars are set to.
+# If you are going to use myisamchk on very large tables - you should first decide how much memory you want it to use.
+#
+# The default is to use about 3MB to perform repairs. By using larger values, you can get myisamchk to operate faster.
+# For example, if you have more than 512MB RAM available - you could use options such as these (in addition to any other options you might specify):
+#
+# myisamchk --myisam_sort_buffer_size=256M \
+# 						--key_buffer_size=512M   \
+# 						--read_buffer_size=64M 	 \
+# 						--write_buffer_size=64M ...
+#
+# Using --myisam_sort_buffer_size=16M is probably enough for most cases.
+#
+# Be aware that myisamchk uses temp files in TMPDIR. If TMPDIR points to a memory file system - out of memory
+# errors can easily occur. If this happens - run myisamchk with the --tmpdir=<dir name> option to specify
+# a dir located on a file system that has more space.
+#
+# When performing repair operations, myisamchk also needs a lot of disk space:
+#
+# Twice the size of the data file (the original file and copy). This space is not needed if you do a repair
+# with --quick; in this case, only the index file is re-created. (This space must be available on the same file system as the original data file)
+# as the copy is created in the same dir as the original.
+# 
+# Space for the new index file that replaces the old one. The old index file is truncated at the start of the repair operation, so you usually
+# ignore this space. This space must be available on the same file system as the original data file.
+#
+# When using --recover or --sort-recover (but not when using --safe-recover) - you need space on disk for sorting.
+# This space is allocated in the temp dir (specified by TMPDIR or --tmpdir=<dir name>). 
+#
+# The following formula yields the amount of space required:
+#
+# (largest_key + row_pointer_length) * number_of_rows * 2
+#
+# You can check the length of the keys and the row_pointer_length with myisamchk -dv <table name>
+# The <row_pointer_length> and <number_of_rows> values are the <Datafile pointer> and <Data records> values
+# in the table desc.
+#
+# To determine the <largest_key> value - check the Key lines in the table desc.
+# The Len column indicates the number of bytes for each key part.
+# For a multiple-column index, the key size is the sum of the Len values for all key parts.
+#
+# If disk space is an issue in relation to repairs, use --safe-recover instead of --recover
+#
+# The following part pertains to myisamlog - Interactions of displaying MyISAM Log File Contents
+#
+# myisamlog processes the contents of a MyISAM log file. To create such a file, start the server with
+# a --log-isam=<log file> option.
+#
+# Invoke myisamlog as follows:
+#
+# myisamlog [<options>] [<file_name> [<tbl_name>] ...]
+#
+# The default operation is to update (-u).
+# If a recovery is done (-r) - all writes and possibly updates and deletes are done and errors are only counted.
+# The default log file name is myisam.log if no <log_file> arg is given.
+#
+# If tables are named on the cmd line - only those tables are updated.
+#
+# myisamlog supports the following options:
+#
+# -?, -I - display a help message and exit
+# -c <N> - Execute only N amount of commands
+# -f <N> - Specify the max number of open files
+# -F <filepath/> - Specify the file path with a trailing slash
+# -i - Display extra info before exiting
+# -o <offset> - Specify the starting offset
+#
+# -p <N> - Removes <N> components from path
+# -r - Performs a recovery operation
+# -R <record_pos_file record_pos> - Specify record pos file and record pos
+# -u - Perform an update operation
+# -v - Verbose mode. Print more output. Stacks.
+# -w <write_file> - Specify the write file
+# -V - version info
+#
+# myisampack - Generate compressed, Read-Only MyISAM Tables
+#
+# The myisampack utility compresses MyISAM tables. myisampack works by compressing each column in the table separately.
+# Usually, myisampack packs the data file 40% to 70%
+#
+# When the table is used later - the server reads into memory the info needed to decompress columns.
+# This results in much better performance when accessing individual rows, because you only have to uncompress exactly one row.
+#
+# MySQL uses mmap() when possible to perform memory mapping on compressed tables.
+# If mmap() does not work - MySQL falls back to normal read/write file operations.
+#
+# NOTE: 
+#
+# If the mysqld server was invoked with external locking disabled - it is not a good idea to invoke myisampack if the 
+# table might be updated by the server during the packing process. It is better to compress tables with the server turned off.
+#
+# After packing a table - it becomes read only. 
+#
+# myisampack does not support partitioned tables.
+#
+# To invoke:
+#
+# myisampack [<options>] <file_name> ...
+#
+# Each file name argument should be the name of an index (.MYI) file. 
+# If you are not in the DB dir, you should specify the path name to the file. 
+# It is permissible to omit the .MYI extension
+#
+# After we compress a table with myisampack - we can use myisamchk -rq to rebuild its indexes.
+# 
+# 
+# It also reads option files and supports the options for processing them.
+#
+# myisampack supports the following options: 
+#
+# --help, -?
+# --backup, -b - Make a backup of each table's data file using the name <tbl_name>.OLD
+# --character-sets-dir=<dir name> - The dir where char sets are installed.
+# --debug[=<debug_options>], - Write a debugging log. A typical <debug_options> string is d:t:o, <file_name>. Defaults to d:t:o
+#  -# [<debug_options>]
+# --force, -f - Produce a packed table even if it becomes larger than the original or if the intermediate file from an earlier invocation
+# 					 of myisampack exists.
+#
+# 					 myisampack creates an intermediate file named <tbl_name>.TMD in the database dir while it compresses the table.
+# 					 If you kill myisampack, the .TMD file might not be deleted.
+# 					 Normally, myisampack exits with an error if it finds that <tbl_name>.TMD exists.
+#
+# 					 With --force, myisampack packs the table anyway.
+#
+# --join=<big tbl name>, - Join all tables named on the cmd line into a single packed table <big_tbl_name>.
+#  -j <big_tbl_name> 		All tables that are to be combined must have identical structure (same column names and types, same indexes, etc.)
+# 	
+# 									<big_tbl_name> must not exist prior to the join operation. All source tables named on the cmd line
+# 									to be merged into <big_tbl_name> must exist. The source tables are read for the join operation but not modified.
+# --silent, -s 			 - Silent mode. Writes only error outputs.
+# --test, -t 				 - Do not actually pack the table, just test packing it.
+# --tmpdir=<dir name>,   - Use the named dir as the location where myisampack creates temp files.
+#  -T <dir_name>
+# --verbose, -v 			 - Verbose. Write info about the progress of the packing ops and its result.
+# --version, -V 			 - Display version info and exit
+# --wait, -w 				 - Wait and retry if the table is in use. If the mysqld server was invoked with external locking disabled, it is not a good idea
+# 									to invoke myisampack if the table might be updated by the server during the packing process.
+#
+# The following sequence of commands illustrates a typical table compression session:
+#
+# ls -l station
+# -rw-rw-r-- 	1 monty 	my 		994128 Apr 17 19:00 station.MYD
+# -rw-rw-r-- 	1 monty  my 		 53248 Apr 17 19:00 station.MYI
+#
+# myisamchk - dvv station
+#
+# MyISAM file: 		station
+# Isam-version: 	2
+# Creation time: 	1996-03-13 10:08:58
+# Recover time:   1997-02-02 3:06:43
+# Data records: 				  1192  Deleted blocks: 			  0
+# Datafile parts: 			  1192  Deleted data: 			     0
+# Datafile pointer (bytes): 	  2  Keyfile pointer (bytes):   2
+# Max datafile length: 	 54657023  Max keyfile length: 33554431
+# Recordlength: 					834
+# Record format: Fixed length
+#
+# table description:
+# Key  Start  Len  Index   Type 				Root Blocksize 	Rec/key
+# 1 	 2 	  4 	 unique 	unsigned long 	1024 1024 					1
+# 2 	 32 	  30 	 multip. text 			  10240 1024 					1
+# 
+# Field Start Length Type
+# 1 	  1 	  1
+# 2 	  2 	  4
+# 3 	  6 	  4
+# 4 	  10 	  1
+# 5 	  11 	  20
+# 6 	  31 	  1
+# etc.
+#
+# myisampack station.MYI
+# Compressing station.MYI: (1192 records)
+# - Calculating statistics
+#
+# normal: 		20  empty-space: 		16 empty-zero: 		12 empty-fill:  11
+# pre-space: 	 0  end-space: 		12	table-lookups: 	 5 zero: 		  7
+# Original trees:  57 	After join: 17
+# - Compressing file
+# 87.14%
+# Remember to run myisamchk -rq on compressed tables
+# 
+# myisamchk -rq station
+# - check record delete-chain
+# - recovering (with sort) MyISAM-table 'station'
+# Data records: 1192
+# - Fixing index 1
+# - Fixing index 2
+#
+# mysqladmin -uroot flush-tables
+#
+# ls -l station
+# -rw-rw-r-- 	1 monty 	my 		127874 Apr 17 19:00 station.MYD
+# -rw-rw-r-- 	1 monty 	my 		 55296 Apr 17 19:04 station.MYI
+#
+# myisamchk -dvv station
+# 
+# MyISAM file: 		station
+# Isam-version: 		2
+# Creation time: 		1996-03-13 10:08:58
+# Recover time: 		1997-04-17 19:04:26
+# Data records: 					  1192 	Deleted blocks: 		    0
+# Datafile parts: 				  1192 	Deleted data: 		       0
+# Datafile pointer (bytes): 		  3 	Keyfile pointer (bytes): 1
+#
+# Max datafile length:      16777215 	Max keyfile length: 131071
+# Recordlength: 						834
+# Record format: Compressed
+#
+# table description:
+# Key Start Len 	Index 	Type 			   Root 		Blocksize 	Rec/key
+# 1 	2 		4 		unique 	unsigned long  10240 		1024 				1
+# 2 	32 	30 	multip.  text 				54272 		1024 				1
+# 
+# Field Start Length Type 										Huff tree Bits
+# 1 	  1 	  1 		constant 								 		  1    0
+# 2 	  2 	  4 		zerofill(1) 									  2 	 9
+# etc.
+#
+# myisampack displays the following kinds of info:
+#
+# normal - Number of cols for which no extra packing is used
+# empty-spaces - Number of cols containing values that are only spaces. Occupies one bit.
+# empty-zero - Number of cols containing values that are only binary zeros. Occupies one bit
+# empty-fill - Number of integer cols that do not occupy the full byte range of their type. These are 
+# 					changed to a smaller type. For example - a BIGINT column (eight bytes) can be stored
+# 					as a TINYINT col (one byte) if all the values are in the range of a TINYINT (-128 to 127)
+# pre-space  - Number of decimal cols that are stored with leading spaces. In this case - each value contains a count for the number of leading spaces.
+# end-space  - Number of columns that have a lot of trailing space. In this case - each value contains a count for the number of trailing spaces
+# table-lookup - The column had only a small number of different values, which are converted to ENUM before Huffman compression.
+# zero 		 - Number of cols in which all values are zero
+# Original trees - Initial number of Huffman trees.
+# 
+# After join - Number of distinct Huffman trees left after joining trees to save some header space.
+#
+# After a table has been compressed, the Field lines displayed by myisamchk -dvv include additional informaton about each col:
+#
+# Type - The data type. Can be one of the following:
+#
+# constant - Same values across all rows
+# no endspace - Do not store endspace
+# no endspace, not_always - Do not store endspace and do not do endspace compression for all values
+# no endspace, no empty - Do not store endspace. Do not store empty values
+# table-lookup - The column was converted to an ENUM.
+# zerofill(<N>) - The most significant <N BYTES> in the value are always 0 and are not stored.
+# no zeros - Do not store zeros
+# always zero - Zero values are stored using one bit.
+#
+# Huff tree - Number of the Huffman tree associated with the column.
+# Bits - Number of bits used in the huffman tree
+#
+# After you run myisampack, use myisamchk to re-create any indexes. 
+# At this time, you can also sort the index blocks and create stats needed for the MySQL optimizer to work better:
+#
+# myisamchk -rq --sort-index --analyze <tbl_name.MYI>
+#
+# After you have installed the packed table into the MySQL DB dir, you should execute mysqladmin flush-tables to force
+# mysqld to start using the new table.
+#
+# To unpack a packed table, use the --unpack option to myisamchk.
+#
+# The following covers mysql_config_editor - a MySQL Configuration Utility
+#
+# The mysql_config_editor utility enables you to store authentication creds in a obfuscated login path file named .mylogin.cnf
+# 
+# The file location is the %APPDATA%\MySQL directory on Windows and the current user's home dir on non-Windows systems.
+# The file can be read later by MySQL client programs to obtain authentication credentials for connecting to MySQL server. 
+#
+# The unobfuscated format of the .mylogin.cnf login path consists of option groups, similar to other option files.
+# Each option group in .mylogin.cnf is called a "login path" which is a group that permits only certain options:
+#
+# host, user, password, port and socket
+#
+# Think of a login path option group as a set of options that specify which MySQL server to connect to and which
+# account to authenticate as.
+#
+# An unobfuscated example:
+#
+# [client]
+# user = mydefaultname
+# password = mydefaultpass
+# host = 127.0.0.1
+# [mypath]
+# user = myothername
+# password = myotherpass
+# host = localhost
+#
+# Order of prio is: Cmd > mylogin.cnf > other option files
+#
+# To specify a alternative login path file name, set the MYSQL_TEST_LOGIN_FILE environment variable.
+# This variable is recognized by mysql_config_editor, by standard MySQL clients and the mysql-test-run.pl testing utility.
+#
+# Programs use groups in the login path file as follows:
+#
+# mysql_config_editor operates on the client login path by default if you specify no --login-path=<name> option
+# to indicate explicit pathing.
+#
+# Without a --login-path option - it reads the same groups from other option files as well as the loginpath file.
+# i.e default groups pertaining to said command.
+#
+# With a --login-path option, client programs read the named login path from the login path file.
+# The option groups read from other option files remain the same.
+#
+# mysql --login-path=<mypath>
+#
+# The mysql client then reads [client] and [mysql] from other option files - whilst reading [client], [mysql] and [mypath] from the login path file.
+#
+# Client programs read the login path file even when the --no-defaults option is used.
+# 
+# mysql_config_editor obfuscates the .mylogin.cnf file so it cannot be read as cleartext - and it's contents when obfuscated by client programs
+# are used only in memory.
+#
+# In said way - a PW can be stored in a file in non-cleartext format and used later, without exposing in a Env var or cmd.
+# 
+# mysql_config_editor does come with a print command as to show login path file contents - but this still omits PWs.
+#
+# Note: .mylogin.cnf files can be unobfuscated with root privs
+#
+# The login path file must be readable and writable to the current user - and inaccessible to other users.
+# Otherwise, mysql_config_editor ignores it and client programs do not use it either.
+#
+# To invoke mysql_config_editor:
+#
+# mysql_config_editor [<program options>] <command> [<command_options>]
+#
+# If the login path files does not exist - mysql_config_editor creates it.
+#
+# <program options> : Pertains to general mysql_config_editor options
+# <command> : Pertains to what action to perform on the .mylogin.cnf login path file. 
+# 				  For example - set writes a login path to the file, remove removes a login path, and print displays login path contents.
+# <command_options> : Indicates any additional options specific to the command, such as the login path name and the values to use in the login path.
+#
+# The position of the command name within the set of program arguments is explicit.
+# 
+# mysql_config_editor --help set #Interprets it as "--help", ignores the set part
+# mysql_config_editor set --help #Interprets it as "set --help" - as in, help command regarding set
+#
+# Assuming that you wish to have a client login path that defines default connection params - and a separate one for remote,,
+# an example:
+#
+# The following will modify your .mylogin.cnf using set commands:
+#
+# mysql_config_editor set --login-path=client
+# 		--host=localhost --user=localuser --password
+# >Prompt for PW to localhost
+#
+# mysql_config_editor set --login-path=remote
+# 		--host=remote.example.com --user=remoteuser --password
+# >Prompt for PW to Remote 
+#
+# We can showcase groupings from the .mylogin.cnf with print --all:
+#
+# mysql_config_editor print --all
+# [client]
+# user = localuser
+# password = *******
+# host = localhost
+# [remote]
+# user = remoteuser
+# password = *******
+# host = remote.example.com
+#
+# If we omit names or --all, it prints client path by default - if there is one.
+#
+# The login path file can contain multiple login paths.
+# A quick example of how to access remote in addition to the stnadard config ones:
+#
+# mysql --login-path=remote #Reads [client], [mysql] and [remote] groups form login path file
+#
+# Note: Groups read from later appearances - take precedence over earlier ones appearing.
+#
+# mysql_config_editor adds login paths to the login path file in the order we create them,
+# Thus, more general ones first - more specific ones later on
+#
+# Ommited values can be appended in terms of specification:
+# mysql --login-path=remote --host=remote2.example.com #Assuming that remote yields same login details as the remote2.example.com host, we can just redirect to that specific host
+#
+# The following are mysql_config_editor General options
+#
+# mysql_config_editor supports the following general options 
+#
+# --debug - Write debugging log
+# --help - Display help message and exit
+# --verbose - Verbose mode
+# --version - Display version info and exit
+#
+# --help, -? - Display a general help message and exit. 
+# Example: mysql_config_editor <command> --help
+#
+# --debug[=<debug options>], - Write a debugging log. A typical <debug_options> string is d:t:o, <file_name>.
+#  -# <debug_options> 			 Defaults to d:t:o, /tmp/mysql_config_editor.trace
+#
+# --verbose, -v - Verbose mode.
+#
+# --version, -V - Display version info and exit
+#
+# The following covers:
+# mysql_config_editor Commands and Command-Specific Options
+#
+# This section describes the permitted mysql_config_editor commands, and for each one - the command-specific options
+# permitted following the command name on the cmd line.
+#
+# In addition - mysql_config_editor supports general options that can be used preceding any command.
+#
+# The following options are supported:
+#
+# help - Display a general help message and exit. This command takes no following options.
+# 		
+# 			To see a command-specific help message, invoke mysql_config_editor as follows, where <command> is a command other than help:
+#
+# 			mysql_config_editor <command> --help
+# 
+# print [<options>] - Print the contents of the login path file in unobfuscated form, with the exception that passwords are displayed as ****.
+# 
+# 							 The default login path name is <client> if no login path is named.
+# 							 If both --all and --login-path are given, --all takes precedence.
+#
+# 							 The <print> command permits these options following the command name:
+#
+# 							 --help, -? - Display a help message for the <print> command and exit.
+# 							 To see a general help message - use mysql_config_editor --help
+# 		
+# 							 --all - Print the contents of all login paths in the login path file.
+# 
+# 							 --login-path=<name>, -G <name> - Print the contents of the named login path.
+#
+# remove [<options>] - Remove a login path from the login path file - or modify a login path by removing options from it.
+#
+# 							  This command removes from the login path only such options as are specified with the --host, --password, --port, --socket
+# 							  and --user options.
+# 
+# 							  	If none of the above are given - remove removes the entire login path.
+#
+#								mysql_config_editor remove --login-path=mypath --user #Removes the user option from login path option 
+#
+# 								mysql_config_editor remove --login-path=mypath #Removes the entire mypath login path
+#
+# 								The remove command permits these options following the cmd name:
+#
+# 								--help, -? - Displays a help message for the remove command and exit.
+# 								
+# 												 To see a general help message - use mysql_config_editor --help
+#
+# 								--host, -h - Remove the host name from the login path.
+#
+# 								--login-path=<name>, -G <name> - The login path to remove or modify. 
+# 																			Default login path name is client if this option is not given.
+#
+#
+#  							--password, -p - Removes the PW from the login path
+#
+# 								--port, -P - Remove the TCP/IP port number from the login path
+#
+# 								--socket, -S - Remove the Unix socket file name from the login path
+#
+# 								--user, -u - Remove the user name from the login path
+#
+# 								--warn, -w - Warn and prompt the user for confirmation if the command attempts to remove the default login
+# 												 path (client) and --login-path=client was not specified. On by default, turn off with --skip-warn
+#
+# reset [<options>] - Empty the contents of the login path file.
+#
+# 							 The reset command permits these options following the command name:
+#
+# 							 --help, -? - Display a help message for the reset command and exit.
+# 											  To see a general help message, use mysql_config_editor --help
+#
+# set [<options>] - Write a login path to the login path file.
+#
+# 						  This command writes to the login path only such options as are specified with the --host,
+# 						  --password, --port, --socket and --user options.
+#
+# 						  If none of those options are given - mysql_config_editor writes the login path as an empty group.
+#
+# 						  The set command permits these options following the command name:
+#
+# 						  --help, -? - Display a help message for the set command and exit.
+# 
+# 											To see a general help message, use mysql_config_editor --help
+#
+# 						  --host=<host_name>, -h <host_name> - The host name to write to the login path.
+#
+# 						  --login-path=<name>, -G <name> - The login path to create. The default login path is <client> if this option is not given.
+#
+# 						  --password, -p - Prompt for a password to write to the login path. After mysql_config_editor displays the prompt,
+# 												 type the password and press Enter. mysql_config_editor does not echo it.
+#
+# 												 To specify a empty password - just press Enter, and it generates:
+#
+# 												 password =
+#
+# 						  --port=<port_num>, -P <port_num> - The TCP/IP port number to write to the login path.
+#
+# 						  --socket=<file_name>, -S <file_name> - The Unix socket file name to write to the login path.
+#
+# 						  --user=<user_name>, -u <user_name> - User name to write to the login path.
+#
+# 						  --warn, -w - Warn and prompt the user for confirmation if the command attempts to overwrite an existing login path.
+# 											On by default - turn off with --skip-warn
+#
+#
+#
+# https://dev.mysql.com/doc/refman/8.0/en/mysqlbinlog.html
