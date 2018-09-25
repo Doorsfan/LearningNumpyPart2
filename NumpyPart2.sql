@@ -7333,6 +7333,789 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 						  --warn, -w - Warn and prompt the user for confirmation if the command attempts to overwrite an existing login path.
 # 											On by default - turn off with --skip-warn
 #
+# The following section pertains to mysqlbinlog - A utility for Processing Binary Log Files
+#
+# The server's binary log consists of files containing "events" that describe modifications to the DB contents.
+# The server writes these files in binary formatting. To display said contents in text - use the mysqlbinlog utility.
+#
+# You can also use mysqlbinlog to display the contents of relay log files written by a slave server in a replication setup
+# because relay logs have the same format as binary logs.
+#
+# The binary log and relay log are covered later.
+#
+# Invoke mysqlbinlog as follows:
+#
+# mysqlbinlog [<options>] <log_file>
+#
+# To display contents of binary log file binlog.000003:
+#
+# mysqlbinlog binlog.000003
+#
+# The output includes events contained in binlog.000003.
+# For statement-based logging, event information includes the SQL statement, the ID of the server on which it
+# was executed, timestamp of execution, time taken, etc.
+#
+# For row-based logging, the event indicates a row change rather than an SQL statement.
+#
+# Events are preceded by header comments that provide additional information:
+#
+# # at 141 #Line start or offset in the bin log file
+#
+# #100309 9:28:36 server id 123 end_log_pos 245 #date, time, server, id, end_log_pos + 1 is where next event will start - timestamp is propagated to slave servers. 
+#
+#  Query thread_id=3350 exec_time=11 error_code=0 #id of thread, time spent executing the event on the master server. 
+#  
+#  #On a slave, it is the replication lag behind the master the slave is having. error_code is the raised error - 0 means no error.
+#
+# When using event groups - the file offset of events may be grouped together and the comments of events may be grouped together.
+# Do not mistake these grouped events for blank file offsets.
+#
+# The output from mysqlbinlog can be re-executed (For example - by using it as input to mysql) - to redo the statements in the log.
+# This is useful for recovery operations after a server crash.
+#
+# Normally - we use mysqlbinlog to read binary log files directly and apply them to the local MySQL server.
+# It is also possible to read binary logs from a remote server by using the --read-from-remote-server option.
+#
+# To read remote binary logs - the connection param options can be given to indicate how to connect to the server.
+# These options are --host, --password, --port, --protocol, --socket and --user.
+# They are ignored except when you also use the --read-from-remote-server option.
+#
+# When running mysqlbinlog against a large binary log - be careful that the filesystem has enough space for the
+# resulting files.
+#
+# To configure the directory that mysqlbinlog uses for temp files - use the TMPDIR environment variable.
+#
+# mysqlbinlog supports the following options, which can be specified on cmd line or in [mysqlbinlog] and [client] groups.
+#
+# Format 										Desc
+# --base64-output 			Print binary log entries using base-64 encoding
+# --bind-address 				Use specified network interface to connect to MySQL Server
+# --binlog-row-event-max   Binary log max event size
+#  -size
+# --character-sets-dir 		Directory where char sets are installed
+# --connection-server-id 	Used for testing and debugging.
+# 
+# --database 					List entries for just this db
+# --debug 						Write debugging log
+# --debug-check 				Print debug info when program exits
+# --debug-info 				Print debug info, memory and CPU stats when the program exits
+# --default-auth 				Auth plugin to use
+# --defaults-extra-file 	Read named option file in addition to usual option files
+# --defaults-file 			Read only named option file
+#
+# --defaults-group-suffix 	Option group suffix value
+# --disable-log-bin 			Disable binary logging
+# --exclude-gtids 			Do not show any of the groups in the GTID set provided
+# --force-if-open 			Read binary log files even if open or not closed properly
+# --force-read 				If mysqlbinlog reads a binary log event that it does not recognize - it prints a warning
+#
+# --get-server-public-key 	Request RSA public key from server
+# --help 						Display help message and exit
+# --hexdump 					Display a hex dump of the log in comments
+# --host 						Connect to MySQL on the given host
+# --idempotent 				Cause the server to use idempotent mode while processing binary log updates from this session only
+# --include-gtids 			Show only the groups in the GTID set provided
+# --local-load 				Prepare local temporary files for LOAD DATA INFILE in the specified dir
+# --login-path 				Read login path options from .mylogin.cnf
+#
+# --no-defaults 				Read no option files
+# --offset 						Skip the first N entries in the log
+# --password 					Password to use when connecting to server
+# --plugin-dir 				Dir where plugins are installed
+# --port 						TCP/IP port number for connection
+# --print-defaults 			Print default options
+# --print-table-metadata 	Print table metadata
+# --protocol 					Connection protocol to use
+#
+# --raw 							Write events in raw (binary) format to output files
+# --read-from-remote 		Read the binary log from a MySQL master rather than reading a local log file
+#  -master
+# --read-from-remote 		Read binary log from MySQL server rather than local log file
+#  -server
+# --result-file 				Direct output to named file
+# --rewrite-db 				Create rewrite rules for databases when playing back from logs written in row-based format. Stacks.
+# --secure-auth 				REMOVED
+#
+# --server-id 					Extract only those events created by the server having the given server ID
+# --server-id-bits 			Tell mysqlbinlog how to interpret server IDs in binary log when log was written by a
+# 									mysqld having its server-id-bits-set to less than the maximum.
+#
+# 									Supported only by MySQL Cluster version of mysqlbinlog.
+# --server-public-key-path Path name to file containing RSA public key
+# --set-charset 				Add a SET NAMES charset_name statement to the output
+# --shared-memory-base 		The name of shared memory to use for shared-memory connections
+#  -name 
+# --short-form 				Display only the statements contained in the log
+# --skip-gtids 				Do not print any GTIDs; use this when writing a dump file from bin logs containing GTIDs.
+# --socket 						For connections to localhost, the Unix socket file to use
+# --ssl-ca 						File that contains list of trusted SSL Cert Auths
+# --ssl-capath 				Dir that contains trusted SSL Cert Auth cert files
+# --ssl-cert 					File that contains X.509 Cert
+#
+# --ssl-cipher 				List of permitted ciphers for connection encryption
+# --ssl-crl 					File that  contains cert revocation lists
+# --ssl-crlpath 				Dir that contains cert revocation list files
+# --ssl-fips-mode 			Whether to enable FIPS mode on the client side
+# --ssl-key 					File that contains X.509 key
+# --ssl-mode 					Security state of connection to server
+# --start-datetime 			Read binary log from first event with timestamp equal to or later than datetime argument
+# --start-position 			Read binary log from first event with position equal to or greater than argument
+# --stop-datetime 			Stop reading binary log at first event with timestmap equal to or greater than datetime arg
+#
+# --stop-never 				Stay connected to server after reading last binary log file
+# --stop-never-slave- 		Slave server ID to report when connecting to server
+#  server-id
+# --stop-position 			Stop reading binary log at first event when position equal to or greater than arg
+# --tls-version 				Protocols permitted for enc. connections
+# --to-last-log 				Do not stop at the end of requested binary log from a MySQL server, but rather continue
+# 									printing to end of last binary log
+# --user 						MySQL user name to use when connecting to server
+# --verbose 					Reconstruct row events as SQL statements
+# --verify-binlog-checksum Verify checksums in binary log
+# --version 					Display version info and exit
+#
+# The following maps the further attributes of some of the above commands:
+#
+# --help, -? - Display a help message and exit
+# --base64-output=<value> - This option determines when events should be displayed encoded as base-64 strings using BINLOG statements.
+# 									 The option has these permissible values (not case-sensitive):
+#
+# 									 AUTO/UNSPEC - displays BINLOG statements automatically when necessary (that is - for format desc. events and row events).
+# 														If no --base64-output option is given, the effect is the same as --base64-output=AUTO
+#
+# 														NOTE: Automatic BINLOG display is the only safe behavior if you intend to use the output of mysqlbinlog 
+# 														to re-execute binary log file contents.
+#
+# 														The other option values are intended only for debugging or testing purposes because they may produce output
+# 														that does not include all events in executable form.
+#
+# 									 NEVER - Causes BINLOG statements not to be displayed. mysqlbinlog exits with an error if a row event is found that must
+# 												be displayed using BINLOG.
+#
+# 									 DECODE-ROWS - Specifies to mysqlbinlog that you intend for row events to be decoded and displayed as commented SQL statements
+# 														by also specifying the --verbose option.
+#
+# 														Like NEVER, DECODE-ROWS suppresses display of BINLOG statements, but unlike NEVER - it does not exit with an error
+# 														if a row event is found.
+#
+# 									 For examples that show the effect of --base64-output and --verbose on row event output.
+#
+# --bind-address=<ip address> - On a computer having multiple network interfaces, use this option to select which interface to use for connecting to the MySQL server.
+# --binlog-row-event-max-size=<N> - General syntax formatting and values:
+#
+# 												Command-Line format - --binlog-row-event-max-size=#
+# 												Type 						 Numeric
+# 												Default Value 			 4294967040
+# 												Minimum Value 			 256
+# 												Maximum Value 			 18446744073709547520
+# 											
+# 												The above values are in bytes. Refers to row-based binary log events size.
+# 												Rows are grouped into events smaller than this size if possible.
+#
+# 												Value should be a multiple of 256 - Defaults to 4GB
+#
+# --character-sets-dir=<dir name> - The dir where char sets are installed.
+#
+# --connection-server-id=<server id> - specifies the server ID that mysqlbinlog reports when it connects to the server. 
+# 													Can be used to avoid a conflict with the ID of a slave server or another mysqlbinlog process.
+#
+# 													If the --read-from-remote-server option is specified, mysqlbinlog reports a server ID of 0,
+# 													which tells the server to disconnect after sending the last log file (nonblocking behavior)
+#
+# 													If the --stop-never option is also specified to maintain the connection to the server, mysqlbinlog
+# 													reports a server ID of 1 by default instead of 0 - and --connection-server-id can be used to
+# 													replace that server ID if required.
+#
+# --database=<db name>, -d <db_name> - This option causes mysqlbinlog to output entries from the binary log (local log only) that occur
+# 													while <db_name> has been selected as the default DB by <USE>.
+#
+# 													The --database option for mysqlbinlog is similar to the --binlog-do-db option for mysqld, but
+# 													can be used to specify only one DB. If --database is given several times, the last one is taken.
+#
+# 													The effects of this option depend on whether the statement-based or row-based logging format is
+# 													in use, in the same way that the effects of --binlog-do-db depend on whether statement-based
+# 													or row-based logging is used.
+#
+# 													Statement-based logging:
+#
+# 													The --database option works as follows:
+#
+# 														While <db_name> is the default DB, statements are output whether they modify tables in
+# 														<db_name> or a different database.
+#
+# 														Unless <db_name> is selected as the default DB, statements are not output - even if they modify tables in <db_name>.
+#
+# 														There is an exception for CREATE DATABASE, ALTER DATABASE and DROP DATABASE. 
+# 														The database being created, altered or dropped is considered to be the default database
+# 														when determining whether to output the statement.
+#
+#													Assuming the following base of implementation:
+#
+# 														INSERT INTO test.t1 (i)  VALUES(100);
+# 														INSERT INTO db2.t2 (j) 	 VALUES(200);
+# 														USE test;
+# 														INSERT INTO test.t1 (i)  VALUES(101);
+# 														INSERT INTO t1 (i) 		 VALUES(102);
+# 														INSERT INTO db2.t2 (j) 	 VALUES(201);
+# 														USE db2;
+# 														INSERT INTO test.t1 (i)  VALUES(103);
+# 														INSERT INTO db2.t2 (j) 	 VALUES(202);
+# 														INSERT INTO t2 (j) 		 VALUES(203);
+#
+# 													mysqlbinlog --database=test does not output the first two INSERT statements because there is no default DB.
+# 													It outputs the three INSERT statements following USE test, but not the three INSERT statements following USE db2.
+#
+# 													mysqlbinlog --database=db2 does not output the first two INSERT statements because there is no default DB.
+# 													It does not output the three INSERT statements after USE.test - but it does output the three after USE db2. (because default usage db2)
+#
+# 													Row-based logging. mysqlbinlog outputs only entires that change tables belonging to <db_name>.
+# 													The default DB has no effect on this. Suppose that the binary log just described was created using
+# 													row-based logging rather than statement-based logging.
+#
+# 													mysqlbinlog --database=test outputs only those entries that modify t1 in the test database, regardless of
+# 													whether USE was issued or what the default DB is.
+#
+# 													If a server is running with binlog format set to MIXED - and we want to use mysqlbinlog with --database option,
+# 													the modified tables must be selected by USE. (In particular, no cross-database updates should be used)
+#
+# 													When used together with the --rewrite-db option, the --rewrite-db option is applied first;
+# 													Then the --database option is applied - using the rewritten database name.
+#
+# 													The order in which the options are provided makes no difference in this regard.
+#
+# --debug[=<debug options>], 			 	Write a debugging log. A typical <debug_options> string is d:t:o, <file_name>. Defaults to d:t:o, /tmp/mysqlbinlog.trace
+#  -# [<debug options>]
+#
+# --debug-check 								Print debug info when the program exits
+#
+# --debug-info 								Print debug info, memory and CPU usage stats when exiting
+#
+# --default-auth=<plugin> 					A hint about the client-side auth plugin to use.
+#
+# --defaults-extra-file=<file name> 	Read this option file after the global option file, but (on Unix) before the user option file.
+# 													Relative if relative, absolute if absolute - error if permissions denied or not found.
+#
+# --defaults-file=<file name> 			Use only the given option file. Relative if relative, error if non permissible or found. Still reads .mylogin.cnf
+#
+# --defaults-group-suffix=<str> 			Regex suffix matching in grouping 
+#
+# --disable-log-bin, -D 					Disable binary logging. Useful for avoiding an endless loop if we use --to-last-log option and we are sending the output
+# 													to the same MySQL server.
+#
+# 													Useful when restoring after a crash to avoid duplication of the statements we logged.
+#
+# 													Causes mysqlbinlog to include a <SET sql log bin = 0> statement in its output to disable binary
+# 													logging of the remaining output.
+#
+# 													Manipulating the session value of the sql log bin system var is a restricted operation - so 
+# 													this requires permissions to set restricted session vars.
+#
+# --exclude-gtids=<gtid set> 				Do not display any of the groups listed in the <gtid_set>
+#
+# --force-if-open, -F 						Read binary log files even if they are open or were not closed properly.
+#
+# --force-read, -f 							With this option, if mysqlbinlog reads a binary log event that it does not recognize
+# 													- it prints a warning, ignores the event and continues. Without this option - mysqlbinlog stops reading in such an event.
+#
+# --get-server-public-key 					Same as otherwise with RSA public key request, applies to clients authenticating caching_sha2_password auth plugin.
+#
+# --hexdump, -H 								Display a hex dump of the log in comments - can be useful for replicating debugging
+#
+# --host=<host name>, 						Get the binary log from the MySQL server on the given host.
+#  -h <host name>
+#
+# --idempotent 								Tell the MySQL server to use idempotent mode while processing updates.
+# 													Causes suppression of any duplicate-key or key-not-found errors that the server
+# 													encounters in the current session while processing updates.
+#
+# 													May prove useful whenever it is desirable or nessecary to replay one or more binary logs
+# 													to a MySQL server which may not contain all of the data to which the logs refer.
+#
+# 													The scope of effect for this option includes the current mysqlbinlog client and session only.
+#
+# --include-gtids=<gtid set> 		 		Display only the groups listed in the gtid_set
+#
+# --local-load=<dir name>,  				Prepare local temporary files for LOAD DATA INFILE in the specified dir.
+#  -l <dir_name> 								(These are not automatically removed by any MySQL program)
+#
+# --login-path=<name> 						Read options from the named login path in the .mylogin.cnf login path file.
+# 													This specific option group pertains to connection details to server and account to auth as.
+#
+# --no-defaults 								Do not read any option files. If program startup fails due to reading unknown options from an option file
+# 													--no-defaults can be used to prevent them from being read.
+#
+# 													The exception is that the .mylogin.cnf file, it's always read.
+#
+# --offset=<N>, -o <N> 						Skip the first N entries in the log.
+#
+# --password[=<password>], 				The PW to use when connecting to the server. If you use the short option (-p) - cannot have space.
+#  -p [<password>]  							If value omitted, prompted for one
+#
+# --plugin-dir=<dir name> 					The dir in which to look for plugins. Specify if --default-auth option is used to specify a auth plugin 
+# 													but mysqlbinlog can't find it
+#
+# --port=<port num>, 						The TCP/IP port number to use for connecting to a remote server
+#  -P <port_num>
+#
+# --print-defaults 							Print the program name and all the options that it gets from option files.
+#
+# --print-table-metadata 					Print table related metadata from the binary log. 
+# 													Configure the amount of table related metadata binary logged using binlog-row-metadata
+#
+# --protocol={TCP|SOCKET|PIPE|MEMORY}  The connection protocol to use for connecting to the server.
+# 													
+# --raw 											By default, mysqlbinlog reads binary log files and writes events in text format.
+# 													The --raw option tells mysqlbinlog to write them in their original binary format.
+#
+# 													Its use requires that --read-from-remote-server also be used because the files are requested from a server.
+#
+# 													mysqlbinlog writes one output file for each file read from the server.
+# 													The --raw option can be used to make a backup of the Server's binary log.
+#
+# 													With --stop-never, the backup acts as "live" - because connection is not interuppted.
+# 													Defaults to writing to a output file in the CWD with the same name as the original log files.
+#
+# 													Output file names can be modified using the --result-file 
+#
+# --read-from-remote-master=<type> 		Read binary logs from a MySQL server with the COM_BINLOG_DUMP or COM_BINLOG_DUMP_GTID commands
+# 													by setting the option value to either BINLOG-DUMP-NON-GTIDS or BINLOG-DUMP-GTIDS, respectively.
+#
+# 													If --read-from-remote-master=<BINLOG-DUMP-GTIDS> is combined with --exclude-gtids - transactions
+# 													can be filtered out on the master - avoiding unessecary network traffic.
+#
+# --read-from-remote-server, -R 			Read the binary log from a MySQL server rather than reading a local log file.
+# 													Any connection parameter options are ignored unless this option is given as well.
+#
+# 													These options are --host, --password, --port, --protocol, --socket and --user.
+#
+# 													Requires that the remote server is running. Works only for binary log files on the remote server,
+# 													not relay log files.
+#
+# 													This option is equivalent to --read-from-remote-master=BINLOG-DUMP-NON-GTIDS
+#
+# --result-file=<name>, -r <name> 		Without the --raw option, this option indicates the file to which mysqlbinlog writes text output.
+#
+# 													With -raw, mysqlbinlog writes one binary output file for each log file transferred from the server,
+# 													writing them by default in the CWD using the same name as the original log file.
+#
+# 													In this case, the --result-file option value is treated as a prefix that modifies output file names.
+#
+# --rewrite-db='<from name->to name>' 	When reading from a row-based or statement-based log, rewrite all occurrences of <from_name> to <to_name>.
+# 													Rewriting is done on the rows, for row-based logs - as well as on the USE clauses, for statement based logs.
+#
+# 													NOTE: Statements in which table names are qualified with DB names are not rewritten to use the new name when using this option.
+#
+# 													The rewrite rule employed as a value for this option is a string having the form '<from_name>-><to_name>' as shown previously,
+# 													and it must be enclosed ''
+#
+# 													To employ it multiple times, an example:
+#
+# 													mysqlbinlog --rewrite-db='dbcurrent->dbold' --rewrite-db='dbtest->dbcurrent' \
+# 																	binlog.00001 > /tmp/statements.sql
+#
+# 													When used together with the --database option, the --rewrite-db option is applied first -
+# 													then --database is applied, using the rewritten DB name.
+#
+# 													In this case, ordering makes no difference.
+#
+# 													For instance, if mysqlbinlog is started with --rewrite-db='mydb->yourdb' --database=yourdb, then all
+# 													updates to any tables in databases mydb and yourdb are included in said output.
+#
+# 													On the other hand, if it is started with --rewrite-db='mydb->yourdb' --database=mydb, then no outputs are given,
+# 													because all updates to mydb are first rewritten as updates to yourdb before applying the --database option
+#
+# 													Thus no updates are left matching --database=mydb
+#
+# --server-id=<id> 							Display only events created by the server having the given server ID
+#
+# --set-charset=<charset name> 			Add a SET NAMES <charset name> statement to the output to specify the char set to be used for processing log files.
+#
+# --shared-memory-base-name=<name> 		On Windows, the shared-memory name to use for connections made using shared memory to a local server.
+# 													Defaults to MySQL. Case-sensitive
+#
+# 													Server must be started with --shared-memory to enable shared-memory connections
+#
+# --short-form, -s 							Display only the statements contained in the log, without any extra information or row-based events.
+# 													DEPRECATED, DO NOT USE.
+#
+# --skip-gtids[=(true|false)] 			Do not display any GTIDs in the output. Needed when writing to a dump file from one or more binary logs
+# 													containing GTIDs, as shown:
+#
+# 													mysqlbinlog --skip-gtids binlog.000001 >  /tmp/dump.sql
+# 													mysqlbinlog --skip-gtids binlog.000002 >> /tmp/dump.sql
+# 													mysql -u root -p -e "source /tmp/dump.sql"
+#
+# 													Not recommended for production
+#
+# --socket=<path>, -S <path> 				For connections to localhost, Unix socket file to use or Windows - named pipe to use.
+#
+# --ssl* 										Options that begin with --ssl specify whether to connect to the server using SSL and indicate where to
+# 													find SSL keys and certs.
+#
+# --ssl-fips-mode={OFF|ON|STRICT} 		Controlling FIPS mode on the client side.
+#
+# --start-datetime=<datetime> 			Start reading the binary log at the first event having a timestamp equal to or later than the <datetime> argument.
+# 													The <datetime> value is relative to the local time zone on the machine where you run mysqlbinlog.
+#
+# 													The value should be in a format accepted for the DATETIME or TIMESTAMP data types.
+#
+# 													mysqlbinlog --start-datetime="2005-12-25 11:25:56" binlog.000003
+#
+# 													Useful for point-in-time recovery.
+#
+# --start-position=<N>, -j <N> 			Start reading the binary log at the first event having a position equal to or greater than <N>.
+# 													This option applies to the first log file named on the cmd line.
+#
+# 													Useful for point-in-time recovery.
+#
+# --stop-datetime=<datetime> 				Stop reading the binary log at the first event having a timestamp equal to or later than the <datetime> argument.
+# 													This option is useful for point-in-time recovery.
+#
+# --stop-never 								This option is used with --read-from-remote-server. It tells mysqlbinlog to remain connected to the server.
+# 													Otherwise mysqlbinlog exits when the last log file has been transferred from the server.
+#
+# 													--stop-never implies --to-last-log - so only the first log file to transfer needs to be named on the cmd line.
+#
+# 													--stop-never is commonly used with --raw to make a live binary log backup, but can also be used without --raw
+# 													to maintain a continous text display of log events as the server generates them.
+#
+# 													With --stop-never, by default, mysqlbinlog reports a server ID of 1 when it connects to the server.
+# 													Use --connection-server-id to explicitly specify an alternative ID to report. Can be used to
+# 													avoid a conflict with the ID of a slave server or another mysqlbinlog.
+#
+# --stop-never-slave-server-id=<id> 	DEPRECATED, use --connection-server-id instead to specify a server ID for mysqlbinlog to report.
+#
+# --stop-position=<N> 						Stop reading the binary log at teh first event having a position equal to or greater than <N>.
+# 													Applies to the last log file named on the cmd line.
+#
+# 													Useful for point-in-time recovery.
+#
+# --tls-version=<protocol list> 			The protocols permitted by the client for encrypted connections. Depends on compilated SSL libs relative to MySQL.
+#
+# --to-last-log, -t 							Do not stop at the end of requested binary log from a MySQL server, but rather continue printing
+# 													until the end of the last binary log.
+#
+# 													If this is sent to the same MySQL server, it causes an endless loop.
+#
+# 													Requires --read-from-remote-server.
+#
+# --user=<user name>, -u <user_name> 	The MySQL user name to use when connecting to a remote server
+#
+# --verbose, -v 								Reconstruct row events and display them as commented SQL statements.
+# 													If given twice - output includes comments to indicate column data types, some metadata and row query log events.
+#
+# --verify-binlog-checksum, -c 			Verify checksums in binary log files.
+#
+# --version, -V 								Display version info and exit
+#
+# --open_files_limit=<value> 				Specifies number of open file descriptors to reserve
+#
+# We can pipe the output of mysqlbinlog into the mysql client to execute the events contained in the binary log.
+# This can be done to recover from a crash with a old backup:
+#
+# mysqlbinlog binlog.000001 | mysql -u root -p
+#
+# or
+#
+# mysqlbinlog binlog.[0-9]* | mysql -u root -p
+#
+# If the statements produced by mysqlbinlog may contain BLOB values, these may cause problems when mysql processes them.
+# In such a case - use mysql with --binary-mode then.
+#
+# We can also redirect the output of mysqlbinlog to a text file instead - if we need to modify the statement log first
+# (for example - to remove statements that we do not want to execute)
+#
+# Example of redirection:
+#
+# mysqlbinlog binlog.000001 > tmpfile #Redirect unto tmpfile
+# <Interlude>
+# mysql -u root -p < tmpfile #Redirect from tmpfile to the DB
+#
+# When mysqlbinlog is invoked with the --start-position option - it displays only those events
+# with an offset in the binary log greater than or equal to the given pos. (The pos must align with start of an event)
+#
+# Thus we can do rollbacks or rollfowards to specific time points - such as roll forward to how the DB was @ a specific time point (in tandem with --stop-datetime)
+#
+# The following covers how to approaching multiple file integrations: 
 #
 #
-# https://dev.mysql.com/doc/refman/8.0/en/mysqlbinlog.html
+# mysqlbinlog binlog.000001 | mysql -u root -p  #Problematic if contains CREATE TEMPORARY TABLE statement and second uses said table
+# mysqlbinlog binlog.000002 | mysql -u root -p  #The reason why it's an isssue, is that the connection is terminated between the two commands, so tmp table is dropped - have to specify them as 1 command
+#
+# Example:
+#
+# mysqlbinlog binlog.000001 binlog.000002 | mysql -u root -p
+#
+# Another way is to route log files to a file and then read the file:
+#
+# mysqlbinlog binlog.000001 > /tmp/statements.sql
+# mysqlbinlog binlog.000002 >> /tmp/statements.sql
+# mysql -u root -p -e "source /tmp/statements.sql"
+#
+# As of 8.0.12, you can also supply multiple binary log files to mysqlbinlog as streamed input using a shell pipe.
+# An archive of compressed binary log files can be decompressed and provided directly to mysqlbinlog.
+#
+# In this example, binlog-files_1.gz contains multiple binary log files for processing.
+#
+# The pipeline extracts the contents of binlog-files_1.gz - pipes the binary log files to mysqlbinlog as standard input,
+# and pipes the output of mysqlbinlog into mysql for execution:
+#
+# gzip -cd binlog-files_1.gz | ./mysqlbinlog - | ./mysql -uroot -p
+#
+# We can chain more than one archive file:
+#
+# gzip -cd binlog-files_1.gz binlog-files_2.gz | ./mysqlbinlog - | ./mysql -uroot -p
+#
+# For streamed input, do not use --stop-position, because mysqlbinlog cannot identify the last log file to apply this option.
+#
+# LOAD DATA INFILE operations: mysqlbinlog can produce output that reproduces a LOAD DATA INFILE operation without
+# the original data file.
+#
+# mysqlbinlog copies the data to a temp file and writes a LOAD DATA LOCAL INFILE statement that refers to the file.
+# The default location of the dir where said files are written is system-specific.
+#
+# To specify a dir explicitly, use the --local-load option
+#
+# Because mysqlbinlog converts LOAD DATA INFILE statements to LOAD DATA LOCAL INFILE statements (i.e, it adds LOCAL) - both the client
+# and server that you use to process the statements must be configured with the LOCAL capability enabled.
+#
+# WARNING: The temporary files created for LOAD DATA LOCAL statements are NOT automatically deleted because they are
+# 			  needed until you actually execute those statements. You should delete the temporary files yourself after
+#  		  you no longer need the statement log. The files can be found in the temporary file dir and have names like:
+# 			  <original_file_name-#-#>
+#
+# The following covers mysqlbinlog Hex Dump Format
+#
+# The --hexdump option causes mysqlbinlog to produce a hex dump of the binary log contents:
+#
+# 	mysqlbinlog --hexdump master-bin.000001
+#
+# The hex output consists of comment lines beginning with #, it might look as follows:
+#
+# /* !40019 SET @@session.max_insert_delayed_threads=0*/;
+# /* !50003 SET @@OLD_COMPLETION_TYPE=@@COMPLETION_TYPE, COMPLETION_TYPE=0*/;
+# at 4
+# 051024 17:24:13 server id 1 end_log_pos 98
+# Position 	Timestamp 	Type 		Master ID 		Size 		Master Pos 	  Flags
+# <                    Hexadecimal outputs           >   62 00 00 00   00 00
+# < 						  Hexadecimal outputs 			  >   |..5.0.15.debug.l|
+# etc.
+# 		Start: binlog v 4, server v 5.0.15-debug-log created 051024 17:24:13
+# 		at startup
+# ROLLBACK;
+#
+# The hex dump output contains the elements in the following list: (This might change)
+#
+# Position: The byte pos within the log file
+# Timestamp: The event timestamp. In the example shown, '9d fc 5c 43' is the representation of '051024 17:24:13' in hexadecimal
+# Type: The event type code
+# Master ID: The server ID of the master that created the event
+# Size: The size in bytes of the event
+# Master Pos: The position of the next event in the original master log file.
+# Flags: Event flag values.
+#
+# The following covers mysqlbinlog Row Event Displays:
+#
+# The following examples illustrate how mysqlbinlog displays row events that specify data modifications.
+# These correspond to events with the WRITE_ROWS_EVENT, UPDATE_ROWS_EVENT and DELETE_ROWS_EVENT type codes.
+#
+# The --base64-output=DECODE-ROWS and --verbose options may be used to affect row event output.
+#
+# Suppose that the server is using row-based binary logging and that you execute the following sequence of statements:
+#
+# CREATE TABLE t
+# (
+# 	 id 	INT NOT NULL,
+# 	 name VARCHAR(20) NOT NULL,
+#   date DATE NULL,
+# ) ENGINE = InnoDB;
+#
+# START TRANSACTION;
+# INSERT INTO t VALUES(1, 'apple', NULL);
+# UPDATE t SET name = 'pear', date = '2009-01-01' WHERE id = 1;
+# DELETE FROM t WHERE id = 1;
+# COMMIT;
+#
+# By default, mysqlbinlog displays row events encoded as base-64 strings using BINLOG statements.
+# Omitting extraneous lines, the output for the row events produced by the preceding statement sequences might look as follows:
+#
+# mysqlbinlog <log_file>
+#
+# # at 218
+# #080828 15:03:08 server id 1 end_log_pos 258 		Write_rows: 	table id 17 flags: 	STMT_END_F
+# 
+# BINLOG '
+# <string>
+# '/*!*/;
+# ...
+# # at 302
+# #080828 15:03:08 server id 1 end_log_pos 356 		Update_rows: 	table id 17 flags: 	 STMT_END_F
+#
+# BINLOG '
+# <string>
+# '/*!*/;
+# ...
+# # at 400
+# #080828 15:03:08 server id 1 end_log_pos 442 		Delete_rows: table id 17 flags: STMT_END_F
+#
+# BINLOG '
+# <string>
+# '/*!*/;
+#
+# We can convert said binary strings to closer to SQL, with --verbose or -v. Said lines pertain to the lines starting with ###
+# 
+# mysqlbinlog -v <log_file>
+# ...
+# # at 218
+# #080828 15:03:08 server id 1 	end_log_pos 258 		Write_rows: table id 17 flags: STMT_END_F
+# 
+# BINLOG '
+# <string>
+# '/*!*/;
+# ### INSERT INTO test.t
+# ### SET
+# ###   @1=1
+# ###   @2='apple'
+# ###   @3=NULL
+# ...
+# # at 302
+# #080828 15:03:08 server id 1 	end_log_pos 356 		Update_rows: table id 17 	flags: STMT_END_F
+#
+# BINLOG '
+# <string>
+# '/*!*/
+# ### UPDATE test.t
+# ### WHERE
+# ###   @1=1
+# ###   @2='apple'
+# ###   @3=NULL
+# ### SET
+# ###   @1=1
+# ###   @2='pear'
+# ###   @3='2009:01:01'
+# ...
+# # at 400
+# #080828 15:03:08 server id 1 end_log_pos 442 		Delete_rows: table id 17 flags : STMT_END_F
+#
+# BINLOG '
+# <string>
+# '/*!*/
+# ### DELETE FROM test.t
+# ### WHERE
+# ###   @1=1
+# ###   @2='pear'
+# ###   @3='2009:01:01'
+#
+# Where of, if we do it twice:
+#
+# mysqlbinlog -vv <log_file>
+# ...
+# # at 218
+# #080828 15:03:08 server id 1  end_log_pos 258 	Write_rows: table id 17 flags: STMT_END_F
+#
+# BINLOG '
+# <string>
+# '/*!*/;
+# ### INSERT INTO test.t
+# ### SET
+# ###   @1=1 /* INT meta=0 nullable=0 is_null=0 */
+# ###   @2='apple' /* VARSTRING(20) meta=20 nullable=0 is_null=0 */
+# ###   @3=NULL /* VARSTRING(20) meta=0 nullable=1 is_null=1 */
+# ...
+# # at 302
+# #080828 15:03:08 server id 1 end_log_pos 356 	Update_rows: table id 17 flags: STMT_END_F
+#
+# BINLOG '
+# <string>
+# '/*!*/;
+# ### UPDATE test.t
+# ### WHERE
+# ###   @1=1 /*  INT meta=0 nullable=0 is_null=0 */
+# ###   @2='apple' /* VARSTRING(20) meta=20 nullable=0 is_null=0 */
+# ###   @3=NULL /* VARSTRING(20) meta=0 nullable=1 is_null=1 */
+# ### SET
+# ###   @1=1 /*  INT meta=0 nullable=0 is_null=0 */
+# ###   @2='pear' /* VARSTRING(20) meta=20 nullable=0 is_null=0 */
+# ###   @3='2009:01:01' /* DATE meta=0 nullable=1 is_null=0 */
+# ...
+# at 400
+#080828 15:03:08 server id 1 	end_log_pos 442 	Delete_rows: table id 17 flags: STMT_END_F
+#
+# BINLOG '
+# <string>
+# '/*!*/;						
+# ### DELETE FROM test.t
+# ### WHERE
+# ###   @1=1 /* INT meta=0 nullable=0 is_null=0 */
+# ###   @2='pear' /* VARSTRING(20) meta=20 nullable=0 is_null=0 */
+# ###   @3='2009:01:01' /* DATE meta=0 nullable=1 is_null=0 */
+#
+# You can tell mysqlbinlog to suppress the BINLOG statements for row events by using the --base64-output=<DECODE-ROWS> option.
+# This is similar to --base64-output=NEVER but it does not exit with an error if a row event is found.
+# The combination of --base64-output=<DECODE-ROWS> and --verbose provides a convenient way to see row events
+# only as SQL statements:
+#
+# mysqlbinlog -v --base64-output=DECODE-ROWS log_file
+# # at 218
+# #080828 15:03:08 server id 1 end_log_pos 258 		Write_rows: table id 17 flags: STMT_END_F
+# ### INSERT INTO test.t
+# ### SET
+# ###   @1=1
+# ###   @2='apple'
+# ###   @3=NULL
+# ...
+# # at 302
+# #080828 15:03:08 server id 1 end_log_pos 356 		Update_rows: table id 17 flags: STMT_END_F
+# ### UPDATE test.t
+# ### WHERE
+# ###   @1=1
+# ###   @2='apple'
+# ###   @3=NULL
+# ### SET
+# ###   @1=1
+# ###   @2='pear'
+# ###   @3='2009:01:01'
+# ...
+# # at 400
+# #080828 15:03:08 server id 1 	end_log_pos 442 		Delete_rows: table id 17 flags: STMT_END_F
+# ### DELETE FROM test.t
+# ### WHERE
+# ###   @1=1
+# ###   @2='pear'
+# ###   @3='2009:01:01'
+#
+# NOTE: You should not suppress BINLOG statements if you intend to re-execute mysqlbinlog output
+#
+# The SQL statements produced by --verbose for row events are much more readable than the corresponding BINLOG statements.
+# However, they do not correspond exactly to the original SQL statements that generated the events.
+#
+# The following limitations apply:
+#
+# The original column names are lost and replaced by @N where N is the column number
+# 
+# Character set information is not available in the binary log, which affects string column display:
+# 		
+# 		There is no distinction made between corresponding binary and nonbinary string types (BINARY and CHAR, VARBINARY and VARCHAR, BLOB and TEXT)
+#     The output uses a data type of STRING for fixed-length strings and VARSTRING for variable-length strings.
+#
+# 		For multibyte char sets, the max number of bytes per character is not present in the binary log, so the length for string
+# 		types is displayed in bytes rather than in characters. For example, STRING(4) will be used as the data type for values from either
+#     of these column types:
+#
+# 		CHAR(4) 	CHARACTER SET latin1
+# 		CHAR(2) 	CHARACTER SET ucs2
+#
+# 		Due to the storage format for events of type UPDATE_ROWS_EVENT, UPDATE statements are displayed with the WHERE clause preceding the SET clause.
+# 
+# Proper interpretation of row events requires the information from the format description event at the beginning of the binary log.
+#
+# Because mysqlbinlog does not know in advance whether the rest of the log contain rows row events, by default it displays the format
+# description event using a BINLOG statement in the initial part of the output.
+#
+# If the binary log is known not to contain any events requiring a BINLOG statement (that is, no row events) - the --base64-output=NEVER option can be 
+# used to prevent this header from being written.
+#
+# The following covers using mysqlbinlog to Back Up Binary Log Files
+#
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/mysqlbinlog-backup.html
