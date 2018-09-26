@@ -8117,5 +8117,321 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # The following covers using mysqlbinlog to Back Up Binary Log Files
 #
+# By default, mysqlbinlog reads binary log files and displays their contents in text format. This enables you
+# to examine events within the files more easily and to re-execute them (For example - by using the output as input to mysql)
+#
+# mysqlbinlog can read log files directly from the local file system, or, with the --read-from-remote-server option
+# - it can connect to a server and request binary log contents from that server.
+#
+# mysqlbinlog writes text output to its standard output - or to the file named as the value of the --result-file=<file name> option
+# if that option is given.
+#
+# mysqlbinlog can read binary log files and write new files containing the same content - that is, in binary
+# format rather than text format.
+#
+# This capability enables you to easily back up a binary log in its original format. mysqlbinlog can make a static
+# backup, backing up a set of log files and stopping when the end of the last file is reached.
+#
+# It can also make a continuous ("live") backup - staying connected to the server when it reaches the end of the last log
+# file and continuing to copy new events as they are generated.
+#
+# In continuous-backup operation, mysqlbinlog runs until the connection ends (for example - when the server exits) or mysqlbinlog
+# is forcibly terminated. When the connection ends, mysqlbinlog does not wait and retry the connection - unlike a slave replication server.
+#
+# To continue a live backup after the server has been restarted - you must also restart mysqlbinlog.
+#
+# Binary log backup requires that you invoke mysqlbinlog with two options at minimum:
+#
+# 		The --read-from-remote-server (or -R) option tells mysqlbinlog to connect to a server and request its binary log.
+# 				(This is similar to a slave replication server connecting to its master server)
+#
+# 		The --raw option tells mysqlbinlog to write raw (binary) output, not text output
+#
+# Along with --read-from-remote-server - it is common to specify other options: --host indicates where the server
+# is running and you may also need to specify connection options such as --user and --password
+#
+# Several other options are useful in conjunction with --raw:
+#
+# 		--stop-never: Stay connected to the server after reaching the end of the last log file and continue to read new events
+#
+# 		--connection-server-id=<id>: The server ID that mysqlbinlog reports when it connects to a server. 
+# 											  When --stop-never is used, the default reported server ID is 1.
+# 											  If this causes a conflict with the ID of a slave server or another mysqlbinlog process,
+# 											  use --connection-server-id to specify an alternative server ID.
+#
+# 		--result-file: A prefix for output file names, as described later.
+#
+# To back up a server's binary log files with mysqlbinlog, you must specify file names that actually exist on the server.
+# If you do not know the names, connect to the server and use the SHOW BINARY LOGS statement to see the current names.
+#
+# Suppose that the statement produces this output:
+#
+# 	SHOW BINARY LOGS;
+# 	
+# 		Log_name 			File_size
+# 	 binlog.000130 		27459
+#   binlog.000131 		13719
+# 	 binlog.000132 		43268
+#
+# With that information, you can use mysqlbinlog to back up the binary log to the current dir as follows (enter each command on a single line):
+#
+# 		To make a static backup of binlog.000130 through binlog.000132, use either of the following commands:
+#
+# 			mysqlbinlog --read-from-remote-server --host=host_name --raw
+# 				binlog.000130 binlog.000131 binlog.000132
+#
+# 			mysqlbinlog --read-from-remote-server --host=host_name --raw
+# 				--to-last-log binlog.000130
+#
+# 		The first command specifies every file name explicitly. The second names only the first file and uses --to-last-log
+# 		to read through the last.
+#
+# 		A difference between these commands is that if the server happens to open binlog.000130 before mysqlbinlog reaches the
+# 		end of binlog.000132, the first command will not read it - but the second will.
+#
+# 		To make a live backup in which mysqlbinlog starts with binlog.000130 to copy existing log files - then stays
+# 		connected to copy new events as the server generates them:
+#
+# 			mysqlbinlog --read-from-remote-server --host=host_name --raw --stop-never binlog.000130
+#
+# 		With --stop-never, it is not nessecary to specify --to-last-log to read to the last log file because that option is implied.
+#
+# The following pertains to Output File Naming
+#
+# Without --raw, mysqlbinlog produces text output and the --result-file option, if given - specifies the name of the single file
+# to which all output is written.
+#
+# With --raw, mysqlbinlog writes one binary output file for each log file transferred from the server.
+# By default, mysqlbinlog writes the files in the current directory with the same name as the original log files.
+#
+# To modify the output file names, use the --result-file option. In conjunction with --raw, the --result-file option
+# value is treated as a prefix that modifies the output file names.
+#
+# Suppose that a server currently has binary log files named binlog.000999 and up.
+# If you use mysqlbinlog --raw to back up the files, the --result-file option produces
+# output file names as shown soon.
+#
+# You can write the files to a specific directory by beginning the --result-file value with the directory path.
+# If the --result-file value consists only of a directory name - the value must end with the pathname separator char.
+#
+# Output files are overwritten if they exist:
+#
+# 	--result-file OPTION 		OUTPUT FILE NAMES
+# --result-file=x 				xbinlog.000999 and up
+# --result-file=/tmp/ 			/tmp/binlog.000999 and up
+# --result-file=/tmp/x 			/tmp/xbinlog.000999 and up
+#
+# The following is an example of using mysqldump + mysqlbinlog for Backup and Restore
+#
+# The following example describes a simple scenario that shows how to use mysqldump and mysqlbinlog together to back
+# up a server's data and binary log - and how to use the backup to restore the server if data loss happens.
+#
+# The example assumes that the server is running on host <host_name> and its first binary log file is named
+# binlog.000999. 
+#
+# Make a continous backup of the bin log:
+#
+# mysqlbinlog --read-from-remote-server --host=host_name --raw
+# 	--stop-never binlog.000999
+#
+# We can also use mysqldump to make a dump file which acts as a snapshot of the server's data.
+#
+# Use --all-databases, --events, and --routines to back up all data and --master-data=2 to include the
+# current bin log co-ords in the dump file.
+#
+# mysqldump --host=host_name --all-databases --events --routines --master-data=2> <dump_file> #Select all the data, include binary log co-ords in the dump
+#
+# We can execute above to make snaphots. 
+#
+# To restore by usage of a dump file:
+#
+# mysql --host=host_name -u root -p < <dump_file>
+#
+# Assuming the binlog file looks as follows:
+#
+# -- CHANGE MASTER TO MASTER_LOG_FILE='binlog.001002', MASTER_LOG_POS=27284;
+#
+# If the most recent is binlog.001004, you can re-execute log events as follows:
+#
+# mysqlbinlog --start-position=27284 binlog.001002 binlog.001003 binlog.001004 | mysql --host=host_name -u root -p
+#
+# We may also copy the backup files to the server, if we do not have root access.
+#
+# The following covers how to Specify mysqlbinlog Server ID
+#
+# When invoked with the --read-from-remote-server option, mysqlbinlog connects to a MySQL server,
+# specifies a server ID to identify itself - requests binary log files.
+#
+# We can use mysqlbinlog to request log files from a server in several ways:
+#
+# Specify an explicit named set of files: For each file, mysqlbinlog connects and issues a Binlog dump command.
+# The server sends the file and disconnects. There is one connection per file.
+#
+# Specify the beginning file and --to-last-log: mysqlbinlog connects and issues a Binlog dump command for all files.
+# The server sends all the files and disconnects.
+#
+# Specify the beginning file and --stop-never (implies --to-last-log): mysqlbinlog connects and issues a Binlog dump
+# command for all files. The server sends all files - but does not disconnect after sending the last one.
+#
+# If we use --read-from-remote-server only - mysqlbinlog connects using a server ID of 0 - which tells the server to disconnect
+# after sending the last requested log file.
+#
+# With --read-from-remote-server and --stop-never, mysqlbinlog connects using a nonzero server ID, so the server does not
+# disconnect after sending the last log file. The server ID is 1 by default, but can be changed with --connection-server-id.
+#
+# Thus, for the first two ways of requesting files, the server disconnects because mysqlbinlog specifies a server ID of 0.
+# Does not disconnect if --stop-never is given because mysqlbinlog specifies a nonzero server ID.
+#
+# The following covers mysqldumpslow - Summarizing Slow Query Log Files
+#
+# The MySQL slow query log contains info about queries that take a long time to execute.
+# mysqldumpslow parses MySQL slow query log files and prints a summary of their contents.
+#
+# Normally - mysqldumpslow groups queries that are similar except for the particular values of number and
+# string data values. It "abstracts" these values to N and 'S' when displaying summary output.
+#
+# The -a and -n options can be used to modify value abstracting behavior.
+#
+# Invoke as follows:
+#
+# mysqldumpslow [<options>] [<log_file> ...]
+#
+# The following options pertain to mysqldumpslow:
+#
+# -a 		   Do not abstract all numbers to N and strings to S
+# -n 		   Abstract numbers with at least the specified digits
+# --debug   Write debug information
+# -g 		   Only consider statements that match the pattern
+# --help    Display help message and exit
+# -h 		   Host name of the server in the log file name
+# -i 		   Name of the server instance
+# -l 		   Do not subtract lock time from total time
+# -r 		   Reverse the sort order
+# -s 		   How to sort output
+# -t 		   Display only first num queries
+# --verbose Verbose mode
+#
+# The following covers dynamics in more detail:
+#
+# --help - Display help message and exit
+# -a - Do not abstract all numbers to N and strings to 'S'
+# --debug, -d - Run in debug mode
+# -g <pattern> - Consider only queries that match the (grep-style) pattern
+# -host, <host_name> - Host name of the MySQL server for *-slow.log file name.
+# 							  Can contain wildcard. Default wildcard is *
+# -i <name> - Name of server instance (if using mysql.server startup script)
+# -l - Do not subtract lock time from total time
+# -n <N> - Abstract numbers with at least <N> digits within names
+# -r - Reverse the sort order
+# -s <sort_Type> - How to sort the output. The value of <sort_type> should be chosen from the following list:
+# 						
+# 						 		t, at: Sort by query time or average query time
+# 								l, al: Sort by lock time or average lock time
+# 								r, ar: Sort by rows sent or average rows sent
+# 								c: Sort by count
+#
+# 								By default, it sorts by average query time (same as -s at)
+#
+# -t <N> - Display only the first <N> queries in the output.
+# --verbose, -v - Verbose mode. 
+#
+# Example output:
+#
+# mysqldumpslow
+#
+# Reading mysql slow query log from /usr/local/mysql/data/mysqld51-apple-slow.log
+# Count: 1 	Time=4.32s (4s) 	Lock=0.00s 	(0s) 		Rows=0.0 (0), 	root[root]@localhost
+# 	insert into t2 select * from t1
+#
+# Count: 3 Time=2.53s (7s) Lock=0.00s (0s) 		Rows=0.0 (0), root[root]@localhost
+# 	insert into t2 select * from t1 limit N
+#
+# Count: 3 Time=2.13s (6s) Lock=0.00s (0s) 		Rows=0.0 (0), root[root]@localhost
+# 	insert into t1 select * from t1
+#
+# The following covers MySQL Program Development Utilities
+#
+# In shell scripts, you can use the my_print_defaults program to parse option files and 
+# see what options would be used by a given program.
+#
+# The following example shows the output that my_print_defaults might produce when asked to show
+# the options found in the [client] and [mysql] groups:
+#
+# my_print_defaults client mysql
+# --port=3306
+# --socket=/tmp/mysql.sock
+# --no-auto-rehash
+#
+# Option file handling is implemented in the C client lib simply by processing all options in the
+# appropiate group or groups before any CMDline args.
+#
+# The following pertains to mysql_config - A utility to display options for Compiling Clients
+#
+# mysql_config provides you with useful information for compiling your MySQL client and connecting it to MySQL.
+# It's a shell script.
+#
+# Note: pkg-config can be used as an alternative to mysql_config for obtaining info such as compiler flags
+# or link libraries required to compile MySQL apps.
+#
+# mysql_config supports the following:
+#
+# --cflags - C compiler flags to find include files and critical compiler flags - defines used when compiling the libmysqlclient lib.
+# 				 The options returned are tied to the specific compiler that was used when the library was created and might 
+# 				 clash with the settings for your own compiler.
+#
+# 				 Using --include is more integratable in relation to portable options that contain only include paths.
+#
+# --cxxflags - Like -cflags, but for C++ compiler flags
+#
+# --include - Compiler options to find MySQL include files
+#
+# --libs - Libs and options required to link with the MySQL client lib.
+#
+# --libs r - Libs and options required to link with the thread-safe MySQL client lib.
+# 				 In MySQL 8.0, all client libs are thread-safe. --libs can be used in all cases.
+#
+# --plugindir - Default plugin dir path name, defined when configuring MySQL
+#
+# --port - Default TCP/IP port number, defined when configuring MySQL
+#
+# --socket - Default Unix socket file, defined when configuring MySQL
+#
+# --variable=<var_name> - Display the value of the named config variable. 
+# 								  Permitted <var_name> values are pkgincludedir (header file dir),
+# 						        pkglibdir (the lib dir),
+# 								  plugindir (the plugin dir)
+#
+# --version - Version number for MySQL distri
+#
+# If you invoke mysql_config with no options, it displays a list of all options that it supports and their values:
+#
+# mysql_config
+# Usage: 	/usr/local/mysql/bin/mysql_config [options]
+# Options:
+# 	--cflags 		[-I/usr/local/mysql/include/mysql -mcpu=pentiumpro]
+#  --cxxflags 		[-I/usr/local/mysql/include/mysql -mcpu=pentiumpro]
+#  --include 		[-I/usr/local/mysql/include/mysql]
+# 	--libs 			[-L/usr/local/mysql/lib/mysql -lmysqlclient
+# 						 -lpthread -lm -lrt -lssl -lcrypto -ldl]
+#  --libs_r 		[-L/usr/local/mysql/lib/mysql -lmysqlclient_r
+# 						 -lpthread -lm -lrt -lssl -lcrypto -ldl]
+#  --plugindir 	[/usr/local/mysql/lib/plugin]
+# 	--socket 		[/tmp/mysql.sock]
+# 	--port 			[3306]
+#  --version 		 [5.8.0-m17]
+#  --variable=<VAR> VAR is one of :
+# 			pkgincludedir 	[/usr/local/mysql/include]
+# 			pkglibdir 		[/usr/local/mysql/lib]
+# 			plugindir 		[/usr/local/mysql/lib/plugin]
+#
+# We can use mysql_config within a CMD line using backticks to include output for particular options.
+# For example, we can compile and link a MySQL client program as follows:
+#
+# gcc -c `mysql_config --cflags` progname.c
+# gcc -o progname progname.o `mysql_config --libs`
+#
+# The following pertains to my_print_defaults - Used for Display Options from Option Files
+#
+# https://dev.mysql.com/doc/refman/8.0/en/my-print-defaults.html
 # 
 # https://dev.mysql.com/doc/refman/8.0/en/mysqlbinlog-backup.html
