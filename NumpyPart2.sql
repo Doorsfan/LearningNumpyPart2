@@ -8432,6 +8432,743 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # The following pertains to my_print_defaults - Used for Display Options from Option Files
 #
-# https://dev.mysql.com/doc/refman/8.0/en/my-print-defaults.html
+# my_print_defaults displays the options that are present in option groups of option files. 
+# The output indicates what options will be used by programs that read the specified option
+# groups.
+#
+# For example, the mysqlcheck program reads the [mysqlcheck] and [client] option groups.
+# To see what options are present in thoose groups in the standard option files, invoke the
+# my_print_defaults as follows:
+#
+# my_print_defaults mysqlcheck client
+# --user=myusername
+# --password=password
+# --host=localhost
+#
+# The output consists of options - one a line.
+#
+# The following options are supported in terms of my_print_defaults:
+#
+# --help, -? - Display a help message and exit
+#
+# --config-file=<file name>, - Read only the given option file
+# --defaults-file=<file name>,
+#  -c <file_name>
+#
+# --debug=<debug options>, - Write a debugging log. A typical <debug_options> string is d:t:o, <file_name>.
+#  -# <debug_options> 		  Defaults to d:t:o, /tmp/my_print_defaults.trace
+#
+# --defaults-extra-file=<file name>, - Read this option file after global option file (but on Unix) before the user option file.
+# --extra-file=<file name>,
+#  -e <file_name>
+#
+# --defaults-group-suffix=<suffix>, - Suffix regex match option groups
+#  -g <suffix>
+# --login-path=<name>, - Read options from the named login path in the .mylogin.cnf login path file.
+#  -L <name>
+# --no-defaults, -n - Return an empty string
+# --show, -s - my_print_defaults masks PWs by default. Use this to display in cleartext.
+# --verbose, -v - Verbose mode.
+# --version, -V - Version info and exit
+#
+# The following pertains to resolve_stack_dump - Used to resolve Numeric Stack Trace Dump to Symbols
+#
+# resolve_stack_dump resolves a numeric stack dump to symbols.
+#
+# Invoke:
+#
+# resolve_stack_dump [<options>] <symbols_file> [<numeric_dump_file>]
+#
+# The symbols file should include the output from the nm --numeric-sort mysqld command.
+# The numeric dump file should contain a numeric stack track from mysqld.
+# If no numeric dump file is named on the command line, the stack trace is read from the standard input.
+#
+# resolve_stack_dump supports the following options:
+#
+# --help, -h - Display a help message and exit.
+# --numeric-dump-file=<file name>, -n <file_name> - Read the stack trace from the given file.
+# --symbols-file=<file name>, -s <file_name> - Use the given symbols file.
+# --version, -V - Display version info and exit.
+#
+# The following covers lz4_decompress - Decompress mysqlpump LZ4-Compressed Output
+#
+# The lz4_decompress utility decompresses mysqlpump output that was created using LZ4 compression.
+#
+# NOTE: If MySQL was configured with the -DWITH LZ4=system option, lz4_decompress is not built.
+# 	     In this case, the system lz4 command can be used instead.
+#
+# Invoke lz4_decompress like this:
+# lz4_decompress <input_file> <output_file>
+#
+# Example of usage:
+#
+# mysqlpump --compress-output=LZ4 > dump.lz4
+# lz4_decompress dump.lz4 dump.txt
+#
+# To see help messages in relation to lz4_decompress, run it with no args.
+# To decompress mysqlpump ZLIB-compressed output, use zlib_decompress.
+#
+# The following pertains to perror - Which displays error messages:
+#
+# perror displays the error message for MySQL or operating system error codes.
+#
+# perror [<options>] <errorcode> ...
+#
+# perror attempts to be flexible in understanding args. For example - 
+#
+# ER WRONG VALUE FOR VAR - can be translated as 1231, 001231, MY-1231 or MY-001231 or ER WRONG VALUE FOR VAR
+#
+# shell>perror 1231
+# MySQL error code MY-001231 (ER_WRONG_VALUE_FOR_VAR): Variable '%-.64s' can't be set to the value of '%-.200s'
+#
+# If a error number is in the range where MySQL and OS sys errors overlap, perror displays both error messages:
 # 
-# https://dev.mysql.com/doc/refman/8.0/en/mysqlbinlog-backup.html
+# perror 1 13
+# OS error code 1: Operation not permitted
+# MySQL error code MY-000001: Can't create/write to file '%s' (OS errno %d - %s)
+# OS error code 13: Permission denied
+# MySQL error code MY-000013: Can't get stat of '%s' (OS errno %d - %s)
+#
+# To obtain the error message for a MySQL Cluster error code, invoke perror with the --ndb option:
+#
+# perror --ndb <errorcode>
+#
+# The meaning of system error messages may be dependent on the OS. 
+#
+# perror supports the following options:
+#
+# --help, --info, -I, -? - Display a help message and exit
+# --ndb - print the error message for a MySQL Cluster error code
+# --silent, -s - Silent mode. Print only the error message
+# --verbose, -v - Verbose mode
+# --version, -V - Version info and exit
+#
+# The following covers the dynamics of resolveip - Resolve Host name to IP Address or Vice Versa
+#
+# The resolveip utility resolves host names to IP addresses and vice versa.
+#
+# Invoke as follows:
+#
+# resolveip [<options>] {<host_name>|<ip-addr>} ...
+#
+# Supports the following options:
+#
+# --help, --info, -?, -I - Display a help message and exit
+# --silent, -s - Silent mode.
+# --version, -V - Display version info and exit.
+#
+# The following options cover zlib_decompress - Decompress mysqlpump ZLIB-Compressed Output
+#
+# The zlib_decompress utility decompresses mysqlpump output that was created using ZLIB compression.
+#
+# Note: If we configured MySQL with the -DWITH ZLIB=system option, zlib_decompress is not built.
+# 		  Then we can use openssl zlib instead.
+#
+# To use zlib_decompress:
+#
+# zlib_decompress <input_file> <output_file>
+#
+# Example:
+#
+# mysqlpump --compress-output=ZLIB > dump.zlib
+# zlib_decompress dump.zlib dump.txt
+#
+# To see a help message, just run zlib_decompress with no args.
+#
+# To decompress mysqlpump LZ4-compressed output, use lz4_decompress.
+#
+# The following pertains to MySQL Program Env Variables:
+#
+# VARIABLE 										Desc
+# AUTHENTICATION_PAM_LOG 				PAM authentication plugin debug logging settings
+# CC 											The name of your C compiler (for running CMake)
+# CXX 										Name of your C++ compiler (for running CMake)
+# CC 											Name of your C compiler (for running CMake)
+# DBI_USER 									Default user name for Perl DBI
+# DBI_TRACE 								Trace options for Perl DBI
+# HOME 										The default path for the mysql history file is $HOME/.mysql_history
+# LD_RUN_PATH 								Used to specify the location of libmysqlclient.so
+# LIBMYSQL_ENABLE_CLEARTEXT_PLUGIN  Enable mysql_clear_password auth plugin
+#
+# LIBMYSQL_PLUGIN_DIR 					Dir in which to look for client plugins
+# LIBMYSQL_PLUGINS 						Client plugins to preload
+# MYSQL_DEBUG 								Debug trace options when debugging
+# MYSQL_GROUP_SUFFIX 					Option group suffix value (like specifying --defaults-group-suffix)
+# MYSQL_HISTFILE 							The path to the mysql history file. If this var is set, its value overrides the default for $HOME/.mysql_history
+# MYSQL_HISTIGNORE 						Patterns specifying statements that mysql should not log to $HOME/.mysql_history or syslog if --syslog is given
+#
+# MYSQL_HOME 								The path to the dir in which the server-specific my.cnf file resides
+# MYSQL_HOST 								Default host name used by the mysql cmd line client
+# MYSQL_OPENSSL_UDF_DH_BITS 			Maximum key length for CREATE DH PARAMETERS()
+#                _THRESHOLD
+# MYSQL_OPENSSL_UDF_DSA_BITS 			Maximum DSA key length for CREATE ASYMMETRIC PRIV KEY()
+# 					  _THRESHOLD 
+# MYSQL_OPENSSL_UDF_RSA_BITS 			Maximum RSA key length for CREATE ASYMMETRIC PRIV KEY()
+# 					  _THRESHOLD
+# MYSQL_PS1 								The cmd prompt to use use in the mysql cmd line 
+# MYSQL_PWD 								The default PW when connecting to mysqld. Insecure.
+# MYSQL_TCP_PORT 							Default TCP/IP port number
+# MYSQL_TEST_LOGIN_FILE 				The name of the .mylogin.cnf login path file
+# MYSQL_TEST_TRACE_CRASH 				Whether the test protocol trace plugin crashes clients.
+# MYSQL_TEST_TRACE_DEBUG 				Whether the test protocol trace plugin produces output.
+# MYSQL_UNIX_PORT 						The default Unix socket file name, used for connections to localhost
+# MYSQLX_TCP_PORT 						The X plugin default TCP/IP port number
+#
+# MYSQLX_UNIX_PORT 						The X Plugin default Unix socket file name; used for connections to localhost
+# NOTIFY_SOCKET 							Socket used by mysqld to communicate with systemd
+# PATH 										Used by the shell to find MySQL programs.
+# PKG_CONFIG_PATH 						Location of mysqlclient.pc pkg-config file.
+# TMPDIR 									The dir in which temp files are created.
+# TZ 											Should be set to your local time zone
+# UMASK 										The user-file creation mode when creating files
+# UMASK_DIR 								The user-directory creation mode when creating dirs
+# USER 										The default user name on Windows when connecting to Mysqld
+#
+# MYSQL_TEST_LOGIN_FILE is the path name of the login path file (the file created by mysql_config_editor).
+#
+# If not set, the default value is %APPDATA%\MySQL\.mylogin.cnf dir on Windows and $HOME/.mylogin.cnf on non Windows OS's
+#
+# The MYSQL_TEST_TRACE_DEBUG and MYSQL_TEST_TRACE_CRASH vars control the test protocol trace client plugin,
+# if MySQL is built with that plugin enabled.
+#
+# The default UMASK and UMASK_DIR values are 0640 and 0750, respectively.
+#
+# MySQL assumes that the value for UMASK or UMASK_DIR is in octal if it starts with a zero.
+# For example, setting UMASK=0600 is equivalent to UMASK=384 because 0600 Octal is 384 decimal.
+#
+# UMASK and UMASK_DIR, are not masks, they are modes.
+#
+# If UMASK is set, mysqld uses ($UMASK | 0600) as the mode for file creation, so that newly created files have a mode in the range
+# from 0600 to 0666 (octal values)
+#
+# If UMASK_DIR is set, mysqld uses ($UMASK_DIR | 0700) as the base mode for dir creation, which is AND supplemented with ~(~$UMASK & 0666)
+# so that newly created dirs have a mode in the range from 0700 to 0777.
+#
+# The AND may remove read and write permissions from the dir mode, but not execute permissions.
+#
+# We might need to set PKG_CONFIG_PATH if we use pkg-config in terms of MySQL programs
+#
+# The following covers MySQL Server Administration
+#
+# MySQL Server (mysqld) is the main program that does most of the work in a MySQL installation.
+# The following will cover:
+#
+# Server configuration
+# The dara dir, particularly the mysql system db
+# The server log files
+# Management of multiple servers on a single machine
+#
+# The following covers The MySQL Server
+#
+# mysqld is the MySQL server. The following will cover:
+#
+# Startup options that the server supports. You can specify these options on the cmd line, through config files or both.
+#
+# Server system vars. These vars reflect the current state and values of the startup options, some of which can be modified while the server is running
+#
+# Server status vars. These vars contain counters and stats about runtime operations
+#
+# How to set the server SQL mode. Modifies certain aspects of SQL syntax and semantics, for example for compability
+# with code from other DBs or to control the error handling for specific situations
+#
+# Configuring and using IPv6 support
+#
+# Configuring and using time zone support
+#
+# Server-side help capabilities
+#
+# The server shutdown process. Performance and reliability considerations depending on type of table (transactional or nontransactional) and whether to use replication.
+#
+# NOTE: Not all storage engines are supported by all MySQL server bins and configs.
+#
+# The following section covers how to configure the Server.
+#
+# The MySQL server, mysqld has many command options and system vars that can be set at startup to configure its operation.
+# To determine the default command option and system var values used by the server:
+#
+# mysqld --verbose --help
+#
+# The command produces a list of all mysqld options and config system vars. 
+# Its output includes the default option and var values, might look like:
+#
+# abort-slave-event-count 			0
+# allow-suspicious-udfs 			FALSE
+# archive 								ON
+# auto-increment-increment 		1
+# auto-increment-offset 			1
+# autocommit 							TRUE
+# automatic-sp-privileges 			TRUE
+# avoid-temporal-upgrade 			FALSE
+# back-log 								80
+# basedir 								/home/jon/bin/mysql-8.0/
+# ...
+# tmpdir 								/tmp
+# transaction-alloc-block-size 	8192
+# transaction-isolation 			REPEATABLE-READ
+# transaction-prealloc-size 		4096
+# transaction-read-only 			FALSE
+# transaction-write-set-extraction OFF
+# updatable-views-with-limit 		YES
+# validate-user-plugins 			TRUE
+# verbose 								TRUE
+# wait-timeout 						28800
+#
+# To see the system vars in use on the server:
+#
+# SHOW VARIABLES;
+#
+# To see some stats and status indicators for a running server:
+#
+# SHOW STATUS;
+#
+# We can also see system vars and status through mysqladmin:
+#
+# mysqladmin variables
+# mysqladmin extended-status
+#
+# Options set on cmd line are only in effect for that session, for permanance use OPtion files.
+#
+# The following pertains to Server Configuration Defaults:
+#
+# The MySQL server has many operating params, which you can change at server startup using cmd line options or config files.
+# We can also change params at runtime.
+#
+# On Windows, the MySQL installer interacts with the user and creates a file named my.ini in the base install dir as the default option file
+#
+# NOTE: The extension on Windows might not be displayed (in terms of .ini or .cnf)
+#
+# After completing the installation process, you can edit the default option file at any time to modify the params.
+#
+# On non Windows, no default option file is made in terms of installation. Without a option file, it just runs with defaults.
+# 
+# The following pertains to Server Options, System vars and Status Vars
+#
+# The following contains all cmd line options, system vars, and status vars within mysqld.
+#
+# Cmd line options, System vars, Status vars:
+#
+# Name 													CMD-line 					Option file 				System Var 				Status Var 			Var Scope 		Dynamic
+# abort-slave-event-count 							Yes 							Yes 							
+# Aborted_clients 																																Yes 					Global 			No
+# Aborted_connects 																																Yes 					Global 			No
+# Acl_cache_items_count 																														Yes 					Global 			No
+# activate_all_roles_on_login 					Yes 							Yes 							Yes 												Global 			Yes
+# allow-suspicious-udfs 							Yes 							Yes 							
+# ansi 													Yes 							Yes
+# audit-log 											Yes 							Yes
+# audit_log_buffer_size 							Yes 							Yes 							Yes 												Global 			No
+# audit_log_compression 							Yes 							Yes 							Yes 												Global 			No
+# audit_log_connection_policy 					Yes 							Yes 							Yes 												Global 			Yes
+# audit_log_current_session 																						Yes						   					Both 				No
+#
+# audit_log_current_size 																														Yes 					Global 			No
+# audit_log_encryption 								Yes 							Yes 							Yes 												Global 			No
+# Audit_log_event_max_drop_size 																												Yes 					Global 			No
+# Audit_log_events 																																Yes 					Global 			No
+# Audit_log_events_filtered 																													Yes 					Global 			No
+# Audit_log_events_lost 																														Yes 					Global 			No
+# Audit_log_events_written 																													Yes 					Global 			No
+#
+# audit_log_exclude_accounts 						Yes 							Yes 							Yes 												Global 			Yes
+# audit_log_file 										Yes 							Yes 							Yes 												Global 			No
+# audit_log_filter_id 																								Yes												Both 				No
+# audit_log_flush 																									Yes 												Global 			Yes
+# audit_log_format 									Yes 							Yes 							Yes 												Global 			No
+# audit_log_include_accounts 						Yes 							Yes 							Yes 												Global 			Yes
+# audit_log_policy 									Yes 							Yes 							Yes 												Global 			No
+# audit_log_read_buffer_size 						Yes 							Yes 							Yes 												Varies 			Varies
+# audit_log_rotate_on_size 						Yes 							Yes 							Yes 												Global 			Yes
+#
+# audit_log_statement_policy 						Yes 							Yes 							Yes 												Global 			Yes
+# audit_log_strategy 								Yes 							Yes 							Yes 												Global 			No
+# Audit_log_total_size 																															Yes 					Global 			No
+# Audit_log_write_waits 																														Yes 					Global 			No
+# authentication_ldap_sasl_auth_method_name 	Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_sasl_bind_base_dn 		Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_sasl_bind_root_dn 		Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_sasl_bind_root_pwd 		Yes 							Yes 							Yes 												Global 			Yes
+#
+# authentication_ldap_sasl_ca_path 				Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_sasl_group_search_attr Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_sasl_group_search_ 		Yes 							Yes 							Yes 												Global 			Yes
+# filter
+# authentication_ldap_sasl_init_pool_size 	Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_sasl_log_status 			Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_sasl_max_pool_size 		Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_sasl_server_host 		Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_sasl_server_port 		Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_sasl_tls 					Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_sasl_user_search_attr 	Yes 							Yes 							Yes 												Global 			Yes
+#
+# authentication_ldap_simple_auth_method_ 	Yes 							Yes 							Yes 												Global 			Yes
+# name
+# authentication_ldap_simple_bind_base_dn 	Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_simple_bind_root_dn 	Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_simple_bind_root_pwd 	Yes 							Yes 							Yes 												Global 			yes
+# authentication_ldap_simple_ca_path 			Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_simple_group_ 			Yes 							Yes 							Yes 												Global 			Yes
+# search_attr
+# authentication_ldap_simple_int_pool_size 	Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_simple_log_status 		Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_simple_max_pool_size 	Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_simple_server_host 		Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_simple_server_port 		Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_simple_tls 				Yes 							Yes 							Yes 												Global 			Yes
+# authentication_ldap_simple_user_ 				Yes 							Yes 							Yes 												Global 			Yes
+# search_attr
+# 
+# authentication_windows_log_level 				Yes 							Yes 							Yes 												Global 			No
+# authentication_windows_use_principal_name 	Yes 							Yes 							Yes 												Global 			No
+# auto_generate_certs 								Yes 							Yes 							Yes 												Global 			No
+# auto_increment_increment 																						Yes 												Both 				Yes
+# auto_increment_offset 																							Yes 												Both 				Yes
+# autocommit 											Yes 							Yes 							Yes 												Both 				Yes
+# automatic_sp_privileges 																							Yes 												Global 			Yes
+# avoid_temporal_upgrade 							Yes 							Yes 							Yes 												Global 			Yes
+# back_log																												Yes 												Global 			No
+# basedir 												Yes 							Yes 							Yes 												Global 			No
+# 
+# big-tables 											Yes 							Yes 																				Both 				Yes
+# - Variable: big_tables 																							Yes 												Both 				Yes
+# bind-address 										Yes 							Yes 																				Global 			No
+# - Variable: bind_address 																						Yes 												Global 			No
+# Binlog_cache_disk_use 																														Yes 					Global 			No
+# binlog_cache_size 							 		Yes 							Yes 							Yes 												Global 			Yes
+#
+# Binlog_cache_use 																																Yes 					Global 			No
+# binlog-checksum 									Yes 							Yes 							
+# binlog_checksum 																									Yes 												Global 			Yes
+# binlog_direct_non_transactional_updates 	Yes 							Yes 							Yes												Both 				Yes
+# binlog-do-db 										Yes 							Yes 
+# binlog_error_action 								Yes 							Yes 							Yes 												Global 			Yes
+# binlog_expire_logs_seconds 						Yes 							Yes 							Yes 												Global 			Yes
+# binlog-format 										Yes 							Yes 																				Both 				Yes
+# - Variable: binlog_format 																						Yes 												Both 				Yes
+# binlog_group_commit_sync_delay 				Yes 							Yes 							Yes 												Global 			Yes
+# binlog_group_commit_sync_no_delay_count 	Yes 							Yes 							Yes 												Global 			Yes
+# binlog_gtid_simple_recovery 					Yes 							Yes 							Yes 												Global 			No
+# binlog-ignore-db									Yes 							Yes 
+# binlog_max_flush_queue_time 																					Yes 												Global 			Yes
+# binlog_order_commits 																								Yes 												Global 			Yes
+# binlog-row-event-max-size 						Yes 							Yes 	
+# binlog_row_image 									Yes 							Yes 							Yes 												Both 				Yes
+# binlog_row_metadata 								Yes 							Yes 							Yes 												Global 			Yes
+# binlog_row_value_options 						Yes 							Yes 							Yes 												Both 				Yes
+# 
+# binlog-rows-query-log-events 					Yes 							Yes 
+# -Variable: binlog_rows_query_log_events 	
+# binlog_rows_query_log_events 					Yes 							Yes 							Yes 												Both 				Yes
+# Binlog_stmt_cache_disk_use 																														Yes 				Global 			No
+# binlog_stmt_cache_size 							Yes 							Yes 							Yes 												Global 			Yes
+# Binlog_stmt_cache_use 																															Yes 				Global 			No
+# binlog_transaction_dependency_history_size Yes 							Yes 							Yes 												Global 			Yes
+# binlog_transaction_dependency_tracking 		Yes 							Yes 							Yes 												Global 			Yes
+# block_encryption_mode 							Yes 							Yes 							Yes 												Both 				Yes
+# bulk_insert_buffer_size 							Yes 							Yes 							Yes 												Both 				Yes
+# Bytes_received 																																		Yes 				Both 				No
+# Bytes_sent 																																			Yes 				Both 				No
+# caching_sha2_password_auto_ 					Yes 							Yes 							Yes 												Global 			No
+# generate_rsa_keys
+# caching_sha2_password_private_key_path 		Yes 							Yes 							Yes 												Global 			No
+# caching_sha2_password_public_key_path 		Yes 							Yes 							Yes 												Global 			No
+# Caching_sha2_password_rsa_public_key 																										Yes 				Global 			No
+# character_set_client 																								Yes 												Both 				Yes
+# character-set-client-handshake 				Yes 							Yes 
+# character_set_connection 																						Yes 												Both 				Yes
+# character_set_database (note 1) 																				Yes 												Both 				Yes
+# character-set-filesystem 						Yes 							Yes 																				Both 				Yes
+# -Variable: character_set_filesystem 																			Yes 												Both 				Yes
+# character_set_results 																							Yes 												Both 				Yes
+# character-set-server 								Yes 							Yes 																				Both 				Yes
+# -Variable: character_set_server 																				Yes 												Both 				Yes
+# character_set_system 																								Yes 												Global 			No
+# character-sets-dir 								Yes 							Yes 																				Global 			No
+#
+# -Variable: character_sets_dir 																					Yes 												Global 			No
+# check_proxy_users 									Yes 							Yes 							Yes 												Global 			Yes
+# chroot 												Yes 							Yes 	
+# collation_connection 																								Yes 												Both 				Yes
+# collation_database (note 1) 																					Yes 												Both 				Yes
+# collation-server 									Yes 							Yes 																				Both 				Yes
+# -Variable: collation_server 																					Yes 												Both 				Yes
+# Com_admin_commands 																																Yes 				Both 				No
+# Com_alter_db 																																		Yes 				Both 				No
+# Com_alter_event 																																	Yes 				Both 				No
+# Com_alter_function 																																Yes 				Both 				No
+# Com_alter_procedure 																																Yes 				Both 				No
+# Com_alter_resource_group 																														Yes 				Global 			No
+# Com_alter_server 																																	Yes 				Both 				No
+# Com_alter_table 																																	Yes 				Both 				No
+# Com_alter_tablespace 																																Yes 				Both 				No
+# Com_alter_user 																																		Yes 				Both 				No
+# Com_alter_user_default_role 																													Yes 				Global 			No
+#
+# Com_analyze 																																			Yes 				Both 				No
+# Com_assign_to_keycache 																															Yes 				Both 				No
+# Com_begin 																																			Yes 				Both 				No
+# Com_binlog 																																			Yes 				Both 				No
+# Com_call_procedure 																																Yes 				Both 				No
+# Com_change_db 																																		Yes 				Both 				No
+# Com_change_master 																																	Yes 				Both 				No
+# Com_change_repl_filter 																															Yes 				Both 				No
+# Com_check 																																			Yes 				Both 				No
+# Com_checksum 																																		Yes 				Both 				No
+# Com_commit 																																			Yes 				Both 				No
+# Com_create_db																																		Yes 				Both 				No
+# Com_create_event 																																	Yes 				Both 				No
+# Com_create_function 																																Yes 				Both 				No
+#
+# Com_create_index 																																	Yes 				Both 				No
+# Com_create_procedure 																																Yes 				Both 				No
+# Com_create_resource_group 																														Yes 				Global 			No
+# Com_create_role 																																	Yes 				Global 			No
+# Com_create_server 																																	Yes 				Both 				No
+# Com_create_table 																																	Yes 				Both 				No
+# Com_create_trigger 																																Yes 				Both 				No
+# Com_create_udf 																																		Yes 				Both 				No
+# Com_create_user 																																	Yes 				Both 				No
+# Com_create_view 																																	Yes 				Both 				No
+#
+# Com_dealloc_sql 																																	Yes 				Both 				No
+# Com_delete 																																			Yes 				Both 				No
+# Com_delete_multi 																																	Yes 				Both 				No
+# Com_do 																																				Yes 				Both 				No
+# Com_drop_db 																																			Yes 				Both 				No
+# Com_drop_event 																																		Yes 				Both 				No
+# Com_drop_function 																																	Yes 				Both 				No
+# Com_drop_index 																																		Yes 				Both 				No
+# Com_drop_procedure 																																Yes 				Both 				No
+# Com_drop_resource_group 																															Yes 				Global 			No
+# Com_drop_role 																																		Yes 				Global 			No
+# Com_drop_server 																																	Yes 				Both 				No
+# Com_drop_table 																																		Yes 				Both 				No
+# Com_drop_trigger 																																	Yes 				Both 				No
+# Com_drop_user 																																		Yes 				Both 				No
+# Com_drop_view 																																		Yes 				Both 				No
+# Com_empty_query 																																	Yes 				Both 				No
+# Com_execute_sql 																																	Yes 				Both 				No
+#
+# Com_explain_other 																																	Yes 				Both 				No
+# Com_flush 																																			Yes 				Both 				No
+# Com_get_diagnostics 																																Yes 				Both 				No
+# Com_grant  																																			Yes 				Both 				No
+# Com_grant_roles																																		Yes 				Global 			No
+# Com_group_replication_start 																													Yes 				Global 			No
+# Com_group_replication_stop 																														Yes 				Global 			No
+# Com_ha_close 																																		Yes 				Both 				No
+# Com_ha_open 																																			Yes 				Both 				No
+# Com_ha_read 																																			Yes 				Both 				No
+# Com_help 																																				Yes 				Both 				No
+#
+# Com_insert 																																			Yes 				Both 				No
+# Com_insert_select 																																	Yes 				Both 				No
+# Com_install_component 																															Yes 				Global 			No
+# Com_install_plugin 																																Yes 				Both 				No
+# Com_kill 																																				Yes 				Both 				No
+# Com_load 																																				Yes 				Both 				No
+# Com_lock_tables 																																	Yes 				Both 				No
+# Com_optimize 																																		Yes 				Both 				No
+# Com_preload_keys 																																	Yes 				Both 				No
+# Com_prepare_sql 																																	Yes 				Both 				No
+# Com_purge 																																			Yes 				Both 				No
+# Com_purge_before_date 																															Yes 				Both 				No
+# Com_release_savepoint 																															Yes 				Both 				No
+# Com_rename_table 																																	Yes 				Both 				No
+#
+# Com_rename_user 																																	Yes 				Both 				No
+# Com_repair 																																			Yes 				Both 				No
+# Com_replace 																																			Yes 				Both 				No
+# Com_replace_select 																																Yes 				Both 				No
+# Com_reset 																																			Yes 				Both 				No
+# Com_resignal 																																		Yes 				Both 				No
+# Com_revoke 																																			Yes 				Both 				No
+# Com_revoke_all 																																		Yes 				Both 				No
+# Com_revoke_roles 																																	Yes 				Global 			No
+# Com_rollback 																																		Yes 				Both 				No
+# Com_rollback_to_savepoint 																														Yes 				Both 				No
+# Com_savepoint 																																		Yes 				Both 				No
+# Com_select 																																			Yes 				Both 				No
+# Com_set_option 																																		Yes 				Both 				No
+# Com_set_resource_group 																															Yes 				Global 			No
+# Com_set_role 																																		Yes 				Global 			No
+#
+# Com_show_authors 																																	Yes 				Both 				No
+# Com_show_binlog_events 																															Yes 				Both 				No
+# Com_show_binlogs 																																	Yes 				Both 				No
+# Com_show_charsets 																																	Yes 				Both 				No
+# Com_show_collations 																																Yes 				Both 				No
+# Com_show_contributors 																															Yes 				Both 				No
+# Com_show_create_db 																																Yes 				Both 				No
+# Com_show_create_event 																															Yes 				Both 				No
+# Com_show_create_func 																																Yes 				Both 				No
+# Com_show_create_proc 																																Yes 				Both 				No
+# Com_show_create_table 																															Yes 				Both 				No
+# Com_show_create_trigger 																															Yes 				Both 				No
+# Com_show_create_user 																																Yes 				Both 				No
+# Com_show_databases 																																Yes 				Both 				No
+# Com_show_engine_logs 																																Yes				Both 				No
+# Com_show_engine_mutex 																															Yes 				Both 				No
+# Com_show_engine_status 																															Yes 				Both 				No
+# Com_show_errors 																																	Yes 				Both 				No
+#
+# Com_show_events 																																	Yes 				Both 				No
+# Com_show_fields 																																	Yes 				Both 				No
+# Com_show_function_code 																															Yes 				Both 				No
+# Com_show_function_status 																														Yes 				Both 				No
+# Com_show_grants 																																	Yes 				Both 				No
+# Com_show_keys 																																		Yes 				Both 				No
+# Com_show_master_status 																															Yes 				Both 				No
+# Com_show_ndb_status 																																Yes 				Both 				No
+# Com_show_new_master 																																Yes 				Both 				No
+# Com_show_open_tables																																Yes 				Both 				No
+# Com_show_plugins 																																	Yes 				Both 				No
+# Com_show_privileges 																																Yes 				Both 				No
+# Com_show_procedure_code 																															Yes 				Both 				No
+# Com_show_procedure_status 																														Yes 				Both 				No
+# Com_show_processlist 																																Yes 				Both 				No
+# Com_show_profile 																																	Yes 				Both 				No
+# Com_show_profiles 																																	Yes 				Both 				No
+# Com_show_relaylog_events 																														Yes 				Both 				No
+# Com_show_slave_hosts 																																Yes 				Both 				No
+# 
+# Com_show_slave_status 																															Yes 				Both 				No
+# Com_show_slave_status_nonblocking 																											Yes 				Both 				No
+# Com_show_status 																																	Yes 				Both 				No
+# Com_show_storage_engines 																														Yes 				Both 				No
+# Com_show_table_status 																															Yes 				Both 				No
+# Com_show_tables 																																	Yes 				Both 				No
+# Com_show_triggers 																																	Yes 				Both 				No
+# Com_show_variables 																																Yes 				Both 				No
+# Com_show_warnings 																																	Yes 				Both 				No
+# Com_shutdown 																																		Yes 				Both 				No
+# Com_signal 																																			Yes 				Both 				No
+# Com_slave_start 																																	Yes 				Both 				No
+# Com_slave_stop 																																		Yes 				Both 				No
+# Com_stmt_close 																																		Yes 				Both 				No
+# Com_stmt_execute 																																	Yes 				Both 				No
+#
+# Com_stmt_fetch 																																		Yes 				Both 				No
+# Com_stmt_prepare 																																	Yes 				Both 				No
+# Com_stmt_reprepare 																																Yes 				Both 				No
+# Com_stmt_reset 																																		Yes 				Both 				No
+# Com_stmt_send_long_data 																															Yes 				Both 				No
+# Com_truncate 																																		Yes 				Both 				No
+# Com_uninstall_component 																															Yes 				Global 			No
+# Com_uninstall_plugin 																																Yes 				Both 				No
+# Com_unlock_tables 																																	Yes 				Both 				No
+# Com_update 																																			Yes 				Both 				No
+# Com_update_multi 																																	Yes 				Both 				No
+# Com_xa_commit 																																		Yes 				Both 				No
+# Com_xa_end 																																			Yes 				Both 				No
+# Com_xa_prepare 																																		Yes 				Both 				No
+# Com_xa_recover 																																		Yes 				Both 				No
+# Com_xa_rollback 																																	Yes 				Both 				No
+# Com_xa_start 									- 																									Yes 				Both 				No
+# completion_type 								Yes 					Yes 									Yes 													Both 				Yes
+# Compression 																																			Yes 				Session 			No
+# concurrent_insert 								Yes 					Yes 									Yes 													Global 			Yes
+# connect_timeout 								Yes 					Yes 									Yes 													Global 			Yes
+# 
+# Connection_control_delay_generated 																											Yes 				Global 			No
+# connection_control_failed_ 					Yes 					Yes 									Yes 													Global 			Yes
+# connections_threshold
+# connection_control_max_connection_delay Yes 					Yes 									Yes 													Global 			Yes
+# connection_control_min_connection_delay Yes 					Yes 									Yes 													Global 			Yes
+# Connection_errors_accept 																														Yes 				Global 			No
+# Connection_errors_internal 																														Yes 				Global 			No
+# Connection_errors_max_connections 																											Yes 				Global 			No
+# Connection_errors_peer_address 																												Yes 				Global 			No
+# Connection_errors_select 																														Yes 				Global 			No
+# Connection_errors_tcpwrap 																														Yes 				Global 			No
+# Connections 																																			Yes 				Global 			No
+# console 											Yes 					Yes 
+# core-file 										Yes 					Yes
+# core_file 																										Yes 													Global 			No
+# Created_tmp_disk_tables 																															Yes 				Both 				No
+# Created_tmp_files 																																	Yes 				Global 		 	No
+# Created_tmp_tables 																																Yes 				Both 				No
+# cte_max_recursion_depth 						Yes 					Yes 									Yes 													Both 				Yes
+# daemon_memcached_enable_binlog 			Yes 					Yes 									Yes 													Global 			No
+# daemon_memcached_engine_lib_name 			Yes 					Yes 									Yes 													Global 			No
+# daemon_memcached_engine_lib_path 			Yes 					Yes 									Yes 													Global 			No
+# daemon_memcached_option 						Yes 					Yes 									Yes 													Global 			No
+#
+# daemon_memcached_r_batch_size 				Yes 					Yes 									Yes 													Global 			No
+# daemon_memcached_w_batch_size 				Yes 					Yes 
+# daemonize 										Yes 					Yes
+# datadir 											Yes 					Yes 									Yes 													Global 			No
+# date_format 																										Yes 													Global 			No
+# datetime_format 																								Yes 													Global 			No
+# debug 												Yes 					Yes 									Yes 													Both 				Yes
+# debug_sync 																										Yes 													Session 			Yes
+# debug-sync-timeout 							Yes 					Yes 	
+# default_authentication_plugin 				Yes 					Yes 									Yes 													Globla 			No
+# default_collation_for_utf8mb4 										Yes 									Yes 													Both 				Yes
+# default_password_lifetime 					Yes 					Yes 									Yes 													Global 			Yes
+# default-storage-engine 						Yes 					Yes 																							Both 				Yes
+# -Variable: default_storage_engine 																		Yes 													Both 				Yes
+# default-time-zone 								Yes 					Yes 
+# default_tmp_storage_engine 					Yes 					Yes 									Yes 													Both 				Yes
+# default_week_format 							Yes 					Yes 									Yes 													Both 				Yes
+# defaults-extra-file 							Yes
+# defaults-file 									Yes
+# defaults-group-suffix 						Yes
+# delay-key-write 								Yes 					Yes 																							Global 			Yes
+# - Variable: delay_key_write 																				Yes 													Global 			Yes
+# Delayed_errors 																																			Yes 			Global 			No
+# 
+# delayed_insert_limit 							Yes 					Yes 									Yes 													Global 			Yes
+# Delayed_insert_threads 																																Yes 			Global 			No
+# delayed_insert_timeout 						Yes 					Yes 									Yes 													Global 			Yes
+# delayed_queue_size 							Yes 					Yes 									Yes 													Global 			Yes
+# Delayed_writes 																																			Yes 			Global 			No
+# des-key-file 									Yes 					Yes 
+# disabled_storage_engines 					Yes 					Yes 									Yes 													Global 			No
+# disconnect_on_expired_password 			Yes 					Yes 									Yes 													Global 			No
+# disconnect-slave-event-count 				Yes 					Yes 
+# div_precision_increment 						Yes 					Yes 									Yes 													Both 				Yes
+# dragnet.log_error_filter_rules 			Yes 					Yes 									Yes 													Global 			Yes
+# dragnet.Status 																																			Yes 			Global 			No
+# early-plugin-load 								Yes 					Yes 
+# enable-named-pipe 								Yes 					Yes
+# - Variable: named_pipe 
+# end_markers_in_json 																							Yes 													Both 				Yes
+# enforce-gtid-consistency 					Yes 					Yes 									Yes 													Global 			Yes
+# enforce_gtid_consistency 					Yes 					Yes 									Yes 													Global 			Yes
+# eq_range_index_dive_limit 																					Yes 													Both 				Yes
+# 
+# error_count 																										Yes 													Session 			No
+# event-scheduler 								Yes 					Yes 																							Global 			Yes
+# - Variable: event_scheduler 																				Yes													Global 			Yes
+# executed-gtids-compression-period 		Yes 					Yes 
+# - Variable: executed_gtids_ 																				Yes 													Global 			Yes
+#   compression_period
+# executed_gtids_compression_period 																		Yes 													Global 			Yes 					
+# exit-info 										Yes 					Yes 
+# expire_logs_days 								Yes 					Yes 									Yes 													Global 			Yes
+# explicit_defaults_for_timestamp 			Yes 					Yes 									Yes 													Both 				Yes
+# external-locking 								Yes 					Yes 									
+# - Variable: skip_external_locking 
+# external_user 																									Yes 													Session			No
+# federated											Yes 					Yes 
+# Firewall_access_denied 																																	Yes 		Global 			No
+# Firewall_access_granted 																																	Yes 		Global 			No
+# Firewall_cached_entries 																																	Yes 		Global 			No
+# flush 												Yes 					Yes 									Yes 													Global 			Yes
+# Flush_commands 																																				Yes 		Global 			No
+# flush_time 										Yes 					Yes 									Yes 													Global 			Yes
+# foreign_key_checks 																							Yes 													Both 				Yes
+# ft_boolean_syntax 								Yes 					Yes 									Yes 													Global 			Yes
+# ft_max_word_len 								Yes 					Yes 									Yes 													Global 			No
+# ft_min_word_len 								Yes 					Yes 									Yes 													Global 			No
+# ft_query_expansion_limit 					Yes 					Yes 									Yes 													Global 			No
+# ft_stopword_file 								Yes 					Yes 									Yes 													Global 			No
+# gdb 												Yes 					Yes 
+# general-log 										Yes 					Yes 																							Global 			Yes
+# -Variable: general_log 																						Yes 													Global 			Yes
+# 
+# general_log_file 								Yes 					Yes 									Yes 													Global			Yes
+# group_concat_max_len 							Yes 					Yes 									Yes 													Both 				Yes
+# group_replication_allow_local_disjoint 	Yes 					Yes 									Yes 													Global 			Yes
+# _gtids_join
+# 
