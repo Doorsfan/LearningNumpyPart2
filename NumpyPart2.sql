@@ -9171,4 +9171,428 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # group_concat_max_len 							Yes 					Yes 									Yes 													Both 				Yes
 # group_replication_allow_local_disjoint 	Yes 					Yes 									Yes 													Global 			Yes
 # _gtids_join
+# group_replication_allow_local_lower 		Yes 					Yes 									Yes 													Global 			Yes
+# _version_join
+# group_replication_auto_ 						Yes 					Yes 									Yes 													Global 			Yes
+# increment_increment
+# group_replication_bootstrap_ 				Yes 					Yes 									Yes 													Global 			Yes
+# group
+# group_replication_communication_debug_ 	Yes 					Yes 									Yes 													Global 			Yes
+# options
+#
+# group_replication_components 				Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_compression_threshold Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_enforce 					Yes 					Yes 									Yes 													Global 			Yes
+# _update_everywhere_checks
+# group_replication_exit_state_action 		Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_flow 						Yes 					Yes 									Yes 													Global 			Yes
+# _control_applier_threshold
+# group_replication_flow 						Yes 					Yes 									Yes 													Global 			Yes
+# _control_certifier_threshold 				
+#
+# group_replication_flow_control 			Yes 					Yes 									Yes 													Global 			Yes
+# _hold_percent
+# group_replication_flow_control 			Yes 					Yes 									Yes 													Global 			Yes
+# _max_commit_quota
+# group_replication_flow_control 			Yes 					Yes 									Yes 													Global 			Yes
+# _member_quota_percent 
+# group_replication_flow_control 			Yes 					Yes 									Yes 													Global 			Yes
+# _min_quota 	
+# group_replication_flow_control 			Yes 					Yes 									Yes 													Global 			Yes
+# _min_recovery_quota
+# group_replication_flow_control 			Yes 					Yes 									Yes 													Global 			Yes
+# _control_mode
+# group_replication_flow_control 			Yes 					Yes 									Yes 													Global 			Yes
+# _control_period 
+# group_replication_flow_control 			Yes 					Yes 									Yes 													Global 			Yes
+# _control_release_percent
+#
+# group_replication_force_members 			Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_group_name 				Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_group_seeds 				Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_gtid_assignment  		Yes 					Yes 									Yes 													Global 			Yes
+# _block_size
+# group_replication_ip_whitelist 			Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_local_address 			Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_member_expel_timeout 	Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_member_weight 			Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_poll_spin_loops 		Yes 					Yes 									Yes 													Global 			Yes
+#
+# group_replication_primary_member 																										Yes 						Global 			No
+# group_replication_recovery_complete_at 	Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_recovery_ 				Yes 					Yes 									Yes 													Global 			Yes
+# get_public_key
+# group_replication_recovery_ 				Yes 					Yes 									Yes 													Global 			Yes
+# public_key_path
+# group_replication_recovery_ 				Yes 					Yes 									Yes 													Global 			Yes
+# reconnect_interval
+# group_replication_recovery_retry_count 	Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_recovery_ssl_ca 		Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_recovery_ssl_capath 	Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_recovery_ssl_cert 		Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_recovery_ssl_cipher 	Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_recovery_ssl_crl 		Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_recovery_ssl_crlpath 	Yes 					Yes 									Yes 													Global 			Yes
 # 
+# group_replication_recovery_ssl_key 		Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_recovery 					Yes 					Yes 									Yes 													Global 			Yes
+# _ssl_verify_server_cert
+# group_replication_recovery_use_ssl 		Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_single_primary_mode 	Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_ssl_mode 					Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_start_on_boot 			Yes 					Yes 									Yes 													Global 			Yes
+# group_replication_transaction 				Yes 					Yes 									Yes 													Global 			Yes
+# _size_limit
+# group_replication_unreachable_ 			Yes 					Yes 									Yes 													Global 			Yes
+# majority_timeout
+#
+# gtid_executed 																									Yes 													Varies 			No
+# gtid-executed-compression-period 			Yes 					Yes 	
+# - Variable: gtid_executed 					
+# _compression_period
+# gtid_executed_compression_period 																			Yes 													Global 			Yes
+# gtid-mode 										Yes 					Yes 																							Global 			Yes
+# - Variable: gtid_mode 																						Yes 													Global 			Yes
+# gtid_mode 																										Yes 													Global 			Yes
+# gtid_next 																										Yes 													Session 			Yes
+# gtid_owned 																										Yes 													Both 				No
+# gtid_purged 																										Yes 													Global 			Yes
+# Handler_commit 																																Yes 						Both 				No
+# Handler_delete 																																Yes 						Both 				No
+# Handler_external_lock 																													Yes 						Both 				No
+# Handler_mrr_init 																															Yes 						Both 				No
+# Handler_prepare 																															Yes 						Both 				No
+# Handler_read_first 																														Yes 						Both 				No
+# Handler_read_key 																															Yes 						Both 				No
+# Handler_read_last 																															Yes 						Both 				No
+# Handler_read_next 																															Yes 						Both 				No
+# Handler_read_prev 																															Yes 						Both 				No
+# Handler_read_rnd 																															Yes 						Both 				No
+# Handler_read_rnd_next 																													Yes 						Both 				No
+#
+# Handler_rollback 																															Yes 						Both 				No
+# Handler_savepoint 																															Yes 						Both 				No
+# Handler_savepoint_rollback 																												Yes 						Both 				No
+# Handler_update 																																Yes 						Both 				No
+# Handler_write 																																Yes 						Both 				No
+# have_compress 																									Yes 													Global 			No
+# have_crypt 																										Yes 													Global 			No
+# have_dynamic_loading 																							Yes 													Global 			No
+# have_geometry 																									Yes 													Global 			No
+# have_openssl 																									Yes 													Global 			No
+# have_profiling 																									Yes 													Global 			No
+# have_query_cache 																								Yes 													Global 			No
+# have_rtree_keys 																								Yes 													Global 			No
+# have_ssl 																											Yes 													Global 			No
+# have_statement_timeout 																						Yes 													Global 			No
+#
+# have_symlink 									-						-										Yes 													Global 			No
+# help 												Yes  					Yes 
+#
+# histogram_generation_max_mem_size 		Yes 					Yes 									Yes 													Both 				Yes
+# host_cache_size 																								Yes 													Global 			Yes
+# hostname 																											Yes 													Global 			No
+# identity 																											Yes 													Session 			Yes
+# ignore-builtin-innodb 						Yes 					Yes 																							Global 			No
+# - Variable: ignore_builtin_innodb 																		Yes 													Global 			No
+# information_schema_stats_expiry 			Yes 					Yes 									Yes 													Both 				Yes
+# init_connect 									Yes 					Yes 									Yes 													Global 			Yes
+# init-file 										Yes 					Yes 																							Global 			No
+# - Variable: init_file 																						Yes 													Global 			No
+# init_slave 										Yes 					Yes 									Yes 													Global 			Yes
+# initialize 										Yes 					Yes 
+# initialize-insecure 							Yes 					Yes 
+# innodb 											Yes 					Yes
+# innodb_adaptive_flushing 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_adaptive_flushing_lwm 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_adaptive_hash_index 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_adaptive_hash_index_parts 			Yes 					Yes 									Yes 													Global 			No
+# innodb_adaptive_max_sleep_delay 			Yes 					Yes 									Yes 													Global 			Yes
+# innodb_api_bk_commit_interval 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_api_disable_rowlock 					Yes 					Yes 									Yes 													Global 			No
+# innodb_api_enable_binlog 					Yes 					Yes 									Yes 													Global 			No
+# innodb_api_enable_mdl 						Yes 					Yes 									Yes 													Global 			No
+# innodb_api_trx_level 							Yes 					Yes 									Yes 													Global 			Yes
+# innodb_autoextend_increment 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_autoinc_lock_mode 					Yes 					Yes 									Yes 													Global 			No
+# innodb_available_undo_logs 																											Yes 							Global 			No
+# innodb_background_drop_list_empty 		Yes 					Yes 									Yes 													Global 			Yes
+#
+# innodb_buffer_pool_bytes_data 																										Yes 							Global 			No
+# innodb_buffer_pool_bytes_dirty 																									Yes 							Global 			No
+# innodb_buffer_pool_chunk_size 				Yes 					Yes 									Yes 													Global 			No
+# innodb_buffer_pool_debug 					Yes 					Yes 									Yes 													Global 			No
+# innodb_buffer_pool_dump_at_shutdown 		Yes 					Yes 									Yes 													Global 			Yes
+# innodb_buffer_pool_dump_now 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_buffer_pool_dump_pct 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_buffer_pool_dump_status 																									Yes 							Global 			No
+# innodb_buffer_pool_filename 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_buffer_pool_in_core_file 			Yes 					Yes 									Yes 													Global 			Yes
+# innodb_buffer_pool_instances 				Yes 					Yes 									Yes 													Global 			No
+#
+# innodb_buffer_pool_load_abort 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_buffer_pool_load_at_startup 		Yes 					Yes 									Yes 													Global 			No
+# innodb_buffer_pool_load_now 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_buffer_pool_load_status 																									Yes 							Global 			No
+# innodb_buffer_pool_pages_data 																										Yes 							Global 			No
+# innodb_buffer_pool_pages_dirty 																									Yes 							Global 			No
+# innodb_buffer_pool_pages_flushed 																									Yes 							Global 			No
+# innodb_buffer_pool_pages_free 																										Yes 							Global 			No
+# innodb_buffer_pool_pages_latched 																									Yes 							Global 			No
+# innodb_buffer_pool_pages_misc 																										Yes 							Global 			No
+# innodb_buffer_pool_pages_total 																									Yes 							Global 			No
+# innodb_buffer_pool_read_ahead 																										Yes 							Global 			No
+#
+# innodb_buffer_pool_read_ahead_evicted 																							Yes 							Global 			No
+# innodb_buffer_pool_read_ahead_rnd 																								Yes 							Global 			No
+# innodb_buffer_pool_read_requests 																									Yes 							Global 			No
+# innodb_buffer_pool_reads 																											Yes 							Global 			No
+# innodb_buffer_pool_resize_status 																									Yes 							Global 			No
+# innodb_buffer_pool_size 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_buffer_pool_wait_free 																										Yes 							Global 			No
+# innodb_buffer_pool_write_requests 																								Yes 							Global 			No
+# innodb_change_buffer_max_size 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_change_buffering  					Yes 					Yes 									Yes 													Global 			yes
+# innodb_change_buffering_debug 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_checkpoint_disabled 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_checksum_algorithm 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_cmp_per_index_enabled 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_commit_concurrency 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_compress_debug 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_compression_ 							Yes 					Yes 									Yes 													Global 			Yes
+# failure_threshold_pct
+#
+# innodb_compression_level 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_compression_pad_pct_max 			Yes 					Yes 									Yes 													Global 			Yes
+# innodb_concurrency_tickets 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_data_file_path 						Yes 					Yes 									Yes 													Global 			No
+# innodb_data_fsyncs 																													Yes 							Global 			No
+# innodb_data_home_dir 							Yes 					Yes 									Yes 													Global 			No
+# innodb_data_pending_fsyncs 																											Yes 							Global 			No
+# innodb_data_pending_reads 																											Yes 							Global 			No
+# innodb_data_pending_writes 																											Yes 							Global 			No
+# innodb_data_read 																														Yes 							Global 			No
+# innodb_data_reads 																														Yes 							Global 			No
+# innodb_data_writes 																													Yes 							Global 			No
+# innodb_data_written 																													Yes 							Global 			No
+# innodb_dblwr_pages_written 																											Yes 							Global 			No
+# innodb_dblwr_writes 																													Yes 							Global 			No
+# innodb_ddl_log_crash_reset_debug 			Yes 					Yes 									Yes 													Global 			Yes
+# innodb_deadlock_detect 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_dedicated_server 						Yes 					Yes 									Yes 													Global 			No
+# innodb_default_row_format 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_directories 							Yes 					Yes 									Yes 													Global 			No
+# 
+# innodb_disable_sort_file_cache 			Yes 					Yes 									Yes 													Global 			Yes
+# innodb_doublewrite 							Yes 					Yes 									Yes 													Global 			No
+# innodb_fast_shutdown 							Yes 					Yes 									Yes 													Global 			Yes
+# innodb_fil_make_page_dirty_debug 			Yes 					Yes 									Yes 													Global 			Yes
+# innodb_file_per_table 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_fill_factor 							Yes 					Yes 									Yes 													Global 			Yes
+# innodb_flush_log_at_timeout 																				Yes 													Global 			Yes
+# innodb_flush_log_at_trx_commit 			Yes 					Yes 									Yes 													Global 			Yes
+# innodb_flush_method 							Yes 					Yes 									Yes 													Global 			No
+# innodb_flush_neighbors 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_flush_sync 								Yes 					Yes 									Yes 													Global 			Yes
+# innodb_flushing_avg_loops 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_force_load_corrupted 				Yes 					Yes 									Yes 													Global 			No
+# innodb_force_recovery 						Yes 					Yes 									Yes 													Global 			No
+# innodb_fsync_threshold 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_ft_aux_table 							Yes 					Yes 									Yes 													Global 			Yes
+# innodb_ft_cache_size 							Yes 					Yes 									Yes 													Global 			No
+# innodb_ft_enable_diag_print 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_ft_enable_stopword 					Yes 					Yes 									Yes 													Both 				Yes
+# innodb_ft_max_token_size 					Yes 					Yes 									Yes 													Global 			No
+#
+# innodb_ft_min_token_size 					Yes 					Yes 									Yes 													Global 			No
+# innodb_ft_num_word_optimize 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_ft_result_cache_limit 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_ft_server_stopword_table 			Yes 					Yes 									Yes 													Global 			Yes
+# innodb_ft_sort_pll_degree 					Yes 					Yes 									Yes 													Global 			No
+# innodb_ft_total_cache_size 					Yes 					Yes 									Yes 													Global 			No
+# innodb_ft_user_stopword_table 				Yes 					Yes 									Yes 													Both 				Yes
+# innodb_have_atomic_builtins 																											Yes 						Global 			No
+# innodb_io_capacity 							Yes 					Yes 									Yes 													Global 			Yes
+# innodb_io_capacity_max 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_limit_optimistic_insert_debug 	Yes 					Yes 									Yes 													Global 			Yes
+# innodb_lock_wait_timeout 					Yes 					Yes 									Yes 													Both  			Yes
+# innodb_log_buffer_size 						Yes 					Yes 									Yes 													Global 			Varies
+# innodb_log_checkpoint_fuzzy_now 			Yes 					Yes 									Yes 													Global 			Yes
+# innodb_log_checkpoint_now 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_log_checksums 							Yes 					Yes 									Yes 													Global 			Yes
+# innodb_log_compressed_pages 				Yes 					Yes 									Yes 													Global 			Yes
+#
+# innodb_log_file_size 							Yes 					Yes 									Yes 													Global 			No
+# innodb_log_files_in_group 					Yes 					Yes 									Yes 													Global 			No
+# innodb_log_group_home_dir 					Yes 					Yes 									Yes 													Global 			No
+# innodb_log_spin_cpu_abs_lwm 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_log_spin_cpu_pct_hwm 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_log_wait_for_flush_spin_hwm 		Yes 					Yes 									Yes 													Global 			Yes
+# innodb_log_waits 																															Yes 						Global 			No
+# innodb_log_write_ahead_size 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_log_write_requests 																												Yes 						Global 			No
+# innodb_log_writes 																															Yes 						Global 			No
+# innodb_lru_scan_depth 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_max_dirty_pages_pct 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_max_dirty_pages_pct_lwm 			Yes 					Yes 									Yes 													Global 			Yes
+# innodb_max_purge_lag 							Yes 					Yes 									Yes 													Global 			Yes
+# innodb_max_purge_lag_delay 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_max_undo_log_size 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_merge_threshold_set_all_debug 	Yes 					Yes 									Yes 													Global 			Yes
+# innodb_monitor_disable 						Yes 					Yes 									Yes 													Global 			Yes
+#
+# innodb_monitor_enable 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_monitor_reset 							Yes 					Yes 									Yes 													Global 			Yes
+# innodb_monitor_reset_all 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_num_open_files 																													Yes 						Global 			No
+# innodb_numa_interleave 						Yes 					Yes 									Yes 													Global 			No
+# innodb_old_blocks_pct 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_old_blocks_time 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_online_alter_log_max_size 			Yes 					Yes 									Yes 													Global 			Yes
+# innodb_open_files 								Yes 					Yes 									Yes 													Global 			No
+# innodb_optimize_fulltext_only 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_os_log_fsyncs 																														Yes 						Global 			No
+# innodb_os_log_pending_fsyncs 																											Yes 						Global 			No
+# innodb_os_log_pending_writes 																											Yes 						Global 			No
+# innodb_os_log_written 																													Yes 						Global 			No
+# innodb_page_cleaners 							Yes 					Yes 									Yes 													Global 			No
+# innodb_page_size 																															Yes 						Global 			No
+# innodb_page_size 								Yes 					Yes 									Yes 													Global 			No
+#
+# innodb_pages_created 																							 							Yes						Global 			No
+# innodb_pages_read 																															Yes 						Global 			No
+# innodb_pages_written 																														Yes 						Global 			No
+# innodb_parallel_read_threads 				Yes 					Yes 									Yes 													Session 			Yes
+# innodb_print_all_deadlocks 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_print_ddl_logs 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_purge_batch_size 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_purge_rseg_truncate_frequency 	Yes 					Yes 									Yes 													Global 			Yes
+# innodb_purge_threads 							Yes 					Yes 									Yes 													Global 			No
+# innodb_random_read_ahead 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_read_ahead_threshold 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_read_io_threads 						Yes 					Yes 									Yes 													Global 			No
+# innodb_read_only 								Yes 					Yes 									Yes 													Global 			No
+# innodb_redo_log_encrypt 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_replication_delay 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_rollback_on_timeout 					Yes 					Yes 									Yes 													Global 			No
+# innodb_rollback_segments 					Yes 					Yes 									Yes 													Global 			Yes
+# 
+# innodb_row_lock_current_waits 																											Yes 						Global 			No
+# innodb_row_lock_time 																														Yes 						Global 			No
+# innodb_row_lock_time_avg 																												Yes 						Global 			No
+# innodb_row_lock_time_max 																												Yes 						Global 			No
+# innodb_row_lock_waits 																													Yes 						Global 			No
+# innodb_rows_deleted 																														Yes 						Global 			No
+# innodb_rows_inserted 																														Yes 						Global 			No
+# innodb_rows_read 																															Yes 						Global 			No
+# innodb_rows_updated 																														Yes 						Global 			No
+# innodb_saved_page_number_debug 			Yes 					Yes 									Yes 													Global 			Yes
+# innodb_scan_directories 						Yes 					Yes 									Yes 													Global 			No
+# innodb_sort_buffer_size 						Yes 					Yes 									Yes 													Global 			No
+# innodb_spin_wait_delay 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_stats_auto_recalc 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_stats_include_delete_marked 		Yes 					Yes 									Yes 													Global 			Yes
+# innodb_stats_method 							Yes 					Yes 									Yes 													Global 			Yes
+# innodb_stats_on_metadata 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_stats_persistent 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_stats_persistent_sample_pages 	Yes 					Yes 									Yes 													Global 			Yes
+# innodb_stats_transient_sample_pages 		Yes 					Yes 									Yes 													Global 			Yes
+# innodb-status-file 							Yes 					Yes 
+# innodb_status_output 							Yes 					Yes 									Yes 													Global 			Yes
+#
+# innodb_status_output_locks 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_strict_mode 							Yes 					Yes 									Yes 													Both 				Yes
+# innodb_sync_array_size 						Yes 					Yes 									Yes 													Global 			No
+# innodb_sync_debug 								Yes 					Yes 									Yes 													Global 			No
+# innodb_sync_spin_loops 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_table_locks 							Yes 					Yes 									Yes 													Both 				Yes
+# innodb_temp_data_file_path 					Yes 					Yes 									Yes 													Global 			No
+# innodb_temp_tablespaces_dir 				Yes 					Yes 									Yes 													Global 			No
+# innodb_thread_concurrency 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_temp_sleep_delay 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_tmpdir 									Yes 					Yes 									Yes 													Both 				Yes
+# innodb_truncated_status_writes 																											Yes 					Global 			No
+#
+# innodb_trx_purge_view_update_only_debug Yes 					Yes 									Yes 													Global 			Yes
+# innodb_trx_rseg_n_slots_debug 				Yes 					Yes 									Yes 													Global 			Yes
+# innodb_undo_directory 						Yes 					Yes 									Yes 													Global 			No
+# innodb_undo_log_encrypt 						Yes 					Yes 									Yes 													Global 			Yes
+# innodb_undo_log_truncate 					Yes 					Yes 									Yes 													Global 			Yes
+# innodb_undo_logs 								Yes 					Yes 									Yes 													Global 			Yes
+# innodb_undo_tablespaces 						Yes 					Yes 									Yes 													Global 			Varies
+# innodb_use_native_aio 						Yes 					Yes 									Yes 													Global 			No
+# innodb_version 																									Yes 													Global 			No
+# innodb_write_io_threads 						Yes 					Yes 									Yes 													Global 			No
+# insert_id 																										Yes 													Session 			Yes
+# install 											Yes 
+# install-manual 									Yes 
+# interactive_timeout 							Yes 					Yes 									Yes 													Both 				Yes
+# internal_tmp_disk_storage_engine 			Yes 					Yes 									Yes 													Global 			Yes
+# internal_tmp_mem_storage_engine 			Yes 					Yes 									Yes 													Both 				Yes
+# join_buffer_size 								Yes 					Yes 									Yes 													Both 				Yes
+# keep_files_on_create  						Yes 					Yes 									Yes 													Both 				Yes
+#
+# Key_blocks_not_flushed 																														Yes					Global 			No
+# Key_blocks_unused 																																Yes 					Global 			No
+# Key_blocks_used 																																Yes 					Global 			No
+# key_buffer_size 								Yes 					Yes 									Yes 													Global 			Yes
+# key_cache_age_threshold 						Yes 					Yes 									Yes 													Global 			Yes
+# key_cache_block_size 							Yes 					Yes 									Yes 													Global 			Yes
+# key_cache_division_limit 					Yes 					Yes 									Yes 													Global 			Yes
+# Key_read_requests 																																Yes 					Global 			No
+# Key_reads 																																		Yes 					Global 			No
+# Key_write_requests 																															Yes 					Global 			No
+# Key_writes 																																		Yes 					Global 			No
+# keyring_aws_cmk_id 							Yes 					Yes 									Yes 													Global 			Yes
+# keyring_aws_conf_file 						Yes 					Yes 									Yes 													Global 			No
+# keyring_aws_data_file 						Yes 					Yes 									Yes 													Global 			No
+#
+# keyring_aws_region 							Yes 					Yes 									Yes 													Global 			Yes
+# keyring_encrypted_file_data 				Yes 					Yes 									Yes 													Global 			Yes
+# keyring_encrypted_file_password 			Yes 					Yes 									Yes 													Global 			Yes
+# keyring_file_data 								Yes 					Yes 									Yes 													Global 			Yes
+# keyring-migration-destination 				Yes 					Yes
+# keyring-migration-host 						Yes 					Yes
+# keyring-migration-password 					Yes 					Yes
+# keyring-migration-port 						Yes 					Yes
+# keyring-migration-socket 					Yes 					Yes
+# keyring-migration-source 					Yes 					Yes
+# keyring-migration-user 						Yes 					Yes
+# keyring_okv_conf_dir 							Yes 					Yes 									Yes 													Global 			Yes
+# keyring_operations 																							Yes 													Global 			Yes
+# language 											Yes 					Yes 									Yes 													Global 			No
+# large_files_support 																							Yes 													Global 			No
+# large_page_size 																								Yes 													Global 			No
+# large-pages 										Yes 					Yes 																							Global 			No
+# - Variable: large_pages 																						Yes 													Global 			No
+# last_insert_id 																									Yes 													Session 			Yes
+# Last_query_cost 																																Yes 					Session 			No
+# Last_query_partial_plans 																													Yes 					Session 			No
+# lc-messages 										Yes 					Yes 																							Both 				Yes
+# - Variable: lc_messages 																						Yes 													Both 				Yes
+# lc-messages-dir 								Yes 					Yes 																							Global 			No
+# - Variable: lc_messages_dir 																				Yes 													Global 			No
+# lc_time_names 																									Yes 													Both 				Yes
+# license 																											Yes 													Global 			No
+# local_infile 																									Yes 													Global 			Yes
+#
+# local-service 									Yes 															
+# lock_wait_timeout 								Yes 					Yes 									Yes 													Both 				Yes
+# Locked_connects 																								 								 Yes 					Global 			No
+# locked_in_memory 																								Yes 													Global 			No
+# log-bin 											Yes 					Yes 									Yes 													Global 			No
+# log_bin 																											Yes 							 						Global 			No
+# log_bin_basename 																								Yes 													Global 			No
+# log-bin-index 									Yes 					Yes 
+# log_bin_index 																									Yes 													Global 			No
+# log-bin-trust-function-creators 			Yes 					Yes 																							Global 			Yes
+# - Variable: log_bin_trust_function_creators 															Yes 													Global 			Yes
+# log-bin-use-v1-row-events 					Yes 					Yes 																							Global 			No
+# - Variable: log_bin_use_v1_row_events 																	Yes 													Global 			No
+# log_bin_use_v1_row_events 					Yes 					Yes 									Yes 													Global 			No
+# log_builtin_as_identified_by_password 	Yes 					Yes 									Yes 													Global 			Yes
+# log-error 										Yes 					Yes 																							Global 			No
+#
+# https://dev.mysql.com/doc/refman/8.0/en/server-option-variable-reference.html
+#
+# https://dev.mysql.com/doc/refman/8.0/en/server-option-variable-reference.html
