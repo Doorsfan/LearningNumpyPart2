@@ -9592,7 +9592,307 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # log_bin_use_v1_row_events 					Yes 					Yes 									Yes 													Global 			No
 # log_builtin_as_identified_by_password 	Yes 					Yes 									Yes 													Global 			Yes
 # log-error 										Yes 					Yes 																							Global 			No
+# - Variable: log_error 																						Yes 													Global 			No
+# log_error_filter_rules 						Yes 					Yes 									Yes 													Global 			Yes
+#
+# log_error_services 							Yes 					Yes 									Yes 													Global 			Yes
+# log_error_suppression_list 					Yes 					Yes 									Yes 													Global 			Yes
+# log_error_verbosity 							Yes 					Yes 									Yes 													Global 			Yes
+# log-isam 											Yes 					Yes 
+# log-output 										Yes 					Yes 																							Global 			Yes
+# - Variable: log_output 																						Yes 													Global 			Yes
+# log-queries-not-using-indexes 				Yes 					Yes 																							Global 			Yes
+# - Variable: log_queries_not_ 																				Yes 													Global 			Yes
+# using_indexes
+# log-raw 											Yes 					Yes 
+# log-short-format 								Yes 					Yes
+# log-slave-updates 								Yes 					Yes 																							Global  			No
+# Variable: log_slave_updates 																				Yes 													Global 			No
+# log_slave_updates 								Yes 					Yes 									Yes 													Global 			No
+# log_slow_admin_statements 																					Yes 													Global 			Yes
+# log_slow_slave_statements 																					Yes 													Global 			Yes
+# log_statements_unsafe_for_binlog 																			Yes 													Global 			Yes
+# log_syslog 										Yes 					Yes 									Yes 													Global 			Yes
+# log_syslog_facility 							Yes 					Yes 									Yes 													Global 			Yes
+# log_syslog_include_pid 						Yes 					Yes 									Yes 													Global 			Yes
+# log_syslog_tag 									Yes 					Yes 									Yes 													Global 			Yes
+# log-tc 											Yes 					Yes
+#
+# log-tc-size 										Yes 					Yes
+# log_throttle_queries_not_using_indexes 																	Yes 													Global 			Yes
+# log_timestamps 									Yes 					Yes 									Yes 													Global 			Yes
+# log-warnings 									Yes 					Yes 																							Global 			Yes
+# - Variable: log_warnings 																					Yes 													Global 			Yes
+# long_query_time 								Yes 					Yes 									Yes 													Both 				Yes
+# low-priority-updates 							Yes 					Yes 																							Both 				Yes
+# - Variable: low_priority_updates 																			Yes 													Both 				Yes
+# lower_case_file_system 																						Yes 													Global 			No
+# lower_case_table_names 						Yes 					Yes 									Yes 													Global 			No
+# mandatory_roles 								Yes 					Yes 									Yes 													Global 			Yes
+# master-info-file 								Yes 					Yes 
+# master-info-repository 						Yes 					Yes 
+# - Variable: master_info_repository 
+# master_info_repository 						Yes 					Yes 									Yes 													Global 			Yes
+# master-retry-count 							Yes 					Yes 
+# master-verify-checksum 						Yes 					Yes
+# - Variable: master_verify_checksum
+#
+# master_verify_checksum 																						Yes 													Global 			Yes
+# max_allowed_packet 							Yes 					Yes 									Yes 													Both 				Yes
+# max_binlog_cache_size 						Yes 					Yes 									Yes 													Global 			Yes
+# max-binlog-dump-events 						Yes 					Yes 
+# max_binlog_size 								Yes 					Yes 									Yes 													Global 			Yes
+# max_binlog_stmt_cache_size 					Yes 					Yes 									Yes 													Global 			Yes
+# max_connect_errors 							Yes 					Yes 									Yes 													Global 			Yes
+# max_connections 								Yes 					Yes 									Yes 													Global 			Yes
+# max_delayed_threads 							Yes 					Yes 									Yes 													Both 				Yes
+# max_digest_length 								Yes 					Yes 									Yes 													Global 			No
+# max_error_count 								Yes 					Yes 									Yes 													Both 				Yes
+# max_execution_time 																														Yes 						Both 				Yes
+# Max_execution_time_exceeded 																											Yes 						Both 				No
+# Max_execution_time_set 																													Yes 						Both 				No
+# Max_execution_time_set_failed 																											Yes 						Both 				No
+# max_heap_table_size 							Yes 					Yes 									Yes 													Both 				Yes
+# max_insert_delayed_threads 																					Yes 													Both 				Yes
+# max_join_size 									Yes 					Yes 									Yes 													Both 				Yes
+# max_length_for_sort_data 					Yes 					Yes 									Yes 													Both 				Yes
+#
+# max_points_in_geometry 						Yes 					Yes 									Yes 													Both 				Yes
+# max_prepared_stmt_count 						Yes 					Yes 									Yes 													Global 			Yes
+# max_relay_log_size 							Yes 					Yes 									Yes 													Global 			Yes
+# max_seeks_for_key 								Yes 					Yes 									Yes 													Both 				Yes
+# max_sort_length 								Yes					Yes 									Yes 													Both  			Yes
+# max_sp_recursion_depth 						Yes 					Yes 									Yes 													Both 				Yes
+# max_tmp_tables 																									Yes 													Both 				Yes
+# Max_used_connections 																														Yes 						Global 			No
+# Max_used_connections_time 																												Yes 						Global 			No
+# max_user_connections 							Yes 					Yes 									Yes 													Both 				Yes
+# max_write_lock_count 							Yes 					Yes 									Yes 													Global 			Yes
+# mecab_charset 																																Yes 						Global 			No
+# mecab_rc_file 									Yes 					Yes 									Yes 													Global 			No
+# memlock 											yes 					Yes 
+# - variable: locked_in_memory 				
+# metadata_locks_cache_size 																					Yes 													Global 			No
+# metadata_locks_hash_instances 																				Yes 													Global 			No
+# min-examined-row-limit 						Yes 					Yes 									Yes 													Both 				Yes
+# multi_range_count 								Yes 					Yes 									Yes 													Both 				Yes
+# myisam-block-size 								Yes 					Yes 
+# myisam_data_pointer_size 					Yes 					Yes 									Yes 													Global 			Yes
+# myisam_max_sort_file_size 					Yes 					Yes 									Yes 													Global 			Yes
+# myisam_mmap_size 								Yes 					Yes 									Yes 													Global 			No
+# myisam-recover-options 						Yes 					Yes 
+# - Variable: myisam_recover_options
+# myisam_recover_options 																						Yes 													Global 			No
+# myisam_repair_threads 						Yes 					Yes 									Yes 													Both 				Yes
+# myisam_sort_buffer_size 						Yes 					Yes 									Yes 													Both 				Yes
+# myisam_stats_method 							Yes 					Yes 									Yes 													Both 				Yes
+# myisam_use_mmap 								Yes 					Yes 									Yes 													Global 			Yes
+# 
+# mysql_firewall_mode 							Yes 					Yes 									Yes 													Global 			Yes
+# mysql_firewall_trace 							Yes 					Yes 									Yes 													Global 			Yes
+# mysql_native_password_proxy_users 		Yes 					Yes 									Yes 													Global 			Yes
+# mysqlx 											Yes 					Yes 									Yes 													Global 			No
+# Mysqlx_aborted_clients 																														Yes 					Global 			No
+# Mysqlx_address 																																	Yes 					Global 			No
+# mysqlx-bind-address 							Yes 					Yes 									Yes 													Global 			No
+# mysqlx_bind_address 							Yes 					Yes 									Yes 													Global 			No
+# Mysqlx_bytes_received 																														Yes 					Both 				No
+# Mysqlx_bytes_sent 																																Yes 					Both 				No
+# mysqlx-connect-timeout 						Yes 					Yes 									Yes 													Global 			Yes
+# mysqlx_connect_timeout 						Yes 					Yes 									Yes 													Global 			Yes
+# Mysqlx_connection_accept_errors 																											Yes 					Both 				No
+# Mysqlx_connection_errors 																													Yes 					Both 				No
+# Mysqlx_connections_accepted 																												Yes 					Global 			No
+# Mysqlx_connections_closed 																													Yes 					Global 			No
+# Mysqlx_connections_rejected 																												Yes 					Global 			No
+# Mysqlx_crud_create_view 																														Yes 					Both 				No
+# Mysqlx_crud_delete 																															Yes 					Both 				No
+# Mysqlx_crud_drop_view 																														Yes 					Both 				No
+# Mysqlx_crud_find 																																Yes 					Both 				No
+# Mysqlx_crud_insert 																															Yes 					Both 				No
+#
+# Mysqlx_crud_modify_view 																														Yes 					Both 				No
+# Mysqlx_crud_update 																															Yes 					Both 				No
+# mysqlx_document_id_unique_prefix 			Yes 					Yes 									Yes 													Global 			Yes
+# Mysqlx_errors_sent 																															Yes 					Both 				No
+# Mysqlx_errors_unknown_message_type 																										Yes 					Both 				No
+# Mysqlx_expect_close 																															Yes 					Both 				No
+# Mysqlx_expect_open 																															Yes 					Both 				No
+# mysqlx-idle-worker-thread-timeout 		Yes 					Yes 									Yes 													Global 			Yes
+# mysqlx_idle_worker_thread_timeout 		Yes 					Yes 									Yes 													Global 			Yes
+# Mysqlx_init_error 																																Yes 					Both 				No
+# mysqlx-interactive-timeout 					Yes 					Yes 									Yes 													Global 			Yes
+# mysqlx_interactive_timeout 					Yes 					Yes 									Yes 													Global 			Yes
+# mysqlx-max-allowed-packet 					Yes 					Yes 									Yes 													Global 			Yes
+# mysqlx_max_allowed_packet 					Yes 					Yes 									Yes 													Global 			Yes
+#
+# mysqlx-max-connections 						Yes 					Yes 									Yes 													Global 			Yes
+# mysqlx_max_connections 						Yes 					Yes 									Yes 													Global 			Yes
+# mysqlx-min-worker-threads 					Yes 					Yes 									Yes 													Global 			Yes
+# mysqlx_min_worker_threads 					Yes 					Yes 									Yes 													Global 			Yes
+# Mysqlx_notice_other_sent 																													Yes 					Both 				No
+# Mysqlx_notice_warning_sent 																													Yes 					Both 				No
+# Mysqlx_port 																																		Yes 					Global 			No
+# mysqlx-port 										Yes 					Yes 									Yes 													Global 			No
+# mysqlx_port 										Yes 					Yes 									Yes 													Global 			No
+# mysqlx-port-open-timeout 					Yes 					Yes 									Yes 													Global 			No
+# mysqlx_port_open_timeout 					Yes 					Yes 									Yes 													Global 			No
+# mysqlx-read-timeout 							Yes 					Yes 									Yes 													Session 			Yes
+# mysqlx_read_timeout 							Yes 					Yes 									Yes 													Session 			Yes
+# Mysqlx_rows_sent 																																Yes 					Both 				No
+# Mysqlx_sessions 																																Yes 					Global 			No
+# Mysqlx_sessions_accepted 																													Yes 					Global 			No
+# Mysqlx_sessions_closed 																														Yes 					Global 			No
+# Mysqlx_sessions_fatal_error 																												Yes 					Global 			No
+# Mysqlx_sessions_killed 																														Yes 					Global 			No
+# Mysqlx_sessions_rejected 																													Yes 					Global 			No
+# Mysqlx_socket 																																	Yes 					Global 			No
+# mysqlx-socket 									Yes 					Yes 									Yes 													Global 			No
+# mysqlx_socket 									Yes 					Yes 									Yes 													Global 			No
+# Mysqlx_ssl_accept_renegotiates 																											Yes 					Global 			No
+#
+# Mysqlx_ssl_accepts 																															Yes 					Global 			No
+# Mysqlx_ssl_active 																																Yes 					Both 				No
+# mysqlx-ssl-ca 									Yes 					Yes  									Yes 													Global 			No
+# mysqlx-ssl-capath 								Yes 					Yes 									Yes 													Global 			No
+# mysqlx-ssl-cert 								Yes 					Yes 									Yes 													Global 			No
+# Mysqlx_ssl_cipher 																																Yes 					Both 				No
+# mysqlx-ssl-cipher 								Yes 					Yes 
+# Mysqlx_ssl_cipher_list 																														Yes 					Both 				No
+# mysqlx-ssl-crl 									Yes 					Yes 									Yes 													Global 			No
+# mysqlx-ssl-crlpath 							Yes 					Yes 									Yes 													Global 			No
+# Mysqlx_ssl_ctx_verify_depth 																												Yes 					Both 				No
+# Mysqlx_ssl_ctx_verify_mode 																													Yes 					Both 				No
+# Mysqlx_ssl_finished_accepts 																												Yes 					Global 			No
+# mysqlx-ssl-key 									Yes 					Yes 									Yes 													Global 			No
+# Mysqlx_ssl_server_not_after 																												Yes 					Global 			No
+# Mysqlx_ssl_server_not_before 																												Yes 					Global 			No
+# Mysqlx_ssl_verify_depth 																														Yes 					Global 			No
+# Mysqlx_ssl_verify_mode 																														Yes 					Global 			No
+# Mysqlx_ssl_version 																															Yes 					Both 				No
+# Mysqlx_stmt_create_collection 																												Yes 					Both 				No
+# Mysqlx_stmt_create_collection_index 																										Yes 					Both 				No
+# Mysqlx_stmt_disable_notices 																												Yes 					Both 				No
+# Mysqlx_stmt_drop_collection 																												Yes 					Both 				No
+# Mysqlx_stmt_drop_collection_index 																										Yes 					Both 				No
+# Mysqlx_stmt_enable_notices 																													Yes 					Both 				No
+# Mysqlx_stmt_ensure_collection 																												Yes 					Both 				No
+# Mysqlx_stmt_execute_mysqlx 																													Yes 					Both 				No
+# Mysqlx_stmt_execute_sql 																														Yes 					Both 				No
+# Mysqlx_stmt_execute_xplugin 																												Yes 					Both 				No
+# Mysqlx_stmt_kill_client 																														Yes 					Both 				No
+# Mysqlx_stmt_list_clients 																													Yes 					Both 				No
+# Mysqlx_stmt_list_notices 																													Yes 					Both 				No
+# 
+# Mysqlx_stmt_list_objects 																													Yes 					Both 				No
+# Mysqlx_stmt_ping 																																Yes 					Both 				No
+# mysqlx-wait-timeout 							Yes 					Yes 									Yes 													Session 			Yes
+# mysqlx_wait_timeout 							Yes 					Yes 									Yes 													Session 			Yes
+# Mysqlx_worker_threads 																														Yes 					Global 			No
+# Mysqlx_worker_threads_active 																												Yes 					Global 			No
+# mysqlx-write-timeout 							Yes 					Yes 									Yes 													Session 			Yes
+# mysqlx_write_timeout 							Yes 					Yes 									Yes 													Session 			Yes
+# named_pipe 																										Yes 													Global 			No
+# Ndb_api_bytes_received_count 																												Yes 					Global 			No
+# Ndb_api_bytes_received_count_session 																									Yes 					Session 			No
+# Ndb_api_bytes_received_count_slave 																										Yes 					Global 			No
+# Ndb_api_bytes_sent_count 																													Yes 					Global 			No
+# Ndb_api_bytes_sent_count_slave 																											Yes 					Global 			No
+# Ndb_api_event_bytes_count_injector 																										Yes 					Global 			No
+# Ndb_api_event_data_count_injector 																										Yes 					Global 			No
+#
+# Ndb_api_event_nondata_count_injector 																									Yes 					Global 			No
+# Ndb_api_pk_op_count 																															Yes 					Global 			No
+# Ndb_api_pk_op_count_session 																												Yes 					Session 			No
+# Ndb_api_pk_op_count_slave 																													Yes 					Global 			No
+# Ndb_api_pruned_scan_count  																													Yes 					Global 			No
+# Ndb_api_pruned_scan_count_session 																										Yes 					Session 			No
+# Ndb_api_range_scan_count_slave 																											Yes 					Global 			No
+# Ndb_api_read_row_count 																														Yes 					Global 			No
+# Ndb_api_read_row_count_session 																											Yes 					Session 			No
+# Ndb_api_scan_batch_count_slave 																											Yes 					Global 			No
+# Ndb_api_table_scan_count 																													Yes 					Global 			No
+# Ndb_api_table_scan_count_session 																											Yes 					Session 			No
+#
+# Ndb_api_trans_abort_count 																													Yes 					Global 			No
+# Ndb_api_trans_abort_count_session 																										Yes 					Session 			No
+# Ndb_api_trans_abort_count_slave 																											Yes 					Global 			No
+# Ndb_api_trans_close_count 																													Yes 					Global 			No
+# Ndb_api_trans_close_count_session 																										Yes 					Session 			No
+# Ndb_api_trans_close_count_slave 																											Yes 					Global 			No
+# Ndb_api_trans_commit_count 																													Yes 					Global 			No
+# Ndb_api_trans_commit_count_session 																										Yes 					Session 			No
+# Ndb_api_trans_commit_count_slave 																											Yes 					Global 			No
+# Ndb_api_trans_local_read_row_count_slave 																								Yes 					Global 			No
+# Ndb_api_trans_start_count 																													Yes 					Global 			No
+# Ndb_api_trans_start_count_session 																										Yes 					Session 			No
+# Ndb_api_trans_start_count_slave 																											Yes 					Global 			No
+# Ndb_api_uk_op_count 																															Yes 					Global 			No
+# Ndb_api_uk_op_count_slave 																													Yes 					Global 			No
+# Ndb_api_wait_exec_complete_count 																											Yes 					Global 			No
+# Ndb_api_wait_exec_complete_count_session 																								Yes 					Session 			No
+# Ndb_api_wait_exec_complete_count_slave 																									Yes 					Global 			No
+# Ndb_api_wait_meta_request_count 																											Yes 					Global 			No
+# Ndb_api_wait_meta_request_count_session 																								Yes 					Session 			No
+# Ndb_api_wait_nanos_count 																													Yes 					Global 			No
+# Ndb_api_wait_nanos_count_session 																											Yes 					Session 			No
+#
+# Ndb_api_wait_nanos_count_slave 																											Yes 					Global 			No
+# Ndb_api_wait_scan_result_count 																											Yes 					Global 			No
+# Ndb_api_wait_scan_result_count_session 																									Yes 					Session 			No
+# Ndb_api_wait_scan_result_count_slave 																									Yes 					Global 			No
+# ndb-batch-size 									Yes 					Yes 									Yes 													Global 			No		
+# ndb-blob-write-batch-bytes 					Yes 					Yes 									Yes 													Both 				Yes
+# ndb-cluster-connection-pool 				Yes 					Yes 									Yes 													Global 			No
+# ndb-cluster-connection-pool-nodeids 		Yes 					Yes 									Yes 													Global 			No
+# Ndb_cluster_node_id 																															Yes 					Both 				No
+# Ndb_config_from_host 																															Yes 					Both 				No
+# Ndb_config_from_port 																															Yes 					Both 				No
+# Ndb_conflict_fn_epoch_trans 																												Yes 					Both 				No
+# Ndb_conflict_fn_max 																															Yes 					Global 			No
+# Ndb_conflict_fn_old 																															Yes 					Global 			No
+# Ndb_conflict_trans_detect_iter_count 																									Yes 					Global 			No
+# Ndb_conflict_trans_row_reject_count 																										Yes 					Global 			No
+# ndb-connectstring 								Yes 					Yes 
+# ndb-deferred-constraints 					Yes 					Yes 																							Both 				Yes
+# - Variable: ndb_deferred_constraints 																	Yes 													Both 				Yes
+# ndb_deferred_constraints 					Yes 					Yes 									Yes 													Both 				Yes
+# ndb-distribution 								Yes 					Yes 																							Global 			Yes
+# - Variable: ndb_distribution 																				Yes 													Global 			Yes
+# ndb_distribution 								Yes 					Yes 									Yes 													Global 			Yes
+# ndb_eventbuffer_free_percent 				Yes 					Yes 									Yes 													Global 			Yes
+# ndb_eventbuffer_max_alloc 					Yes 					Yes 									Yes 													Global 			Yes
+# ndb_force_send 									Yes 					Yes 									Yes 													Both 				Yes
+# ndb_index_stat_enable 						Yes 					Yes 									Yes 													Both 				Yes
+# ndb_index_stat_option 						Yes 					Yes 									Yes 													Both 				Yes
+# ndb_join_pushdown 																								Yes 													Both 				Yes
+# Ndb_last_commit_epoch_server 																												Yes 					Global 			No
+# Ndb_last_commit_epoch_session 																												Yes 					Session 			No
+# ndb-log-apply-status 							Yes 					Yes 																							Global 			No
+# 
+# - Variable: ndb_log_apply_status 																			Yes 													Global 			No
+# ndb_log_apply_status 							Yes 					Yes 									Yes 													Global 			No
+# ndb_log_binlog_index 							Yes 															Yes 													Global 			Yes
+# ndb-log-empty-epochs 							Yes 					Yes 									Yes 													Global 			Yes
+# ndb-log-empty-update 							Yes 					Yes 									Yes 													Global 			Yes
+# ndb-log-transaction-id 						Yes 					Yes 																							Global 			No
+# - Variable: ndb_log_transaction_id 																		Yes 													Global 			No
+# ndb_log_updated_only 							Yes 					Yes 									Yes 													Global 			Yes
+# ndb-mgmd-host 									Yes 					Yes 
+# Ndb_number_of_data_nodes 																													Yes  					Global 			No
+# ndb_optimization_delay 																						Yes 													Global 			Yes
+# ndb_optimized_node_selection 				Yes 					Yes 									Yes 													Global 			No
+# Ndb_pushed_queries_defined 																													Yes 					Global 			No
+# Ndb_pushed_queries_executed 																												Yes 					Global 			No
+# ndb_recv_thread_activation_threshold 																	Yes 													Global 			Yes
+# ndb_recv_thread_cpu_mask 																					Yes  													Global 			Yes
+# ndb_report_thresh_binlog_epoch_slip 		Yes 					Yes 									Yes 													Global 			Yes
+# ndb_report_thresh_binlog_mem_usage 		Yes 					Yes 									Yes 													Global 			Yes
+# Ndb_scan_count 																																	Yes 					Global 			No
+#
+# 
+#
+#
 #
 # https://dev.mysql.com/doc/refman/8.0/en/server-option-variable-reference.html
 #
-# https://dev.mysql.com/doc/refman/8.0/en/server-option-variable-reference.html
