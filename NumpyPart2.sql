@@ -9889,9 +9889,406 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # ndb_report_thresh_binlog_epoch_slip 		Yes 					Yes 									Yes 													Global 			Yes
 # ndb_report_thresh_binlog_mem_usage 		Yes 					Yes 									Yes 													Global 			Yes
 # Ndb_scan_count 																																	Yes 					Global 			No
+# 
+# ndb_show_foreign_key_mock_tables 			Yes 					Yes 									Yes 													Global 			Yes
+# Ndb_slave_max_replicated_epoch 																			Yes 													Global 			No
+# ndb_table_no_logging 																							Yes 													Session 			Yes
+# ndb-transid-mysql-connection-map 			Yes 
+# ndb_use_transactions 							Yes 					Yes 									Yes 													Both 				Yes
+# ndb_version 																										Yes 													Global 			No
+# ndb_version_string 																							Yes 													Global 			No
+# ndb-wait-setup 									Yes 					Yes 									Yes 													Global 			No
+# ndbinfo_database 																								Yes 													Global 			No
+# ndbinfo_max_rows 								Yes 															Yes 													Both 				Yes
+# ndbinfo_show_hidden 							Yes 															Yes 													Both 				Yes
+# ndbinfo_version 																								Yes 													Global 			No
+# net_buffer_length 								Yes 					Yes 									Yes 													Both 				Yes
+# net_read_timeout 								Yes 					Yes 									Yes 													Both 				Yes
+# net_retry_count 								Yes 					Yes 									Yes 													Both 				Yes
+# net_write_timeout 								Yes 					Yes 									Yes 													Both 				Yes
+# new 												Yes 					Yes 									Yes 													Both 				Yes
+# ngram_token_size 								Yes 					Yes 									Yes 													Global 			No
+#
+# no-dd-upgrade 									Yes 					Yes 
+# no-defaults 										Yes 
+# no-monitor 										Yes 					Yes
+# Not_flushed_delayed_rows 																														Yes 				Global 			No
+# offline_mode 									Yes 					Yes 									Yes 													Global 			Yes
+# old 												Yes 					Yes 									Yes 													Global 			No
+# old-alter-table 								Yes 					Yes 																							Both 				Yes
+# - Variable: old_alter_table 																				Yes 													Both 				Yes
+# old_passwords 																									Yes 													Both 				Yes
+# old-style-user-limits 						Yes 					Yes 
+# Ongoing_anonymous_gtid_violating_transaction_count 																						Yes 				Global 			No
+# Ongoing_anonymous_transaction_count 																											Yes 				Global 			No
+# Ongoing_automatic_gtid_violating_transaction_count 																						Yes 				Global 			No
+# Open_files 																																			Yes 				Global 			No
+# open-files-limit 								Yes 					Yes 																							Global 			No
+# - Variable: open_files_limit 																				Yes 													Global 			No
+# Open_streams 																																		Yes 				Global 			No
+# Open_table_definitions 																															Yes 				Global 			No
+# Open_tables 																																			Yes 				Both 				No
+# Opened_files 																																		Yes 				Global 			No
+# Opened_table_definitions 																														Yes 				Both 				No
+# Opened_tables 																																		Yes 				Both 				No
+# optimizer_prune_level 						Yes 					Yes 									Yes 													Both 				Yes
+# optimizer_search_depth 						Yes 					Yes 									Yes 													Both 				Yes
+# 
+# optimizer_switch 								Yes 					Yes 									Yes 													Both 				Yes
+# optimizer_trace 																								Yes 													Both 				Yes
+# optimizer_trace_features 																					Yes  													Both 				Yes
+# optimizer_trace_limit 																						Yes 													Both 				Yes
+# optimizer_trace_max_mem_size 																				Yes 													Both 				Yes
+# optimizer_trace_offset 																						Yes 													Both 				Yes
+# original_commit_timestamp 																					Yes 													Session 			Yes
+# parser_max_mem_size 							Yes 					Yes 									Yes 													Both 				Yes
+# password_history 								Yes 					Yes 									Yes 													Global 			Yes
+# password_require_current 					Yes 					Yes 									Yes 													Global 			Yes
+# password_reuse_interval 						Yes 					Yes  									Yes 													Global 			Yes
+# performance_schema 							Yes 					Yes  									Yes 													Global 			No
+# Performance_schema_accounts_lost 																												Yes 				Global 			No
+# performance_schema_accounts_size 			Yes 					Yes 									Yes 													Global 			No
+# Performance_schema_cond_classes_lost 																										Yes 				Global 			No
+# Performance_schema_cond_instances_lost 																										Yes 				Global 			No
+#
+# performance-schema-consumer 				Yes 					Yes
+# -events-stages-current 
+#
+# performance-schema-consumer 				Yes 					Yes
+# -events-stages-history 
+#
+# performance-schema-consumer 				Yes 					Yes
+# -events-stages-history-long 				
+#
+# performance-schema-consumer 				Yes 					Yes
+# -events-statements-current
+#
+# performance-schema-consumer 				Yes 					Yes
+# -events-statements-history
+#
+# performance-schema-consumer 				Yes 					Yes
+# -events-statements-history-long 		
+#
+# performance-schema-consumer 				Yes 					Yes
+# -events-transactions-current 
+#
+# performance-schema-consumer 				Yes 					Yes
+# -events-transactions-history 
+#
+# performance-schema-consumer 				Yes 					Yes
+# -events-transactions-history-long 	
+#
+# performance-schema-consumer 				Yes 					Yes
+# -events-waits-current 
+#
+# performance-schema-consumer 				Yes 					Yes
+# -events-waits-history
+# 
+# performance-schema-consumer 				Yes 					Yes
+# -events-waits-history-long 
+#
+# performance-schema-consumer 				Yes 					Yes
+# -global-instrumentation 
+#
+# performance-schema-consumer 				Yes 					Yes
+# -statements-digest 
+#
+# performance-schema-consumer 				Yes 					Yes
+# -thread-instrumentation 
+#
+# Performance_schema_digest_lost 																												Yes 				Global 			No
+# performance_schema_digests_size 			Yes 					Yes 									Yes 													Global 			No	
+# performance_schema_error_size 				Yes 					Yes 									Yes 													Global 			No
+# performance_schema_ 							Yes 					Yes 									Yes 													Global 			No
+# events_stages_history_long_size
+#
+# performance_schema_events_ 					Yes 					Yes 									Yes 													Global 			No
+# stages_history_size 
+#
+# performance_schema_events_ 					Yes 					Yes 									Yes 													Global 			No
+# statements_history_long_size 
+#
+# performance_schema_events_ 					Yes 					Yes 									Yes 													Global 			No
+# statements_history_size 
+# 
+# performance_schema_events_ 					Yes 					Yes 									Yes 													Global 			No
+# transactions_history_long_size
+#
+# performance_schema_events_ 					Yes 					Yes 									Yes 													Global 			No
+# transactions_history_size 
+#
+# performance_schema_events_ 					Yes 					Yes 									Yes 													Global 			No
+# waits_history_long_size 
+#
+# performance_schema_events_ 					Yes 					Yes 									Yes 													Global 			No
+# waits_history_size 
+#
+# Performance_schema_file_ 																														Yes 				Global 			No
+# classes_lost
+#
+# Performance_schema_file_ 																														Yes 				Global 			No
+# handles_lost
+#
+# Performance_schema_file_ 																														Yes 				Global 			No
+# instances_lost
+#
+# Performance_schema_hosts_lost 																													Yes 				Global 			No
+#
+# performance_hosts_size  						Yes 					Yes 									Yes 													Global 			No
+# Performance_schema_index_stat_lost 																											Yes 				Global 			No
+# performance_schema-instrument 				Yes 					Yes 																		
+# Performance_schema_locker_lost 																												Yes 				Global 			No
+# performance_schema_max_cond_classes 		Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_cond_instances 	Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_digest_length 	Yes 					Yes 									Yes 													Global 			No
+# performance_schema_ 							Yes 					Yes 									Yes 													Global 			Yes
+# max_digest_sample_age
+# performance_schema_max_file_classes 		Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_file_handles 		Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_file_instances 	Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_index_stat 		Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_memory_classes 	Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_metadata_locks 	Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_mutex_classes 	Yes 					Yes 									Yes 													Global 			No
+#
+# performance_schema_max_mutex_instances 	Yes 					Yes 									Yes 													Global 			No
+#
+# performance_schema_max_ 						Yes 					Yes 									Yes 													Global 			No
+# prepared_statements_instances
+#
+# performance_schema_ 							Yes 					Yes 									Yes 													Global 			No
+# max_program_instances
+#
+# performance_schema_ 							Yes 					Yes 									Yes 													Global 			No
+# max_rwlock_classes 
+#
+# performance_schema_max_socket_classes 	Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_socket_instances Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_sql_text_length 	Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_stage_classes 	Yes 					Yes 									Yes 													Global 			No
+# performance_schema 							Yes 					Yes 									Yes 													Global 			No
+# _max_statement_classes 
+# performance_schema 							Yes 					Yes 									Yes 													Global 			No
+# _max_statement_stack 
+#
+# performance_schema_max_table_handles 	Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_table_instances 	Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_table_lock_stat 	Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_thread_classes 	Yes 					Yes 									Yes 													Global 			No
+# performance_schema_max_thread_instances Yes 					Yes 									Yes 													Global 			No
+# Performance_schema_memory_classes_lost 																								Yes 						Global 			No
+# Performance_schema_metadata_lock_lost 																								Yes 						Global 			No
+# Performance_schema_mutex_classes_lost 																								Yes 						Global 			No
+# Performance_schema_mutex_instances_lost 																							Yes 						Global 			No
+# Performance_schema_nested_statement_lost 																							Yes 						Global 			No
+# Performance_schema_prepared_statements_lost 																						Yes 						Global 			No
+# Performance_schema_program_lost 																										Yes 						Global 			No
+# Performance_schema_rwlock_classes_lost 																								Yes 						Global 			No
+# Performance_schema_rwlock_instances_lost 																							Yes 						Global 			No
+# Performance_schema_session_connect_attrs_longest_seen 																			Yes 						Global 			No
+# Performance_schema_session_connect_attrs_lost 																					Yes 						Global 			No
+#
+# performance_schema_ 							Yes 					Yes 									Yes 													Global 			No
+# session_connect_attrs_size 
+#
+# performance_schema_setup_actors_size 	Yes 					Yes 									Yes 													Global 			No
+# performance_schema_setup_objects_size 	Yes 					Yes 									Yes 													Global 			No
+# Performance_schema_socket_classes_lost 																								Yes 						Global 			No
+#
+# Performance_schema_ 																														Yes 						Global 			No
+# socket_instnaces_lost 
+#
+# Performance_schema_stage_classes_lost 																								Yes 						Global 			No
+# Performance_schema_statement_classes_lost 																							Yes 						Global 			No
+# Performance_schema_table_handles_lost 																								Yes 						Global 			No
+# Performance_schema_table_instances_lost 																							Yes 						Global 			No
+# Performance_schema_table_lock_stat_lost 																							Yes 						Global 			No
+# Performance_schema_thread_classes_lost 																								Yes 						Global 			No
+# Performance_schema_thread_instances_lost 																							Yes 						Global 			No
+# Performance_schema_users_lost 																											Yes 						Global 			No
+# performance_schema_users_size 				Yes 					Yes 									Yes 													Global 			No
+# persisted_globals_load 						Yes 					Yes 									Yes 													Global 			No
+# pid-file 											Yes 					Yes 																							Global 			No
+# - Variable: pid_file 																							Yes 													Global 			No
+# plugin 											Yes 					Yes 	
+# plugin_dir 										Yes 					Yes  									Yes 													Global 			No
+# plugin-load 										Yes 					Yes 
+# plugin-load-add 								Yes 					Yes
+# port 												Yes 					Yes  									Yes 													Global 			No
+# port-open-timeout 								Yes 					Yes 									
+# 
+# preload_buffer_size 							Yes 					Yes 									Yes 													Both 				Yes
+# Prepared_stmt_count 																														Yes 						Global 			No
+# print-defaults 									Yes 
+# profiling 																										Yes 													Both 				Yes
+# profiling_history_size 						Yes 					Yes 									Yes 													Both 				Yes
+# protocol_version 																								Yes 													Global 			No
+# proxy_user 																										Yes 													Session 			No
+# pseudo_slave_mode 																								Yes 													Session 			Yes
+# psuedo_thread_id 																								Yes 													Session 			Yes
+# Qcache_free_blocks 																														Yes 						Global 			No
+# Qcache_free_memory 																														Yes 						Global 			No
+# Qcache_hits 																																	Yes 						Global 			No
+# Qcache_inserts     																														Yes 						Global 			No
+# Qcache_lowmem_prunes 																														Yes 						Global 			No
+# Qcache_not_cached 																															Yes 						Global 			No
+# Qcache_queries_in_cache 																													Yes 						Global 			No
+# Qcache_total_blocks 																														Yes 						Global 			No
+# Queries 																																		Yes 						Both 				No
+# 
+# query_alloc_block_size 						Yes 					Yes 									Yes 													Both 				Yes
+# query_cache_limit 								Yes 					Yes 									Yes 													Global 			Yes
+# query_cache_min_res_unit 					Yes 					Yes 									Yes 													Global 			Yes
+# query_cache_size 								Yes 					Yes 									Yes 													Global 			Yes
+# query_cache_type 								Yes 					Yes 									Yes 													Both 				Yes
+# query_cache_wlock_invalidate 				Yes 					Yes 									Yes 													Both 				Yes
+# query_prealloc_size 							Yes 					Yes 									Yes 													Both 				Yes
+# Questions 																																	Yes 						Both 				No
+# rand_seed1 																										Yes 													Session 			Yes
+# rand_seed2 																										Yes 													Session 			Yes
+# range_alloc_block_size 						Yes 					Yes 									Yes 													Both 				Yes
+# range_optimizer_max_mem_size 				Yes 					Yes 									Yes 													Both 				Yes
+# rbr_exec_mode 																									Yes 													Both 				Yes
+#
+# read_buffer_size 								Yes 					Yes 									Yes 													Both 				Yes
+# read_only 										Yes 					Yes 									Yes 													Global 			Yes
+# read_rnd_buffer_size 							Yes 					Yes 									Yes 													Both 				Yes
+# regexp_stack_limit 							Yes 					Yes 									Yes 													Global 			Yes
+# regexp_time_limit 								Yes 					Yes 									Yes 													Global 			Yes
+# relay-log 										Yes 					Yes 																							Global 			No
+# - Variable: relay_log 																						Yes 													Global 			No
+# relay_log_basename 																							Yes 													Global 			No
+# relay-log-index 								Yes 					Yes 									 														Global 			No
+# - Variable: relay_log_index 																				Yes 													Global 			No
+# relay_log_index 								Yes 					Yes 									Yes 													Global 			No
+# relay-log-info-file 							Yes 					Yes 																							
+# - Variable: relay_log_info_file 
+# relay_log_info_file 							Yes 					Yes 									Yes 													Global 			No
+# relay-log-info-repository 					Yes 					Yes 	
+# - Variable: relay_log_info_repository 	
+# relay_log_info_repository 																					Yes 													Global 			Yes
+# relay_log_purge 								Yes 					Yes 									Yes 													Global 			Yes
+# relay-log-recovery 							Yes 					Yes 
+# - Variable: relay_log_recovery 
+# relay_log_recovery 							Yes 					Yes 									Yes 													Global 			No
+# relay_log_space_limit 						Yes 					Yes 									Yes 													Global 			No
+# remove 											Yes
+# replicate-do-db 								Yes 					Yes
+# replicate-do-table 							Yes 					Yes
+# replicate-ignore-db 							Yes 					Yes
+# replicate-ignore-table 						Yes 					Yes
+# replicate-rewrite-db 							Yes 					Yes
+# replicate-same-server-id 					Yes 					Yes
+# replicate-wild-do-table 						Yes 					Yes
+# replicate-wild-ignore-table 				Yes 					Yes
+# report-host 										Yes 					Yes 																							Global 			No
+# - Variable: report_host 																						Yes 													Global 			No
+# report-password 								Yes 					Yes 																							Global 			No
+# - Variable: report_password 																				Yes 													Global 			No
+# report-port 										Yes 					Yes 																							Global 			No
+# - Variable: report_port 																						Yes 													Global 			No
+# report-user 										Yes 					Yes 																							Global 			No
+# - Variable: report_user 																						Yes 													Global 			No
+# require_secure_transport 					Yes 					Yes 									Yes 													Global 			Yes
+# resultset_metadata 																							Yes 													Session 			Yes
+# 
+# rewriter_enabled 																								Yes 													Global 			Yes
+# Rewriter_number_loaded_rules 																												Yes 					Global 			No
+# Rewriter_number_reloads 																														Yes 					Global 			No
+# Rewriter_number_rewritten_queries 																										Yes 					Global 			No
+# Rewriter_reload_error 																														Yes 					Global 			No
+# rewriter_verbose 																								Yes 													Global 			Yes
+# rpl_read_size 									Yes 					Yes 									Yes 													Global 			Yes
+# Rpl_semi_sync_master_clients 																												Yes 					Global 			No
+# rpl_semi_sync_master_enabled 																				Yes 													Global 			Yes
+# Rpl_semi_sync_master_net_avg_wait_time 																									Yes 					Global 			No
+# Rpl_semi_sync_master_net_wait_time 																										Yes 					Global 			No
+# Rpl_semi_sync_master_net_waits 																											Yes 					Global 			No
+# Rpl_semi_sync_master_no_times 																												Yes 					Global 			No
+# Rpl_semi_sync_master_no_tx 																													Yes 					Global 			No
+# Rpl_semi_sync_master_status 																												Yes 					Global 			No
+# Rpl_semi_sync_master_timefunc_failures 																									Yes 					Global 			No
+# rpl_semi_sync_master_timeout 																				Yes 													Global 			Yes
+# rpl_semi_sync_master_trace_level 																			Yes 													Global 			Yes
+# Rpl_semi_sync_master_tx_avg_wait_time 																									Yes 					Global 			No
+# Rpl_semi_sync_master_tx_wait_time 																										Yes 					Global 			No
+# Rpl_semi_sync_master_tx_waits 																												Yes 					Global 			No
+# rpl_semi_sync_master_wait_for_slave_count 																Yes 													Global 			Yes
+#
+# rpl_semi_sync_master_wait_no_slave 																		Yes 													Global 			Yes
+# rpl_semi_sync_master_wait_point 																			Yes 													Global 			Yes
+# Rpl_semi_sync_master_wait_pos_backtraverse 																							Yes 					Global 			No
+# Rpl_semi_sync_master_wait_sessions 																										Yes 					Global 			No
+# Rpl_semi_sync_master_yes_tx 																												Yes 					Global 			No
+# rpl_semi_sync_slave_enabled 																				Yes 													Global 			Yes
+# Rpl_semi_sync_slave_status 																													Yes 					Global 			No
+# rpl_semi_sync_slave_trace_level 																			Yes 													Global 			Yes
+# rpl_stop_slave_timeout 						Yes 					Yes 									Yes 													Global 			Yes
+# Rsa_public_key 																																	Yes 					Global 			No
+#
+# safe-user-create 								Yes 					Yes 
+# schema_definition_cache 						Yes 					Yes 									Yes 													Global 			Yes
+# Secondary_engine_execution_count 																											Yes 					Both 				No
+# secure-auth 										Yes 					Yes 																							Global 			Yes
+# - Variable: secure_auth 																						Yes 													Global 			Yes
+# secure-file-priv 								Yes 					Yes 																							Global 			No
+# - Variable: secure_file_priv 																				Yes 													Global 			No
+#
+# Select_full_join 																																Yes 					Both 				No
+# Select_full_range_join 																														Yes 					Both 				No
+# Select_range 																																	Yes 					Both 				No
+# Select_range_check 																															Yes 					Both 				No
+# Select_scan 																																		Yes 					Both 				No
+# server-id 										Yes 					Yes 																							Global 			Yes
+# - Variable: server_id 																						Yes 													Global 			Yes
+# server_uuid 																										Yes 													Global 			No
+# session_track_gtids 							Yes 					Yes 									Yes 													Both 				Yes
+# session_track_schema 							Yes 					Yes 									Yes 													Both 				Yes
+# session_track_stat_change 					Yes 					Yes 									Yes 													Both 				Yes
+# session_track_system_variables 			Yes 					Yes 									Yes 													Both 				Yes
+# 
+# session_track_transaction_info 			Yes 					Yes 									Yes 													Both 				Yes
+# sha256_password_auto_generate_rsa_keys 	Yes 					Yes 									Yes 													Global			No
+# sha256_password_private_key_path 			Yes 					Yes 									Yes 													Global 			No
+# sha256_password_proxy_users 				Yes 					Yes 									Yes 													Global 			Yes
+# sha256_password_public_key_path 			Yes 					Yes 									Yes 													Global 			No
+# shared_memory 									Yes 					Yes 									Yes 													Global 			No
+# shared_memory_base_name 						Yes 					Yes 									Yes 													Global 			No
+# show_compability_56 							Yes 					Yes 									Yes 													Global 			Yes
+# show_create_table_verbosity 				Yes 					Yes 									Yes 													Both 				Yes
+# show_old_temporals 							Yes 					Yes 									Yes 													Both 				Yes
+# show-slave-auth-info 							Yes 					Yes 
+# simplified_binlog_gtid_recovery 			Yes 					Yes 									Yes 													Global 			No
+# skip-character-set-client-handshake 		Yes 					Yes 
+# skip-concurrent-insert 						Yes 					Yes
+# - Variable: concurrent_insert 
+# skip-event-scheduler 							Yes 					Yes 									
+# skip_external_locking 						Yes 					Yes 									Yes 													Global 			No
+# skip-grant-tables 								Yes 					Yes 
+# skip-host-cache 								Yes 					Yes
+# skip-name-resolve 								Yes 					Yes 																							Global 			No
+# - Variable: skip_name_resolve 																				Yes 													Global 			No
+# skip-ndbcluster 								Yes 					Yes 																							
+# skip-networking 								Yes 					Yes 																							Global 			No
+# - Variable: skip_networking 																				Yes 													Global 			No
+# skip-new 											Yes 					Yes 
+# skip-show-database 							Yes 					Yes 																							Global 			No
+# - Variable: skip_show_database 																			Yes 													Global 			No
+# skip-slave-start 								Yes 					Yes 
+# skip-ssl 											Yes 					Yes
+# skip-stack-trace 								Yes 					Yes
+# slave_allow_batching 							Yes 					Yes 									Yes 													Global 			Yes
+# slave-checkpoint-group 						Yes 					Yes 
+# - Variable: slave_checkpoint_group 
+# slave_checkpoint_period 						Yes 					Yes 									Yes 													Global 			Yes
+# slave_compressed_protocol 					Yes 					Yes 									Yes 													Global 			Yes
+# slave_exec_mode 								Yes 					Yes 									Yes 													Global 			Yes
+#
+# Slave_heartbeat_period 																												Yes 							Global 			No
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/server-option-variable-reference.html
 #
 # 
-#
 #
 #
 # https://dev.mysql.com/doc/refman/8.0/en/server-option-variable-reference.html
