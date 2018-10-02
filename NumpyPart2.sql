@@ -10285,11 +10285,423 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # slave_exec_mode 								Yes 					Yes 									Yes 													Global 			Yes
 #
 # Slave_heartbeat_period 																												Yes 							Global 			No
+# Slave_last_heartbeat 																													Yes 							Global 			No
+# slave-load-tmpdir 								Yes 					Yes 																							Global 			No
+# - Variable: slave_load_tmpdir 																				Yes 													Global 			No
+# slave-max-allowed-packet 					Yes 					Yes 
+# - Variable: slave_max_allowed_packet 	
+# slave_max_allowed_packet 																					Yes 													Global 			Yes
+# slave-net-timeout 								Yes 					Yes 																							Global 			Yes
+# - Variable: slave_net_timeout 																				Yes 													Global 			Yes
+# Slave_open_temp_tables 																												Yes 							Global 			No
+# slave-parallel-type 							Yes 					Yes 
+# - variable: slave_parallel_type 
+# slave_parallel_type 																							Yes 													Global 			Yes
+# slave-parallel-workers 						Yes 					Yes 
+# - Variable: slave_parallel_workers 		
+# slave_parallel_workers 						Yes 															Yes 													Global 			Yes
+# slave-pending-jobs-size-max 				Yes 
+# - Variable: slave_pending_jobs_size_max 
+# slave_pending_jobs_size_max 				Yes 															Yes 													Global 			Yes
 # 
-# https://dev.mysql.com/doc/refman/8.0/en/server-option-variable-reference.html
+# slave_preserve_commit_order 				Yes 															Yes 													Global 			Yes
+# Slave_received_heartbeats 																											Yes 							Global 			No
+# Slave_retried_transactions 																											Yes 							Global 			No
+# Slave_rows_last_search_algorithm_used 																							Yes 							Global 			No
+# slave-rows-search-algorithms 				Yes 					Yes 
+# - Variable: slave_rows_search_algorithms
+# slave_rows_search_algorithms 																				Yes 													Global 			Yes
+# Slave_running 																															Yes 							Global 			No
+# slave-skip-errors 								Yes 					Yes 																							Global 			No
+# - Variable: slave_skip_errors 																				Yes 													Global 			No
+# slave-sql-verify-checksum 					Yes 					Yes 
+# slave_sql_verify_checksum 																					Yes 													Global 			Yes
+# slave_transaction_retries 					Yes 					Yes 									Yes 													Global 			Yes
+# slave_type_conversions 						Yes 					Yes 									Yes 													Global 			No
+# Slow_launch_threads 																													Yes 							Both 				No
+# slow_launch_time 								Yes 					Yes 									Yes 													Global 			Yes
+# Slow_queries 																															Yes 							Both 				No
+# slow-query-log 									Yes 					Yes 																							Global 			Yes
+# - Variable: slow_query_log 																					Yes 													Global 			Yes
+# slow_query_log_file 							Yes 					Yes 									Yes 													Global 			Yes
 #
+# slow-start-timeout 							Yes 					Yes 
+# socket 											Yes 					Yes 									Yes 													Global 			No
+# sort_buffer_size 								Yes 					Yes 									Yes 													Both 				Yes
+# Sort_merge_passes 																														Yes 							Both 				No
+# Sort_range 																																Yes 							Both 				No
+# Sort_rows 																																Yes 							Both 				No
+# Sort_scan 																																Yes 							Both 				No
+# sporadic-binlog-dump-fail 					Yes 					Yes 
+# sql_auto_is_null 																								Yes 													Both 				Yes
+# sql_big_selects 																								Yes 													Both 				Yes
+# sql_buffer_result 																								Yes 													Both 				Yes
+# sql_log_bin 																										Yes 													Session 			Yes
+# sql_log_off 																										Yes 													Both 				Yes
+# sql-mode 											Yes 					Yes 																							Both 				Yes
+# - Variable: sql_mode 																							Yes 													Both 				Yes
+# sql_notes 																										Yes 													Both 				Yes
+# sql_quote_show_create 																						Yes 													Both 				Yes
+# sql_require_primary_key 						Yes 					Yes 									Yes 													Both 				Yes
+# sql_safe_updates 																								Yes 													Both 				Yes
+# sql_select_limit 																								Yes 													Both 				Yes
+# sql_slave_skip_counter 																						Yes 													Global 			Yes
+# sql_warnings 																									Yes 													Both 				Yes
+# ssl 												Yes 					Yes 												
 # 
+# Ssl_accept_renegotiates 																												Yes 							Global 			No
+# Ssl_accepts 																																Yes 							Global 			No
+# ssl-ca 											Yes 					Yes 																							Global 			No
+# - Variable: ssl_ca 																							Yes 													Global 			No
+# Ssl_callback_cache_hits 																												Yes 							Global 			No
+# ssl-capath 										Yes 					Yes 																							Global 			No
+# - Variable: ssl_capath 																						Yes 													Global 			No
+# ssl-cert 											Yes 					Yes 																							Global 			No
+# - Variable: ssl_cert 																							Yes 													Global 			No
+# Ssl_cipher 																																Yes 							Both 				No
+# ssl-cipher 										Yes 					Yes 																							Global 			No
+# - Variable: ssl_cipher 																						Yes 													Global 			No
+# Ssl_cipher_list 																														Yes 							Both 				No
+# Ssl_client_connects 																													Yes 							Global 			No
+# Ssl_connect_renegotiates 																											Yes 							Global 			No
+# ssl-crl 											Yes 					Yes 																							Global 			No
+# - Variable: ssl_crl 																							Yes 													Global 			No
+# ssl-crlpath 										Yes 					Yes 																							Global 			No
+# - Variable: ssl_crlpath 																						Yes 													Global 			No
+# Ssl_ctx_verify_depth 																													Yes 							Global 			No
+# Ssl_ctx_verify_mode 																													Yes 							Global 			No
+# Ssl_default_timeout 																													Yes 							Both 				No
+# Ssl_finished_accepts 																													Yes 							Global 			No
 #
+# Ssl_finished_connects 																												Yes 							Global 			No
+# ssl_fips_mode 									Yes 					Yes 									Yes 													Global 			Yes
+# ssl-key 											Yes 					Yes 																							Global 			No
+# - Variable: ssl_key 																							Yes 													Global 			No
+# Ssl_server_not_after 																													Yes 							Both 				No
+# Ssl_server_not_before 																												Yes 							Both 				No
+# Ssl_session_cache_hits 																												Yes 							Global 			No
+# Ssl_session_cache_misses 																											Yes 							Global 			No
+# Ssl_session_cache_mode 																												Yes 							Global 			No
+# Ssl_session_cache_overflows 																										Yes 							Global 			No
+# Ssl_session_cache_size 																												Yes 							Global 			No
+# Ssl_session_cache_timeouts 																											Yes 							Global 			No
+# Ssl_sessions_reused 																													Yes 							Both 				No
+# Ssl_used_session_cache_entries 																									Yes 							Global 			No
+# Ssl_verify_depth 																														Yes 							Both 				No
+# Ssl_verify_mode 																														Yes 							Both 				No
+# Ssl_version 																																Yes 							Both 				No
+# standalone 										Yes 					Yes 
+# stored_program_cache 							Yes 					Yes 									Yes 													Global 			Yes
+# stored_program_definition_cache 			Yes 					Yes 									Yes 													Global 			Yes
+# super-large-pages 								Yes 					Yes 
+# super_read_only 								Yes 					Yes 									Yes 													Global 			Yes
+# symbolic-links 									Yes 					Yes 
+# sync_binlog 										Yes 					Yes 									Yes 													Global 			Yes
+# sync_master_info 								Yes 					Yes 									Yes 													Global 			Yes
+# 
+# sync_relay_log 									Yes 					Yes 									Yes 													Global 			Yes
+# sync_relay_log_info 							Yes 					Yes 									Yes 													Global 			Yes
+# sysdate-is-now 									Yes 					Yes 
+# syseventlog.facility 							Yes 					Yes 									Yes 													Global 			Yes
+# syseventlog.include_pid 						Yes 					Yes 									Yes 													Global 			Yes
+# syseventlog.tag 								Yes 					Yes 									Yes 													Global 			Yes
+# system_time_zone 																								Yes 													Global 			No
+# table_definition_cache 																						Yes 													Global 			Yes
+# Table_locks_immediate 																												Yes 							Global 			No
+# Table_locks_waited 																													Yes 							Global 			No
+# table_open_cache 																								Yes 													Global 			Yes
+# Table_open_cache_hits 																												Yes 							Both 				No
+# table_open_cache_instances 																					Yes 													Global 			No
+# Table_open_cache_misses 																												Yes 							Both 				No
+# Table_open_cache_overflows 																											Yes 							Both 				No
+# tablespace_definition_cache 				Yes 					Yes 									Yes 													Global 			Yes
+# tc-heuristic-recover 							Yes 					Yes 
+# Tc_log_max_pages_used 																												Yes 							Global 			No
+# Tc_log_page_size 																														Yes 							Global 			No
+# Tc_log_page_waits 																														Yes 							Global 			No
+# temp-pool 										Yes 					Yes 
+# 
+# temptable_max_ram 								Yes 					Yes 									Yes 													Global 			Yes
+# thread_cache_size 								Yes 					Yes 									Yes 													Global 			Yes
+# thread_handling 								Yes 					Yes 									Yes 													Global 			No
+# thread_pool_algorithm 						Yes 					Yes 									Yes 													Global 			No
+# thread_pool_high_priority_connection 	Yes 					Yes 									Yes 													Both 				Yes
+# thread_pool_max_unused_threads 			Yes 					Yes 									Yes 													Global 			Yes
+# thread_pool_prio_kickup_timer 				Yes 					Yes 									Yes 													Both 				Yes
+# thread_pool_size 								Yes 					Yes 									Yes 													Global 			No
+# thread_pool_stall_limit 						Yes 					Yes 									Yes 													Global 			Yes
 #
-# https://dev.mysql.com/doc/refman/8.0/en/server-option-variable-reference.html
+# thread_stack 									Yes 					Yes 									Yes 													Global 			No
+# Threads_cached 																															Yes 							Global 			No
+# Threads_connected 																														Yes 							Global 			No
+# Threads_created 																														Yes 							Global 			No
+# Threads_running 																														Yes 							Global 			No
+# time_format 																										Yes 													Global 			No
+# time_zone 																										Yes 													Both 				Yes
+# timestamp 																										Yes 													Session 			Yes
+# tls_version 										Yes 					Yes 									Yes 													Global 			No
+# tmp_table_size 									Yes 					Yes 									Yes 													Both 				Yes
+# tmpdir 											Yes 					Yes 									Yes 													Global 			No
+# transaction_alloc_block_size 				Yes 					Yes 									Yes 													Both 				Yes
+# transaction_allow_batching 																					Yes 													Session 			Yes
+# transaction-isolation 						Yes 					Yes  																							Both 				Yes
+# - Variable: transaction_isolation 																		Yes 													Both 				Yes
+# transaction_prealloc_size 					Yes 					Yes 									Yes 													Both 				Yes
+# transaction-read-only 						Yes 					Yes 																							Both 				Yes
+# - Variable: transaction_read_only 																		Yes 													Both 				Yes
+# 
+# transaction_write_set_extraction 			Yes 															Yes 													Both 				Yes
+# tx_isolation 																									Yes 													Both 				Yes
+# tx_read_only 																									Yes 													Both 				Yes
+# unique_checks 																									Yes 													Both 				Yes
+# updatable_views_with_limit 					Yes 					Yes 									Yes 													Both 				Yes
+# Uptime 																																	Yes 							Global 			No
+# Uptime_since_flush_status 																											Yes 							Global 			No
+# use_secondary_engine 																							Yes 													Session 			Yes
+# user 												Yes 					Yes 
+# validate-password 								Yes 					Yes
+# validate_password_check_user_name 		Yes 					Yes 									Yes 													Global 			Yes
+# validate_password_dictionary_file 																		Yes 													Global 			Yes
+# validate_password_dictionary_file_last_parsed 																				Yes 							Global 			No
+# validate_password_dictionary_file_words_count 																				Yes 							Global 			No
+# validate_password_length 																					Yes 													Global 			Yes
+# validate_password_mixed_case_count 																		Yes 													Global 			Yes
+# validate_password_number_count 																			Yes 													Global 			Yes
+# validate_password_policy 																					Yes 													Global 			Yes
+# validate_password_special_char_count 																	Yes 													Global 			Yes
+# validate_password.check_user_name 		Yes 					Yes 									Yes 													Global 			Yes
+# validate_password.dictionary_file 																		Yes 													Global 			Yes
+# validate_password.dictionary_file_last_parsed 																				Yes 							Global 			No
+# validate_password.dictionary_file_words_count 																				Yes 							Global 			No
+# validate_password.length 																					Yes 													Global 			Yes
+# validate_password.mixed_case_count 																		Yes 													Global 			Yes
+# validate_password.number_count 																			Yes 													Global 			Yes
+# validate_password.policy 																					Yes 													Global 			Yes
+# validate_password.special_char_count 																	Yes 													Global 			Yes
+# validate_user_plugins 																						Yes 													Global 			No
+# verbose 											Yes 					Yes 
+# version 																											Yes 													Global 			No
+# version_comment 																								Yes 													Global 			No
+# version_compile_machine 																						Yes 													Global 			No
+# version_compile_os 																							Yes 													Global 			No
+# version_compile_zlib 																							Yes 													Global 			No
+# version_tokens_session 						Yes 					Yes 									Yes 													Both 				Yes
+# version_tokens_session_number 				Yes 					Yes 									Yes 													Both 				No
+# wait_timeout 									Yes 					Yes 									Yes 													Both 				Yes
+# warning_count 																									Yes 													Session 			No
+# windowing_use_high_precision 				Yes 					Yes 									Yes 													Both 				Yes
+#
+# The following pertain to the Server Command Options of mysqld:
+#
+# mysqld reads options from the [mysqld] and [server] groups.
+# mysqld_safe reads options from the [mysqld], [server], [mysqld_safe] and [safe_mysqld] groups.
+#
+# mysql.server reads options from the [mysqld] and [mysql.server] groups
+#
+# Memory allocations in size and defaulting is dependant upon platform.
+#
+# Values default to bytes in memory allocations in terms of buffer sizes, lengths, and stack sizes - unless specified otherwise.
+#
+# Note: Values are hints - MySQL retains freedom in assignments.
+#
+# 		Property 					 
+# --allow-suspicious-udfs 		 					 						  
+# 
+#   cmd-line format - --allow-suspicious-udfs 
+# 	 Type 				 Boolean
+#   Default Value 	 FALSE
+#
+# 	 Controls whether user-defined functions that have only an xxx symbol for the main function can be loaded.
+#   By default - is off and only UDFs that have at least one auxilliary symbol can be loaded; prevents attempts at loading
+# 	 functions from shared object files other than those containing legit UDFs.
+#
+# --ansi
+# 
+# 	 cmd-line format 	--ansi
+#
+# 	 Use standard (ANSI) SQL Syntax instead of MySQL syntax. 
+#   For more precise control over the server SQL mode - use --sql-mode instead.
+#
+# --basedir=<dir name>, -b <dir name>
+#
+# 	 cmd-line format 			--basedir=dir_name
+# 	 System Var 				basedir
+# 	 Scope 						Global
+# 	 Dynamic 				 	No
+# 	 SET_VAR Hint Applies  	No
+#   Type 						Dir name
+#   Default (>= 8.0.2) 		parent of mysqld installation dir
+#   Default (<= 8.0.1) 		configuration-dependent default
+#
+# 	 The path to the MySQL installation dir. This option sets the basedir system var.
+#
+# 	 The server executable determines its own full path name at startup and uses the parent of the dir in which
+# 	 it is located as the default basedir value.
+#
+# 	 This in turn enables the server to use that basedir when searching for server-related info such as the share dir containing error messages.
+#
+# --big-tables
+#
+# 	cmd-line format 			--big-tables
+# 	System var 					big_tables
+# 	Scope 						Global, Session
+# 	Dynamic 						Yes
+# 	SET_VAR Hint: 				No
+# 	Type 							Boolean
+# 	Default 						OFF
+#
+# 	Enable large result sets by saving all temp sets in files. This option prevents most 
+# 	"table full" errors, but also slows down queries for which in-memory tables would suffice.
+#
+# 	The server is able to handle large result sets automatically by using memory for smaller temp tables and
+#  switching to disk tables where necessary.
+#
+# --bind-address=<addr>
+#
+# cmd-line format 			--bind-address=addr
+# System var 					bind_address
+# Scope 							Global
+# Dynamic 						No
+# SET_VAR Hint Applies 		No
+# Type 							String
+# Default to 					*
+#
+# The MySQL server listens on one or more network sockets for TCP/IP connections.
+# Each socket is bound to one address - but it is possible for an address to map onto
+# multiple network interfaces.
+#
+# To specify how the server should listen for TCP/IP connections, use the --bind-address option at server startup
+#
+# < 8.0.13 - Accepts a single address value, which may specify a single non-wildcard IP address or host name, or one of the
+#  			 wildcard address formats that permit listening on multiple network interfaces (*, 0.0.0.0 or ::)
+#
+# >= 8.0.13 - accepts a single value as just described, or a list of comma-separated values. When the opption names a list of
+#  			  multiple values, each value must specify a single non-wildcard IP address or host name - i.e NONE may have (*, 0.0.0.0, or ::)
+#
+# IPs can be specified as IPv4 or IPv6. For any option that is a host name - the server resolves the name to an IP and binds to that address.
+# If a host name resolves to multiple IP addresses, the server uses the first IPv4 address if there are any, or the first IPv6 address otherwise.
+#
+# The server treats different types of addresses as follows:
+#
+# 		If the address is *, the server accepts TCP/IP connections on all server host IPv4 interfaces - and IPv6 if supported.
+# 		This is the default behavior.  - If multiple values are specified, this is not allowed as a value.
+#
+# 		If the address is 0.0.0.0, the server accepts TCP/IP connections on all server host IPv4 interfaces. Not permitted with a list of several values.
+#
+# 		If the address is ::, the server accepts TCP/IP connections on all server host IPv4 and IPv6 interfaces. Not permitted with a list of several values.
+#
+# 		If the address is an IPv4-mapped address, the server accepts TCP/IP connections for that address - in either IPv4 or IPv6.
+#	 	Example: If server is bound to ::ffff:127.0.0.1 - Clients can connect using --host=127.0.0.1 or --host=::ffff:127.0.0.1
+#
+# 		If the address is a regular IPv4 or IPv6 address - such as 127.0.0.1 or ::1, the server accepts TCP/IP only for that IPv4 or IPv6.
+#
+# 		If binding to any address fails, server procedure fails and does not start.
+#
+# 		Some examples:
+#
+# 		--bind-address=* - Listens on all IPv4 or IPv6 - specified by *
+#
+# 		--bind-address=198.51.100.20 - Listens only on the 198.51.100.20 IPv4 address.
+#
+# 		--bind-address=198.51.100.20, 2001:db8:0:f101::1 - The server listens on the 198.51.100.20 IPv4 and 2001:db8:0:f101::1 IPv6
+#
+# 		--bind-address=198.51.100.20,* - Produces an error, Can't use wildcards with multiple designated values.
+#
+# 		When --bind-address names a single value (wildcard or non-wildcard) - the server listens on a single socket, which for a wildcard
+# 		address may be bound to multiple network interfaces. 
+#
+# 		When it lists multiple values - the server listens on one socket per value - with each socket bound to a single network
+# 		interface. This scaling is linear, i.e 1:1. Can come to affect connection-acceptance efficiency depending on the OS - long lists can cause overhead.
+#
+# 		If we intend to bind the server to a specific address - the mysql.user grant table must contain an account with admin privs that can connect to that 
+# 		address.
+#
+# 		Otherwise - we cannot shut down the server. For example - if we bind the server to * - we can connect to it using all existing accounts.
+# 		But if we bind to ::1, we'd need admin privs on root in terms of ::1 - as in 'root'@'::1' exists in the mysql.user table.
+#
+# --binlog-format={ROW|STATEMENT|MIXED}
+#
+# 		cmd line format: 		--binlog-format=format
+# 		System var: 			binlog_format
+# 		Scope 					Global, Session
+# 		Dynamic 					Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Enumeration
+# 		Defaults: 				ROW
+# 		Can take: 				ROW, STATEMENT, MIXED
+#
+# 		Specify wether to use row-based, statement-based or mixed replication. Statement is default in >= 8.0
+#
+# 	 	Sometimes the var cannot be changed during runtime - or causes replication to fail.
+#
+# 		Setting the binary logging format without enabling binary logging sets the binlog format global sys var and logs a warning.
+# 
+# --character-sets-dir=<dir name>
+#
+# 		cmd line format: 		--character-sets-dir=dir_name
+# 		Sys Var: 				character_sets_dir
+# 		Scope: 					Global
+# 		Dynamic 					No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Dir name
+#
+# 		The dir where char sets are installed
+#
+# --character-set-client-handshake
+# 
+# 		cmd line format: 		--character-set-client-handshake
+# 		Type: 					Boolean
+# 		Defaults: 				TRUE
+#
+# 		Do not ignore char set info sent by the client. 
+# 		To ignore client info and use the default server char set, use --skip-character-set-client-handshake.
+# 		(Causes behavior akin to MySQL 4.0)
+#
+# --character-set-filesystem=<charset name>
+# 		
+# 		cmd line format: 		--character-set-filesystem=name
+# 		System Var: 			character_set_filesystem
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Defaults: 				Binary
+#
+# 		The filesystem char set. Sets the char set filesystem System var.
+#
+# --character-set-server=<charset name>, -C <charset_name>
+#
+# 		cmd line format: 		--character-set-server
+# 		System var: 			character_set_server
+# 		Scope: 					global, session
+#		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default (>= 8.0.1): 	utf8mb4
+# 		Default (8.0.0): 		latin1
+#
+# 		Use <charset_name> as the default server char set. To specify a nondefault char set - use --collation-server to specify the collation.
+#
+# --chroot=<dir name>, -r <dir_name>
+#
+# 	 	cmd line format: 		--chroot=dir_name
+# 		Type: 					Dir name
+#
+# 		Put the mysqld server in a closed env during startup by using the chroot() system call.
+# 		Recommended security measure - limits interaction of LOAD_DATA_INFILE and SELECT ... INTO OUTFILE
+#
+# --collation-server=<collation_name>
+#
+# 		cmd line format: 		--collation-server
+# 		System var: 			collation_server
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default (>= 8.0.1) 	utf8mb4_0900_ai_ci
+# 		Default (8.0.0) 		latin1_swedish_ci
+#
+# 		Use collation_name as the default server collation.
+#
+# https://dev.mysql.com/doc/refman/8.0/en/server-options.html
 #
