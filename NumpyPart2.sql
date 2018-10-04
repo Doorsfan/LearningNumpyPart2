@@ -10703,5 +10703,513 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # 		Use collation_name as the default server collation.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/server-options.html
+# --console
 #
+# 		cmd line format: 		--console 
+# 		OS: 						Windows
+#
+# 		Cause the default error log destination to be the console. This affects log writers that base
+# 		their own output destination on the default destination.
+#
+# 		Takes precedence over --log-error if both are given
+#
+# --core-file
+# 
+# 		cmd line format: 		--core-file
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		Write a core file if mysqld dies. Name and location of the core file is system dependent.
+# 		On Linux, a core file named core.pid is written to the current working dir of the process, which for
+# 		mysqld is the data dir.
+#
+# 		pid is the process ID of the server process. On macOS, a core file named core.pid is written
+# 		to the /cores dir. On Solaris, use the coreadm cmd to specify where to write the core file and how to name it.
+#
+# 		For some systems, to get a core file you must also specify the --core-file-size option to mysqld_safe.
+# 		On some systems, such as Solaris, you do not get a core file if you are also using the --user option.
+# 		
+# 		This may cause the need to write ulimit -c unlimited before starting the server.
+#
+# 		To reduce the size of core files - the innodb buffer pool in core file options can be disabled to prevent
+# 		InnoDB buffer pool pages from being written to core files.
+# 
+# --daemonize, -D
+# 		
+#
+# 		cmd line format: 			--daemonize[={OFF|ON}]
+# 		Type 							Boolean
+# 		Default: 					OFF
+#
+# 		Causes the server to run as a traditional, forking daemon, permitting it to work with OS systems that use
+# 		systemd for process control.
+#
+# 		Mutually exclusive with --initialize and --initialize-secure
+#
+# 		If the server is started using the --daemonize option and is not connected to a tty device - a default log error option
+# 		of --log-error="" is used in absence of explicit log file, to direct the error output to the default log file.
+#
+# 		-D is shorthand for this command.
+#
+# --datadir=<dir name>, -h <dir_name>
+#
+# 		cmd line format: 		--datadir=<dir_name>
+# 		System var: 			datadir
+# 		Scope:					Global
+# 		Dynamic: 				No
+# 		SET_VAR hint 			No
+# 		Type: 					Dir name
+#
+# 		Path to the MySQL server data dir. This option sets the datadir sys var.
+#
+# --debug[=<debug options>], -# [<debug_options>]
+#
+# 		cmd line format: 		--debug[=<debug_options>]
+# 		Sys var: 				debug
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR hint 			No
+# 		Type: 					String
+# 		default (Windows): 	d:t:i:O, \mysqld.trace
+# 		default (Unix): 		d:t:i:o, /tmp/mysqld.trace
+#
+# 		If MySQL is configured with the -DWITH_DEBUG=1 CMake option, you can use this option to get a trace
+# 		file of what mysqld is doing.
+#
+# 		A typical <debug_options> string is d:t:o, <file_name>.
+# 		
+# 		Using -DWITH_DEBUG=1 to configure MySQL with debug support enables you to use the --debug="d,parser_debug" option
+# 		when you start the server.
+#
+# 		This causes the Bison parser that is used to process SQL statements to dump a parser trace to the server's STD error output.
+# 		Typically, this output is written to the error log.
+#
+# 		Stacks. Values that begin with + or - are subtracted from the previous value. For example:
+# 		--debug=T --debug=+P sets the value to P:T
+#
+# --debug-sync-timeout[=N]
+# 		
+# 		cmd line format: 			--debug-sync-timeout[=#]
+# 		Type: 						Integer
+#
+# 		Controls whether the Debug Sync facility for testing and debugging is enabled. Use of Debug Sync
+# 		requires that MySQL be configured with the -DENABLE_DEBUG_SYNC=1 CMake option.
+#
+# 		If not compiled-in, this option is not available. The option value is timeout in seconds.
+# 		Defaults to 0, which disables Debug Sync.
+#
+# 		To enable it, specify a value greater than 0; this value also becomes the default timeout for
+# 		individual synchronization points.
+#
+# 		If the option is given without a value - the timeout is set to 300 seconds.
+#
+# --default-storage-engine=<type>
+#
+# 		cmd line format: 			--default-storage-engine=name
+# 		System var: 				default_storage_engine
+# 		Scope: 						Global, Session
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						Enumeration
+# 		Defaults to: 				InnoDB
+#
+# 		Set the default storage engine for tables. Sets the storage engine for permanent tables only.
+# 		To set for temp tables - set the default_tmp_storage_engine sys Var.
+#
+# 		If you disable the default storage engine at server startup, you must set the default engine for both
+# 		permanent and temp tables to a different engine or the server won't start
+#
+# --default-time-zone=<timezone>
+#
+# 		cmd line format: 			--default-time-zone=name
+# 		Type: 						String
+#
+# 		Set the default server time zone. This option sets the global time zone Sys var.
+# 		If not given, defaults to sys time zone - same as sys time zone sys var
+#
+# --defaults-extra-file=<file name>
+#
+# 		Read this option file after the global option file but (on Unix) before the user option file.
+# 		If the file does not exist or is otherwise inaccessible, an error occurs.
+# 		Relative if relative, Absolute if Absolute.
+#
+# 		Must be the first option given if used on the cmd line.
+#
+# --defaults-file=<file name>
+# 
+#		Read only the given option file. If the file does not exist or is otherwise inaccessible, an error occurs.
+# 		Relative if relative, absolute if absolute.
+#
+# 		Still reads mysqld-auto.cnf
+#
+# 		Must be first option on cmd, except if server is started with --defaults-file and --install (or --install-manual) options.
+# 		(Then --install/--install-manual must be first)
+#
+# --defaults-group-suffix=<str>
+#
+# 		Read not only the usual option groups - but also the groups with usual names and suffix of <str>.
+# 		Regex onm suffix of groups to read.
+#
+# --delay-key-write[={OFF|ON|ALL}]
+#
+# 		cmd line format: 		--delay-key-write[=name]
+# 		Sys var: 				delay_key_write
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR hint: 			No
+# 		Type: 					Enumeration
+# 		Default: 				ON
+# 		ACCEPTS: 				ON/OFF/ALL
+#
+# 		Specify how to use delayed key writes. Delayed key writing causes key buffers not to be flushed between
+# 		writes for MyISAM tables.
+#
+# 		OFF disables delayed key writes.
+# 		ON enables delayed key writes for those tables that were created with the DELAY_KEY_WRITE option.
+# 		ALL delay key writes for all MyISAM tables.
+#
+# 		NOTE: If set to ALL, one should not use MyISAM tables from within another program (such as another MySQL server or
+# 				myisamchk) when the tables are in use. Causes index corruption if you do.
+#
+# --des-key-file=<file name>
+#
+# 	 	cmd line format: 		--des-key-file=<file_name>
+# 		Deprecated: 			Yes
+#
+# --early-plugin-load=<plugin list>
+#
+# 		cmd line format: 		--early-plugin-load=<plugin_list>
+# 		Type: 					String
+# 		Defaults: 				Empty string
+#
+# 		This option tells the server which plugins to load before loading mandatory built-in plugins and before storage engine initialization.
+# 		If multiple --early-plugin-load options are given, only the last one is used.
+#
+# 		The option value is a semicolon-separated list of <name>=<plugin_library> and <plugin_library> values.
+#
+# 		Each <name> is the name of a plugin to load, and <plugin_library> is the name of the library file that contains the plugin code.
+# 		If a plugin library is named without any preceding plugin name - the server loads all plugins in the library.
+#
+# 		The server looks for plugin lib files in the dir named by the <plugin dir> Sys var.
+#
+# 		For example, if plugins named myplug1 and myplug2 have lib files myplug1.so and myplug2.so, use this option to perform an early plugin load:
+#
+# 			mysqld --early-plugin-load="myplug1=myplug1.so;myplug2=myplug2.so"
+#
+# 		Quotes are used around the arg value because otherwise a ; is treated as command eliminator in terms of for instance Unix systems.
+#
+# 		Each named plugin is loaded early for a single invocation of mysqld only.
+# 		After a restart, the plugin is not loaded early unless --early-plugin-load is used again.
+#
+# 		If the server uses --initialize or --initialize-secure, plugins specified by --early-plugin-load are not loaded.
+#
+# 		If the server is run with --help, plugins specified by --early-plugin-load are loaded but not initialized. Ensures that
+# 		plugin options are displayed in the help messages.
+#
+# 		Default of --early-plugin-load value is empty. To load the keyring_file plugin, you must use an explicit --early-plugin-load option with
+# 		a nonempty value.
+#
+# 		The InnoDB tablespace encryption feature relies on the keyring_file plugin for encryption key management,
+# 		and the keyring_file plugin must be loaded prior to storage engine initialization to facilitate InnoDB recovery for encrypted tables.
+#
+# 		Admins who want the keyring_file plugin loaded at startup should use the appropiate nonempty option value.
+# 		For example - keyring_file.so on Unix and keyring_file.dll on Windows.
+#
+# --enable-named-pipe
+#
+# 		cmd line format: 			--enable-named-pipe
+# 		Platform specific: 		Windows
+#
+# 		Enable support for named pipes. Applies only on Windows.
+#
+# --event-scheduler[=<value>]
+# 		
+# 		cmd line format: 			--event-scheduler[=<value>]
+# 		Sys var: 					event_scheduler
+# 		Scope: 						Global
+# 		Dynamic: 					Yes
+# 		SET_VAR hint: 				No
+# 		Type: 						Enumeration
+# 		Default (>= 8.0.3) 		On
+# 		Default (<= 8.0.2) 		OFF
+# 		Valid: 						ON/OFF/DISABLED
+#
+# 		For more info on this, see --event-scheduler.
+# 		Enable, disable - start or stop the event scheduler.
+#
+# --exit-info[=<flags>], -T [<flags>]
+#
+# 		cmd line format: 			--exit-info[=<flags>]
+# 		Type: 						Integer
+#
+# 		This is a bitmask of different flags that you can use for debugging the mysqld server.
+# 		
+# --external-locking
+#
+# 		cmd line format: 			--external-locking
+# 		Type: 						Boolean
+# 		Defaults: 					FALSE
+#
+# 		Enable external locking (system locking), which is disabled by default.
+#
+# 		If you use this option on a system on which lockd does not fully work (such as Linux),
+# 		mysqld can easily deadlock.
+#
+# 		To disable external locking explicitly, use --skip-external-locking.
+#
+# 		External locking affects only MyISAM table access. 
+#
+# --flush
+#
+# 		cmd line format: 			--flush
+# 		Sys Var 						flush
+# 		Scope: 						Global
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						Boolean
+# 		Defaults: 					OFF
+#
+# 		Flush (synchronize) all changes to disk after each SQL statement. 
+#
+# 		Normally, MySQL does a write of all changes to disk only after each SQL statement
+# 		and lets the OS handle the synch to disk.
+#
+# 		Note: If activated, flush time is ignored.
+#
+# --gdb 
+#
+# 		cmd line format: 			--gdb
+# 		Type: 						Boolean
+# 		default: 					FALSE
+#
+# 		Install an interrupt handler for SIGINT (needed to stop mysqld with ^C to set breakpoints) and disable stack tracking
+# 		and core file handling.
+#
+# 		On Windows, this option also suppresses the forking that is used to implement the RESTART statement:
+#
+# 			Forking enables one process to act as a monitor to the other, which acts as the server.
+#
+# 			However, forking makes determining the server process to attach to for debugging more difficult,
+# 			so starting the server with --gdb suppresses forking.
+# 
+# 			For a server started with this, RESTART simply exits and does not restart.
+#
+# 			In non-debug settings, --no-monitor may be used to suppress forking the monitor process.
+#
+# --general-log[={0|1}]
+#
+# 		cmd line format: 			--general-log
+# 		Sys var: 					general_log
+# 		Scope: 						Global
+# 		Dynamic: 					Yes
+# 		SET_VAR hint: 				No
+# 		Type: 						Boolean
+# 		Defaults: 					OFF
+#
+# 		Specify the initial general query log state. With no argument or an argument of 1, the --general-log option enables the log.
+# 		If omitted or given with an arg of 0 - the option disables the log.
+#
+# --initialize, -I
+#
+# 		cmd line format: 			--initialize
+# 		Type: 						Boolean
+# 		Defaults: 					OFF
+#
+# 		Initializes a mysql installation by creating the data dir and populating the tables in the mysql system DB.
+# 		
+# 		When the server is started with --initialize, some functionality is unavailable that limits the statements permitted
+# 		in any file named by the --init-file option.
+#
+# 		In addition, disabled_storage_engine sys var has no effect.
+#
+# 		--initialize is mutually exclusive with --daemonize 
+#
+# 		-I is a synonym for --initialize
+#
+# --initialize-insecure
+#
+# 		cmd line format: 			--initialize-insecure
+# 		Type: 						Boolean
+# 		Default: 					OFF
+#
+# 		This option is used to initialize a MySQL installation by creating the data dir and populating the tables
+# 		in the mysql system DB. This option implies --initialize.
+#
+# 		--initialize-insecure is mutually exclusive with --daemonize.
+#
+# --init-file=<file name>
+#
+# 		cmd line format: 			--init-file=file_name
+# 		Sys var: 					init_file
+# 		Scope: 						Global 
+# 		Dynamic: 					No
+# 		SET_VAR Hint: 				No
+# 		Type: 						File name
+#
+# 		Read the SQL statements from this file at the startup. Each statement must be on a single line and should not include comments.
+#
+# 		If the server is started with the --initialize or --initialize-insecure option, it operates in bootstrap mode and some
+# 		functionality is unavailable that limits the statements permitted in the file.
+#
+# 		These include statements that are related to account management (such as CREATE USER or GRANT), replication and global transaction identifiers.
+#
+# --innodb-<xxx>
+#
+# 		Set an option for the InnoDB storage engine. The InnoDB options are listed later.
+#
+# --install [<service name>]
+# 
+# 		cmd line format: 			--install [service_name]
+# 		Platform: 					Windows
+#
+# 		Install the server as a Windows Service that starts automatically when Windows does as well.
+# 		Defaults to MySQL if no Service_name value is given.
+#
+# 		If server is started with --defaults-file and --install, --install must be first.
+#
+# --install-manual [<service name>]
+# 		
+# 		cmd line format: 			--install-manual [<service_name>]
+# 		Platform: 					Windows
+#
+# 		Install the server as a Windows service that must be started manually. Does not start automatically during Windows boot cycle.
+# 		Default service name is MySQL if no service_name is given.
+#
+# 		--install-manual first if --defaults-file and --install-manual given.
+#
+# --language=<lang name>, -L <lang name>
+#
+# 		cmd line format: 			--language=name
+# 		Deprecated: 				Yes; use lc-messages-dir
+# 		Sys Var: 					language
+# 		Scope: 						Global
+# 		Dynamic: 					No
+# 		SET_VAR Hint: 				No
+# 		Type: 						Dir name
+# 		Default value: 			/usr/local/mysql/share/mysql/english/
+#
+# 		The language to use for error messages. <lang_name> can be given as the language name or as the full path name to the dir
+# 		where the language files are installed.
+#
+# 		--lc-messages-dir and --lc-messages should be used rather than --language, which is deprecated (and handeled as an alias for --lc-messages-dir).
+# 		--language will be removed in a future MySQL release.
+#
+# --large-pages
+# 
+# 		cmd line format: 			--large-pages
+# 		Sys var: 					large_pages
+# 		Scope: 						Global
+# 		Dynamic: 					No
+# 		SET_VAR hint: 				No
+# 		Platform specific: 		Linux
+# 		Type: 						Boolean
+# 		Default: 					FALSE
+#
+# 		Some hardware/OS architechtures support memory pages greater than the default (4kb normally)
+# 		The actual implementation of this support depends on the underlying hardware and OS.
+#
+# 		Applications that perform a lot of memory accesses may obtain performance improvements by using
+# 		large pages due to reduced Translation Lookaside Buffer (TLB) Misses.
+#
+# 		Disabled by default.
+#
+# 		MySQL supports the Linux implementation of large page support (which is called HugeTLB) in Linux.
+#
+# 		For solaris, this pertains to --super-large-pages.
+#
+# --lc-messages=<locale name>
+#
+# 		cmd line format: 			--lc-messages=name
+# 		Sys var: 					lc_messages
+# 		Scope: 						Global, Session
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						String
+# 		Default: 					en_US
+#
+# 		The locale to use for error messages. Defaults to en_US. The server converts
+# 		the args to a language name and combines it with the value of --lc-messages-dir to produce the location
+# 		for the error message file.
+#
+# --lc-messages-dir=<dir name>
+#
+# 		cmd line format: 			--lc-messages-dir=dir_name
+# 		Sys var: 					lc_messages_dir
+# 		Scope: 						Global
+# 		Dynamic: 					No
+# 		SET_VAR Hint: 				No
+# 		Type: 						Dir name
+#
+# 		The dir where error messages are located. The server uses the value together with the value
+# 		of --lc-messages to produce the location for the error message file.
+#
+# --local-service
+#
+# 		cmd line format: 			--local-service
+# 		
+# 		Windows based: A --local-service option following the service name causes the server to run using the
+# 							LocalService Windows acc that has limited sys privs.
+#
+# 							If both --defaults-file and --local-service are given following the service name, they can be in any order.
+#
+# --log-error[=<file name>]
+#
+# 		cmd line format: 			--log-error[=file_name]
+# 		Sys var: 					log_error
+# 		Scope: 						Global
+# 		Dynamic: 					No
+# 		SET_VAR Hint: 				No
+# 		Type: 						File name
+#
+# 		Set the default error log dest. to the named file. This affects log writers that base their own
+# 		output dest on the default dest.
+#
+# 		If the option names no file, the default error log dest on Unix and Unix-like systems is a file named <host_name.err> in the data Dir.
+# 		The default destination on Windows is the same, unless the --pid-file option is specified.
+#
+# 		In that case, the file name is the PID file base name with a suffix of .err in the data dir.
+#
+# 		If the option names a file, the default destination is that file (with an .err suffix added if the name has no suffix),
+# 		located under the data dir unless an absolute path name is given to specify a different location.
+#
+# 		If error log output cannot be redirected to the error log file, an error occurs and startup fails.
+#
+# 		On Windows, --console takes precedence over --log-error if both are given. In this case, the default error log destination is
+# 		the console rather than a file.
+#
+# --log-isam[=<file name>]
+#
+# 		cmd line format: 		--log-isam[=file_name]
+# 		Type: 					File name
+#
+# 		Log all MyISAM changes to this file (used only when debugging MyISAM)
+#
+# --log-output=<value>, ...
+#
+# 		cmd line format: 		--log-output=name
+# 		Sys var: 				log_output
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Set
+# 		Defaults: 				FILE
+# 		Valid: 					TABLE, FILE, NONE
+#
+# 		This option determines the destination for general query log and slow query log output.
+# 		The option value can be given as one or more of the words TABLE, FILE or NONE.
+#
+# 		TABLE select logging to the general log and slow_log tables in the mysql database as a destination.
+# 		FILE selects logging to log files as a destination.
+# 		NONE disables logging.
+#
+# 		If NONE is present in the option value, it takes precedence over any other words that are present.
+# 		TABLE and FILE can both be given to select to both log output destinations.
+#
+# 		This option selects log output destinations, but does not enable log output.
+# 		To do that, use the --general_log and --slow_query_log options.
+#
+# 		For FILE logging, the --general_log_file and -slow_query_log_file options determine the log file location.
+#
+# --log-queries-not-using-indexes
+#
+# 		https://dev.mysql.com/doc/refman/8.0/en/server-options.html
