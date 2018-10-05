@@ -11211,5 +11211,483 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 		For FILE logging, the --general_log_file and -slow_query_log_file options determine the log file location.
 #
 # --log-queries-not-using-indexes
+# 
+# 		cmd line format: 		--log-queries-not-using-indexes
+# 		System variable: 		log_queries_not_using_indexes
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		If you are using this option with the slow query log enabled, queries that are expected to retrieve all rows are logged.
+#
+# 		This option does not necessarily mean that no index is used. For example - a query that uses a full index scan uses an index
+# 		but would be logged because the index would not limit the number of rows.
+#
+# --log-raw 
+#
+# 		cmd line format: 		--log-raw[=<value>]
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		Passwords in certain statements written to the general query log, slow query log and binary log are rewritten by the server
+# 		not to occur literally in plain text.
+#
+# 		Password rewriting can be suppressed for the general query log by starting the server with the --log-raw option.
+# 		This option may be useful for diagnostic purposes, to see the exact text of statements as received by the server,
+# 		but for security reasons is not recommended for production use.
+#
+# 		If a query rewrite plugin is installed, the --log-raw option affects statement logging as follows:
+#
+# 			Without --log-raw, the server logs the statement returned by the query rewrite plugin. This may differ from the statement as received.
+#
+# 			With --log-raw, the server logs the original statement as received.
+#
+# --log-short-format
+#
+# 		cmd line format: 		--log-short-format
+# 		Type: 					Boolean
+# 		Default: 				FALSE
+#
+# 		Log less information to the slow query log, if it has been activated.
+#
+# --log-tc=<file name>
+#
+# 		cmd line format: 		--log-tc=file_name
+# 		Type: 					File name
+# 		Default: 				tc.log
+#
+# 		The name of the memory-mapped transaction coordinator log file (for XA transactions that affect multiple storage engines
+# 		when the binary log is disabled).
+#
+# 		The default name is tc.log. The file is created under the data dir if not given as a full path name. Unused.
+#
+# --log-tc-size=<size>
+#
+# 		cmd line format: 		--log-tc-size=#
+# 		Type: 					integer
+# 		Default: 				6 * page * size
+# 		Minimum value: 		6 * page * size
+# 		Max (64-bit) 			<a lot>
+# 		Max (32-bit) 			<less>
+#
+# 		The size in bytes of the memory-mapped transaction coordinator log. 
+# 		Defaul and min values are 6 times the page size, and the value must be a multiple of the page size.
+#
+# --log-warnings[=<level>], -W [<level>]
+#
+# 		cmd line format: 		--log-warnings[=#]
+# 		Deprecated: 			YES (removed in 8.0.3)
+#     Sys var: 				log_warnings
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Int
+# 		Default value: 		2
+# 		Min val: 				0
+# 		Max (64-bit) 			<a lot>
+# 		Max (32-bit) 			<a lot>
+#
+# 		DEPRECATED - Use log error verbosity sys var instead.
+#
+# --low-priority-updates
+#
+# 		cmd line format: 		--low-priority-updates
+# 		Sys var: 				low_priority_updates
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				FALSE
+#
+# 		Give table-modifying operations (INSERT, REPLACE, DELETE, UPDATE) lower prio than selects..
+# 		This can also be done using { INSERT | REPLACE | DELETE | UPDATE } LOW PRIORITY ... to lower the prio of only one query,
+# 		or by SET LOW_PRIORITY_UPDATES=1 to change the priority in one thread.
+#
+# 		This affects only storage engines that use only table-level locking (MyISAM, MEMORY, MERGE)
+#
+# --min-examined-row-limit=<number>
+#
+# 		cmd line format: 		--min-examined-row-limit=#
+# 		Sys var: 				min_examined_row_limit
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				0
+# 		Min value: 				0
+# 		Max (64-bit) 			<a lot>
+# 		Max (32-bit) 			<less>
+#
+# 		When this option is set - queries which examine fewer than <number> rows are not written to the slow query log. Default is 0.
+#
+# --memlock
+#
+# 		cmd line format: 		--memlock
+# 		Type: 					Boolean
+# 		Default: 				FALSE
+#
+# 		Lock the mysqld process in memory. This option might help if you have a problem where the OS is causing mysqld to swap to disk.
+#
+# 		--memlock works on systems that support the mlockall() system call; this includes Solaris, most Linux distributions that use a 2.4 or higher kernel,
+# 		and perhaps other Unix systems.
+#
+# 		On Linux systems, you can tell whether or not mlockall() (and thus this option) is supported by checking to see whether or not it is defined
+# 		in the system mman.h file, as follows:
+#
+# 		grep mlockall /usr/include/sys/mman.h
+#
+# 		If mlockall() is supported, you should see in the output of the previous command something as follows:
+#
+# 		extern int mlockall (int __flags) __THROW;
+#
+# 		NOTE: Do not use on a system that does not support mlockall(). Will crash, if you do.
+#
+# 		Might need to run as root, but can be circumvented with limits.conf changing as well.
+#
+# --myisam-block-size=<N>
+#
+# 		cmd line format: 		--myisam-block-size=#
+# 		Type: 					integer
+# 		Default: 				1024
+# 		Min value: 				1024
+# 		Max value: 				16384
+#
+# 		Block size used for MyISAM index pages.
+#
+# --myisam-recover-options[=<option>[, <option>] ...]]
+# 	
+# 		cmd line format: 		--myisam-recover-options[=<name>]
+# 		Type: 					Enumeration
+# 		Default: 				Off
+# 		Valid values: 			OFF/DEFAULT/BACKUP/FORCE/QUICK
+#
+# 		Set the MyISAM storage engine recovery mode. The option value is any combination of the values of
+# 		OFF, DEFAULT, BACKUP, FORCE or QUICK.
+#
+# 		If you specify multiple values, separate them by commas. Specifying the option with no argument is the same
+# 		as specifying DEFAULT, and specifying with an explicit value of "" disables recovery (same as OFF).
+#
+# 		If recovery is enabled, each time mysqld opens a MyISAM table, it checks whether the table is marked as crashed
+# 		or was not closed properly. (The last option works only if you are running with external locking disabled).
+#
+# 		If this is the case, mysqld runs a check on the table. If the table was corrupted, mysqld attempts to repair it.
+#
+# 		The following options pertain to how the repair works:
+#
+# 		OFF 		No recovery
+# 		DEFAULT 	Recovery without backup, forcing or quick checking
+# 		BACKUP 	If hte data file was changed during recovery, save a backup of the <tbl_name>.MYD file as <tbl_name-datetime>.BAK
+# 		FORCE 	Run recovery even if we would lose more than one row from the .MYD file
+# 		QUICK 	Do not check the rows in the table if there are not any delete blocks.
+#
+# 		Before the server automatically repairs a table, it writes a note about the repair to the error log.
+#
+# 		If you want to be able to recover from most problems without user intervention - you should use the options
+# 		BACKUP, FORCE. This forces a repair of a table even if some rows would be deleted, but it keeps the old data file
+# 		as a backup so that you can later examine what occured.
+#
+#
+# --no-defaults
+#
+# 		Do not read any option files. If program startup fails due to reading unknown options from an option file, --no-defaults
+# 		prevents crashing in relation to reading.
+#
+# --no-dd-upgrade
+#
+# 		cmd line format: 				--no-dd-upgrade
+# 		Introduced: 					8.0.4
+# 		Type: 							Boolean
+# 		Default: 						FALSE
+#
+# 		Prevents the automatic upgrade of data dictionary tables when starting the MySQL server. This option would typically be used
+# 		when starting the MySQL server following an in-place upgrade of the MySQL server to a new version, which may include changes to
+# 		data dictionary table defs.
+#
+# 		When --no-dd-upgrade is specified, and the server finds that the data dictionary version of the server is different from the 
+# 		version stored in the data dictionary, startup fails with an error stating that data dictionary upgrade is prohibited.
+#
+# 		During a normal startup, the data dictionary version of the server is compared to the version stored in the data dictionary
+# 		to determine if data dictionary table defs should be upgraded.
+#
+# 		If an upgrade is necessary and supported, the server creates data dictionary tables with updated definitions, copies persisted
+# 		metadata to the new tables, automatically replaces the old tables with new ones, and reinitializes the data dir.
+#
+# 		If an upgrade is not necessary, startup continues without updating data dir tables.
+#
+# --no-monitor
+#
+# 	   cmd line format: 				--no-monitor
+# 		Introduced: 					8.0.12
+# 		Platform based: 				Windows
+# 		Type: 							Boolean
+# 		Default: 						FALSE
+#
+# 		Suppresses the forking that is used to implement the RESTART statement.
+# 		Forking enables one process to act as a monitor to the other, which acts as the server.
+#
+# 		For a server started with this option, RESTART simply exits and does not restart.
+#
+# 		Case of < 8.0.12 - can use --gdb for workaround.
+#
+# --old-alter-table
+#
+# 		cmd line format: 				--old-alter-table
+# 		Sys Var: 						old_alter_table
+# 		Scope: 							Global, Session
+# 		Dynamic: 						Yes
+# 		SET_VAR Hint: 					No
+# 		Type: 							Boolean
+# 		Default: 						OFF
+#
+# 		When this option is given, the server does not use the optimized method of processing an ALTER TABLE operation.
+# 		It reverts to using a temp table, copying over the data - and then renames the temp table to the original - as per MySQL <= 5.0
+#
+# --old-style-user-limits
+#
+# 		cmd line format: 				--old-style-user-limits
+# 		Type: 							Boolean
+# 		Default: 						FALSE
+#
+# 		Enable old-style user limits. (Causes account resource limits to be counted seperately for each host from which a user connected rather than per acc row in the user table)
+#
+# --open-files-limit=<count>
+#
+# 		cmd line format: 				--open-files-limit=#
+# 		Sys Var: 						open_files_limit
+# 		Scope: 							Global
+# 		Dynamic: 						No
+# 		SET_VAR Hint: 					No
+# 		Type: 							Int
+# 		Default: 						5000, can be adjusted
+# 		min: 								0
+# 		max: 								OS dependant
+#
+# 		Changes the number of file descriptors available to mysqld. You should try increasing the value of this option if
+# 		mysqld gives you the error "Too many open files".
+#
+# 		mysqld uses the option value to reserve desc with setrlimit().
+# 		Internally, the maximum value for this option is the max unsigned integer value,
+# 		but the actual max is OS dependant.
+#
+# 		If the requested number of file desc cannot be allocated, mysqld writes a warning to the error log.
+#
+# 		mysqld may attempt to allocate more than the requested number of desc (if they are available) using the values of max_connections
+# 		and table_open_cache to estimate whether more descriptors will be needed.
+#
+# 		On Unix, the value cannot be set greater than ulimit -n
+#
+# --performance-schema-xxx
+# 
+# 		Configure a Performance Schema Option.
+#
+# --pid-file=<file name>
+#
+# 		cmd line format: 	--pid-file=<file_name>
+# 		Sys Var: 			pid_file
+# 		Scope: 				Global
+# 		Dynamic: 			No
+# 		SET_VAR Hint: 		No
+# 		Type: 				File name
+#
+# 		Path name of the process ID file. The server creates the file in teh data dir unless an absolute path name is given to specify
+# 		a different dir.
+#
+# 		If specified - must specify a value.
+#
+# 		If not specified, defaults to <host_name>.pid - where host name is name of the host machine.
+#
+# 		The process ID file is used by other programs such as mysqld_safe to determine the servers process ID.
+# 		On Windows, this variable also affects the default error log file name.
+#
+# --plugin-xxx
+#
+# 		Specifies an option that pertains to a server plugin. 
+#
+# 		For example, many storage engines can be built as plugins, and for such engines, options for them
+# 		can be specified with a --plugin prefix.
+#
+# 		Thus, the --innodb_file_per_table option for InnoDB can be specified as --plugin-innodb_file_per_table
+#
+# 		For boolean options, that can be enabled or disabled, the --skip prefix and other alternatives are supported.
+#
+# 		For example - --skip-plugin-innodb_file_per_table disables innodb_file_per_table.
+#
+# 		The rationale for the --plugin prefix is that it enables plugin options to be specified unambiguously if there is a 
+# 		name conflict with a built-in server option.
+#
+# 		For example, if named --sql-mode - it would conflict with built in systems. To circumvent, specify with --plugin first.
+#
+# --plugin-load=<plugin list>
+#
+# 		cmd line format: 			--plugin-load=<plugin_list>
+# 		Type: 						String
+#
+# 		This option tells the server to load the named plugins at startup.
+#
+# 		If multiple --plugin-load options are given, only last one is used. Additional may be loaded using --plugin-load-add.
+#
+# 		The option value is a semicolon listed of <name>=<plugin_library> and <plugin_library> values.
+#
+# 		Each <name> is the name of a plugin to load - and <plugin_library> is the name of the library file that contains 
+# 		the plugin code.
+#
+# 		If a plugin library is named without any preceding plugin name, the server loads all plugins in the library.
+# 		The server looks for plugin lib files in the dir named by the <plugin dir> sys var.
+#
+# 		For example - if plugins named myplug1 and myplug2 have lib files - myplug1.so and myplug2.so, use this to perform an early plugin load:
+#
+# 		mysqld --plugin-load="myplug1=myplug1.so;myplug2=myplug2.so"
+#
+# 		This differs from INSTALL PLUGIN in that it's localized to one invocation of mysqld - Which adds one entry to the mysql.plugins table to cause
+# 		the plugin to be loaded for every normal server startup.
+#
+# 		Under normal startup, the server determines which plugins to load by reading the mysql.plguins system table.
+#
+# 		If the server is started with the --skip-grant-tables option - it does not consult the mysql.plugins table and does not load plugins
+# 		listed there.
+#
+# 		--plugin-load allows for plugins to be loaded even when --skip-grant-tables is given.
+# 		--plugin-load also enables plugins to be loaded at startup that cannot be loaded at runtime.
+#
+# --plugin-load-add=<plugin list>
+#
+# 		cmd line format: 			--plugin-load-add=plugin_list
+# 		Type: 						String
+#
+# 		This option complements the --plugin-load option. 
+# 		--plugin-load-add adds a plugin or plugins to the set of plugins to be loaded at startup.
+#
+# 		The argument format is the same as for --plugin-load. --plugin-load-add can be used to avoid specifying a large
+# 		set of plugins as a single long unwieldy --plugin-load argument.
+#
+# 		--plugin-load-add can be used instead of --plugin-load, but any ones that precedes --plugin-load, resets the set to load.
+#
+# 		i.e: 	--plugin-load=x --plugin-load-add=y   		--> 		--plugin-load="x;y"
+#
+# 				--plugin-load-add=y 	--plugin-load=x 		--> 		--plugin-load=x
+#
+# --port=<port_num>, -P <port_num>
+#
+# 		cmd line format: 		--port=#
+# 		Sys var: 				port
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				3306
+# 		Min value: 				0
+# 		Max value: 				65535
+#
+# 		Port number to use for listening on to TCP/IP connections. On Unix/akin, >= 1024 if not started by root
+#
+# --port-open-timeout=<num>
+#
+# 		cmd line format: 		--port-open-timeout=#
+# 		Type: 					int
+# 		Default: 				0
+#
+# 		On some systems, when the server is stopped, the TCP/IP port might not become available immediately.
+# 		If the server is restarted quickly afterwards, its attempt to reopen the port can fail.
+#
+# 		This indicates how many seconds the server should wait for the TCP/IP port to become free if it cannot be opened.
+# 		Defaults to not wait.
+#
+# --print-defaults
+#
+# 		Print the program name and all options that it gets from option files.
+# 		PWs are masked. Must be first - except in relaiton to --defaults-file or --defaults-extra-file.
+#
+# --remove [<service_name>]
+#
+# 		cmd line format: 		--remove [service_name]
+# 		platform: 				Windows
+#
+# 		Removes a MySQL Windows service. Default service name is MySQL if no <service_name> value is given.
+#
+# --safe-user-create
+#
+# 		cmd line format: 		--safe-user-create
+# 		Type: 					Boolean
+# 		Default: 				FALSE
+#
+# 		If this option is enabled, a user cannot create new MySQL users by using the GRANT statement unless the user has the INSERT privs
+# 		for the mysql.user table or any column in the table.
+#
+# 		If you want a user to have the ability to create new users that have those privs that the user has the right to grant,
+# 		grant the user the following privs:
+#
+# 		GRANT INSERT(user) 	ON mysql.user 	TO 'user_name'@'host_name';
+#
+# 		Ensures that the user cannot change any priv columns directly - but has to use the GRANT statement to give privs to other users.
+#
+# --secure-auth
+#
+# 		cmd line format: 		--secure-auth
+# 		DEPRECATED: 			8.0.3
+# 		Sys var: 				secure_auth
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					BOOLEAN
+# 		Default: 				ON
+# 		VALID: 					ON
+#
+# --secure-file-priv=<dir name>
+#
+# 		cmd line format: 		--secure-file-priv=dir_name
+# 		Sys var: 				secure_file_priv
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default: 				platform specific
+# 		Valid: 					empty string, dirname, NULL
+#
+# 		Sets the secure file priv sys var - which is used to limit the effect of data import and export operations,
+# 		such as those performed by the LOAD DATA and SELECT ... INTO OUTFILE statements and the LOAD FILE() function.
+#
+# --shared-memory
+#
+# 		cmd line format: 		--shared-memory[={0,1}]
+# 		Sys var: 				shared_memory
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Platform: 				Windows
+# 		Type: 					Boolean
+# 		Default: 				FALSE
+#
+# 		Enables shared-memory connections by local clients. Can only be done on Windows.
+#
+# --shared-memory-base-name=<name>
+#
+# 		cmd line format: 		--shared-memory-base-name=name
+# 		System var: 			shared_memory_base_name
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Platform: 				Windows
+# 		Type: 					String
+# 		Default: 				MYSQL
+#
+# 		Name of the shared memory to use for shared-memory connections. Case sensitive.
+#
+# --skip-concurrent-insert
+#
+# 		Turns off the ability to select and insert at the same time on MyISAM tables. 
+#
+# --skip-event-scheduler
+#
+# 		cmd line format: 		--skip-event-scheduler
+# 									--disable-event-scheduler
+#
+# 		Turns the Event Scheduler OFF. Not the same as disabling the event scheduler - that would require --event-scheduler=DISABLED;
+#
+# --skip-grant-tables
 #
 # 		https://dev.mysql.com/doc/refman/8.0/en/server-options.html
+# 				
+# 		https://dev.mysql.com/doc/refman/8.0/en/server-options.html
+#
