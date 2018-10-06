@@ -11687,7 +11687,195 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # --skip-grant-tables
 #
-# 		https://dev.mysql.com/doc/refman/8.0/en/server-options.html
-# 				
+# 		cmd line format: 		--skip-grant-tables
+# 		Type: 					Boolean
+# 		Default: 				FALSE
+#
+# 		Causes the server to start without using the privilege system at all, which gives
+# 		anyone with access to the server unrestricted access to all DBs.
+#
+# 		Can cause a running server to start using the grant tables again by executing mysqladmin flush-privileges
+# 		or mysqladmin reload cmd from a sys shell or by issuing a MySQL FLUSH PRIVILEGES statement after connecting to the server.
+#
+# 		If the server is started with the --skip-grant-tables option to disable authentication checks, the server enables
+# 		--skip-networking automatically to prevent remote connections.
+#
+# 		Also causes the server to suppress during its startup sequence the loading of user-defined functions (UDFs),
+# 		scheduled events and plugins that were installed with the INSTALL PLUGIN statement.
+#
+# 		To cause plugins to be loaded anyway, use the --plugin-load option: --skip-grant-tables also causes the 
+# 		disabled_storage_engines sys var to have no effect.
+#
+# 		Does not cause loading of server components to be suppressed during server startup.
+#
+# 		FLUSH PRIVILEGES might be executed implicitly by other actions performed after startup.
+# 		For example, mysql_upgrade flushes the priv during the upgrade procedure.
+#
+# --skip-host-cache
+#
+# 		cmd line format: 		--skip-host-cache
+#
+# 		Disable use of the internal host cache for faster name-to-IP resolution.
+# 		In this case, the server performs a DNS lookup every time a client connects.
+#
+# 		Use of --skip-host-cache is similar to setting the host_cache_size sys var to 0,
+# 		but host_cache_size is more flexible - due to ability of integration of resizing, enabling or disabling,
+# 		host cache at runtime, not just at server startup.
+#
+# 		If you start the server with --skip-host-cache - that does not prevent changes to the value of host_cache_size,
+# 		but such changes have no effect and the cache is not re-enabled even if host_cache_size is set larger than 0.
+#
+# --skip-innodb
+#
+# 		Disable the InnoDB storage engine. In this case, because the default storage engine is InnoDB, the server will not
+# 		start unless you also use --default-storage-engine and --default-tmp-storage-engine to set the default to some other
+# 		engine for both permanent and TEMPORARY tables.
+#
+# 		The InnoDB storage engine cannot be disabled, and the --skip-innodb option is deprecated and has no effect.
+# 		Results in a warning.
+#
+# --skip-name-resolve
+#
+# 		cmd line format: 		--skip-name-resolve
+# 		Sys Var: 				skip_name_resolve
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		Do not resolve host names when checking client connections. Use only IP addresses.
+# 		If used - all Host column values in the grant table must be IP addresses.
+#
+# 		Depending on the network configuration of your system and the Host values for your accounts,
+# 		clients may need to connect using an explicit --host option - such as --host=127.0.0.1 or --host=::1
+#
+# 		Example: If on, 127.0.0.1 does not resolve to localhost. Must be designated with:
+#
+# 		CREATE USER 'root'@'127.0.0.1' IDENTIFIED BY 'root-password';
+# 		CREATE USER 'root'@'::1' IDENTIFIED BY 'root-password';
+#
+# --skip-networking
+#
+# 		cmd line format: 		--skip-networking
+# 		Sys Var: 				skip_networking
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+#
+# 		Do not listen for TCP/IP connections at all. All interactions with mysqld must be done through named pipes or shared memory or Unix sockets.
+# 		Recommended for systems with only local clients permitted.
+#
+# 		If the server is started with the --skip-grant-tables option to disable authentication checks, the server enables --skip-networking to prevent remote connections.
+#
+# --ssl*
+#
+# 		Specify whether to permit clients to connect using SSL and indicate where to find SSL keys/Certs.
+#
+# --standalone
+#
+# 		cmd line format: 		--standalone
+# 		Platform: 				Windows
+#
+# 		Instructs MySQL server to not run as a service.
+#
+# --super-large-pages
+#
+# 		cmd line format: 		--super-large-pages
+# 		Platform: 				Solaris
+# 		Type: 					Boolean
+# 		Default: 				FALSE
+#
+# 		Standard use of large pages in MySQL attempts to use the largest size supported, up to 4MB.
+# 		Under Solaris, super large pages is up to 256MB of pages.
+#
+# 		Can be turned on/off with: --super-large-pages or --skip-super-large-pages option.
+#
+# --symbolic-links, --skip-symbolic-links
+#
+# 		cmd line format: 		--symbolic-links
+# 		Deprecated: 			8.0.2
+# 		Type: 					Boolean
+# 		Default (8.0.2 >=) 	OFF
+# 		Default (8.0.1 <=) 	ON
+#
+# 		Enable or disable symbolic link support. On Unix, enabling symbolic links means that you can link a MyISAM index file or
+# 		data file to another dir with the INDEX DIR or DATA DIR option of the CREATE TABLE statement.
+#
+# 		If deleting or renaming the table - the files that its symbolic links point to also are deleted or renamed.
+#
+# 		Symbolic link support, --symbolic-links - is deprecated. Disabled by default. have_symlink sys var is also deprecated
+# 		Does not pertain to Windows.
+#
+# --skip-show-database
+#
+# 		cmd line format: 		--skip-show-database
+# 		Sys Var: 				skip_show_database
+# 		Scope: 					Global
+#		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+#
+# 		This option sets the skip_show_database sys var that controls who is permitted to use the SHOW DATABASE.
+#
+# --skip-stack-trace
+#
+# 		cmd line format: 		--skip-stack-trace
+#
+# 		Do not write stack traces. Useful when running mysqld under a debugger.
+# 		On some systems, you also must use this option to get a core file.
+#
+# --slow-query-log[={0|1}]
+#
+# 		cmd line format: 		--slow-query-log
+# 		Sys Var: 				slow_query_log
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		Specify the initial slow query log state. With no argument or an argument of 1, the --slow-query-log
+# 		option enables the log. If omitted or given 0 - disables the log.
+#
+# --slow-start-timeout=<timeout>
+#
+# 		cmd line format: 		--slow-start-timeout=#
+# 		Type: 					Integer
+# 		Default: 				15000
+#
+# 		Controls the Windows service control manager's service start timeout.
+# 		Max number of milliseconds that the service control manager waits before trying to kill the Windows service during startup.
+# 		Default value is 15000 (15 seconds).
+#
+# 		0 is no timeout. 
+#
+# --socket=<path>
+#
+# 		cmd line format: 		--socket={file_name|pipe_name}
+# 		Sys Var: 				socket
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default (Other)  		/tmp/mysql.sock
+# 		Default (Windows) 	MySQL
+#
+# 		On Unix, specifies the Unix socket file to use when listening for local connections.
+# 		The default value is /tmp/mysql.sock.
+#
+# 		If this option is given, the server creates the file in the data dir unless an absolute path name is given
+# 		to specify a different dir.
+#
+# 		On Windows, the option specifies the pipe name to use when listening for local connections that used a named pipe.
+# 		Default is MySQL (not case sensitive)
+#
+# --sql-mode=<value>[,<value>[,<value> ...]]
+#
+# 		Cmd line format: 		--sql-mode=name
+# 		Sys Var: 				sql_mode
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Set
 # 		https://dev.mysql.com/doc/refman/8.0/en/server-options.html
 #
