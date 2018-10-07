@@ -11877,5 +11877,620 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 		Dynamic: 				Yes
 # 		SET_VAR Hint: 			Yes
 # 		Type: 					Set
-# 		https://dev.mysql.com/doc/refman/8.0/en/server-options.html
+# 		Default (>= 8.0.11) 	ONLY_FULL_GROUP_BY STRICT_TRANS_TABLES NO_ZERO_IN_DATE NO_ZERO_DATE
+# 									ERROR_FOR_DIVISION_BY_ZERO NO_ENGINE_SUBSTITUTION
 #
+# 		Default (<= 8.0.4) 	ONLY_FULL_GROUP_BY STRICT_TRANS_TABLES NO_ZERO_IN_DATE
+# 									NO_ZERO_DATE ERROR_FOR_DIVISION_BY_ZERO NO_AUTO_CREATE_USER
+# 									NO_ENGINE_SUBSTITUTION
+# 		
+# 		Valid (>= 8.0.11) 	ALLOW_INVALID_DATES
+# 									ANSI_QUOTES
+# 									ERROR_FOR_DIVISION_BY_ZERO
+# 									HIGH_NOT_PRECEDENCE
+# 									IGNORE_SPACE
+# 									NO_AUTO_VALUE_ON_ZERO
+#
+# 									NO_BACKSLASH_ESCAPES
+# 									NO_DIR_IN_CREATE
+# 									NO_ENGINE_SUBSTITUTION
+# 									NO_UNSIGNED_SUBTRACTION
+# 									NO_ZERO_DATE
+#
+# 									NO_ZERO_IN_DATE
+# 									ONLY_FULL_GROUP_BY
+# 									PAD_CHAR_TO_FULL_LENGTH
+# 									PIPES_AS_CONCAT
+# 									REAL_AS_FLOAT
+#
+# 									STRICT_ALL_TABLES
+# 									STRICT_TRANS_TABLES
+# 									TIME_TRUNCATE_FRACTIONAL
+#
+# 		Valid Values (>= 8.0.1, <= 8.0.4)
+# 	
+# 									ALLOW_INVALID_DATES
+# 									ANSI_QUOTES
+# 									ERROR_FOR_DIVISION_BY_ZERO
+# 									HIGH_NOT_PRECEDENCE
+# 									IGNORE_SPACE
+# 									NO_AUTO_CREATE_USER
+# 									NO_AUTO_VALUE_ON_ZERO
+# 									NO_BACKSLASH_ESCAPES
+# 									NO_DIR_IN_CREATE
+# 									NO_ENGINE_SUBSTITUTION
+# 									NO_FIELD_OPTIONS
+# 									NO_KEY_OPTIONS
+#
+# 									NO_TABLE_OPTIONS
+# 									NO_UNSIGNED_SUBTRACTION
+# 									NO_ZERO_DATE
+# 									NO_ZERO_IN_DATE
+# 									ONLY_FULL_GROUP_BY
+# 									
+# 									PAD_CHAR_TO_FULL_LENGTH
+# 									PIPES_AS_CONCAT
+# 									REAL_AS_FLOAT
+# 									STRICT_ALL_TABLES
+# 									STRICT_TRANS_TABLES
+# 									TIME_TRUNCATE_FRACTIONAL
+#
+# 		Valid (8.0) 			ALLOW_INVALID_DATES
+# 									ANSI_QUOTES
+# 									ERROR_FOR_DIVISION_BY_ZERO
+# 									HIGH_NOT_PRECEDENCE
+# 									IGNORE_SPACE
+# 									NO_AUTO_CREATE_USER
+# 									NO_AUTO_VALUE_ON_ZERO
+# 									NO_BACKSLASH_ESCAPES
+#
+# 									NO_DIR_IN_CREATE
+# 									NO_ENGINE_SUBSTITUTION
+# 									NO_FIELD_OPTIONS
+# 									NO_KEY_OPTIONS
+# 									NO_TABLE_OPTIONS
+#
+# 									NO_UNSIGNED_SUBTRACTION
+# 									NO_ZERO_DATE
+# 									NO_ZERO_IN_DATE
+# 									ONLY_FULL_GROUP_BY
+# 									PAD_CHAR_TO_FULL_LENGTH
+# 									
+# 									PIPES_AS_CONCAT
+# 									REAL_AS_FLOAT
+# 									STRICT_ALL_TABLES
+# 									STRICT_TRANS_TABLES
+#
+# The above refers to setting of the SQL mode.
+#
+# The startup can configure these during install process, or option files that the server reads at startup.
+#
+# --sysdate-is-now
+#
+# 	cmd line format: 			--sysdate-is-now
+# 	Type: 						Boolean
+# 	Default: 					FALSE
+#
+# 	SYSDATE() by default returns the time at which it executes, not the time at which the statement in which
+# 	it occurs begins executing.
+#
+# 	This differs from the be´havior of NOW().
+#
+# 	Causes the SYSDATE() to be an alias for NOW().
+#
+# --tc-heuristic-recover={COMMIT|ROLLBACK}
+#
+# 	cmd line format: 			--tc-heuristic-recover=name
+# 	Type: 						Enumeration
+# 	Default: 					COMMIT
+# 	Valid: 						COMMIT, ROLLBACK
+#
+# 	Type of decision to use in the heuristic recovery process. 
+# 	To use this option, two or more storage engines that support XA transactions must be installed.
+#
+# --temp-pool
+#
+# 	cmd line format: 			--temp-pool
+# 	Deprecated: 				Yes (Removed in 8.0.1)
+# 	Type: 						Boolean
+# 	Default (other): 			FALSE
+# 	Default (Linux): 			TRUE
+# 
+# 	Removed in 8.0.1
+#
+# --transaction-isolation=<level>
+#
+# 	cmd line format: 			--transaction-isolation=name
+# 	Sys Var: 					transaction_isolation
+# 	Scope: 						Global, Session
+# 	Dynamic: 					Yes
+# 	SET_VAR Hint: 				No
+# 	Type: 						Enumeration
+# 	Default: 					REPEATABLE-READ
+# 	Valid: 						READ-UNCOMMITTED
+# 									READ-COMMITTED
+# 									REPEATABLE-READ
+# 									SERIALIZABLE
+#
+# 	Sets the default transaction isolation level. The <level> value can be:
+# 	READ-UNCOMMITTED, READ-COMMITTED, REPEATABLE-READ or SERIALIZABLE.
+#
+# 	The default transaction isolation level can also be set at runtime using the SET TRANSACTION
+# 	statement or by setting the transaction_isolation SYS VAR.
+#
+# --transaction-read-only
+#
+# 	cmd line format: 			--transaction-read-only
+# 	Sys Var: 					transaction_read_only
+# 	Scope: 						Global, Session
+# 	Dynamic: 					Yes
+# 	SET_VAR Hint: 				No
+# 	Type: 						Boolean
+# 	Default: 					OFF
+#
+# 	Sets the default transaction access mode. By default, read-only mode is disabled, so the mode is read/write.
+#
+# 	To set the default transaction access mode at runtime, use the SET TRANSACTION statement or set the
+# 	transaction read only SYS VAR.
+#
+# --tmpdir=<dir name>, -t <dir_name>
+#
+# 	cmd line format: 			--tmpdir=dir_name
+# 	Sys Var: 					tmpdir
+# 	Scope: 						Global
+# 	Dynamic: 					No
+# 	SET_VAR Hint: 				No
+# 	Type: 						Dir name
+#
+# 	Path of the dir to use for creating temp files. Might be useful if your default /tmp dir resides on a platform that is too small to hold temp tables.
+# 	Accepts several paths that are used in round-robin typing.
+#
+# 	Separation char: : on Unix, ; on Windows.
+#
+# 	If the MySQL server is acting as a replication slave - you should not set --tmpdir to point to a dir on a memory-based file system or to a dir
+# 	that is cleared when the server host restarts.
+#
+# 	A replication slave needs some of its temp files to survive a machine restart so that it can replicate temp tables or LOAD DATA INFILE operations.
+# 	If files in the temp file dir are lost when the server restarts, replication fails.
+#
+# --user={<user name>|<user id>}, -u {<user_name>|<user_id>}
+#
+# 	cmd line format: 			--user=name
+# 	Type: 						String
+#
+# 	Run the mysqld server as the user having the name <user_name> or the numeric user ID <user_id>.
+# 	"User" here is sys acc, not MySQL users in grant tables.
+#
+# 	Mandatory when starting mysqld as root. Server changes its ID during its startup sequence, causing it to run
+# 	as that particular user rather than as root.
+#
+# 	To avoid a possible security hole where a user adds a --user=root option to my.cnf file,
+# 	mysqld only runs with the first --user - attempting several causes a warning.
+#
+# 	/etc/my.cnf and $MYSQL_HOME/my.cnf run before CMD line. Thus, put another user than root in /etc/my.cnf (found before any other)
+#
+# --verbose, -v - Use this option with the --help option for detailed help.
+#
+# --version, -V - Display version info and exit.
+#
+# The following pertains to Server System Variables and more coverage about their inner workings.
+#
+# Sys vars can be set at server startup using options on the cmd line or in an option file.
+#
+# Most of them can be changed dynamically at runtime using the SET statement, which enables you to modify
+# operation of the server without having to stop and restart it.
+#
+# We can also use Sys var values in expressions.
+#
+# At runtime, setting a global sys var value normally requires the SYSTEM VARIABLES ADMIN or SUPER privilege.
+# Setting a session sys var normally reqs no privs - can be done by any user, there are exceptions though.
+#
+# based on current versioning (option files, compiled in defaults): mysqld --verbose --help
+#
+# Based on compiled in defaults, ignoring option files: mysqld --no-defaults --verbose --help
+# 
+# Current values run on server can also be seen with SHOW VARIABLES or the Performance Schema sys var tables.
+#
+# In terms of options, 1 and 0 act as logical booleans (TRUE and FALSE, respectively)
+#
+# Relative paths pertain to the data dir - such as /var/mysql/data
+#
+# activate_all_roles_on_login
+#
+# 		cmd line format: 		--activate-all-roles-on-login
+# 		Introduced: 			8.0.2
+# 		Sys Var: 				activate_all_roles_on_login
+# 		Scope: 					Global
+# 		Dynamic: 				yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		Whether to enable automatic activation of all granted roles when users log in to the server:
+#
+# 			If activate_all_roles_on_login is enabled, the server activates all roles granted to each account at login time.
+# 			This takes precedence over default roles specified with SET DEFAULT ROLE.
+#
+# 			If activate_all_roles_on_login is disabled, the server activates the default roles specified with SET DEFAULT ROLE, if any, at login time.
+#
+# 			Granted roles include those granted explicitly to the user and those named in the mandatory_roles SYS VAR.
+#
+# 			activate_all_roles_on_login applies only at login time, and at the beginning of execution for stored programs and views that execute
+# 			in definer context.
+#
+# 			To change the active roles within a session, use SET_ROLE. 
+#        To change the active roles for a stored program, the program body should execute SET ROLE.
+#
+# authentication_windows_log_level
+#
+# 		cmd line format: 		--authentication-windows-log-level
+# 		Introduced: 			8.0.11
+# 		Sys var: 				authentication_windows_log_level
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				2
+# 		Min value: 				0
+# 		Max value: 				4
+#
+# 		Available only if the authentication_windows Windows auth plugin is enabled and debugging code is enabled.
+#
+# 		Sets the log level for Windows auth Plugin:
+#
+# 		0 		No logging
+# 		1 		Log only error messages
+# 		2 		Log level 1 messages and warning messages
+# 		3 		Log level 2 messages and information notes
+# 		4 		log level 3 messages and debug messages
+#
+# authentication_windows_use_principal_name
+# 		
+# 		cmd line format: 		--authentication-windows-use-principal-name
+# 		Introduced: 			8.0.11
+# 		Sys Var: 				authentication_windows_use_principal_name
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				ON
+#
+# 		Is available only if the authentication_windows Windows auth plugin is enabled.
+#
+# 		A client that authenticates using the InitSecurityContext() function should provide a string identifying
+# 		the service to which it connects.
+#
+# 		MySQL uses the principal name (UPN) of the account under which the server is running. 
+# 		The UPN has the form <user_id@computer_name> and need not be registered anywhere to be used.
+#
+# 		The UPN is sent by the server at the beginning of authentication handshake.
+#
+# 		This variable controls whether the server sends the UPN in the initial challenge.
+# 		By default, the variable is enabled.
+#
+# 		For security reasons, it can be disabled to avoid sending the server's account name to a client in clear text.
+# 		If the variable is disabled, the server always sends a 0x00 byte in the first challenge, the client does not
+# 		specify <targetName>, and as a result - NTLM authentication is used.
+#
+# 		If the server fails to obtain its UPN (which will happen primarily in environments that do not support Kerberos authentication),
+# 		the UPN is not sent by the server and NTLM authentication is used.
+#
+# autocommit
+#
+# 		cmd line format: 	--autocommit[=#]
+# 		Sys Var: 			autocommit
+# 		Scope: 				Global, Session
+# 		Dynamic: 			Yes
+# 		SET_VAR Hint: 		No
+# 		Type: 				Boolean
+# 		Default: 			ON
+#
+# 		The autocommit mode. If set to 1, all changes to a table take effect immediately. 
+# 		If set to 0 - you must use COMMIT to accept a transaction or ROLLBACK to cancel it.
+#
+# 		If autocommit is 0 and you change it to 1, MySQL performs an automatic COMMIT of any open transaction.
+# 		Another way to begin a transaction is to use a START TRANSACTION or BEGIN statement.
+#
+# 		By default, client connections begin with autocommit set to 1. To cause clients to begin with a default of 0,
+# 		set the global autocommit value by starting the server with the --autocommit=0 option.
+#
+# 		Option file usage:
+#
+# 		[mysqld]
+# 		autocommit=0
+#
+# automatic_sp_privileges
+#
+# 		Sys Var: 			automatic_sp_privileges
+# 		Scope: 				Global
+# 		Dynamic: 			Yes
+# 		SET_VAR Hint: 		No
+# 		Type: 				Boolean
+# 		Default: 			TRUE
+#
+# 		When set to 1 (Default), the server automatically grants the EXECUTE and ALTER ROUTINE privs to the
+# 		creator of a stored routine - if the user cannot already execute and alter or drop the routine.
+#
+# 		(The ALTER ROUTINE priv is required to drop the routine). The server also automatically drops those 
+# 		privs from the creator when the routine is dropped. If automatic_sp_privileges is 0, the server does
+# 		not automatically add or drop these privs.
+#
+# 		The creator of a routine is the account used to execute the CREATE statement for it.
+# 		This might not be the same as the account named as the DEFINER in the routine def.
+#
+# auto_generate_certs
+#
+# 		cmd line format: 		--auto-generate-certs[={OFF|ON}]
+# 		System Var: 			auto_generate_certs
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				ON
+#
+# 		This variable is available if the server was compiled using OpenSSL. Controls whether 
+# 		the server autogenerates SSL key and certificate files in the data dir, if they do not already exist.
+#
+# 		At startup, the server automatically generates server-side and client-side SSL cert and key files in the data dir
+# 		if the auto_generate_certs SYS Var is enabled, no SSL options other than --ssl is on and the server-side SSL files are 
+# 		missing from the data dir.
+#
+# 		These files enable secure client connections using SSL.
+#
+# 		The sha256_password_auto_generate_rsa_keys and caching_sha2_password_auto_generate_rsa_keys SYS vars are related,
+# 		but control autogeneration of RSA key-pair files for secure PWs using RSA over unencrypted connections.
+#
+# avoid_temporal_upgrade
+#
+# 		cmd line format: 		--avoid-temporal-upgrade={OFF|ON}
+# 		Deprecated: 			Yes
+# 		Sys var. 				avoid_temporal_upgrade
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		This variable controls whether ALTER TABLE implicitly upgrades temporal columns found to be in pre-5.6.4 format
+# 		(TIME, DATETIME and TIMESTAMP columns without support for fractional seconds precision)
+#
+# 		Upgrading such columns require a table rebuild, which prevents any use of fast alternations that might otherwise
+# 		apply to the operation to be performed.
+#
+# 		This variable is disabled by default - Enabling it causes ALTER TABLE not to rebuild temporal columns and thereby be able to
+# 		take advantage of fast alterations.
+#
+# 		DEPRECATED, will be removed.
+#
+# back log
+#
+# 		Sys var: 				back_log
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				-1 (autosizing)
+# 		min: 						1
+# 		max: 						65535
+#
+#		Number of oustanding connection requests MySQL can have.
+# 		This comes into play when the main MySQL thread gets very many connection requests in a very short time.
+# 		It takes a small gap of time for the main thread to then check the connection and start a new thread.
+#
+# 		The back_log indicates how many requests can be stacked during this short time before MySQL momentarily stops answering new requests.
+#
+# 		Only increase this if you expect a large number of connections in a short amount of time.
+#
+# 		Basically the size of the listen queue for incoming TCP/IP connections.
+#
+# 		OS has it's own limitations. Cannot be set higher than this limit.
+#
+# 		defaults to max connections, adjusts max permitted number of connections.
+#
+# 		the Unix call of listen() system call has more details.
+#
+# basedir
+#
+# 		cmd line format: 		--basedir=dir_name
+# 		Sys Var: 				basedir
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Dir name
+# 		Default (8.0.2 >=) 	parent of mysqld install dir
+# 		default (8.0.1 <=) 	configuration-dependant default
+#
+# 		Path of the MySQL install base dir
+#
+# big_tables
+#
+# 		Cmd line format: 		--big-tables
+# 		Sys Var: 				big_tables
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		If set to 1 - all temp tables are stored on disk rather than in memory.
+# 		This is a little slower, but the error "The table <tbl_name> is full" does not occur for SELECT operations that require
+# 		a large temp table.
+#
+# 		Default value for a new connection is 0 (use in-memory temp tables).
+# 		Normally, you should never need to set this Var.
+#
+# 		When in-memory internal temporary tables are managed by the TempTable storage engine 
+# 		(the default), and max amount of memory that can be occupied by the TempTable storage engine is exceeded,
+# 		the TempTable storage engine starts storing data to temp files on Disk.
+#
+# 		When in-memory temporary tables are managed by the MEMORY storage engine,
+# 		in-memory tables are automatically converted to disk-based tables as required.
+#
+# bind_address
+#
+# 		cmd line format: 		--bind-address=addr
+# 		Sys Var: 				bind_address
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Defaults: 				*
+#
+# 		Value of the --bind-address option
+#
+# block_encryption_mode
+#
+# 		cmd line format: 		--block-encryption-mode=#
+# 		Sys Var: 				block_encryption_mode
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default: 				aes-128-ecb
+#
+# 		This controls the block encryption mode for block-based algorithms such as AES.
+# 		It affects encryption for AES_ENCRYPT() and AES_DECRYPT().
+#
+# 		block_encryption_mode takes a value in aes-<keylen>-<mode> format, where <keylen> is the key length
+# 		in bits and <mode> is the encryption mode.
+#
+# 		The value is not case-sensitive. Permitted <keylen> values are 128, 192 and 256.
+#
+# 		Permitted encryption depend on whether MySQL was compiled using OpenSSL or wolfSSL:
+#
+# 			For OpenSSL, permitted <mode> values are: ECB, CBC, CFB1, CFB8, CFB128, OFB
+#
+# 			For wolfSSL, permitted <mode> values are: ECB, CBC
+#
+# 		For example - the following is 256 bits key length with AES encryption with the CBC mode:
+#
+# 			SET block_encryption_mode = 'aes-256-cbc';
+#
+# 		An error occurs for attempts to set block_encryption_mode to a value containing an unsupported key length
+# 		or a mode that the SSL lib does not support.
+#
+# bulk_insert_buffer_size
+#
+# 		cmd line format: 		--bulk-insert-buffer-size=#
+# 		Sys Var: 				bulk_insert_buffer_size
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Integer
+# 		Default: 				8388608
+# 		Min value: 				0
+# 		Max value (64-bit) 	a lot
+# 		Max value (32-bit) 	less
+#
+# 		MyISAM uses a special tree-like cache to make bulk inserts faster for INSERT ... SELECT, INSERT ... VALUES (...),
+# 		(...), ... and LOAD DATA INFILE when adding data to nonempty tables.
+#
+# 		This variable limits the size of the cache tree in bytes per thread. 
+# 		Setting it to 0 disables this optimization. Defaults to 8MB.
+#
+# 		(MySQL 8.0.14 >=) : Setting the session value of this SYS var is a restricted operation.
+# 								  The session user must have privs sufficient to set restricted session vars.
+#
+# caching_sha2_password_auto_generate_rsa_keys
+#
+# 		cmd line format: 		--caching-sha2-password-auto-generate-rsa-keys[={OFF|ON}]
+# 		Introduced: 			8.0.4
+# 		Sys Var: 				caching_sha2_password_auto_generate_rsa_keys
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				ON
+#
+# 		Available if the server was compiled using OpenSSL. The server uses it to determine whether to autogenerate
+# 		RSA private/public key-pair files in the data dir if they do not already exist.
+#
+# 		At startup, the server automatically generates RSA private/public key-pair files in the data dir if all of the following is true:
+#
+# 			The sha256_password_auto_generate_rsa_keys or caching_sha2_password_auto_generate_rsa_keys sys var is Enabled
+#
+# 			No RSA options are specified
+#
+# 			No RSA files are in the data dir.
+#
+# 			The key-pair files enable secure password exchange using RSA over unencrypted connections for accounts authenticated
+# 			by the sha256_password or caching_sha2_password plugin
+#
+# 			auto_generate_certs SYS var is related but controls autogeneration of SSL cert and key files needed for Secure connections using SSL.
+#
+# caching_sha2_password_private_key_path
+#
+# 		cmd line format: 			--caching-sha2-password-private-key-path=file_name
+# 		introduced: 				8.0.3
+# 		Sys Var: 					caching_sha2_password_private_key_path
+# 		Scope: 						Global
+# 		Dynamic: 					No
+# 		SET_VAR Hint: 				No
+# 		Type: 						File Name
+# 		Default: 					private_key.pem
+#
+# 		This variable specifies the path name of the RSA private key file for the caching_sha2_password auth plugin.
+# 		If relative, it's relative to server data dir. File must be in PEM format.
+#
+# 		Because a private key is stored within - access should be restricted to MySQL.
+#
+# caching_sha2_password_public_key_path
+#
+# 		Cmd line format: 			--caching-sha2-password-public-key-path=file_name
+# 		Introduced: 				8.0.3
+# 		Sys Var: 					caching_sha2_password_public_key_path
+# 		Scope: 						Global
+# 		Dynamic: 					No
+# 		SET_VAR Hint: 				No
+# 		Type: 						File name
+# 		Default: 					public_key.pem
+#
+# 		Same as above, except for a public key.
+#
+# character_set_client
+#
+# 		Sys var: 					character_set_client
+# 		Scope: 						Global, Session
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						String
+# 		Default (>= 8.0.1) 		utf8mb4
+# 		Default (8.0.0) 			utf8
+#
+# 		Char set for statements that arrive from the client.
+#
+# 		The session value of this var is set using the char set requested by the client when the client
+# 		connects to the server.
+#
+# 		Many clients support a --default-character-set option to enable this char set to be specified explicitly.
+#
+# 		The global value of the variable is used to set the session value in cases when the client-requested value is unknown
+# 		or not available - or the server is configured to ignore client requests
+#
+# 		examples:
+#
+# 		The client requests a char set not known to the server. For example, a japanese-enabled client requests sjis when connecting
+# 		to a server not configured with sjis support.
+#
+# 		The client is from a version of MySQL older than MySQL 4.1 - i.e, does not require a char set
+#
+# 		mysqld started with the --skip-character-set-client-handshake option - ignores client char set configs.
+#
+# 		Some char sets are invalid for client char sets. Trying to use them as the character_set_client value produces an error.
+#
+# character_set_connection
+#
+# 		Sys var: 				character_set_connection
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default (>= 8.0.1) 	utf8mb4
+# 		Default (8.0.0) 		utf8
+# 
+# 		The char set used for literals specified without a char set introducer and for number-to-string conversion.
+#
+# character_set_database
+#
+# 		
+# https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
