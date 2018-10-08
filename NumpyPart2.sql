@@ -12492,5 +12492,413 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # character_set_database
 #
+# 		Sys var: 				character_set_database
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default (>= 8.0.1) 	utf8mb4
+# 		Default (8.0.0) 		latin1
+# 		Footnote: 				Dynamic - but server should be designating this value by itself.
 # 		
+# 		The char set used by the default DB. The server sets this var whenever the default DB changes.
+# 		If there is no default DB, the var has the same value as character_set_server.
+#
+# 		(8.0.14 >=) setting the session value of this system variable is a restricted operation.
+# 		The session user must have privileges sufficient to set restricted session variables.
+#
+# 		The global character_set_database and collation_database SYS vars are deprecated, will be removed.
+#
+# 		Since they are deprecated - attempting to assign them causes a warning.
+#
+# 		The session vars is read only in the future.
+#
+# 		Can still access for reading purposes in relation to DB charset and collation.
+#
+# character_set_filesystem
+#
+# 		cmd line format: 			--character-set-filesystem=name
+# 		Sys var: 					character_set_filesystem
+# 		Scope: 						Global, Session
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						String
+# 		Default: 					binary
+#
+# 		The file system char set. Used to interpret string literals that refers to file names, such as 
+# 		in the LOAD_DATA_INFILE and SELECT_..._INTO_OUTFILE statements and the LOAD_FILE() function.
+#
+# 		Such file names are converted from character_set_client to character_set_filesystem before the file opening
+# 		attempt occurs.
+#
+# 		Default is binary, which means no conversion occurs. 
+# 		For systems on which multibyte file names are permitted, a different value may be used.
+#
+# 		For example, if using UTF-8 in the system - we can set this to 'utf8mb4'
+#
+# 		(MySQL 8.0.14)	- This is a restricted operation - session user must have privs sufficient to set restricted session vars.
+#
+# character_set_results
+#
+# 		Sys Var: 				character_set_results
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default (>= 8.0.1) 	utf8mb4
+# 		Default (8.0.0) 		utf8
+#
+# 		The char set used for returning query results to the client.
+# 		This includes result data such as column values, result metadata such as column names and error messages.
+#
+# character_set_server
+#
+# 		cmd line format: 		--character-set-server
+# 		Sys Var: 				character_set_server
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default (>= 8.0.1) 	utf8mb4
+# 		Default (8.0.0) 		latin1
+#
+# 		The servers default char set
+#
+# character_set_system
+#
+# 		Sys var: 				character_set_system
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default: 				utf8
+#
+# 		The char set used by the server for storing identifiers. Value is always utf8.
+#
+# character_sets_dir
+#
+# 		cmd line format: 		--character-sets-dir=dir_name
+# 		Sys Var: 				character_sets_dir
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Dir name
+#
+# 		The dir where char sets are installed.
+#
+# check_proxy_users
+#
+# 		cmd line format: 		--check-proxy-users=[={OFF|ON}]
+# 		Sys var: 				check_proxy_users
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		Some authentication plugins implement proxy user mapping for themselves (for example, the PAM and Windows auth plugins)
+# 		Other authentication plugins do not support proxy users by default.
+#
+# 		Of these, some can request that the MySQL server itself map proxy users according to granted proxy privs:
+#
+# 		mysql_native_password_sha256_password
+#
+# 		If the check_proxy_users SYS Var is enabled, the server performs proxy user mapping for any authentication plugins that make
+# 		such a request.
+#
+# 		However, it may also be necessary to enable plugin-specific system variables to take advantage of server proxy user mapping support:
+#
+# 			For the mysql_native_password plugin, enable mysql_native_password_proxy_users
+#
+# 			For the sha256_password plugin, enable sha256_password_proxy_users
+#
+# collation_connection
+#
+# 		Sys var: 				collation_connection
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+#
+# 		The collation of the connection char set. 
+#
+# 		collation_connection is important for comparisons of literal strings.
+#
+# 		For comparisons of strings with column values, collation_connection does not matter because columns
+# 		have their own collation, which has a higher collation precedence.
+#
+# collation_database
+#
+# 		Sys var: 				collation_database
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default (>= 8.0.1) 	utf8mb4_0900_ai_ci
+# 		Default (8.0.0) 		latin1_swedish_ci
+# 		Footnote: 				Dynamic - leave interaction to server.
+#
+# 		Collation used by the default DB. The server sets this var whenever the default DB changes.
+#
+# 		If there is no default DB, the var has the same value as collation server.
+#
+# 		(MySQL 8.0.14 >=) Setting the session value of this system variable is a restricted operation.
+# 								The session user must have privs sufficient to set restricted session vars.
+#
+# 		The global character_set_database and collation_database SYS var is deprecated and assignment causes a warning.
+# 		
+# 		Read only in the future.
+#
+# collation_server
+#
+# 		cmd line format: 		--collation-server
+# 		Sys Var: 				collation_server
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default (>= 8.0.1) 	utf8mb4_0900_ai_ci
+# 		Default (8.0.0) 		latin1_swedish_ci
+#
+# 		Servers default collation
+#
+# completion_type
+#
+# 		cmd line format: 		--completion-type=#
+# 		Sys Var: 				completion_type
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Enumeration
+# 		Default: 				NO_CHAIN
+# 		Valid values: 			NO_CHAIN, CHAIN, RELEASE, 0, 1, 2
+#
+# 		The transaction completion type. This variable can take the values shown in the following:
+#
+# 		Name 						DESC
+# 	
+# 		NO_CHAIN/0  			COMMIT and ROLLBACK are unaffected. Default value.
+#
+# 		CHAIN/1 					COMMIT and ROLLBACK are equivalent to COMMIT AND CHAIN and ROLLBACK AND CHAIN respectively.
+# 									(A new transaction starts immediately with the same isolation level as the just-terminated transaction)
+#
+# 		RELEASE/2 				COMMIT and ROLLBACK are equivalent to COMMIT RELEASE and ROLLBACK RELEASE, respectively.
+# 									(The server disconnects after terminating the transaction)
+#
+# 		completion_type affects transactions that begin with START_TRANSACTION or BEGIN and end with COMMIT or ROLLBACK.
+#
+# 		Does not apply to implicit commits. Does not apply to XA_COMMIT, XA_ROLLBACK or autocommit=1.
+#
+# concurrent_insert
+#
+# 		cmd line format: 		--concurrent-insert[=#]
+# 		Sys Var: 				concurrent_insert
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Enumeration
+# 		Default: 				AUTO
+# 		VALID: 					NEVER, AUTO, ALWAYS, 0, 1, 2
+#
+# 		If AUTO - MySQL permits INSERT and SELECT statements to run concurrently for MyISAM tables that have no free blocks in
+# 		the middle of the data file.
+#
+# 		If you start mysqld with --skip-new, this variable is set to NEVER.
+#
+# 		Values:
+#
+# 		Name 				DESC
+# 		
+# 		NEVER/0 			Disables concurrent inserts
+#
+# 		AUTO/1 			Enables concurrent insert for MyISAM tables that do not have holes.
+#
+# 		ALWAYS/2 		Enables concurrent inserts for all MyISAM tables - even those that have holes.
+# 							For a table with a hole - new rows are inserted at the end of the table if it is in
+# 							use by another thread. 
+#
+# 							Otherwise - MySQL aquires a normal write lock and inserts the row into the hole.
+#
+# connect_timeout
+#
+# 		cmd line format: 		--connect-timeout=#
+# 		Sys var: 				connect_timeout
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				10
+# 		Min: 						2
+# 		Max: 						31536000
+#
+# 		Number of seconds mysqld waits for a connection packet before responding with Bad handshake.
+# 		Defaults 10 seconds.
+#
+# 		Increasing the connect_timeout value might help if clients frequently encounters errors of the form:
+# 		
+# 		Lost connection to MySQL server at 'XXX', system error: <errno>
+#
+# core_file
+#
+# 		Sys var: 				core_file
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		Whether to write a core file if the server crashes. Is set by the --core-file option.
+#
+# 		Under some circumstances, disabling innodb_buffer_pool_in_core_file can cause core_file to be disabled.
+#
+# cte_max_recursion_depth
+#
+# 		cmd line format: 		--cte-max-recursion-depth=#
+# 		Introduced: 			8.0.3
+# 		Sys Var: 				cte_max_recursion_depth
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				1000
+# 		Min: 						0
+# 		Max: 						<a lot>
+#
+# 		The common table expression (CTE) maxium recursion depth.
+# 		The server terminates execution of any CTE that recurses more levels than the values of this var.
+#
+# datadir
+#
+# 		cmd line format: 		--datadir=dir_name
+# 		Sys Var: 				datadir
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Dir name
+#
+# 		The path to the MySQL server data dir. Relative paths are resolved with respect to the CWD.
+# 		If the server will be started automatically (Where you can't assume the CWD) - specify datadir as absolute
+#
+# debug
+# 		
+# 		cmd line format: 		--debug[=debug_options]
+# 		Sys Var: 				debug
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default (Windows) 	d:t:i:O, \mysqld.trace
+# 		Default (Unix) 		d:t:i:o, /tmp/mysqld.trace
+#
+# 		Indicates the current debugging settings. 
+# 		Available only for servers built with debugging support.
+#
+# 		Initial value comes from the value of instances of the --debug option given at server startup.
+# 		Global and Session values may be set at runtime.
+#
+# 		Setting the session value of this Sys var is a restricted operation.
+# 		Must have permission to set restricted session vars.
+#
+# 		Example of modifying debugging status:
+#
+# 		SET debug = 'T'; #base declaration
+# 		SELECT @@debug; #Select the attribute
+#
+# 		@@debug
+# 		
+# 		T
+#
+# 		SET debug = '+P'; #Add P as part of operations
+# 		SELECT @@debug;
+# 
+# 		@@debug
+#
+# 		P:T
+#
+# 		SET debug = '-P'; #Remove P as part of operations
+# 		SELECT @@debug;
+#
+# 		T
+#
+# debug_sync
+#
+# 		Sys var: 		debug_sync
+# 		Scope: 			Session
+# 		Dynamic: 		Yes
+#	 	SET_VAR Hint: 	No
+# 		Type: 			String
+#
+# 		The variable is the user interface to the Debug Sync facility.
+# 		Use of Debug Sync requires that MySQL be configured with the -DENABLE_DEBUG_SYNC=1 CMake option.
+#
+# 		If Debug Sync is not compiled in, this sys var is not available.
+#
+# 		The global var value is read only and indicates whether the facility is enabled.
+# 		By default, Debug Sync is disabled and the value of debug_sync is OFF.
+#
+# 		If the server is started with --debug-sync-timeout=<N>, where <N> is a timeout value greater than 0,
+# 		Debug Sync is enabled and the value of debug_sync is ON - <current signal> (the signal name)
+#
+# 		<N> becomes the default timeout for individual synchronization points.
+#
+# 		The session value can be read by any user and will have the same value as the global variable.
+# 		The session value can be set to control synchronization points.
+#
+# 		Setting the session value of this Sys Var is a restricted operation.
+#
+# 		Covered more in terms of MySQL internals: Test Synchronization
+#
+# default_authentication_plugin
+#
+# 		cmd line format: 				--default-authentication_plugin=plugin_name
+# 		Sys Var: 						default_authentication_plugin
+# 		Scope: 							Global
+# 		Dynamic: 						No
+# 		SET_VAR Hint: 					No
+# 		Type: 							Enumeration
+#
+# 		Default (>= 8.0.4) 			caching_sha2_password
+#
+# 		Default (<= 8.0.3) 			mysql_native_password
+#
+# 		Valid (>= 8.0.3) 				mysql_native_password
+# 											sha256_password
+# 											caching_sha2_password
+#
+# 		Valid (<= 8.0.2) 				mysql_native_password
+# 											sha256_password
+#
+# 		The default auth plugin. Permitted values are:
+#
+# 			mysql_native_password: Use MySQL native PWs.
+# 
+# 			sha256_password: Use SHA-256 PWs.
+#
+# 			caching_sha2_password: Use SHA-256 passwords. (Default auth plugin rather than mysql_native_password)
+#
+# 		This value affects these aspects of server operations:
+#
+# 			Determines which authentication plugin the server assigns to new accounts created by CREATE USER and GRANT statements that 
+# 			do not explicitly specify an authentication plugin.
+#
+# 			For an account created with the following statement, the server associates the account with the default auth plugin and assigns
+# 			the account the given PW - hashed as required by that plugin:
+#
+# 				CREATE USER ... IDENTIFIED BY 'cleartext password';
+#
+# default_collation_for_utf8mb4
+#
+# 		Introduced: 		8.0.11
+# 		Sys Var: 			default_collation_for_utf8mb4
+# 		Scope: 				Global, Session
+# 		Dynamic: 			Yes
+# 		SET_VAR Hint: 		No
+# 		Type: 				Enumeration
+# 		Valid: 				utf8mb4_0900_ai_ci 
+# 								utf8mb4_general_ci
+#
+# 		For interal use by replication. This SYS VAR is set to the default collation for the utf8mb4 char set.
+#
+# 		https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
+#
 # https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
