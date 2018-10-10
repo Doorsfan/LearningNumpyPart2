@@ -12899,6 +12899,656 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # 		For interal use by replication. This SYS VAR is set to the default collation for the utf8mb4 char set.
 #
-# 		https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
+# 		The value of the Var is replicated from a master to a slave so that the slave can correctly process data
+# 		originating from a master with a different default collation for utf8mb4.
 #
+# 		Primarily intended to support replication from MySQL 5.7 or older master servers to MySQL 8.0 slave server,
+# 		or group replication with a MySQL 5.7 primary node and one or more MySQL 8.0 secondaries.
+#
+# 		The default collation for utf8mb4 in MySQL 5.7 is utf8mb4_general_ci, but utf8mb4_0900_ai_ci in MySQL 8.0
+#
+# 		If the slave does not recieve a value for the Var, it assumes the master is from an earlier release and sets
+# 		the value to the previous default collation utf8mb4_general_ci.
+#
+# 		Is a restircted operation, requires privs to set.
+#
+# 		The default utf8mb4 collation is used in the following statements:
+#
+# 			SHOW COLLATION and SHOW CHARACTER SET.
+#
+# 			CREATE TABLE and ALTER TABLE having a CHARACTER SET utf8mb4 clause without a COLLATION clause, either for 
+# 			the table char set or for a column char set.
+#
+# 			CREATE DATABASE and ALTER DATABASE having a CHARACTER SET utf8mb4 clause without a COLLATION clause.
+#
+# 			Any statement containing a string literal of the form _utf8mb4'<some text>' without a COLLATION clause.
+#
+# default_password_lifetime
+#
+# 		cmd line format: 		--default-password-lifetime=#
+# 		Sys Var: 				default_password_lifetime
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				0
+# 		Min value: 				0
+# 		Max: 						65535
+#
+# 		Defines the global automatic password expiration policy. The default_password_lifetime value is 0,
+# 		which disables automatic password expiration.
+#
+# 		If the value of default_password_lifetime is a positive int <N>, it indicates the permitted password lifetime; PWs must be changed every <N> days.
+#
+# 		The global PW expiration policy can be overwritten with individual accounts using the PW expiration option of CREATE USER and ALTER USER statements.
+#
+# default_storage_engine
+#
+# 		cmd line format: 		--default-storage-engine=name
+# 		Sys var: 				default_storage_engine
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Enumeration
+# 		Default: 				InnoDB
+#
+# 		The default storage engine. This variable sets the storage engine for permanent tables only. To set the storage engine
+# 		for TEMPORARY tables, set the default_tmp_storage_engine SYS var.
+#
+# 		To see which storage engines are available and on - we can use SHOW ENGINES or query the INFORMATION_SCHEMA ENGINES table.
+#
+# 		If you disable the default storage engine at server startup, you must set the default engine for both permanent and TEMPORARY
+# 		tables to a different engine or the server won't start.
+#
+# default_tmp_storage_engine
+#
+# 		Cmd line format: 		--default-tmp-storage-engine=name
+# 		Sys Var: 				default_tmp_storage_engine
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Enumerator
+# 		Default: 				InnoDB
+#
+# 		The default storage engine for TEMPORARY tables (created with CREATE TEMPORARY TABLE)
+# 		To set the storage engine for permanent tables - set the default_storage_Engine SYS VAR.
+#
+# 		If you disable the default storage engine at server startup, you must set the default engine for both
+# 		permanent and TEMPORARY tables to a different engine or the server won't start.
+#
+# default_week_format
+#
+# 		cmd line format: 		--default-week-format=#
+# 		Sys Var: 				default_week_format
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				0
+# 		Min: 						0
+# 		Max: 						7
+#
+# 		Default mode value to use for the WEEK() function
+#
+# delay_key_write
+#
+# 		cmd line format: 		--delay-key-write[=name]
+# 		Sys Var: 				delay_key_write
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Enumeration
+# 		Default: 				ON
+# 		Valid: 					ON, OFF, ALL
+#
+# 		This option applies only to MyISAM tables. 
+#     It can have one of the following values to affect handling of the DELAY_KEY_WRITE table option that can be used in CREATE TABLE statements.
+#
+# 		OFF - 	DELAY_KEY_WRITE is ignored.
+# 		ON  - 	MySQL honors any DELAY_KEY_WRITE option specified in CREATE_TABLE statements. DEFAULT.
+# 		ALL - 	All new opened tables are treated as if they were created with the DELAY_KEY_WRITE option on.
+#
+# 		If this option is on, the key buffer is not flushed for the table on every index update - but only when the table is closed.
+# 		This speeds up writes on keys a lot - but if you use this feature, you should add automatic checking of all MyISAM tables by
+# 		starting with --myisam-recover-options , example:
+#
+# 		--myisam-recover-options=BACKUP, FORCE
+#
+# 		If external locking is on with --external-locking, there is no protection against index corruption for tables that use
+# 		delayed key writes.
+#
+# delayed_insert_limit
+#
+# 		cmd line format: 			--delayed-insert-limit=#
+# 		Deprecated: 				Yes
+# 		Sys var: 					delayed_insert_limit
+# 		Scope: 						Global
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						Integer
+# 		Default: 					100
+# 		Min: 							1
+# 		Max (64-bit) 				<a lot>
+# 		Max (32-bit) 				<less>
+#
+# 		This Sys var is deprecated (DELAYED inserts are not supported), will be removed.
+#
+# delayed_insert_timeout
+#
+# 		cmd line format: 			--delayed-insert-timeout=#
+# 		Deprecated: 				Yes
+# 		Sys Var: 					delayed_insert_timeout
+# 		Scope: 						Global
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						Integer
+# 		Default: 					300
+#
+# 		Deprecated, same as above.
+#
+# delayed_queue_size
+#
+# 		cmd line format: 			--delayed-queue-size=#
+# 		Deprecated: 				Yes
+# 		Sys Var: 					delayed_queue_size
+# 		Scope: 						Global
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						Integer
+# 		Default: 					1000
+# 		Min: 							1
+# 		Max (64-bit) 				<a lot>
+# 		Max (32-bit) 				<less>
+#
+# 		Deprecated
+#
+# disabled_storage_engines
+#
+# 		cmd line format: 			--disabled-storage-engines=engine[, engine]...
+# 		Sys Var: 					disabled_storage_engines
+# 		Scope: 						Global
+# 		Dynamic: 					No
+# 		SET_VAR Hint: 				No
+# 		Type: 						String
+# 		Default: 					empty string
+#
+# 		indicates which storage engines cannot be used to create tables or tablespaces.
+# 		For example,to prevent new MyISAM or FEDERATED tables from being created - start with the lines as follows:
+#
+# 			[mysqld]
+# 			disabled_storage_engines="MyISAM,FEDERATED"
+#
+# 		By default - disabled_storage_engines is empty (no engines disabled) - but can be defined with a comma-listed list.
+# 
+# 		Values included cause said values to not be able to be used to create tables or tablespaces with CREATE_TABLE or CREATE_TABLESPACE,
+# 		and cannot be used with ALTER_TABLE_..._ENGINE or ALTER_TABLESPACE_..._ENGINE to change existing storage engines of tables or tablespaces.
+#
+# 		Doing so causes a ER_DISABLED_STORAGE_ENGINE error
+#
+# 		disabled_storage_engines does not restrict other DDL statements for existing tables, such as CREATE_INDEX,
+# 		TRUNCATE_TABLE, ANALYZE_TABLE, DROP_TABLE or DROP_TABLESPACE.
+#
+# 		This permits a smooth transition so that existing tables or tablespaces that use a disabled engine can be migrated to a 
+# 		permitted engine by means such as ALTER_TABLE_..._ENGINE_<permitted_engine>
+#
+# 		It is permitted to set the default_storage_engine or default_tmp_storage_engine SYS var to a storage engine that is disabled.
+#
+# 		However, it does make the database crash upon attempting to be utilized if used in tandem with this stature. (Can be used for debugging)
+#
+# 		disabled_storage_engines is disabled and has no effect if the server is started with any of these options:
+#
+# 			--initialize, --initialize-insecure, --skip-grant-tables
+#
+# 		Setting this can cause a error with mysqld_upgrade
+#
+# disconnect_on_expired_password
+#
+# 		Cmd line format: 		--disconnect-on-expired-password[=#]
+# 		Sys Var: 				disconnect_on_expired_password
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				ON
+#
+# 		This var controls how the server handles clients with expired passwords:
+#
+# 			If the client indicates that it can handle expires passwords, the value of disconnect_on_expired_password
+# 			is irrelevant. The server permits the client to connect but puts it in sandbox mode.
+#
+# 			If the client does not indicate that it can handle expires passwords, it handles it according to disconnect_on_expired_password:
+#
+# 				Enabled -> Disconnects the client
+#
+# 				Disabled -> permits, but keeps in Sandbox mode
+#
+# div_precision_increment
+#
+# 		cmd line format: 			--div-precision-increment=#
+# 		Sys Var: 					div_precision_increment
+# 		Scope: 						Global, Session
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				Yes
+# 		Type: 						Integer
+# 		Default: 					4
+# 		Min: 							0
+# 		Max: 							30
+#
+# 		This variable indicates the number of digits by which to increase the scale of the result of division operations performed with
+# 		the / operator.
+#
+# dragnet.log_error_filter_rules
+#
+# 		cmd line format: 			--dragnet.log-error-filter-rules
+# 		Introduced: 				8.0.4
+# 		Sys Var: 					dragnet.log_error_filter_rules
+# 		Scope: 						Global
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						String
+# 		Default: 					IF prio>=INFORMATION THEN drop. IF EXISTS source_line THEN unset source_line.
+#
+# 		The filter rules that control operation of the log_filter_dragnet error log filter component.
+# 		If log_filter_dragnet is not installed, dragnet.log_error_filter_rules is N/A.
+#
+# 		If log_filter_dragnet is installed but off, dragnet.log_error_filter_rules have no effect.
+#
+# 		(MySQL 8.0.12 >=) - the dragnet.Status variable can be consulted to determine the result of the most
+# 		recent assignment to dragnet.log_error_filter_rules
+#
+# 		(MySQL 8.0.12 <)  - the dragnet.Status assignment upon success, spawned a warning:
+#
+# 			mysql> SET GLOBAL dragnet.log_error_filter_rules = 'IF prio <> 0 THEN unset prio.';
+# 			Query OK, 0 rows affected, 1 warning (0.00 sec)
+#
+# 			mysql> SHOW WARNINGS\G
+# 			******************************** 1. row *******************************************
+# 			Level: Note
+# 			Code:  4569
+# 			Message: filter configuration accepted:
+# 						SET @@global.dragnet.log_error_filter_rules='IF prio!=ERROR THEN unset prio.';
+#
+# 		The value displayed by SHOW_WARNINGS indicates the "decompiled" canonical rep. after the rule set has been
+# 		successfully parsed and compiled into internal form.
+#
+# 		Semantically, this canonical form is identical to the value assigned to dragnet.log_error_filter_rules,
+# 		but there may be some differences between the assigned and canonical values, as illustrated:
+#
+# 			<> goes to !=
+#
+# 			Numeric prio of 0 is changed to SEVERITY level ERROR
+#
+# 			Optional spaces are gone
+#
+# end_markers_in_json
+#
+# 		Sys var: 		end_markers_in_json
+# 		Scope: 			Global, Session
+# 		Dynamic: 		Yes
+# 		SET_VAR Hint: 	Yes
+# 		Type: 			Boolean
+# 		Default: 		OFF
+#
+# 		Whether optimizer JSON output should add end markers.
+#
+# eq_range_index_dive_limit
+#
+# 		Sys var: 		eq_range_index_dive_limit
+# 		Scope: 			Global, Session
+# 		Dynamic: 		Yes
+# 		SET_VAR Hint: 	Yes
+# 		Type: 			Integer
+# 		Default: 		200
+# 		Min: 				0
+# 		Max: 				<a lot>
+#
+# 		This variable indicates the number of equality ranges in an equality comparison condition when the optimizer
+# 		should switch from using index drives to index statistics in estimating the number of qualifying rows.
+#
+# 		It applies to evaluation of expressions that have either of these equivalent forms, where the optimizer uses
+# 		a nonunique index to look up <col_name> values:
+#
+# 			col_name IN(val1, ..., valN)
+# 			col_name = val1 OR ... OR col_name = valN
+#
+# 		In both cases, the expression contains N equality ranges.
+#
+# 		The optimizer can make row estimates using index dives or index statistics.
+#
+# 		If eq_range_index_dive_limit is greater than 0, the optimizer uses existing index
+# 		statistics instead of index dives if there are eq_range_index_dive_limit or more equality ranges.
+#
+# 		Thus, to permit use of index dives for up to <N> equality ranges, set eq_range_index_dive_limit to N + 1.
+# 		To disable use of index statistics and always use index dives regardless of <N>, set this to 0.
+#
+# 		To update the table index stats for best estimates, use ANALYZE_TABLE.
+#
+# error_count
+#
+# 		Number of errors that resulted from the last statement that generated messages. is Read only.
+#
+# event_scheduler
+#
+# 		cmd line format: 		--event-scheduler[=value]
+# 		Sys Var: 				event_scheduler
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Enumeration
+# 		Default (>= 8.0.3) 	ON
+# 		Default (<= 8.0.2) 	OFF
+# 		Valid: 					ON, OFF, DISABLED
+#
+# 		This variable indicates the status of the Event Scheduler.
+#
+# explicit_defaults_for_timestamp
+#
+# 		cmd line format: 		--explicit-defaults-for-timestamp=#
+# 		Deprecated: 			Yes
+# 		Sys Var: 				explicit_defaults_for_timestamp
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default (>= 8.0.2) 	ON
+# 		Default (<= 8.0.1) 	OFF
+#
+# 		This sys var determines whether the server enables certain nonstandard behaviors for default values and NULL value
+# 		handling in TIMESTAMP columns.
+#
+# 		By default, explicit_defaults_for_timestamp is enabled, which disables the nonstandard behaviors.
+# 		Disabling explicit_defaults_for_timestamp results in a warning.
+#
+# 		Setting this in scope of session is a restricted operation. Requires privs to allow for setting.
+#
+# 		If explicit_defaults_for_timestamp is disabled - the server enables the nonstandard behaviors and handles TIMESTAMP cols as follows:
+#
+# 			TIMESTAMP columns not explicitly declared with the NULL attribute are automatically declared with the NOT NULL attribute.
+# 			Assigning such a column value of NULL is permitted and sets the column to the current timestamp.
+#
+# 			The first TIMESTAMP column in a table, if not explicitly declared with the NULL attribute or an explicit DEFAULT 
+# 			or ON UPDATE attribute, is automatically declared with the DEFAULT CURRENT_TIMESTAMP and ON UPDATE CURRENT_TIMESTAMP attributes.
+#
+# 			TIMESTAMP columns following the first one, if not explicitly declared with the NULL attribute or an explicit DEFAULT,
+# 			are automatically declared as DEFAULT '0000-00-00 00:00:00'. For inserted rows that specify no explicit value for such
+# 			a column, it defaults to the above with no warnings.
+#
+# 			Strict SQL mode or the NO ZERO DATE SQL mode being on - can cause invalidation of defaulting to 0000-00-00 00:00:00 may be invalid.
+# 			Be aware that the TRADITIONAL SQL mode includes strict mode and NO ZERO DATE.
+#
+# 		The above is deprecated and will be removed.
+#
+# 		If explicit_defaults_for_timestamp is on, the server disables the above and handles instead with:
+#
+# 			It is not possible to assign a TIMESTAMP column a value of NULL to set it to the current timestamp.
+# 			To do such, you must use NOW() or CURRENT_TIMESTAMP.
+#
+# 			TIMESTAMP columns not explicitly declared with the NOT NULL attribute are automatically declared with the
+# 			NULL attribute and permit NULL values. (i.e - Assigning it NULL, causes it to be NULL)
+#
+# 			TIMESTAMP columns declared with the NOT NULL attribute do not permit NULL values.
+# 			For inserts that specify NULL for such a column, the result is an error, regardless of mode.
+#
+# 			TIMESTAMP cols explicitly declared with the NOT NULL attribute and without an explicit DEFAULT attribute
+# 			are treated as having no default value. (if Strict is not on, the implicit default is '0000-00-00 00:00:00' and a Warning.
+#
+# 			No TIMESTAMP cols are automatically declared with the DEFAULT CURRENT_TIMESTAMP or ON UPDATE CURRENT_TIMESTAMP attribs.
+# 			(Must be explicitly declared)
+#
+# 			The first TIMESTAMP col in a table is not handled differently from TIMESTAMP cols following the first one.
+#
+# 		If explicit_defaults_for_timestamp is disabled at start, this warning crops up:
+#
+# 			[Warning] TIMESTAMP with implicit DEFAULT value is deprecated.
+# 			Please use --explicit_defaults_for_timestamp server option
+#
+# 		NOTE: --explicit_defaults_for_timestamp is deprecated as well. Will be removed.
+#
+# external_user
+#
+# 		Sys var: 		external_user
+# 		Scope: 			Session
+# 		Dynamic: 		No
+# 		SET_VAR Hint: 	No
+# 		Type: 			String
+#
+# 		External user name used during the authentication process, as set by the plugin used to authenticate the client.
+# 		With native MySQL auth or if the plugin does not set the value - this is NULL. (Relates to Poxy users)
+#
+# flush
+#
+# 		cmd line format: 	--flush
+# 		Sys Var: 			flush
+# 		Scope: 				Global
+# 		Dynamic: 			Yes
+# 		SET_VAR Hint: 		No
+# 		Type: 				Boolean
+# 		Default: 			OFF
+#
+# 		If ON, the server flushes (synchs) all changes to disk after each SQL statement.
+# 		Normally, MySQL does a write of all changes to disk only after each SQL statement
+# 		and lets the OS handle the Sync to disk.
+#
+# 		Starts with ON if we start mysqld with --flush.
+#
+# 		NOTE: if enabled, flush_time does nothing, and changing it does nothing.
+#
+# flush_time
+#
+# 		cmd line format: 	--flush-time=#
+# 		Sys var: 			flush_time
+# 		Scope: 				Global
+# 		Dynamic: 			Yes
+# 		SET_VAR Hint: 		No
+# 		Type: 				Integer
+# 		Default: 			0
+# 		Min: 					0
+#
+# 		If set to a nonzero value, all tables are closed every flush_time seconds to free up resources and synch unflushed data to disk.
+# 		Only use for systems with small amounts of resources.
+#
+# foreign_key_checks
+#
+# 		Sys Var: 			foreign_key_checks
+# 		Scope: 				Global, Session
+# 		Dynamic: 			Yes
+# 		SET_VAR Hint: 		Yes
+# 		Type: 				Boolean
+# 		Default: 			ON
+#
+# 		If set to 1 (the default), foreign key constraints for InnoDB tables are checked.
+# 		If set to 0, foreign key constraints are ignored, with a couple of exceptions.
+#
+# 		When re-creating a table that was dropped, an error is returned if the table definition
+# 		does not conform to the foreign key constraints referencing the table.
+#
+# 		Likewise, an ALTER_TABLE operation returns an error if a foreign key definition is incorrectly formed.
+#
+# 		Typically, you leave this enabled during normal ops. Disabling can be used for reloading InnoDB tables
+# 		in a order different from that required by their parent/child relationships.
+#
+# 		Setting foreign_key_checks to 0 also affects data definition statements: 
+#
+# 		DROP_SCHEMA drops a schema even if it contains tables that have foreign keys 
+# 		that are referred to by tables outside the schema, and DROP_TABLE drops tables 
+# 		that have foreign keys that are reffered by other tables.
+#
+# 		NOTE: Setting this to 1, does not trigger a scan of the existing table data. Therefore,
+# 				rows added to the table while foreign_key_checks = 0 will not be verified for consistency.
+#
+# 				Dropping an index required by a foreign key constraint is not permitted, even with foreign_key_checks=0
+# 				The foreign key constraint must be removed before dropping the index.
+#
+# ft_boolean_syntax
+#
+# 		cmd line format: 	--ft-boolean-syntax=name
+# 		Sys Var: 			ft_boolean_syntax
+# 		Scope: 				Global
+# 		Dynamic: 			Yes
+# 		SET_VAR Hint: 		No
+# 		Type: 				String
+# 		Default: 			+ -><()~*:""&|
+#
+# 		The list of operators supported by boolean full-text searches performed using IN BOOLEAN MODE.
+#
+# 		The rules for changing the default of this is:
+#
+# 			Operator function is defined by pos in string
+#
+# 			Replacement must be 14 chars
+#
+# 			Each char must be an ASCII nonalphanumeric char
+#
+# 			Either the first or second char must be a space.
+#
+# 			No duplicates are permitted except the phrase quoting operators in pos 11 and 12.
+# 			These two chars are not required to be the same, but they are the only two that may be.
+#
+# 			Pos 10, 13 and 14 (defaults to :, &, |) are reserved for future extensions.
+#
+# ft_max_word_len
+#
+# 		cmd line format: 		--ft-max-word-len=#
+# 		Sys Var: 				ft_max_word_len
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Min: 						10
+#
+# 		Max length of word in a MyISAM FULLTEXT index.
+#
+# 		NOTE: FULLTEXT indexes on MyISAM tables must be rebuilt after changing this var. Use REPAIR TABLE <tbl_name> QUICK.
+#
+# ft_min_word_len
+#
+# 		cmd line format: 		--ft-min-word-len=#
+# 		Sys Var: 				ft_min_word_len
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				4
+# 		Min: 						1
+#
+# 		The min length of the word to be included in a MyISAM FULLTEXT index.
+#
+# 		NOTE: FULLTEXT indexes on MyISAM tables must be rebuilt after changing this var. Use REPAIR TABLE <tbl_name> QUICK.
+#
+# ft_query_expansion_limit
+#
+# 		Cmd line format: 		--ft-query-expansion-limit=#
+# 		Sys Var: 				ft_query_expansion_limit
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				20
+# 		Min: 						0
+# 		Max: 						1000
+#
+# 		number of top matches to use for full-text searches performed using WITH QUERY EXPANSION.
+#
+# ft_stopword_file
+#
+# 		cmd line format: 		--ft-stopword-file=file_name
+# 		Sys Var: 				ft_stopword_file
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					File name
+#
+# 		The file from which to read the list of stopwords for full-text searches on MyISAM tables.
+# 		The server looks for the file in the data directory unless an absolute path name is given to specify a different dir.
+#
+# 		All the words from the file are used;, comments are not.
+#
+# 		By default, a list of stopwords is used (defined in storage/myisam/ft_static.c file)
+#
+# 		Setting this to '' disables stopword filtering.
+#
+# 		FULLTEXT indexes on MyISAM tables must be rebuilt after changing this var or the contents of the stopword file.
+# 		Use REPAIR TABLE <tbl_name> QUICK.
+#
+# general_log
+#
+# 		cmd line format: 		--general-log
+# 		Sys Var: 				genral_log
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		Whether the general query log is enabled. Can be 0/OFF to disable the log or 1/ON to enable.
+#
+# 		Default depends on whether the --general_log option is given.
+#
+# 		The destination for log output is controlled by the log_output SYS_VAR; if that value is NONE, no log entries
+# 		are written even if the log is enabled.
+#
+# general_log_file
+#
+# 		cmd line format: 		--general-log-file=file_name
+# 		Sys Var: 				general_log_file
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					File name
+# 		Default: 				host_name.log
+#
+# 		Name of the general query log file. Defaults to <host_name.log> but the initial value can be changed with --general_log_file option.
+#
+# group_concat_max_len
+#
+# 		Cmd line format: 		--group-concat-max-len=#
+# 		Sys Var: 				group_concat_max_len
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Int
+# 		Default: 				1024
+# 		Min: 						4
+# 		Max (64-bit) 			<a lot>
+# 		Min (32-bit) 			<less>
+#
+# 		Max permitted result length in bytes for the GROUP_CONCAT() function. Defaults to 1024.
+#
+# have_compress
+#
+# 		Yes if the zlib compression lib is available to the server, NO if not.
+# 		If not, the COMPRESS() and UNCOMPRESS() functions cannot be used.
+#
+# have_crypt
+# 		
+# 		REMOVED
+#
+# have_dynamic_loading
+#
+#		Yes if mysqld supports dynamic loading of plugins, NO if not.
+# 		If NO, cannot use options such as --plugin-load to load plugins at server startup, or the
+# 		INSTALL_PLUGIN statement to load plugins at runtime.
+#
+# have_geometry
+#
+# 		YES if the server supports spatial data types, NO if not.
+#
+# have_openssl
+#
+# 		This variable is an alias for have_ssl
+#
+# have_profiling
+#
+# 		YES if statement profiling capability is present, NO if not.
+# 		If present, the profiling system variable controls whether this capability is enabled or disabled.
+#
+# 		DEPRECATED.
+#
+# have_query_cache
+#
+# 		Query cache was removed in 8.0.3, have_query_cache is deprecated, always NO.
+#
+# have_rtree_keys
+#
+# 		
 # https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
