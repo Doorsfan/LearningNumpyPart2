@@ -13550,5 +13550,682 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # have_rtree_keys
 #
+# 		YES if RTREE indexes are available, NO if not. (Used for Spatial indexes in MyISAM tables)
+#
+# have_ssl
+#
+# 		Yes if mysqld supports SSL connections, NO if not. DISABLED if server was compiled with SSL, but not activated with the respective --ssl-xxx option
+#
+# have_statement_timeout
+#
+# 		Sys_Var: 		have_statement_timeout
+# 		Scope: 			Global
+# 		Dynamic: 		No
+# 		SET_VAR Hint: 	No
+# 		Type: 			Boolean
+#
+# 		Whether the statement execution timeout feature is available. 
+# 		Can be NO if the background thread used by this feature, could not be initialized.
 # 		
-# https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
+# have_symlink
+#
+# 		YES if symbolic link support is enabled, NO if not.
+# 		Required on UNIX for support of the DATA DIRECTORY and INDEX DIRECTORY table options.
+#
+# 		If the server is started with --skip-symbolic-links - this value is Disabled.
+#
+# 		Means nothing on Windows.
+#
+# 		NOTE: Symbolic links are deprecated in support and stature.
+#
+# histogram_generation_max_mem_size
+#
+# 		cmd line format: 		--histogram-generation-max-mem-size=#
+# 		Introduced: 			8.0.2
+# 		Sys Var: 				histogram_generation_max_mem_size
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		DEFAULT: 				20000000
+# 		min value: 				1000000
+# 		max (64-bit) 			<a lot>
+# 		max (32-bit) 			<less>
+#
+# 		Max amount of memory for generating histogram stats.
+#
+# 		Setting this is a restricted ops, reqs privs.
+#
+# host_cache_size
+#
+# 		Sys Var: 				host_cache_size
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				-1 (Autosizing, do not assign)
+#		Min: 						0
+# 		Max: 						65536
+#
+# 		Size of the internal host cache. Setting it to 0 disables the host cache.
+#
+# 		Changing the cache size at runtime implicitly causes a FLUSH HOSTS ops to clear the host cache
+# 		and truncate the host_cache table.
+#
+# 		Defaults to 128 + 1 for a value of max_connections up to 500, plus 1 for every 20 above 500, up to 2k.
+#
+# 		Using --skip-host-cache is similar to setting the host_cache_size SYS_VAR to 0, but host_cache_size can be set during
+# 		runtime - not just startup.
+#
+# 		If started with --skip-host-cache, modification attempts are simply ignored.
+#
+# hostname
+#
+# 		Sys var: 				hostname
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+#
+# 		The server sets this var to the server host name at startup.
+#
+# identity
+#
+# 		Synonym for the last_insert_id var. Exists for compability with other DB systems.
+# 		can be read with SELECT @@identity, and set it using SET identity.
+#
+# init_connect
+#
+# 		cmd line format: 		--init-connect=name
+# 		Sys Var: 				init_connect
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+#
+# 		A string to be executed by the server for each client that connects. 
+# 		The string consists of one or more SQL statements, separated by ; chars.
+#
+# 		For example, each client session begins by default with autocommit mode enabled.
+# 		For older servers (< 5.5.8) - there is no global autocommit SYS_VAR to specify that autocommit
+# 		should be off by default - but can be circumvented with:
+#
+# 		SET GLOBAL init_connect='SET autocommit=0';
+#
+# 		Can also beb set on cmd or in a option file:
+#
+# 		[mysqld]
+# 		init_connect='SET autocommit=0'
+#
+# 		For users with SUPER priv or CONNECTION_ADMIN - the content of init_connect is not executed.
+#
+# 		(MySQL 8.0.5 >=) 	init_connect is skipped for any client with an expired PW.
+#
+# 		Allows for connection and changing of PW.
+#
+# information_schema_stats_expiry
+#
+# 		cmd line format: 		--information-schema-stats-expiry=value
+# 		Introduced: 			8.0.3
+# 		Sys Var: 				information_schema_stats_expiry
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				86400
+# 		min: 						0
+# 		Max: 						<a lot>
+#
+# 		Some of the information_schema tables that contain columns that provide table stats:
+#
+# 		STATISTICS.CARDINALITY
+# 		TABLES.AUTO_INCREMENT
+# 		TABLES.AVG_ROW_LENGTH
+# 		TABLES.CHECKSUM
+# 		TABLES.CHECK_TIME
+# 		TABLES.CREATE_TIME
+# 		TABLES.DATA_FREE
+# 		TABLES.DATA_LENGTH
+# 		TABLES.INDEX_LENGTH
+# 		TABLES.MAX_DATA_LENGTH
+# 		TABLES.TABLE_ROWS
+# 		TABLES.UPDATE_TIME
+#
+#		Said columns represent the dynamic table metadata - information that changes as table contents change.
+#
+# 		By default, MySQL retrieves cached values for those columns from the mysql.index_stats and mysql.table_stats dictionary tables
+# 		when the columns are queried, which is more efficient than retrieving stats directly from the storage engine.
+#
+# 		If cached stats are not available or have expired, MySQL retrieves the latest stats from the storage engine
+# 		and caches them in the mysql.index_stats and mysql.table_stats dictionary tables.
+#
+# 		Subsequent queries retrieve the cachhed stats until the cached stats expire.
+#
+# 		The information_schema_stats_expiry session var defines the period of time before cached stats expire.
+# 		The default is 24 hours (86400 secs), but the time period can be extended to as much as one year.
+#
+# 		To update cached values at any time for a given table, use ANALYZE TABLE.
+#
+# 		To always retrieve the latest directly from the storage engine and bybpass cached values, set information_schema_stats_expiry to 0.
+#
+# 		Querying stats columns does not store or update stats in the mysql.index_stats and mysql.table_stats dictionary tables under said circumstnaces:
+#
+# 			When cached stats have not expired
+#
+# 			When information_schema_stats_expiry is set to 0
+#
+# 			When the server is started in read_only, super_read_only, transaction_read_only or innodb_read_only
+#
+# 			When the query also fetches Performance Schema Data
+#
+# 		information_schema_stats_expiry is a session var, and each client session can define its own expiration value.
+# 		Stats that are retrieved from the storage engine and cached by one session are available to other sessions.
+#
+# init_file
+#
+# 		Cmd line format: 		--init-file=file_name
+# 		Sys Var: 				init_file
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					File name
+#
+# 		The name of the file specified with the --init-file option when you start the server.
+#
+# 		This should be a file containing SQL statements that you want the server to execute when it starts.
+#
+# 		Each statement must be on a single line and no comments. 
+#
+# innodb_xxx
+#
+# 		InnoDB sys vars are listed later.
+#
+# 		Said Vars control many aspects of storage, memory use and I/O patterns for InnoDB tables, and are called for in relation to InnoDB default storage engines.
+#
+# insert_id
+# 
+# 		The value to be used by the following INSERT or ALTER_TABLE statement when inserting an AUTO_INCREMENT value.
+# 		Mainly used with the binary log.
+#
+# interactive_timeout
+#
+# 		cmd line format: 		--interactive-timeout=#
+# 		Sys Var: 				interactive_timeout
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				28800
+# 		Min: 						1
+#
+# 		The number of seconds the server waits for acitvity on an interactive connection before closing it.
+# 		An interactive client is defined as a client that uses the CLIENT_INTERACTIVE option to mysql_real_connect()
+#
+# internal_tmp_disk_storage_engine
+#
+# 		cmd line format: 		--internal-tmp-disk-storage-engine=#
+# 		Sys Var: 				internal_tmp_disk_storage_engine
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Enumeration
+# 		Default: 				INNODB
+# 		Valid: 					MYISAM
+# 									INNODB
+#
+# 		The storage engine for on-disk internal temp tables. Permitted values are MYISAM and INNODB (Default)
+#
+# 		The optimizer uses the storage engine defined by internal_tmp_disk_storage_engine for on-disk internal temporary tables.
+#
+# 		When using internal_tmp_disk_storage_engine=INNODB (the default), queries that generate on-disk internal temp tables that exceed
+# 		InnoDB row or column limits will return Row size too large or Too many columns errors.
+#
+# 		The workaround is to set internal_tmp_disk_storage_engine to MYISAM.
+#
+# internal_tmp_mem_storage_engine
+#
+# 		cmd line format: 		--internal-tmp-mem-storage-engine=#
+# 		introduced: 			8.0.2
+# 		SYS Var: 				internal_tmp_mem_storage_engine
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Enumeration
+# 		Default: 				TempTable
+# 		Valid: 					TempTable, MEMORY
+#
+# 		The storage engine for in-memory internal temporary tables.
+#
+# 		The optimizer uses the storage engine defined by internal_tmp_mem_storage_engine for in-memory internal temp tables.
+#
+# join_buffer_size
+#
+# 		cmd line format: 		--join-buffer-size=#
+# 		Sys Var: 				join_buffer_size
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Integer
+# 		Default: 				262144
+# 		Min value: 				128
+# 		Max (Other, 64-bit) 	<most>
+# 		Max (Other, 32-bit) 	<less>
+# 		Max (Windows) 			<less>
+#
+# 		The min size of the buffer that is used for plain index scans, range index scans, and joins that do not 
+# 		use indexes and thus perform full table scans.
+#
+# 		Normally - the best way to get fast joins is to add indexes. Increase the value of join_buffer_size to get a faster
+# 		full join when adding indexes is not possible.
+#
+# 		One join buffer is allocated for each full join between two tables. For a complex join between several tables for which 
+# 		indexes are not used, multiple join buffers might be nessecary.
+#
+# 		Unless Batched Key Access (BKA) is used, there is no gain from setting the buffer larger than required to hold each
+# 		matching row - and all joins allocate at least the min size, thus, careful with global min designation.
+#
+# 		It is better to have the global be small, and allow for session values that are larger - when thye perform large joins.
+# 		Memory allocation time can cause large performance drops if the global size is larger than needed by most queries that use it.
+#
+# 		When BKA is used, the value of join_buffer_size defines how large the batch of keys is in each request to the storage engine.
+# 		The larger the buffer, the more sequential access will be to the right hand table of a join operation, which can significantly 
+# 		improve performance.
+#
+# 		Defaults to 256kb, max is 4gb-1. Larger is allowed for 64-bit (Windows throws a warning and sets to max)
+#
+# keep_files_on_create
+#
+# 		cmd line format: 		--keep-files-on-create=#
+# 		Sys Var: 				keep_files_on_create
+# 		Scope: 					Global ,Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		if a MyISAM table is created with no DATA DIR option, the .MYD file is created in the DB directory.
+# 		By default, if MyISAM finds an existing .MYD file in this case, it overwrites it.
+#
+# 		The same applies to .MYI files for tables created with no INDEX DIRECTORY option.
+# 		To suppress this behavior, set the keep_files_on_create var to ON(1), which causes MyISAM to not overwrite
+# 		existing files and returns an error instead. 
+#
+# 		If a MyISAM table is created with a DATA DIRECTORY or INDEX DIRECTORY option and an existing .MYD or .MYI file is found,
+# 		MyISAM always returns an error. It will not overwrite a file in the specified dir.
+#
+#
+# key_buffer_size
+#
+# 		cmd line format: 		--key-buffer-size=#
+# 		Sys Var: 				key_buffer_size
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				8388608
+# 		Min value: 				8
+# 		Max value(64-bit) 	OS_PER_PROCESS_LIMIT
+# 		Max (32-bit) 			4294967295
+#
+# 		Index blocks for MyISAM tables are buffered and are shared by all threads. key_buffer_size is the size of the buffer used
+# 		for index blocks. The key buffer is also known as the key cache.
+#
+# 		The max permissible setting for key_buffer_size is 4gb-1 on 32-bit platforms.
+#
+# 		Larger are allowed on 64-bit - Realistic size might be less. 
+#
+# 		The above is akin to a "hint" of request of setting to - value can be overwritten by underlying OS or Hardware etc.
+#
+# 		You can increase the value to get better index handling for all reads and multiple writes; on a System whose primary
+# 		function is to run MySQL using the MyISAM storage engine, 25% of the total machine memory is fine.
+#
+# 		If assigned too large of a value, the underlying OS which handles file system caching for data reads will start to lag
+#
+# 		For even more speed when writing many rows at the same time, use LOCK_TABLES.
+#
+# 		You can check the performance of the key buffer by issuing a SHOW_STATUS statement and examining the Key_read_requests,
+# 		Key_reads, Key_write_requests and Key_writes status.
+#
+# 		The Key_reads/Key_read_requests ratio should normally be less than 0.01.
+#
+# 		The Key_writes/Key_write_requests ratio is usually near 1 if you use mostly updates and deletes,
+# 		but can be smaller in case of updating many rows at the same time or using the DELAY_KEY_WRITE table option.
+#
+# 		The fraction of the key buffer in use can be determined using key_buffer_size in conjunction with the Key_blocks_unused
+# 		status variable and buffer block size, which is available from the key_cache_block_size Sys_var:
+#
+# 		- ((Key_blocks_unused * key_cache_block_size) / key_buffer_size)
+#
+# 		This value is an approximation because some space in the key buffer is allocated internally for admin structs.
+# 		Factors that influence the amount of overhead for these structures include block size and pointer size.
+#
+# 		As block size increases, the percentage of the key buffer lost to overhead tends to decrease.
+#
+# 		larger blocks result in a smaller number of read ops (because more keys are obtained per read),
+# 		but an increase in reads of keys that are not examined (if not all keys in a block are relevant to a query)
+#
+# 		It is possible to create Multiple MyISAM key caches. The size limit of 4gb applies to each cache individually, not as a group.
+#
+# key_cache_age_threshold
+#
+# 		Cmd line format: 		--key-cache-age-threshold=#
+# 		Sys var: 				key_cache_age_threshold
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				300
+# 		Min: 						100
+# 		Max value (64-bit): 	<a lot>
+# 		Max value (32-bit): 	<less>
+#
+# 		Controls the demotion of buffers from hot sublist of a key cache to the warm sublist.
+# 		Lower values causes demotion to happen more quickly.
+#
+# 		Min 100. default 300.
+#
+# key_cache_block_size
+#
+# 		cmd line format: 		--key-cache-block-size=#
+# 		Sys var: 				key_cache_block_size
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				1024
+# 		Min: 						512
+# 		Max: 						16384
+#
+# 		Size in bytes of blocks in the key cache. Defaults to 1024.
+#
+# key_cache_division_limit
+#
+# 		cmd line format: 		--key-cache-division-limit=#
+# 		Sys var: 				key_cache_division_limit
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				100
+# 		Min: 						1
+# 		mx: 						100
+#
+# 		The division point between the hot and warm sublist of the key cache buffer list.
+# 		The value is the % of the buffer list to use for the warm sublist.
+#
+# large_files_support
+#
+# 		Sys var: 				large_files_support
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+#
+# 		Whether mysqld was compiled with options for large file support.
+#
+# large_pages
+#
+# 		cmd line format: 		--large-pages
+# 		Sys var: 				large_pages
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Platform: 				Linux
+# 		Type: 					Boolean
+# 		Default: 				FALSE
+#
+# 		Whether large page support is enabled (via the --large-pages option)
+#
+# large_page_size
+#
+# 		Sys var: 				large_page_size
+# 		scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				0
+#
+# 		If large page support is enabled, this shows the size of memory pages.
+# 		Large memory pages are supported only on Linux, on other OS's - this is always 0.
+#
+# last_insert_id
+#
+# 		The values to be returned from LAST_INSERT_ID(). This is stored in the binary log when you use
+# 		LAST_INSERT_ID() in a statement that updates a table.
+#
+# 		Setting this var does not update the value returned by the mysql_insert_id() C API Function
+#
+# lc_messages
+#
+# 		cmd line format: 		--lc-messages=name
+# 		Sys Var: 				lc_messages
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default: 				en_US
+#
+# 		The locale to use for error messages. The default is en_US. THe server converts the argument
+# 		to a language name and combines it with the value of lc_messages_dir to produce the location
+# 		for the error message file.
+#
+# lc_messages_dir
+#
+# 		cmd line format: 		--lc-messages-dir=dir_name
+# 		Sys var: 				lc_messages_dir
+# 		Scope: 					global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Dir name:
+#
+# 		The dir where error messages are located. The server uses the value together with the values of lc_messages
+# 		to produce the location for the error message file.
+#
+# lc_time_names
+#
+# 		Sys var: 				lc_time_names
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+#
+# 		This var specifies the locale that contorls the language used to display day and month names and abbreviations.
+# 		This var affects the output from the DATE_FORMAT(), DAYNAME() and MONTHNAME() functions.
+#
+# 		Locale names are POSIX-style values such as 'ja_JP' or 'pt_BR'. Default is 'en_US' regardless of your system locale setting.
+#
+# license
+#
+# 		Sys var: 				license
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default: 				GPL
+#
+# 		Type of license the server has
+#
+# local_infile
+#
+# 		Sys var: 				local_infile
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			no
+# 		Type: 					Boolean
+# 		Default (>= 8.0.2) 	OFF
+# 		Default (<= 8.0.1) 	oN
+#
+# 		This variable controls server-side LOCAL capability for LOAD_DATA statements. 
+#
+# 		Depending on the local_infile setting, the server refuses or permits local data loading 
+# 		by clients that have LOCAL enables on the client side.
+#
+#		To explicitly cause the server to refuse or permit LOAD_DATA_LOCAL statements (regardless of how client programs and libs are configed at build time
+# 		or runtime) - start mysqld with local_infile disabled or enabled, respectively.
+#
+# 		local_infile can also be set at runtime.
+#
+# lock_wait_timeout
+#
+# 		Cmd line format: 		--lock-wait-timeout=#
+# 		Sys var: 				lock_wait_timeout
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Integer
+# 		Default: 				31536000
+# 		Min: 						1
+# 		Max: 						31536000
+#
+# 		Specifies the timeout in seconds for attempts to aquire metadata locks. The permissible value ranges from
+# 		1 to 1 year. Default is 1 year.
+#
+# 		This timeout applies to all statements that use metadata locks. These include DML and DDL operations on tables, views, stored
+# 		procedures and stored functions, as well as LOCK_TABLES, FLUSH_TABLES_WITH_READ_LOCK and HANDLER statements.
+#
+# 		This timeout does not apply to implicit accesses to System tables in the mysql DB, such as grant tables modified by GRANT or REVOKE
+# 		statements or table logging statements.
+#
+# 		This timeout does apply to Sys tables accessed directly, such as with SELECT or UPDATE.
+#
+# 		The timeout value applies separately for each metadata lock attempt. A given statement can require more than one lock, so it is possible
+# 		for the statement to block for longer than the lock_wait_timeout value before reporting a timeout error. When lock timeout occurs, ER_LOCK_WAIT_TIMEOUT
+# 		is reported.
+#
+# 		lock_wait_timeout also defines the amount of time that a LOCK_INSTANCE_FOR_BACKUP statement waits for a lock before giving up.
+#
+# locked_in_memory
+#
+# 		sys var: 				locked_in_memory
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 
+# 		Whether mysqld was locked in memory with --memlock.
+#
+# log_error
+#
+# 		cmd line format: 		--log-error[=file_name]
+# 		Sys var: 				log_error
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					File name
+#
+# 		The default error log destination. If the destination is the console, the value is stderr.
+# 		Otherwise, the destination is a file and the log error value is the file name.
+#
+# log_error_filter_rules
+#
+# 		cmd line format: 		--log-error-filter-rules
+# 		Introduced: 			8.0.2
+# 		Removed: 				8.0.4
+# 		SYS VAR: 				log_error_filter_rules
+# 		Scope: 					Global
+#  	Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default value: 		set by server
+#
+# 		The filter rules for error logging. This variable is unused. Removed.
+#
+# log_error_services
+#
+# 		cmd line format: 		--log-error-services
+# 		Introduced: 			8.0.2
+# 		Sys var: 				log_error_services
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default: 				log_filter_internal; log_sink_internal
+#
+# 		The components to enable for error logging. This variable may contain a list with 0,1 or many elements.
+#
+# 		In the latter case, elements may be delimited by ; or (MySQL >= 8.0.12) , + SPACE.
+#
+# 		A given setting cannot use both ; and , +´SPACE separators.
+#
+# 		Components order is significant because the server executes components in the order listed.
+# 		Any loadable (not built in) component named in the log_error_services value must first be installed
+# 		with INSTALL_COMPONENT.
+#
+# log_error_suppression_list
+#
+# 		Cmd line format: 		--log-error-suppression-list=value
+# 		Introduced: 			8.0.13
+# 		Sys var: 				log_error_suppression_list
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default: 				''
+#
+# 		This enables specifying which diagnostics should not be written to the error log when they occur
+# 		with a severity of WARNING or INFORMATION.
+#
+# 		For example, if a particular type of warning occurs frequently but is not of interest (and thus may be
+# 		considered undesirable "noise" in the error log) you can suppress that.
+#
+# 		The variable value may be empty string for no suppression, or a list of one or more comma separated values indicating
+# 		the error codes to suppress.
+#
+# 		The numeric value of each code to be suppressed must be in a permitted range:
+#
+# 			1 up to (but less than) 1000: Global error codes that are shared by the server and clients
+#
+# 			10000 and higher: Server error codes intended to be written ot the error log (not sent to clients)
+#
+# 		Attempts to assign an error code not in a permitted range produces an error and the var value remains unchanged.
+#
+# 		Error codes may be specified in a numeric or symbolic form. A numeric code may be specified with or without the MY- prefix.
+#
+# 		Leading 0's in the numeric part are not significant. Examples of permitted code format:
+#
+# 			31
+# 			00031
+# 			MY-31
+# 			MY-00031
+# 			ER_SERVER_SHUTDOWN_COMPLETE
+#
+# 		List of error codes comes later.
+#
+# 		The server can generate messages for a given error code at different severities, so suppression for a message
+# 		associated with an error code listed in log_error_suppression_list depends on its severity.
+#
+# 		Suppose that hte variable has a value of '10000, 10001, MY-10002'
+#
+# 		Messages for those codes are not written to the error log if generated with a SEVERITY of WARNING or INFORMATION.
+#
+# 		Messages generated with a severity of ERROR or SYSTEM are not suppressed and are written to the error log.
+#
+# 		The effect of log_error_suppression_list combines with that of log_error_verbosity.
+#
+# 		Consider a server started with these settings:
+#
+# 		[mysqld]
+# 		log_error_verbosity=2 			# error and warning messages only
+# 		log_error_suppression_list='10000,10001,MY-10002'
+#
+# 		In this case, log_error_verbosity discards all messages with INFORMATION severity.
+#
+# 		Of the remaining messages, log_error_suppression_list discards messages with WARNING severityy
+# 		and any of the named error codes.
+#
+#
+# 		NOTE: log_error_verbosity defaults to 2, so its effect on suppression of all INFORMATION messages is by
+# 		default as above. You must set it to 3, if you want log_error_suppression_list to affect messages with INFORMATION severity.
+#
+# 		Example:
+#
+# 		[mysqld]
+#		log_error_verbosity=1 #Error messages only
+#
+# 		Discards all messages with WARNING and INFORMATION severity.
+#
+# 		Setting log_error_suppression_list has no effect because all error codes it might suppress
+# 		are already discarded due to the log_error_verbosity setting. 	
+#
+# 		https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
+# 		
+# 		
+# 
