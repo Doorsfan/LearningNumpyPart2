@@ -14225,7 +14225,559 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 		Setting log_error_suppression_list has no effect because all error codes it might suppress
 # 		are already discarded due to the log_error_verbosity setting. 	
 #
+# 		log_error_suppression_list (like log_error_verbosity) affects the log_filter_internal error log filter,
+# 		which is on by default.
+#
+# 		If that filter is turned off, error code suppression does not occur and must be modeled using whatever
+# 		filter service is used instead where desired (for example, with individual filter rules when using
+# 		log_filter_dragnet).
+#
+# log_error_verbosity
+#
+# 		cmd line format: 		--log-error-verbosity=#
+# 		Sys var: 				log_error_verbosity
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default (>= 8.0.4) 	2
+# 		Default (<= 8.0.3) 	3
+# 		Min: 						1
+# 		Max: 						#
+# 
+# 		The verbosity for handling events intended for the error log, as filtered by the log_filter_internal
+# 		error log filter component, which is enabled by default.
+#
+# 		If log_filter_internal is disabled, log_error_verbosity has no effect
+#
+# 		The following is the verbosity levels:
+#
+# 		Error messages: 		1
+# 		Error and Warnings: 	2
+# 		Error, Warning,Info: 3
+#
+# 		Selected important sys messages about non-error situations are printed to the error log regardless
+# 		of the log_error_verbosity value.
+#
+# 		These messages include startup and shutdown messages, and some significant changes to settings.
+#
+# 		The effect of log_error_verbosity combines with that of log_error_suppression_list.
+#
+# log_output
+#
+# 		Cmd line format: 		--log-output=name
+# 		Sys var: 				log_output
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Set
+# 		Default: 				File
+# 		Valid: 					TABLE, FILE, NONE
+#
+# 		The destination for general query log and slow query log output.
+# 		The value can be a comma-separated list of one or more of the words TABLE (log of tables),
+# 		FILE (log to files), or NONE (do not log to tables or files).
+#
+# 		The default value is FILE. NONE, if present takes precedence over any other specifiers.
+#
+# 		If the value is NONE log entries are not written even if the logs are enabled.
+# 		If the logs are not enabled, no logging occurs even if the value of log_output is not NONE.
+#
+# log_queries_not_using_indexes
+#
+# 		cmd line format: 	--log-queries-not-using-indexes
+# 		Sys var: 			log_queries_not_using_indexes
+# 		Scope: 				Global
+# 		Dynamic: 			Yes
+# 		SET_VAR Hint: 		No
+# 		Type:    			Boolean
+# 		default: 			OFF
+#
+# 		Whether queries that do not use indexes are logged to the slow query log.
+#
+# log_slow_admin_statements
+#
+# 		Sys var: 			log_slow_admin_statements
+# 		Scope: 				Global
+# 		Dynamic: 			Yes
+# 		SET_VAR Hint: 		No
+# 		Type: 				Boolean
+# 		Default: 			OFF
+#
+# 		Include slow administrative statements in the statements written to the slow query log.
+#
+# 		Administrative statements include ALTER_TABLE, ANALYZE_TABLE, CHECK_TABLE, CREATE_INDEX,
+# 		DROP_INDEX, OPTIMIZE_TABLE and REPAIR_TABLE
+#
+# log_syslog
+#
+# 		cmd line format: 		--log-syslog[={0|1}]
+# 		Deprecated: 			8.0.2 (removed in 8.0.13)
+# 		Sys var: 				log_syslog
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default (Windows, <= 8.0.1) 	ON
+# 		Default (Unix, <= 8.0.1) 		OFF
+# 		Default (>= 8.0.2) 				ON (when error logging to system log is enabled)
+#
+# 		Prior to (8.0) this var controlled whether to perform error logging to the system log (the Event log on Windows, Syslog on Unix/UNIX based systems)
+#
+# 		In MySQL 8.0, the log_sink_syseventlog log component implements error logging to the system log.
+# 		Thus this type of logging can be enabled by adding that component to the log_error_services SYS var.
+#
+# 		log_syslog is removed. (just deprecated before 8.0.13)
+#
+# log_syslog_facility
+#
+# 		cmd line format: 		--log-syslog-facility=value
+# 		Removed: 				8.0.13
+# 		Sys var: 				log_syslog_facility
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default: 				daemon
+#
+# 		This var was removed in 8.0.13 and replaced by syseventlog.facility
+#
+# log_syslog_include_pid
+#
+# 		cmd line format: 		--log-syslog-include-pid[={0|1}]
+# 		removed: 				8.0.13
+# 		Sys var: 				log_syslog_include_pid
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				ON
+#
+# 		This was removed in 8.0.13 and replaced by syseventlog.include_pid
+#
+# log_syslog_tag
+#
+# 		cmd line format: 		--log-syslog-tag=tag
+# 		Removed: 				8.0.13
+# 		Sys var: 				log_syslog_tag
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default: 				empty string
+#
+# 		Removed in 8.0.13 and replaced by syseventlog.tag
+#
+# log_timestamps
+#
+# 		cmd line format: 		--log-timestamps=#
+# 		Sys var: 				log_timestamps
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Enumeration
+# 		Default: 				UTC
+# 		Valid: 					UTC, SYSTEM
+#
+# 		Controls the time zone of timestamps in messages written to the error log and in general query log and slow query
+# 		log messages written to files.
+#
+# 		Does not affect the time zone of general query log and slow query log messages written to tables (mysql.general_log, mysql.slow_log).
+#
+# 		Rows retrieved from those tables can be converted from the local system time zone to any desired time zone with CONVERT_TZ() or by
+# 		setting the session time_zone sys var.
+#
+# 		Permitted log_timestamps values are UTC (default) and SYSTEM (local system time zone)
+#
+# 		Timestamps are written using ISO 8601 / RFC 3339 format: YYYY-MM-DDThh:mm:ss.uuuuu plus a tail value of Z signifying
+# 		Zulu time (UTC) or +hh:mm (offset from UTC)
+#
+# log_throttle_queries_not_using_indexes
+#
+# 		Sys var: 			log_throttle_queries_not_using_indexes
+# 		Scope: 				Global
+# 		Dynamic: 			Yes
+# 		SET_VAR Hint: 		No
+# 		Type: 				Integer
+# 		Default: 			0
+#
+# 		If log_queries_not_using_indexes is enabled, the log_throttle_queries_not_using_indexes variable
+# 		limits the number of such queries per minute that can be written to the slow query log.
+#
+# 		A value of 0 (default) means "No limit".
+#
+# log_warnings
+#
+# 		cmd line format: 		--log-warnings[=#]
+# 		Deprecated: 			Yes (removed in 8.0.3)
+# 		Sys var: 				log_warnings
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				2
+# 		Min: 						0
+# 		Max (64-bit) 			<a lot>
+# 		Max (32-bit) 			<less>
+#
+# 		Removed in 8.0.3 - use the log_error_verbosity sys_var instead.
+#
+# long_query_time
+#
+# 		cmd line format: 		--long-query-time=#
+# 		Sys var: 				long_query_time
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Numeric
+# 		Default: 				10
+# 		Min: 						0
+#
+# 		If a query takes longer than this many seconds, the server increments the Slow_queries status var.
+# 		If the slow query log is enabled, the query is logged to the slow query log file.
+#
+# 		This value is measured in real time, not CPU time - so a query that is under Threshold on a lightly loaded
+# 		system may be above Threshold on a heavy loaded one.
+#
+# 		The value of this var can be specified to a resolution of microseconds.
+#
+# 		For logging to tables, only integer times are written; the microseconds part is ignored.
+#
+# low_priority_updates
+#
+# 		cmd line format: 		--low-priority-updates
+# 		Sys var: 				low_priority_updates
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				FALSE
+#
+# 		If set to 1, all INSERT, UPDATE, DELETE and LOCK TABLE WRITE statements wait until there is no pending
+# 		SELECT or LOCK TABLE READ on the affected table.
+#
+# 		This affects only storage engines that use only table-level locking (such as MyISAM, MEMORY and MERGE)
+#
+# lower_case_file_system
+#
+# 		Sys var: 				lower_case_file_system
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+#
+# 		This var describes the case sensitivity of file names on the file system where the data dir
+# 		is located.
+#
+# 		OFF means file names are case-sensitive, ON means they are not case-sensitive.
+#
+# 		This var is read only because it reflects a file system attribute and setting it would have
+# 		no effect on the file system.
+#
+# lower_case_table_names
+#
+# 		cmd line format: 		--lower-case-table-names[=#]
+# 		Sys var: 				lower_case_table_names
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				0
+# 		Min: 						0
+# 		Max: 						2
+#
+# 		If set to 0, table names are stored as specified and comparisons are case-sensitive.
+#
+# 		If set to 1, table names are stored in lowercase on disk and comparisons are not case sensitive.
+#
+# 		If set to 2, table names are stored as given but compared in lowercase.
+#
+# 		This option also applies to DB names and table aliases. 
+#
+# 		On Windows the default is 1. On macOS, default is 2. On Linux, 2 is not supported - enforced 0.
+#
+# 		You should NOT set lower_case_table_names to 0 if you are running MySQL on a system where the data dir
+# 		resides on a case-insensitive file system (such as on Windows or macOS).
+#
+# 		Is an unsupported combination that could result in a hang condition when running an INSERT INTO ... SELECT ... FROM <tbl_name>
+# 		operation with the wrong <tbl_name> letter case.
+#
+# 		With MyISAM - accessing table names using different letter cases could cause index corruption.
+#
+# 		An error message is printed and the server exits if you attempt to start the server with --lower_case_table_names=0 on
+# 		a case-insensitive file system.
+#
+# 		If you are using InnoDB tables, you should set this variable to 1 on all platforms to force names to be converted
+# 		to lowercase.
+#
+# 		The setting of this variable in MySQL 8.0 affects the behavior of replication filtering options with regard
+# 		to case sensitivity. (Bug #51639)
+#
+# 		It is prohibited to start the server with a lower_case_table_names setting that is different from the setting used
+# 		when the server was initialized.
+#
+# 		The restriction is necessary because collations used by various data dictionary table fields are based on the
+#	 	setting defined when the server is initialized and restarting the server with a different setting would
+# 		introduce inconsistencies with respect to how identifiers are ordered and compared.
+#
+# mandatory_roles
+#
+# 		cmd line format: 				--mandatory-roles=value
+# 		introduced: 					8.0.2
+# 		Sys var: 						mandatory_roles
+# 		Scope: 							Global
+# 		Dynamic: 						Yes
+# 		SET_VAR Hint: 					No
+# 		Type: 							String
+# 		Default: 						empty string
+#
+# 		Roles the server should treat as mandatory. In effect, these roles are automatically
+# 		granted to every user, although setting mandatory_roles does not actually change any
+# 		user accounts, and the granted roles are not visible in the mysql.role_edges system table.
+#
+# 		The var value is a comma separated name:
+#
+# 		SET PERSIST mandatory_roles = '`role1`@`%`, `role2`,role3,role4@localhost';
+#
+# 		Setting mandatory_roles requires the ROLE_ADMIN priv, in addition to the SYSTEM_VARIABLES_ADMIN or SUPER
+# 		priv normally required to set a global system var.
+#
+# 		Role names consist of a user part and host part in user_name@host_name format.
+# 		The host part, if omitted, defaults to %
+#
+# 		User names and host names, if quoted, must be written in a fashion permitted for quoting within quoted strings.
+#
+# 		Roles named in the value of mandatory_roles cannot be revoked with REVOKE or dropped with DROP_ROLE or DROP_USER.
+#
+# 		Mandatory roles, like explicitly granted roles, do not take effect until activated.
+#
+# 		At login time, role activation occurs for all granted roles if the activate_all_roles_on_login sys_var is enabled,
+# 		or only for roles that are set as default roles otherwise.
+#
+# 		At runtime, SET_ROLE activates roles.
+#
+# 		Roles that do not exist when assigned to mandatory_roles but are created later may require special treatment
+# 		to be considered mandatory.
+#
+# 		SHOW_GRANTS displays mandatory roles according to the rules showcased later.
+#
+# max_allowed_packet
+#
+# 		cmd line format: 		--max-allowed-packet=#
+# 		Sys var: 				max_allowed_packet
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default (>= 8.0.3) 	67108864
+# 		Default (<= 8.0.2) 	4194304
+# 		Min: 						1024
+# 		Max: 						1073741824
+#
+# 		Max size of one packet or any generated/intermediate string or any parameter sent by the mysql_stmt_send_long_data() C API function.
+# 		The default is 64MB.
+#
+# 		The packet message buffer is initialized to net_buffer_length bytes, but can grow up to max_allowed_packet bytes when needed.
+# 		This value by default is small, to catch large (possibly incorrect) packets.
+#
+# 		You must increase this value if you are using large BLOB columns or long strings.
+# 		It should be as big as the largest BLOB you want to use.
+#
+# 		The protocol limit for max_allowed_packet is 1GB. The value should be a multiple of 1024: nonmultiples are rounded down to the nearest
+# 		multiple.
+#
+# 		When you change the message buffer size by changing the value of the max_allowed_packet variable, you should also change
+# 		the buffer size on the client side if your client program permits it.
+#
+# 		The default max_allowed_packet value built in to the client library is 1GB, but individual client programs
+# 		might override this.
+#
+# 		For example, mysql and mysqldump have defaults of 16MB and 24MB, respectively.
+#
+# 		They also enable you to change the client-side value by setting max_allowed_packet on the cmd line or in an option file.
+#
+# 		The session value of this var is read only. The client can receive up to as many bytes as the session value.
+# 		However, the server will not send to the client more bytes than the current global max_allowed_packet value.
+# 		(The global value could be less than the session value if the global value is changed after the client connects.)
+#
+# max_connect_errors
+#
+# 		cmd line format: 		--max-connect-errors=#
+# 		Sys var: 				max_connect_errors
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				100
+# 		Min: 						1
+# 		Max (64-bit) 			<a lot>
+# 		max (32-bit) 			<less>
+#
+# 		If more than this many successive connection requests from a host are interuppted without a successful
+# 		connection, the server blocks that host from further connections.
+#
+# 		You can unblock blocked hosts by flushing the host cache. To do so, issue a FLUSH_HOSTS statement or execute
+# 		a mysqladmin flush-hosts command.
+#
+# 		If a connection is established successfully within fewer than max_connect_errors attempts after a previous connection
+# 		was interrupted, the error count for the host is cleared to 0.
+#
+# 		However, once a host is blocked, flushing the host cache is the only way to unblock it. Default is 100.
+#
+# max_connections
+#
+# 		Cmd line format: 		--max-connections=#
+# 		Sys var: 				max_connections
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				151
+# 		Min: 						1
+# 		Max: 						100000
+#
+# 		max permitted number of simultaneous client conns.
+#
+# max_delayed_threads
+#
+# 		cmd line format: 		--max-delayed-threads=#
+# 		deprecated: 			Yes
+# 		Sys var: 				max_delayed_threads
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				20
+# 		Min: 						0
+# 		Max: 						16384
+#
+# 		This sys var is deprecated (because DELAYED inserts are not supported), will be removed.
+#
+# max_digest_length
+#
+# 		cmd line format: 		--max-digest-length=#
+# 		Sys var: 				max_digest_length
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				1024
+# 		Min: 						0
+# 		Max: 						1048576
+#
+# 		max number of bytes available for computing normalized statement digests.
+#
+# 		Once said amount of space is used during digest computation, truncation occurs:
+# 		No further tokens from a parsed statement are collected or figure into its digest value.
+#
+# 		Statements that differ only after that many bytes of parsed tokens produce the same 
+# 		normalized statement digest and are considered identical if compared or if aggregated for digest stats.
+#
+# 		Decreasing the max_digest_length value reduces memory use but causes the digest value of more statements
+# 		to become indistinguishable if they differ only at the end.
+#
+# 		Increasing the value permits longer statements to be distinguished but increases memory use, particularly
+# 		for workloads that involve large number of simultaneous sessions (the server allocates max_digest_length bytes per session)
+#
+# 		The parser uses this system var as a limit on the max length of normalized statement digests that it computes.
+# 		The Performance Schema, if it tracks statement digests, makes a copy of the digest value, using the performance_schema_max_digest_length,
+# 		sys var as a limit on the max length of digests that it stores.
+#
+# 		Consequently, if performance_schema_max_digest_length is less than max_digest_length digest values stored in the Performance
+# 		Schema are truncated relative to the original digest values.
+#
+# max_error_count
+#
+# 		cmd line format: 		--max-error-count=#
+# 		Sys var: 				max_error_count
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Integer
+# 		Default (>= 8.0.3) 	1024
+# 		Default (<= 8.0.2) 	64
+# 		Min: 						0
+# 		Max: 						65535
+#
+# 		Max number of error, warning and info messages to be stored for display by the SHOW_ERRORS and SHOW_WARNINGS statements.
+# 		This is the same as the number of condition areas in the diagnostics area, and thus the number of conditions that can be
+# 		inspected by GET_DIAGNOSTICS.
+#
+# max_execution_time
+#
+# 		cmd line format: 		--max-execution-time=#
+# 		Sys var: 				max_execution_time
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Integer
+# 		Default: 				0
+#
+# 		The execution timeout for SELECT statements, in milliseconds.
+# 		If the value is 0, timeouts are not enabled.
+#
+# 		max_execution_time applies as follows:
+#
+# 			The global max_execution_time value provides the default for the session value for new connections.
+# 			The session value applies to SELECT executions executed within the session that include no MAX_EXECUTION_TIME(N)
+# 			optimizer hint or for which N is 0.
+#
+# 			max_execution_time applies to read-only SELECT statements. Statements that are not read only are those that 
+# 			invoke a stored function that modifies data as a side effect.
+#
+# 			max_execution_time is ignored for SELECT statements in stored programs.
+#
+# max_heap_table_size
+#
+# 		cmd line format: 		--max-heap-table-size=#
+# 		Sys var: 				max_heap_table_size
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					16777216
+# 		Min value: 				16384
+# 		Max value (64-bit) 	<a lot>
+# 		Max value (32-bit) 	<less>
+#
+# 		Sets the maximum size to which user-created MEMORY tables are permitted to grow.
+# 		The value of the variable is used to calculate MEMORY table MAX_ROWS values.
+#
+# 		Setting this variable has no effect on any existing MEMORY table, unless the table is
+# 		re-created with a statement such as CREATE_TABLE or altered with ALTER_TABLE or TRUNCATE_TABLE
+#
+# 		A server restart also sets the maximum size of existing MEMORY tables to the global max_heap_table_size 
+#
+# 		This var is also used in conjunction with tmp_table_size to limit the size of internal in-memory tables.
+#
+# 		max_heap_table_size is not replicated.
+#
+# max_insert_delayed_threads
+#
+# 		deprecated: 			Yes
+# 		Sys var: 				max_insert_delayed_threads
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+#
+# 		Synonym to max_delayed_threads
+#
+# 		Deprecated because DELAYED inserts are not supported.
+#
+# max_join_size
+#
+# 		cmd line format: 		--max-join-size=#
+# 		Sys var: 				max_join_size
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Integer
+# 		Default: 				<a lot>
+# 		Min: 						1
+# 		Max: 						<a lot>
+#
 # 		https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
+# 		
 # 		
 # 		
 # 
