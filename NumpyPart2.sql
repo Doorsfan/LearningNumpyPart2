@@ -14775,9 +14775,548 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 		Default: 				<a lot>
 # 		Min: 						1
 # 		Max: 						<a lot>
-#
-# 		https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
-# 		
-# 		
-# 		
 # 
+# 		Do not permit statements that probably need to exaime more than max_join_size rows (for single-table statements)
+# 		or row combinations (for multiple-table statements) or that are likely to do more than max_join_size disk seeks.
+#
+# 		By setting this value, you can catch statements where keys are not used properly and that would probably take a long time.
+# 		Set this if you use to perform joins that lack a WHERE clause, that take a long time or return more than millions of rows.
+#
+# 		Setting this var to other than DEFAULT resets the value of sql_big_selects to 0.
+#
+# 		If you set the sql_big_selects value again, the max_join_size var is ignored.
+#
+# max_length_for_sort_data
+#
+# 		Cmd line format: 		--max-length-for-sort-data=#
+# 		Sys var: 				max_length_for_sort_data
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Integer
+# 		DEFAULT (>= 8.0.1) 	4096
+# 		Default (8.0.0) 		1024
+# 		Min: 						4
+# 		Max: 						<max>
+#
+# 		The cutoff on the size of index values that determines which filesort algo to use.
+#
+# max_points_in_geometry
+#
+# 		cmd line format: 		--max-points-in-geometry=integer
+# 		Sys var: 				max_points_in_geometry
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Integer
+# 		Default: 				65536
+# 		Min: 						3
+# 		Max: 						1048576
+#
+# 		Max value of the points_per_circle argument to the ST_BUFFER_Strategy() function
+#
+# max_prepared_stmt_count
+#
+# 		cmd line format: 		--max-prepared-stmt-count=#
+# 		Sys var: 				max_prepared_stmt_count
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				16382
+# 		Min: 						0
+# 		Max: 						1048576
+#
+# 		This variable limits the total number of prepared statements in the server.
+#
+# 		It can be used in environments where there is the potentional for denial-of-service attacks
+# 		based on running the server out of memory by preparing huge number of statements.
+#
+# 		If the value is set lower than the current number of prepared statements, existing statements are not
+# 		affected and can be used, but no new statements can be prepared until the current number drops below the limit.
+#
+# 		
+# max_seeks_for_key
+#
+# 		cmd line format: 		--max-seeks-for-key=#
+# 		Sys Var: 				max_seeks_for_key
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Integer
+# 		Default (64-bit) 		<a lot>
+# 		Default (32-bit) 		<less>
+# 		min: 						1
+# 		Max (64-bit) 			<a lot>
+# 		Max (32-bit) 			<less>
+#
+# 		Limit the assumed max number of seeks when looking up rows based on a key.
+# 		The MySQL optimizer assumes that no more than this number of key seeks are
+# 		required when searching for matching rows in a table by scanning an index, regardless
+# 		of the actual cardinality of the index.
+#
+# 		By setting it to a low value, for instance 100 - you can force MySQL to prefer indexes
+# 		instead of table scans.
+#
+# max_sort_length
+#
+# 		cmd line format: 		--max-sort-length=#
+# 		Sys var: 				max_sort_length
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Integer
+# 		Default: 				1024
+# 		Min: 						4
+# 		Max: 						<a lot>
+#
+# 		The number of bytes to use when sorting data values. The server uses only the first max_sort_length
+# 		bytes of each value and ignore the rest.
+#
+# 		Consequently, values that differ only after the first max_sort_length bytes compare as equal for
+# 		GROUP BY, ORDER BY and DISTINCT operations.
+#
+# 		Increasing this may require increasing the value of sort_buffer_size as well.
+#
+# max_sp_recursion_depth
+#
+# 		cmd line format: 		--max-sp-recursion-depth[=#]
+# 		Sys var: 				max_sp_recursion_depth
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				0
+# 		Max: 						255
+#
+# 		The number of times that any given stored procedure may be called recursively.
+# 		The default value for this option is 0, which completely disables recursion in stored
+# 		procedures.
+#
+# 		Max is 255.
+#
+# 		Stored procedure recursion increases the demand on thread stack space.
+#
+# 		If you increase the value of max_sp_recursion_depth, it may be necessary 
+# 		to increase thread stack size by increasing the value of thread_stack at server startup.
+#
+# max_tmp_tables
+#
+# 		REMOVED 
+#
+# max_user_connections
+#
+# 		cmd line format: 		--max-user-connections=#
+# 		Sys var: 				max_user_connections
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				0
+# 		Min: 						0
+# 		Max: 						4294967295
+#
+# 		The max number of simultaneous connections permitted to any given MySQL user account.
+# 		A value of 0 (the default) means "No limit".
+#
+# 		This variable has a global value that can be set at server startup or runtime.
+#
+# 		It also has a read-only session value that indicates the effective simultaneous-connection
+# 		limit that applies to the account associated with the current session. The session value is initalized as
+# 		follows: 				
+#
+# 		If the user account has a nonzero MAX_USER_CONNECTIONS resource limit, the session max_user_connections is set to that limit.
+#
+# 		Otherwise, the session max_user_connections session value is set to the global value.
+#
+# 		Account resource limits are specified, using the CREATE_USER or ALTER_USER statement.
+#
+# max_write_lock_count
+#
+# 		cmd line format: 		--max-write-lock-count=#
+#  	Sys var: 				max_write_lock_count
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default (64-bit) 		<a lot>
+# 		Default (32-bit) 		<less>
+# 		Min: 						1
+# 		Max (64-bit) 			<a lot>
+# 		Max (32-bit) 			<less>
+#
+# 		After this many write locks, permit some pending read lock requests
+# 		to be processed in between.
+#
+# mecab_rc_file
+#
+# 		cmd line format: 		--mecab-rc-file
+# 		Sys var: 				mecab_rc_file
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Dir name
+#
+# 		The mecab_rc_file option is used when setting up the MeCab full-text parser.
+#
+# 		The mecab_rc_file option defines the path to the mecabrc configuration file, which is the configuration
+# 		file for MeCab. The option is read-only and can only be set at startup.
+#
+# 		The mecabrc configuration file is required to initialize MeCab.
+#
+# metadata_locks_cache_size
+#
+# 		deprecated: 			Yes (removed in 8.0.13)
+# 		Sys var: 				metadata_locks_cache_size
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				1024
+# 		Min: 						1
+# 		Max: 						A LOT
+#
+# 		REMOVED in 8.0.13
+#
+# metadata_locks_hash_instances
+#
+# 		DeprecateD: 			Yes (removed in 8.0.13)
+# 		Sys var: 				metadata_locks_hash_instances
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				8
+# 		Min: 						1
+# 		Max: 						1024
+#
+# 		Removed in 8.0.13
+#
+# min_examined_row_limit
+#
+# 		cmd line format: 		--min-examined-row-limit=#
+# 		Sys Var: 				min_examined_row_limit
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				0
+# 		Min: 						0
+# 		Max (64-bit): 			<a lot>
+# 		Max (32-bit): 			<less>
+#
+# 		Queries that examine fewer than this number of rows are not logged to the slow query log.
+#
+# multi_range_count
+#
+# 		cmd line format: 		--multi-range-count=#
+# 		Deprecated: 			Yes (Removed in 8.0.3)
+# 		Sys var: 				multi_range_count
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				256
+# 		Min: 						1
+# 		Max: 						<a lot>
+#
+# 		Removed in 8.0.3
+#
+# myisam_data_pointer_size
+#
+# 		cmd line format: 		--myisam-data-pointer-size=#
+# 		Sys var: 				myisam_data_pointer_size
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				6
+# 		Min: 						2
+# 		Max: 						7
+#
+# 		Default point size in bytes, to be used by CREATE TABLE for MyISAM tables when no MAX_ROWS
+# 		option is specified.
+#
+# 		This variable cannot be less than 2 or larger than 7. Default to 6.
+#
+# myisam_max_sort_file_size
+#
+# 		cmd line formT: 		--myisam-max-sort-file-size=#
+# 		SYS var: 				myisam_max_sort_file_size
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					integer
+# 		Default (64-bit) 		<a lot>
+# 		Default (32-bit) 		<less>
+#
+# 		The max size of the temp file that MySQL is permitted to use while re-creating a MyISAM index
+# 		(during REPAIR_TABLE, ALTER_TABLE, or LOAD_DATA_INFILE)
+#
+# 		If the file size would be larger than this value, the index is created using the key cache instead
+# 		, which is slower. Given in bytes.
+#
+# 		If MyISAM index files exceed the size and disk space available, increasing the value may help performance.
+# 		The space must be available in the file system containing the dir where the original index file is located.
+#
+# myisam_mmap_size
+#
+# 		cmd line format: 		--myisam-mmap-size=#
+# 		Sys var: 				myisam_mmap_size
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default (64-bit) 		<a lot>
+# 		Default (32-bit) 		<less>
+# 		Min: 						7
+# 		Max (64-bit) 			<a lot>
+# 		Max (32-bit) 			<less>
+#
+# 		The max amount of memory to use for memory mapping compressed MyISAM files.
+# 		If many compressed MyISAM tables are used, the value can be decreased to reduce
+# 		the likelihood of memory-swapping problems.
+#
+# myisam_recover_options
+#
+# 		Sys_var: 				myisam_recover_options
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+#
+# 		The value of the --myisam-recover-options option
+#
+# myisam_repair_threads
+#
+# 		Cmd line format: 		--myisam-repair-threads=#
+# 		Sys var: 				myisam_repair_threads
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				1
+# 		Min: 						1
+# 		Max value (64-bit) 	<a lot>
+# 		Max value (32-bit) 	<less>
+#
+# 		If greater than 1, MyISAM table indexes are created in parallel (each index in its own thread)
+# 		during the Repair by sorting process.
+#
+# 		Multithread repair is still in beta.
+#
+# myisam_sort_buffer_size
+#
+# 		cmd line format: 		--myisam-sort-buffer-size=#
+# 		Sys Var: 				myisam_sort_buffer_size
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				8388608
+# 		Min: 						4096
+# 		Max (other, 64-bit) 	<a lot>
+# 		Max (other, 32-bit) 	<less>
+# 		Max (windows, 64-bit)<a lot>
+# 		Max (Windows, 32-bit)<less>
+#
+# 		The size of the buffer that is allocated when sorting MyISAM indexes during a REPAIR_TABLE
+# 		or when creating indexes with CREATE_INDEX or ALTER_TABLE
+#
+# myisam_stats_method
+#
+# 		Cmd line format: 		--myisam-stats-method=name
+# 		Sys var: 				myisam_stats_method
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Enumeration
+# 		Default: 				nulls_unequal
+# 		Valid: 					nulls_equal, nulls_unequal, nulls_ignored
+#
+# 		How the server treats NULL values when collecting statistics about the distribution of index values for MyISAM tables.
+# 		
+# 		nulls_equal - All NULL index values are considered equal and form a single value group that has a size equal to number of NULL values.
+# 		nulls_unequal - NULL values are considered unequal, and each NULL forms a distinct group value of size 1.
+# 		nulls_ignored - NULL values are ignored.
+#
+# 		The method that is used for generating table stats influences how the optimizer chooses indexes for query execution
+#
+# myisam_use_mmap
+#
+# 		cmd line format: 		--myisam-use-mmap
+# 		Sys var: 				myisam_use_mmap
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		Use memory mapping for reading and writing MyISAM tables.
+#
+# mysql_native_password_proxy_users
+#
+# 		cmd line format: 		--mysql-native-password-proxy-users=[={OFF|ON}]
+# 		Sys var: 				mysql_native_password_proxy_users
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		Controls whether the mysql_native_password built-in authentication plugin supports
+# 		proxy users. It has no effect unless the check_proxy_users SYS_VAR is on.
+#
+# named_pipe
+#
+# 		Sys var: 			named_pipe
+# 		Scope: 				global
+# 		Dynamic: 			No
+# 		SET_VAR Hint: 		No
+# 		Platform: 			Windows
+# 		Type: 				Boolean
+# 		Default: 			OFF
+#
+# 		Indicates whether the server supports connections over named pipes.
+#
+# net_buffer_length
+#
+# 		cmd line format: 		--net-buffer-length=#
+# 		Sys var: 				net_buffer_length
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				16384
+# 		Min: 						1024
+# 		Max: 						1048576
+#
+# 		Each client thread is associated with a connection buffer and a result buffer.
+#
+# 		Both begin with a size given by net_buffer_length but are dynamically enlarged up to
+# 		max_allowed_packet bytes as needed.
+#
+# 		The result buffer shrinks to net_buffer_length after each SQL statement.
+#
+# 		This var should not normally be changed, but in case of having very small amounts of memory,
+# 		you can set it to the expected length of statements sent by clients.
+#
+# 		If statements exceed this length, the connection buffer is automatically enlarged.
+# 		The max value to which net_buffer_length can be set is 1MB.
+#
+# 		Session value of this is read only.
+#
+# net_read_timeout
+#
+# 		Cmd line format: 		--net-read-timeout=#
+# 		Sys var: 				net_read_timeout
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				30
+# 		Min: 						1
+#
+# 		The number of seconds to wait for more data from a connection before aborting the read.
+#
+# 		When the server is reading from the client, net_read_timeout is the timeout value controlling
+# 		when to abort.
+#
+# 		When the server is writing to the client, net_write_timeout is the timeout value controlling when to
+# 		abort.
+#
+# 		See also slave_net_timeout
+#
+# net_retry_count
+#
+# 		cmd line format: 		--net-retry-count=#
+# 		Sys var: 				net_retry_count
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				10
+# 		Min: 						1
+# 		Max (64-bit) 			<a lot>
+# 		Max (32-bit) 			<less>
+#
+# 		If a read or write on a communication port is interuppted, retry this many times before giving up.
+#
+# 		This should be set pretty high on FreeBSD because internal interuppts are sent to all threads.
+#
+# net_write_timeout
+#
+# 		cmd line format: 		--net-write-timeout=#
+# 		Sys var: 				net_write_timeout
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				60
+# 		Min: 						1
+#
+# 		Number of seconds to wait for a block to be written to a connection before aborting the write.
+# 		(See also net_read_timeout)
+# 
+# new
+#
+# 		cmd line format: 		--new
+# 		Sys var: 				new
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Disabled by: 			skip-new
+# 		Type: 					Boolean
+# 		Default: 				FALSE
+#
+# 		Used in 4.0 to turn on some 4.1 behaviors, retained for backwards comp. always off.
+#
+# ngram_token_size
+#
+# 		cmd line format: 		--ngram-token-size
+# 		Sys var: 				ngram_token_size
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				2
+# 		Min: 						1
+# 		Max: 						10
+#
+# 		Defines the n-gram token size for the n-gram full-text parser.
+# 		The ngram_token_size option is read-only and can only be modified at startup.
+#
+# offline_mode
+#
+# 		cmd line format: 		--offline-mode=val
+# 		Sys Var: 				offline_mode
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		Whether the server is in "offline mode", which has these characteristics:
+#
+# 			Connected client users who do not have the CONNECTION_ADMIN or SUPER privs are disconnected on the next request,
+# 			with an appropiate error.
+#
+# 			Disconnection includes terminating running statements and releasing locks. Such clients also cannot initiate new connections,
+# 			and receive an appropiate error.
+#
+# 			Connected client users who have the CONNECTION_ADMIN or SUPER privs are not disconnected, and can initiate new connections to
+# 			manage the server.
+#
+# 			Replication slave threads are permitted to keep applying data to the server.
+#
+# 		Only users who have the SYSTEM_VARIABLES_ADMIN or SUPER priv can control offline mode.
+#
+# 		To put a server in offline mode, change the value of the offline_mode SYS_VAR from OFF to ON.
+#
+# 		To resume normal ops, change offline_mode from ON to OFF. In offline mode, clients that are 
+# 		refused access receive an ER_SERVER_OFFLINE_MODE error.
+#
+# old
+#
+#  		
+#
+#
