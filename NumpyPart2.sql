@@ -15317,6 +15317,890 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # old
 #
-#  		
+# 		cmd line format: 		--old
+# 		Sys_var: 				old_alter_table
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		old is a compability var. Disabled by default, but can be enabled at startup to revert the server to behaviors present in older verisons.
+#
+# 		When old is enabled, it changes the default scope of index hints to that used prior to MySQL 5.1.17.
+#
+# 		That is, index hints with no FOR clause apply only to how indexes are used for retrieval and not to resolution
+# 		of ORDER BY or GROUP BY clauses.
+#
+# 		Take care about enabling this in a replication setup.
+#
+# 		With statement-based binary logging, having different modes for master and slave - might lead to replication errors.
+#
+# old_alter_table
+#
+# 		Cmd line format: 		--old-alter-table
+# 		Sys var: 				old_alter_table
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		When this variable is enabled, the server does not use optimized method of processing an ALTER_TABLE operation.
+# 		It reverts to using a temporary table, copying over the data and then renaming the temporary table to the original,
+# 		as used by MySQL 5.0 and earlier.
+#
+# 		ALTER TABLE ... DROP PARTITION with old_alter_table=ON rebuilds the partitioned table and attempts to move data
+# 		from the dropped partition to another partition with a compatible PARTITION ... VALUES def.
+#
+# 		Data that cannot be moved to another partition is deleted. In earlier releases, ALTER TABLE ... DROP PARTITION 
+# 		with old_alter_table=ON deletes data stored in the partition and drops the partition.
+#
+# old_passwords
+#
+# 		Deprecated: 		Yes (removed in 8.0.11)
+# 		Sys var: 			old_passwords
+# 		Scope: 				Global, Session
+# 		Dynamic: 			Yes
+# 		SET_VAR Hint: 		No
+# 		Type: 				Enumeration
+# 		Default: 			0
+# 		Valid: 				0, 2
+#
+# 		REMOVED in 8.0.11
+#
+# open_files_limit
+#
+# 		Cmd line format: 		--open-files-limit=#
+# 		Sys var: 				open_files_limit
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				5000, with possible adjustment
+# 		Min: 						0
+# 		Max: 						platform dependent
+#
+# 		The number of files that the OS permits mysqld to open.
+#
+# 		The value of this variable at runtime is the real value permitted by the system and might
+# 		be different from the value you specify at server startup.
+#
+# 		The value is 0 on systems where MySQL cannot change the number of open files.
+#
+# 		The effective open_files_limit value is based on the value specified at system startup (if any) and the values
+# 		of max_connections and table_open_cache using the following:
+#
+# 		1) 10 + max_connections + (table_open_cache * 2)
+# 		2) max_connections + 5
+# 		3) OS limit if +
+# 		4) if OS limit is INF 
+# 			open_files_limit value specified at startup, 5000 if None
+#
+# 		The server bases it's max on the max of the above three - If that many cannot be obtained,
+# 		the server attempts to obtain as many as the system will permit.
+#
+# optimizer_prune_level
+#
+# 		cmd line format: 		--optimizer-prune-level[=#]
+# 		Sys var: 				optimizer_prune_level
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Boolean
+# 		Default: 				1
+#
+# 		Controls the heuristic applied during query optimization to prune less-promising
+# 		partial plans from the optimizer search space.
+#
+# 		A value of 0 disables heuristics so that the optimizer performs an exhaustive search.
+# 		A value of 1 causes the optimizer to prune plans based on the number of rows retrieved by intermediate plans.
+#
+# optimizer_search_depth
+#
+# 		cmd line format: 		--optimizer-search-depth[=#]
+# 		Sys_var: 				optimizer_search_depth
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Integer
+# 		Default: 				62
+# 		Min: 						0
+# 		Max: 						62
+#
+# 		The max depth of search performed by the query optimizer. Values larger than
+# 		the number of relations in a query result in better query plans, but take longer
+# 		to generate an execution plan for a query.
+#
+# 		Values smaller than the number of relations in a query return an execution plan
+# 		quicker, but the resulting plan may be far from being optimal.
+#
+# 		If set to 0, the system automatically picks a reasonable value.
+#
+# optimizer_switch
+#
+# 		cmd line format: 		--optimizer-switch=value
+# 		Sys_var: 				optimizer_switch
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Set
+# 		Valid (>= 8.0.13) 	batched_key_access={on|off}
+# 									block_nested_loop={on|off}
+# 									condition_fanout_filter={on|off}
+#									derived_merge={on|off}
+# 									duplicateweedout={on|off}
+#
+# 									engine_condition_pushdown={on|off}
+# 									firstmatch={on|off}
+# 									index_condition_pushdown{on|off}
+# 									index_merge={on|off}
+# 									index_merge_intersection={on|off}
+# 									index_merge_union={on|off}
+# 									loosescan={on|off}
+# 									materialization={on|off}
+#
+# 									mrr={on|off}
+# 									mrr_cost_based={on|off}
+# 									semijoin={on|off}
+# 									skip_scan={on|off}
+# 									subquery_materialization_cost_based={on|off}
+# 									use_index_extensions={on|off}
+# 									use_invisible_indexes={on|off}
+#
+# 		Valid (>= 8.0.3, <= 8.0.12)
+#
+# 									batched_key_access={on|off}
+# 									block_nested_loop={on|off}
+# 									condition_fanout_filter={on|off}
+# 									derived_merge={on|off}
+# 									duplicateweedout={on|off}
+# 									engine_condition_pushdown={on|off}
+# 									firstmatch={on|off}
+# 									index_condition_pushdown={on|off}
+# 									index_merge={on|off}
+# 									index_merge_intersection={on|off}
+# 									index_merge_sort_union={on|off}
+#
+# 									index_merge_union={on|off}
+# 									loosescan={on|off}
+# 									materialization={on|off}
+# 									mrr={on|off}
+# 									mrr_cost_based={on|off}
+# 									semijoin={on|off}
+# 									subquery_materialization_cost_based={on|off}
+# 									use_index_extensions={on|off}
+# 									use_invisible_indexes={on|off}
+#
+# 		Valid (<= 8.0.2) 		batched_key_access={on|off}
+# 									block_nested_loop={on|off}
+# 									condition_fanout_filter={on|off}
+# 									derived_merge={on|off}
+# 									duplicateweedout={on|off}
+# 									engine_condition_pushdown={on|off}
+#
+# 									firstmatch={on|off}
+# 									index_condition_pushdown={on|off}
+# 									index_merge={on|off}
+# 									index_merge_intersection={on|off}
+# 									index_merge_sort_union={on|off}
+# 									index_merge_union={on|off}
+# 									loosescan={on|off}
+# 									materialization={on|off}
+# 									mrr={on|off}
+# 									mrr_cost_based={on|off}
+# 
+# 									semijoin={on|off}
+# 									subquery_materialization_cost_based={on|off}
+# 									use_index_extensions={on|off}
+#
+# 		The optimizer_switch SYS_VAR enables control over optimizer behavior.
+#
+# 		The value of this var is a set of flags, each of which has a value of on
+# 		or off to indicate whether the corresponding optimizer behavior is enabled or disabled.
+#
+# 		This variable has global and session values and can be changed at runtime.
+#
+# 		The global default can be set at server startup.
+#
+# 		To see the current set of optimizer flags, select the variable value:
+#
+# 		SELECT @@optimizer_switch\G
+# 		***************************** 1. row **********************************
+# 		@@optimizer_switch: 	index_merge=on,index_merge_union=on (off if it's off), etc.
+#
+# optimizer_trace
+#
+# 		Sys var: 		optimizer_trace
+# 		Scope: 			Global, Session
+# 		Dynamic: 		Yes
+# 		SET_VAR Hint: 	No
+# 		Type: 			String
+#
+# 		Controls the optimizer tracing.
+#
+# optimizer_trace_features
+#
+# 		Sys var: 		optimizer_trace_features
+# 		Scope: 			Global, Session
+# 		Dynamic: 		Yes
+# 		SET_VAR Hint: 	no
+# 		Type: 			String
+#
+# 		Enables or disabled selected optimizer tracing features.
+#
+# optimizer_trace_limit
+#
+# 		Sys var: 		optimizer_trace_limit
+# 		Scope. 			Global, Session
+# 		Dynamic: 		Yes
+# 		SET_VAR Hint: 	No
+# 		Type: 			Integer
+# 		Default: 		1
+#
+# 		Max number of optimizer traces to display.
+#
+# optimizer_trace_max_mem_size
+#
+# 		Sys var: 		optimizer_trace_max_mem_size
+# 		Scope: 			Global, Session
+# 		Dynamic: 		Yes
+# 		SET_VAR Hint: 	Yes
+# 		Type: 			Integer
+# 		Default (>= 8.0.4) 1048576
+# 		Default (<= 8.0.3) 16384
+#
+# 		The max cumulative size of stored optimizer traces.
+#
+# optimizer_trace_offset
+#
+# 		Sys var: 		optimizer_trace_offset
+# 		Scope: 			Global, Session
+# 		Dynamic: 		Yes
+# 		SET_VAR Hint: 	No
+# 		Type: 			Integer
+# 		Default: 		-1
+#
+# 		The offset of optimizer traces to display.
+#
+# performance_schema_xxx
+#
+# 		Performance Schema sys vars, listed later.
+# 		Can be used to configure performance schema ops.
+#
+# parser_max_mem_size
+#
+# 		cmd line format: 		--parser-max-mem-size=N
+# 		Sys var: 				parser_max_mem_size
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default (64-bit) 		<a lot>
+# 		Default (32-bit) 		<less>
+# 		Min: 						10000000
+# 		Max (64-bit) 			<a lot>
+# 		Max (32-bit) 			<less>
+#
+# 		The max amount of memory available to the parser. 
+# 		The default value places no limit on memory available.
+# 		
+# 		The value can be reduced to protect against out-of-memory situations caused by
+# 		parsing long or complex SQL statements.
+#
+# password_history
+#
+# 		cmd line format: 		--password-history=#
+# 		Introduced: 			8.0.3
+# 		Sys var: 				password_history
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				0
+# 		Min: 						0
+# 		Max: 						4294967295
+#
+# 		This variable defines the global policy for controlling reuse of previous passwords based on
+# 		required minimum number of password changes.
+#
+# 		For an account password used previously, this variable indicates the number of subsequent account password
+# 		changes that must occur before the password can be used.
+#
+# 		If the value is 0 (default), there is no reuse restriction based on number of PW changes.
+#
+# 		Changes to this variable apply immediately to all accounts defined with the PASSWORD HISTORY DEFAULT option.
+#
+# 		The global number-of-changes password reuse policy can be overridden as desired for individual accounts using
+# 		the PASSWORD HISTORY option of the CREATE USER and ALTER USER statements.
+#
+# password_require_current
+#
+# 		cmd line format: 		--password-require-current[={OFF|ON}]
+# 		Introduced: 			8.0.13
+# 		Sys var: 				password_require_current
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		Defines the global policy for controlling whether attempts to change an acc PW must specify the current PW to be replaced.
+#
+# 		Changes to this var apply immediately to all accounts defined with the PASSWORD REQUIRE CURRENT DEFAULT option.
+#
+# 		The global verification-required policy can be overriden as desired for individual accounts using the
+# 		PASSWORD REQUIRE option of the CREATE_USER and ALTER_USER statements.
+#
+# password_reuse_interval
+#
+# 		cmd line format: 		--password-reuse-interval=#
+# 		Introduced: 			8.0.3
+# 		Sys var: 				password_reuse_interval
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				0
+# 		Min: 						0
+# 		Max: 						<a lot>
+#
+# 		This variable defines the global policy for controlling reuse of previous PWs based on time elapsed.
+# 		For an account PW used previously, this var indicates the number of days that must pass before the PW can be reused.
+#
+# 		If the value is 0 (default), there is no reuse restriction based on time elapsed.
+#
+# 		Changes to this var apply instantly to all accounts defined with the PASSWORD REUSE INTERVAL DEFAULT option.
+#
+# 		The global time-elapsed PW reuse policy can be overridden as desired for individual accounts using the PASSWORD REUSE INTERVAL
+# 		option of the CREATE_USER and ALTER_USER statements.
+#
+# persisted_globals_load
+#
+# 		cmd line format: 		--persisted-globals-load[=ON|OFF]
+# 		Sys var: 				persisted_globals_load
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				ON
+#
+# 		Whether to load persisted configuration settings from the mysqld-auto.cnf file in the data dir.
+# 		The server normally processes this file at startup after all other option files.
+#
+# 		Disabling this causes the server startup sequence to skip mysqld-auto.cnf
+#
+# 		To modify the contents of mysqld-auto.cnf, use the SET_PERSIST, SET_PERSIST_ONLY and
+# 		RESET_PERSIST statements.
+#
+# pid_file
+#
+# 		cmd line format: 		--pid-file=file_name
+# 		Sys var: 				pid_file
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					File name
+#
+# 		The path name of the process ID file. This var can be set with the --pid-file option.
+#
+# 		The server creates the file in the data dir unless an absolute path name is given
+# 		to specify a different dir.
+#
+# 		If you specify the --pid-file option, you must specify a value.
+#
+# 		If you do not specify the --pid-file option, MySQL uses a default
+# 		value of <host_name>.pid where <host_name> is the name of the host machine.
+#
+# 		The process ID file is used by other programs such as mysqld_safe to determine 
+# 		the server's process ID.
+#
+# 		On Windows, this var also affects the default error log file name.
+#
+# plugin_dir
+#
+# 		cmd line format: 		--plugin-dir=dir_name
+# 		Sys var: 				plugin-dir
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+#  	Type: 					Dir name
+# 		Default: 				BASEDIR/lib/plugin
+#
+# 		Path name of the plugin dir.
+#
+# 		If the plugin dir is writable by server, it may be possible for a user to write
+# 		executable code to a file in the dir using SELECT ... INTO DUMPFILE
+#
+# 		This can be prevented by making plugin_dir read only to the server or by setting
+# 		--secure-file-priv to a dir where SELECT writes can be made safely.
+#
+# port
+#
+# 		cmd line format: 		--port=#
+# 		Sys var: 				port
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				3306
+# 		Min: 						0
+# 		Max: 						65535
+#
+# 		Number of port on which the server listens for TPC/IP conns.
+# 		Can be set with --port
+#
+# preload_buffer_size
+#
+# 		cmd line format: 		--preload-buffer-size=#
+# 		Sys var: 				preload_buffer_size
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				32768
+# 		Min: 						1024
+# 		Max: 						<a lot>
+#
+# 		Size of the buffer that is allocated when preloading indexes.
+#
+# profiling
+#
+# 		If set to 0 or OFF (the default), statement profiling is disabled.
+#
+# 		If set to 1 or ON, statement profiling is enabled and the SHOW PROFILE
+#  	and SHOW PROFILES statements provide access to profiling information.
+#
+# 		Deprecated.
+#
+# profiling_history_size
+#
+# 		Number of statements for which to maintain profiling information if profiling is enabled.
+# 		Default is 15.
+#
+# 		max is 100. Setting this 0 disables profiling.
+#
+# 		Deprecated.
+#
+# protocol_version
+#
+# 		Sys var: 		protocol_version
+# 		Scope: 			Global
+# 		Dynamic: 		No
+# 		SET_VAR Hint: 	No
+# 		Type: 			Integer
+#
+# 		The version of the client/server protocol used by the MySQL server.
+#
+# proxy_user
+#
+# 		Sys var: 		proxy_user
+# 		scope: 			Session
+# 		Dynamic: 		No
+# 		SET_VAR Hint: 	No
+# 		Type: 			String
+#
+# 		If the current client is a proxy for another user, this var is the proxy user account name.
+# 		Otherwise, this var is NULL.
+#
+# pseudo_slave_mode
+#
+# 		Sys var: 		pseudo_slave_mode
+# 		Scope: 			Session
+# 		Dynamic: 		Yes
+# 		SET_VAR Hint: 	No
+# 		Type: 			Integer
+#
+# 		This var is used for internal server use.
+#
+# 		AS of MySQL 8.0.14, setting the session value of this sys var is a restricted ops.
+#
+# 		The session user must have the privs to set it.
+#
+# 		In MysQL >= 8.0.14 - pseudo_slave_mode has the following effects on the handling of a statement that
+# 		sets one or more unsupported or unknown SQL modes:
+#
+# 			If true - the server ignores the unsupported mode and raises a warning
+#
+# 			If false - the server rejects the statement with ER_UNSUPPORTED_SQL_MODE
+#
+# 		mysqlbinlog sets this var to true prior to executing any other SQL.
+#
+# pseudo_thread_id
+#
+# 		Sys var: 		pseudo_thread_id
+# 		Scope: 			Session
+# 		Dynamic: 		Yes
+# 		SET_VAR Hint: 	No
+# 		Type: 			Integer
+#
+# 		Used for internal server use
+#
+# 		Setting this is a restricted ops, must have privs
+#
+# query_alloc_block_size
+#
+# 		Cmd line format: 		--query-alloc-block-size=#
+# 		Sys var: 				query_alloc_block_size
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				8192
+# 		Min: 						1024
+# 		Max: 						<a lot>
+# 		Block size: 			1024
+#
+# 		The allocation size of memory blocks that are allocated for objects created during statement parsing
+# 		and execution. 
+#
+# 		If you have problems with memory fragmentation, it might help to increase this param.
+# 		
+# query_cache_limit
+#
+# 		Cmd line format: 		--query-cache-limit=#
+# 		DeprecateD: 			Yes (removed in 8.0.3)
+# 		Sys var: 				query_cache_limit
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				1048576
+# 		Min: 						0
+# 		Max (64-bit) 			<a lot>
+# 		Max (32-bit) 			<less>
+#
+# 		REMOVED in 8.0.3
+#
+# query_cache_min_res_unit
+#
+# 		Cmd line format: 		--query-cache-min-res-unit=#
+# 		Deprecated: 			Yes (Removed in 8.0.3)
+# 		Sys var: 				query_cache_min_res_unit
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					integer
+# 		Default: 				4096
+# 		Min: 						512
+# 		Max (64-bit) 			<a lot>
+# 		Max (32-bit) 			<less>
+#
+# 		REMOVED in 8.0.3
+#
+# query_cache_size
+#
+# 		cmd line format: 				--query-cache-size=#
+# 		Deprecated: 					Yes (removed in 8.0.3)
+# 		Sys var: 						query_cache_size
+# 		Scope: 							Global
+# 		Dynamic: 						Yes
+# 		SET_VAR Hint: 					No
+# 		Type: 							Integer
+# 		Default (64-bit, >= 8.0.1) 0
+#  	Default (64-bit, 8.0.0) 	1048576
+#
+# 		Default (32-bit, >= 8.0.1) 0
+# 		Default (32-bit, 8.0.0) 	1048576
+# 
+# 		Min: 								0
+#
+# 		Max (64-bit) 					<a lot>
+# 		Max (32-bit) 					<less>
+#
+# 		REMOVED in 8.0.3
+#
+# query_cache_type
+#
+# 		Cmd line format: 			--query-cache-type=#
+# 		Deprecated: 				Yes (Removed in 8.0.3)
+# 		Sys var: 					query_cache_type
+# 		Scope: 						Global, Session
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						Enumeration
+# 		Default: 					0
+# 		Valid: 						0, 1, 2
+#
+# 		Removed in 8.0.3
+#
+# query_cache_wlock_invalidate
+#
+# 		cmd line format: 			--query-cache-wlock-invalidate
+# 		Deprecated: 				Yes (Removed in 8.0.3)
+# 		Sys var: 					query_cache_wlock_invalidate
+# 		Scope: 						Global, Session
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						Boolean
+# 		Default: 					FALSE
+#
+# 		Removed in 8.0.3
+#
+# query_prealloc_size
+#
+# 		cmd line format: 			--query-prealloc-size=#
+# 		Sys var: 					query_prealloc_size
+# 		Scope: 						Global, Session
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						Integer
+# 		Default: 					8192
+# 		Min: 							8192
+# 		Max (64-bit) 				<a lot>
+# 		Max (32-bit) 				<less>
+# 		Block size: 				1024
+#
+# 		The size of the persistent buffer used for statement parsing and execution.
+# 		This buffer is not freed between statements.
+#
+# 		If you are running complex queries, a larger query_prealloc_size value might
+# 		be helpful in improving performance, because it can reduce the need for the server
+# 		to perform memory allocation during query execution operations.
+#
+# rand_seed1
+#
+# 		sys var: 				rand_seed1
+# 		Scope: 					Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+#
+# 		The rand_seed1 and rand_seed2 vars exist as session vars only, and can be set but not read.
+# 		The variable - but not their values - are shown in the output of SHOW_VARIABLES.
+#
+# 		The purpose of these vars is to support replication of the RAND() function.
+# 		For statements that invoke RAND(), the master passes two values to the slave -
+# 		where they are used to seed the RNG.
+#
+# 		The slave uses these values to set the session vars rand_seed1 and rand_seed2 so that RAND()
+# 		on the slave generates the same value as on the master.
+#
+# rand_seed2
+# 
+# 		Same as rand_seed1
+#
+# range_alloc_block_size
+#
+# 		Cmd line format: 		--range-alloc-block-size=#
+# 		Sys var: 				range_alloc_block_size
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Integer
+# 		Default: 				4096
+# 		Min: 						4096
+# 		Max (64-bit) 			<a lot>
+# 		Max: 						<less>
+# 		Block size: 			1024
+#
+# 		Size of blocks that are allocated when doing range optimization.
+#
+# range_optimizer_max_mem_size
+#
+# 		cmd line ormat: 		--range-optimizer-max-mem-size=N
+# 		Sys var: 				range_optimizer_max_mem_size
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Integer
+# 		Default: 				8388608
+# 		Min: 						0
+# 		Max: 						<a lot>
+#
+# 		The limit on memory consumption for the range optimizer.
+# 		A value of 0 means "no limit".
+#
+# 		If an execution plan considered by the optimizer uses the range access
+# 		method but the optimizer estimates that the amount of memory needed for this
+# 		method would exceed the limit - it abandons the plan and considers other plans.
+#
+# rbr_exec_mode
+#
+# 		sys var: 		rbr_exec_mode
+# 		Scope: 			Global, Session
+# 		Dynamic: 		Yes
+# 		SET_VAR Hint: 	No
+# 		Type: 			Enumeration
+# 		Default: 		STRICT
+# 		Valid: 			IDEMPOTENT, STRICT
+#
+# 		For internal use by mysqlbinlog.
+# 		The variable switches the server between IDEMPOTENT mode and STRICT mode.
+#
+# 		IDEMPOTENT mode causes suppression of duplicate-key and no-key found errors
+# 		in BINLOG statements generated by mysqlbinlog.		
+#
+# 		This mode is useful when replaying a row-based binary log on a server that causes
+# 		conflicts with existing data. 
+#
+# 		mysqlbinlog sets this mode when you specify the --idempotent option by writing the following:
+#
+# 		SET SESSION RBR_EXEC_MODE=IDEMPOTENT;
+#
+# 		As of MySQL 8.0.14 - setting the session value of this sys var is a restricted ops.
+# 		Reqs privs.
+#
+# read_buffer_size
+#
+# 		cmd line format: 		--read-buffer-size=#
+# 		Sys var: 				read_buffer_size
+# 		Scope: 					Global, Session
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			Yes
+# 		Type: 					Integer
+# 		Default: 				131072
+# 		Min: 						8200
+# 		Max: 						<a lot>
+#
+# 		Each thread that does a sequential scan for a MyISAM table allocates a buffer of this size (in bytes)
+# 		for each table it scans.
+#
+# 		If you do many sequential scans, you might want to increase this value.
+#
+# 		Value of this var should be % 4kb. If it set to a value which is not, it's rounded down to closest % 4kb value.
+#
+# 		Is also used in the following context for all storage engines:
+#
+# 			For caching the indexes in a temporary file (not a temp table), when sorting rows for ORDER BY.
+#
+# 			For bulk insert into partitions.
+#
+# 			For caching results of nested queries.
+#
+# 		read_buffer_size is also used in one other storage engine-specific way: To determine the memory block size
+# 		for MEMORY tables.
+#
+# read_only
+#
+# 		cmd line format: 		--read-only
+# 		Sys var: 				read_only
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		When the read_only sys var is enabled, the server permits no client updates except
+# 		from users who have the CONNECTION_ADMIN or SUPER privs.
+#
+# 		This var is disabled by default.
+#
+# 		The server also supports a super_read_only sys var (disabled by default), which has these effects:
+#
+# 			If super_read_only is enabled, the server prohibits client updates, even from users who have the SUPER priv.
+#
+# 			Setting super_read_only to ON implicitly forces read_only to ON.
+#
+# 			Setting read_only to OFF implicitly forces super_read_only to OFF.
+#
+# 		Even with read_only enabled, the server permits these operations:
+#
+# 			Updates performed by slave threads, if the server is a replication slave. 
+#
+# 			In replication setups, it can be useful to enable read_only on slave servers
+# 			to ensure that slaves accept updates only from the master server and not from clients.
+#
+# 			Use of ANALYZE_TABLE or OPTIMIZE_TABLE statements. The purpose of read-only mode is to prevent
+# 			changes to table structure or contents.
+#
+# 			Analysis and optimization do not qualify as such changes. 
+#
+# 			This means for example, that consistency checks on read-only replication slaves can be performed with
+# 			mysqlcheck --all-databases --analyze
+#
+# 			Operations on TEMPORARY tables
+#
+# 			Inserts into the log tables (mysql.general_log and mysql.slow_log)
+#
+# 			Updates to Performance Schema tables, such as UPDATE or TRUNCATE TABLE operations.
+#
+# 		Changes to read_only on a master server are not replicated to slave servers. 
+# 		The value can be set on a slave server independent of the setting on the master.
+#
+# 		The following conditions apply to attempts to enable read_only (including implicit attempts resulting from enabling super_read_only):
+# 
+# 			The attempt fails and an error occurs if you have any explicit locks (acquired with LOCK_TABLES) or have a pending transaction.
+#
+# 			The attempt blocks while other clients hold explicit table locks or have pending transactions, until the locks are released and
+# 			the trans ends. 
+# 			
+# 			While the attempt to enable read_only is pending, requests by other clients for table locks or to begin trans also block until read_only has been set.
+#
+# 			The attempt blocks if there are active transactions that hold metadata locks, until those transactions end.
+#
+# 			read_only can be enabled while you hold a global read lock (acquired with FLUSH_TABLES_WITH_READ_LOCK) because that does
+# 			not involve table locks.
+#
+# read_rnd_buffer_size
+#
+# 			cmd line format: 		--read-rnd-buffer-size=#
+# 			Sys var: 				read_rnd_buffer_size
+# 			Scope: 					Global, Session
+# 			Dynamic: 				Yes
+# 			SET_VAR Hint: 			Yes
+# 			Type: 					Integer
+# 			Default: 				262144
+# 			Min: 						1
+# 			Max: 						<less>
+#
+# 			This var is used for reads from MyISAM tables and for any storage engine, for multi-range read optimization.
+#
+# 			When reading rows from a MyISAM table in sorted order following a key-sorting operation, the rows
+# 			are read through this buffer to avoid disk seeks.
+#
+# 			Setting this variable to a large value can improve ORDER BY performance by a lot.
+# 			However, this is a buffer allocated for each client - so you should not set the global variable to a large value.
+#
+# 			Instead, the session value can be large for where you need to run large queries.
+#
+# regexp_stack_limit
+#
+# 			cmd line format: 		--regexp-stack-limit=#
+# 			introduced: 			8.0.4
+# 			Sys var: 				regexp_stack_limit
+# 			Scope: 					Global
+# 			Dynamic: 				Yes
+# 			SET_VAR Hint: 			No
+# 			Type: 					Integer
+# 			Default: 				8 000 000
+# 			Min: 						0
+# 			Max: 						<a lot>
+#
+# 			Max value available memory in bytes for the internal stack used for regex matching ops
+# 			performed by REGEXP_LIKE() and similar functions.
+#
+# regexp_time_limit
+#
+# 			cmd line format: 		--regexp-time-limit=#
+# 			Introduced: 			8.0.4
+# 			Sys var: 				regexp_time_limit
+# 			Scope: 					Global
+# 			Dynamic: 				Yes
+# 			SET_VAR Hint: 			No
+# 			Type: 					Integer
+# 			Default: 				32
+# 			min: 						0
+# 			Max: 						<a lot>
+#
+# 			The time limit for regexp matching ops performed by REGEXP_LIKE() and similar functions.
+# 			This limit is expressed as the max permitted number of steps performed by the match engine,
+# 			and thus affects execution time only indirectly.
+#
+# 			Typically on the order of milliseconds.
+#
+# require_secure_transport
+#
+# 			cmd line format: 		--require-secure-transport[={OFF|ON}]
+# 			Sys var: 				require_secure_transport
+# 			Scope: 					Global
+# 			Dynamic: 				Yes
+# 			SET_VAR Hint: 			No
+# 			Type: 					Boolean
+# 			Default: 				OFF
+#
+# 			
+#
+# 
 #
 #
