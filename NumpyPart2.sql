@@ -16198,7 +16198,404 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 			SET_VAR Hint: 			No
 # 			Type: 					Boolean
 # 			Default: 				OFF
+# 			
 #
+# 			Whether client connections to the server are required to use some form of secure transport.
+# 			When this variable is enabled, the server permits only TCP/IP connections that use SSL,
+# 			or connections that use a socket file (on Unix) or shared memory (on Windows).
+#
+# 			The server rejects nonsecure connection attempts, which fail with an ER_SECURE_TRANSPORT_REQUIRED error.
+#
+# 			This capability supplements per-account SSL reqs, which takes precedence.
+#
+# 			For example,if an acc is defined with REQUIRE SSL - enabling require_secure_transport
+# 			does not make it possible to use the account to connect using a Unix socket file.
+#
+# 			It is possible for a server to have no secure transports available. For example, a server on Windows
+# 			supports no secure transports if started without specifying any SSL cert or key files and with
+# 			the shared_memory SYS_VAR disabled.
+#
+# 			Under said conditions, attempts to enable require_secure_transport at startup cause the server to write
+# 			a message to the error log and exit. Attempts to enable the variable at runtime fail with an ER_NO_SECURE_TRANSPORTS_CONFIGURED
+# 			error.
+#
+# resultset_metadata
+#
+# 			Introduced: 		8.0.3
+# 			Sys var: 			resultset_metadata
+# 			Scope: 				Session
+# 			Dynamic: 			Yes
+# 			SET_VAR Hint: 		No
+# 			Type: 				Enumeration
+# 			Default: 			FULL
+# 			Valid: 				FULL, NONE
+#
+# 			For connections for which metadata transfer is optional, the client sets the resultset_metadata
+# 			SYS var to control whether the server returns result set metadata.
+#
+# 			Permitted values are FULL (return all metadata; this is the default) and NONE (return no metadata)
+#
+# 			For connections that are not metadata-optional, setting resultset_metadata to NONE produces an error.
+#
+# schema_definition_cache
+#
+# 			cmd line format: 		--schema-definition-cache=N
+# 			Sys var: 				schema_definition_cache
+# 			scope: 					Global
+# 			Dynamic: 				Yes
+# 			SET_VAR Hint: 			No
+# 			Type: 					Integer
+# 			Default: 				256
+# 			Min: 						256
+# 			Max: 						524288
+#
+# 			Defines a limit for the number of schema def objects, both used and unused, that can be kept
+# 			in the dictionary object cache.
+#
+# 			Unused schema definition objects are only kept in the dictionary object cache when the number in use is
+# 			less than the capacity defined by schema_definition_cache.
+#
+# 			A setting of 0 means that schema definition objects are only kept in the dictionary object cache
+# 			while they are in use.
+#
+# secure_auth
+#
+# 			cmd line format: 		--secure-auth
+# 			Deprecated: 			Yes (removed in 8.0.3)
+# 			Sys var: 				secure_auth
+# 			Scope: 					Global
+# 			Dynamic: 				Yes
+# 			SET_VAR Hint: 			No
+# 			Type: 					Boolean
+# 			Default: 				On
+# 			Valid: 					On
+#
+# 			Removed in 8.0.3
+#
+# secure_file_priv
+#
+# 			cmd line format: 		--secure-file-priv=dir_name
+# 			Sys var: 				secure_file_priv
+# 			Scope: 					Global
+# 			Dynamic: 				No
+# 			SET_VAR Hint: 			No
+# 			Type: 					String
+# 			Default: 				platform specific
+# 			Valid: 					empty string, dirname, NULL
+#
+# 			Used to limit the effect of data import and export operations, such as those performed
+# 			by the LOAD_DATA and SELECT_..._INTO_OUTFILE statements and the LOAD_FILE() function.
+#
+# 			Permitted only to users with FILE priv.
+#
+# 			secure_file_priv can be set as follows:
+#
+# 				If empty - var has no effect. Not a secure setting.
+#
+# 				If name of a dir, the server limits import and export ops to work only with files in that dir.
+# 				The dir must exist, the server will not create it.
+#
+# 				If set to NULL, the server disables import and export ops.
+#
+# 			The default value is platform specific and depends on the value of the INSTALL_LAYOUT CMake option,
+# 			as shown as follows:
+#
+# 			(To specify the default secure_file_priv value explicitly if you are building from source, use the 
+# 			INSTALL_SECURE_FILE_PRIVDIR CMake option.)
+#
+# 				INSTALL_LAYOUT Value 		Default secure_file_priv Value
+# 				STANDALONE, WIN 				empty
+# 				DEB, RPM, SLES, SVR4 		/var/lib/mysql-files
+# 				Otherwise 						mysql-files under the CMAKE_INSTALL_PREFIX value
+#
+# 			The server checks the value of secure_file_priv at startup and writes a warning to the error log
+# 			if the value is insecure.
+#
+# 			A non-NULL value is considered insecure if it is empty, or the value is the dara dir or a subdir of it,
+# 			or a sub-dir that is accessible by all users.
+#
+# 			If secure_file_priv is set to a nonexistent path, the server writes an error message to the error log and exits.
+#
+# server_id
+#
+# 			cmd line format: 		--server-id=#
+# 			Sys var: 				server_id
+# 			Scope: 					Global
+# 			Dynamic: 				Yes
+# 			SET_VAR Hint: 			No
+# 			Type: 					Integer
+# 			Default (>= 8.0.3) 	1
+# 			Default (<= 8.0.2) 	0
+# 			Min: 						0
+# 			Max: 						<a lot>
+#
+# 			Specifies the server ID. This variable is set by the --server-id option.
+# 			The server_id sys var is set to 1 by default.
+#
+# 			The server can be started with this default ID, but when bin log is enabled,
+# 			an informational message is issued if you did not specify a server ID explicitly using the --server-id option.
+#
+# 			For servers that are used in a replication topology, you must specify a unique server ID for each replication
+# 			server, in the range from 1 to 2^32 - 1. "Unique" means that each ID must be different from other IDs in use by 
+# 			any other replication master or slave.
+#
+# 			If the server ID is set to 0, binary logging takes place - but a master server with a server ID of 0
+# 			refuses any connections from slaves and a slave with a server ID of 0 refuses to connect to a master.
+#
+# 			Note that although you can change the server ID dynamically to a nonzero value, doing so does not
+# 			enable replication to start immediately.
+#
+# 			You must change the server ID and then restart the server to initialize the replication slave.
+#
+# session_track_gtids
+#
+# 			cmd line format: 			--session-track-gtids=[value]
+# 			Sys var: 					session_track_gtids
+# 			Scope: 						Global, Session
+# 			Dynamic: 					Yes
+# 			SET_VAR Hint: 				No
+# 			Type: 						Enumeration
+# 			Default: 					OFF
+# 			Valid: 						OFF, OWN_GTID, ALL_GTIDS
+#
+# 			Controls whether the server tracks GTIDs within the current session and returns them to the client.
+# 			Depending on the variable value, at the end of executing each transaction, the server GTIDs are captured
+# 			by the tracker and returned to the client.
+#
+# 			These session_track_gtids values are permitted:
+#
+# 				OFF: Track collects no GTIDs. Default.
+#
+# 				OWN_GTID: The track collects GTIDs generated by successfully committed read/write transactions.
+#
+# 				ALL_GTIDS: The track collects all GTIDs in the gtid_executed SYS_VAR at the time the current transaction commits,
+# 				regardless of whether the transaction is read/write or read only.
+#
+# 			session_track_gtids cannot be set within transactional context.
+#
+# session_track_schema
+#
+# 			cmd line format: 		--session-track-schema=#
+# 			Sys var: 				session_track_schema
+# 			Scope: 					Global, Session
+# 			Dynamic: 				Yes
+# 			SET_VAR Hint: 			No
+# 			Type: 					Boolean
+# 			Default: 				ON
+#
+# 			Controls whether the server tracks when the default schema (database) is set within the current session
+# 			and notifies the client to make the schema name available.
+#
+# 			If the schema name tracked is enabled, name notification occurs each time the default schema is set,
+# 			even if the new schema name is the same as the old.
+#
+# session_track_state_change
+#
+# 			Cmd line format: 		--session-track-state-change=#
+# 			Sys var: 				session_track_state_change
+# 			Scope: 					Global, Session
+# 			Dynamic: 				Yes
+# 			SER_VAR Hint: 			No
+# 			Type: 					Boolean
+# 			Default: 				OFF
+#
+# 			Controls whether the server tracks changes to the state of the current session and notifies
+# 			the client when state changes occur.
+#
+# 			Changes can be reported for these attributes of client session state:
+#
+# 				Default schema (db)
+#
+# 				Session-specific values for sys vars.
+#
+# 				User-defined vars
+#
+# 				Temp tables
+#
+# 				Prepared statements
+#
+# 			If the session state tracker is enabled, notification occurs for each change that involves tracked session attributes,
+# 			even if the new attribute values are the same as the old.
+#
+# 			For example, setting a user-defined variable to its current value results in a notification.
+#
+# 			The session_track_state_change variable controls only notification of when changes occur, not what the changes are.
+#
+# 			For example, state-change notifications occur when the default schema is set or tracked session SYS vars are assigned,
+# 			but the notification does not include the schema name or variable values.
+#
+# 			To receive notification of the schema name or session sys var values - use the session_track_schema or session_track_system_variables
+# 			SYS_Vars respectively.
+#
+# 			NOTE: Assigning a value to session_track_state_change itself is not considered a state change and is not reported as such.
+# 					However, if its name is listed in the value of session_track_system_variables, any assignments to it do result in notification of the new value.
+#
+# session_track_system_variables
+#
+# 			cmd line format: 		--session-track-system-variables=#
+# 			Sys var: 				session_track_system_variables
+# 			Scope: 					Global, Session
+# 			Dynamic: 				Yes
+# 			SET_Var Hint: 			No
+# 			Type: 					String
+# 			Default: 				time_zone, autocommit, character_set_client, character_set_results,
+# 										character_set_connection
+#
+# 			Controls whether the server tracks assignments to session system vars and notifies the client of the name
+# 			and value of each assigned variable.
+#
+# 			The variable value is a comma-separated list of variables for which to track assignments.
+#
+# 			By default, notification is enabled for time_zone, autocommit, character_set_client,
+# 			character_set_results and character_set_connection.
+#
+# 			(The latter three vars are those affacted by SET_NAMES)
+#
+# 			Wildcard * all denotation can be given.
+#
+# 			To disable notification session vars assignments, set session_track_system_variables to the
+# 			empty string.
+#
+# 			If session system variable tracking is enabled, notification occurs for all assignments to tracked
+# 			session variables, even if the new values are the same as the old.
+#
+# session_track_transaction_info
+#
+# 			cmd line format: 		--session-track-transaction-info=value
+# 			Sys var: 				session_track_transaction_info
+# 			Scope: 					Global, Session
+# 			Dynamic: 				Yes
+# 			SET_VAR Hint: 			No
+# 			Type: 					Enumeration
+# 			Default: 				OFF
+# 			Valid: 					OFF, STATE, CHARACTERISTICS
+#
+# 			Controls whether the server tracks the state and characteristics of transactions within the current session
+# 			and notifies the client to make this information available.
+#
+# 			These session_track_transaction_info values are permitted:
+#
+# 				OFF: Disable transaction state tracking. Default.
+#
+# 				STATE: Enable transaction state tracking without characteristics tracking.
+# 						 State tracking enables the client to determine whether a transaction is in progress
+# 						 and whether it could be moved to a different session without being rolled back.
+#
+# 				CHARACTERISTICS: Enable transaction state tracking, including chars tracking. Characteristics tracking enables
+# 						 the client to determine how to restart a transaction in another session so that it has the same
+# 						 characteristics as in the original session.
+#
+# 						The following chars are relevant:
+#
+# 						READ ONLY
+# 						READ WRITE
+# 						ISOLATION LEVEL
+# 						WITH CONSISTENT SNAPSHOT
+#
+# 				For a client to safely relocate a transaction to another session, it must track not only transaction
+# 				state but also transaction characteristics. 
+#
+# 				In addition, the client must track the transaction_read_only and transaction_isolation SYS_VAR to correctly determine the session defaults.
+#
+# 				(To track these, list them in the value of the session_track_system_variables SYS_VAR)
+#
+# sha256_password_auto_generate_rsa_keys
+#
+# 				Cmd line format: 		--sha256-password-auto-generate-rsa-keys[={OFF|ON}]
+# 				Sys var: 				sha256_password_auto_generate_rsa_keys
+# 				Scope: 					Global
+# 				Dynamic: 				No
+# 				SET_VAR Hint: 			No
+# 				Type: 					Boolean
+# 				Default: 				ON
+#
+# 				Available if the server was compiled using OpenSSL. The server uses it to determine whether to
+# 				autogenerate RSA private/public key-pair files in the data dir if they do not already exist.
+#
+# 				At startup, the server automatically generates RSA private/public key-pair files in the data dir
+# 				if all of these conditions are true:
+#
+# 					The sha256_password_auto_generate_rsa_keys or caching_sha2_password_auto_generate_rsa_keys SYS_VAR is on.
+#
+# 					No RSA options are specified
+#
+# 					The RSA files are missing from the data dir.
+#
+# 				These key-pair files enable secure PW exchange using RSA over unencrypted connections for accounts
+# 				authenticated by the sha256_password or caching_sha2_password plugin.
+#
+# 				The auto_generate_certs SYS_VAR is related but controls autogeneration of SSL certs and keys needed for secure connections.
+#
+# sha256_password_private_key_path
+#
+# 				cmd line format: 		--sha256-password-private-key-path=file_name
+# 				Sys var: 				sha256_password_private_key_path
+# 				Scope: 					Global
+# 				Dynamic: 				No
+# 				SET_VAR Hint: 			No
+# 				Type: 					File name
+# 				Default: 				private_key.pem
+#
+# 				This var is available if MySQL was compiled using OpenSSL.
+# 				Its value is the path name of the RSA priv key file for the sha256_password
+# 				auth plugin.
+#
+# 				Relative to server data dir. Must be in PEM.
+#
+# 				Permissions should be constrained to MySQL reading it.
+#
+# sha256_password_proxy_users
+#
+# 				cmd line format: 		--sha256-password-proxy-users=[={OFF|ON}]
+# 				Sys var: 				sha256_password_proxy_users
+# 				Scope: 					Global
+# 				Dynamic: 				Yes
+# 				SET_VAR Hint: 			No
+# 				Type: 					Boolean
+# 				Default: 				OFF
+#
+# 				Controls whether the sha256_password built-in auth plugin supports proxy users.
+# 				Has no effect unless the check_proxy_users SYS_VAR is on.
+#
+# sha256_password_public_key_path
+#
+# 				cmd line format: 		--sha256-password-public-key-path=file_name
+# 				Sys var: 				sha256_password_public_key_path
+# 				Scope: 					Global
+# 				Dynamic: 				No
+# 				SET_VAR Hint: 			No
+# 				Type: 					File name
+# 				Default: 				public_key.pem
+#
+# 				Available if MYSQL was compiled using OpenSSL. 
+# 				Its value is the path name of the RSA public key file for the sha256_password auth plugin.
+# 			 			
+# 				If the file is named as a relative path, it is interpreted relative to the server Data dir.
+# 				File must be in PEM format.
+#
+# 				The key is a public key, thus copies can be distirbued to client users.
+# 				(Clients that explicitly specify a public key when connecting to the server using RSA
+# 				PW encryption must use the same public key as that used by the server.)
+#
+# shared_memory
+#
+# 				cmd line format: 		--shared-memory[={0,1}]
+# 				Sys var: 				shared_memory
+# 				Scope: 					Global
+# 				Dynamic: 				No
+# 				SET_VAR Hint: 			No
+# 				Platform: 				Windows
+# 				Type: 					Boolean
+# 				Default: 				FALSE
+#
+# 				Whether hte server permits shared-memory connections.
+#
+# shared_memory_base_name
+#
+# 				https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
+#
+# 			
+# 			https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
 # 			
 #
 # 
