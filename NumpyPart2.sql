@@ -16592,12 +16592,583 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # shared_memory_base_name
 #
-# 				https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
+# 				cmd line format: 		--shared-memory-base-name=name
+# 				Sys var: 				shared_memory_base_name
+# 				Scope: 					Global
+# 				Dynamic: 				No
+# 				SET_VAR Hint: 			No
+# 				Platform: 				Windows
+# 				Type: 					String
+# 				Default: 				MYSQL
 #
-# 			
-# 			https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
-# 			
+# 				Name of the shared memory to use for shared-memory connections.
+# 				Useful when running multiple MySQL instances on a single physical machine.
+# 				Defaults to MySQL. Case sensitive.
 #
+# show_compatibility_56
+#
+# 				cmd line format: 		--show-compatibility-56[={OFF|ON}]
+# 				Deprecated: 			Yes (Removed in 8.0.1)
+# 				Sys var: 				show_compatibility_56
+# 				Scope: 					Global
+# 				Dynamic: 				Yes
+# 				SET_VAR Hint: 			No
+# 				Type: 					Boolean
+# 				Default: 				OFF
+#
+# 				Was used in the transition period during which system and status variable info in
+# 				INFORMATION_SCHEMA tables was moved to Performance Schema tables.
+#
+# 				That transition period ended in MySQL 8.0.1, at which time this variable was removed.
+#
+# show_create_table_verbosity
+#
+# 				Cmd line format: 		--show-create-table-verbosity
+# 				Introduced: 			8.0.11
+# 				Sys var: 				show_create_table_verbosity
+# 				Scope: 					Global, Session
+# 				Dynamic: 				Yes
+# 				SET_VAR Hint: 			No
+# 				Type: 					Boolean
+#
+# 				SHOW_CREATE_TABLE normally does not show the ROW_FORMAT table option if the
+# 				row format is the default format.
+#
+# 				Enabling this variable causes SHOW_CREATE_TABLE to display ROW_FORMAT
+# 				regardless of whether it is the default format.
+#
+# show_old_temporals
+#
+# 				cmd line format: 			--show-old-temporals={OFF|ON}
+# 				Deprecated: 				Yes
+# 				Sys var: 					show_old_temporals
+# 				Scope: 						Global, Session
+# 				Dynamic: 					Yes
+# 				SET_VAR Hint: 				No
+# 				Type: 						Boolean
+# 				Default: 					OFF
+#
+# 				Whether SHOW_CREATE_TABLE output includes comments to flag temporal columns found to be in
+# 				pre-5.6.4 format (TIME, DATETIME, and TIMESTAMP columns without support for fractional seconds precision)
+#
+# 				Disabled by default. If enabled, SHOW_CREATE_TABLE output looks as follows:
+#
+# 				CREATE TABLE `mytbl` (
+# 					`ts` timestamp /* 5.5 binary format */ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+# 					`dt` datetime /* 5.5 binary format */ DEFAULT NULL,
+# 					`t` time /* 5.5 binary format */ DEFAULT NULL
+# 				) DEFAULT CHARSET=utf8mb4
+#
+# 				Output for the COLUMN_TYPE column of the INFORMATION_SCHEMA.COLUMNS table is affected similarly.
+#
+# 				Deprecated.
+#
+# skip_external_locking
+#
+# 				cmd line format: 		--skip-external-locking
+# 				Sys var: 				skip_external_locking
+# 				Scope: 					Global
+# 				Dynamic: 				No
+# 				SET_VAR Hint: 			No
+# 				Type: 					Boolean
+# 				Default: 				ON
+#
+# 				This is OFF if mysqld uses external locking (system locking), ON if external locking is disabled.
+#  			This affects only MyISAM table access.
+#
+# 				This variable is set by the --external-locking or --skip-external-locking option.
+#
+# 				External locking is disabled by default.
+#
+# 				External locking affects only MyISAM table access.
 # 
+# skip_name_resolve
 #
+# 				Cmd line format: 		--skip-name-resolve
+# 				Sys var: 				skip_name_resolve
+# 				Scope: 					Global
+# 				Dynamic: 				No
+# 				SET_VAR Hint: 			No
+# 				Type: 					Boolean
+# 				Default: 				OFF
 #
+# 				This variable is set from the value of the --skip-name-resolve option.
+# 				If OFF, mysqld resolves host names when checking client connections.
+#
+# 				If it is ON, mysqld uses only IP numbers; in this case, all Host column values
+# 				in the grant tables must be IP addresses or localhost.
+#
+# skip_networking
+#
+# 				cmd line format: 		--skip-networking
+# 				Sys var: 				skip_networking
+# 				Scope: 					Global
+# 				Dynamic: 				No
+# 				SET_VAR Hint: 			No
+#
+# 				This is ON if the server permits only local (non-TCP/IP) connections.
+# 				On Unix, local connections use a Unix socket file.
+#
+# 				On Windows, local connections use a named pipe or shared memory.
+# 				Can be set to ON with the --skip-networking option.
+#
+# skip_show_database
+#
+# 				cmd line format: 		--skip-show-database
+# 				Sys var: 				skip_show_database
+# 				Scope: 					Global
+# 				Dynamic: 				No
+# 				SET_VAR Hint: 			No
+#
+# 				Prevents people from using the SHOW_DATABASE statement if they do not have the SHOW_DATABASE priv.
+#
+# 				This can improve security if you have concerns about users being able to see databases belonging to other users.
+# 				Its effect depends on the SHOW_DATABASE priv: 
+#
+# 				If ON - the SHOW_DATABASES statement is permitted only to users who have the SHOW_DATABASES priv, and the statement displays all DB names.
+#
+# 				If OFF - SHOW_DATABASES is permitted to all users, but displays the names of only those databases for which the user has the SHOW_DATABASE or other privs.
+#
+# 				(ANY global priv includes privs for all DBs)
+#
+# slow_launch_time
+#
+# 				cmd line format: 		--slow-launch-time=#
+# 				Sys var: 				slow_launch_time
+# 				Scope: 					Global
+# 				Dynamic: 				Yes
+# 				SET_VAR Hint: 			No
+# 				Type: 					Integer
+# 				Default: 				2
+#
+# 				If creating a thread takes longer than this many seconds, the server increments the Slow_launch_threads status var.
+#
+# slow_query_log
+#
+# 				Cmd line format: 		--slow-query-log
+# 				Sys var: 				slow_query_log
+# 				Scope: 					Global
+# 				Dynamic: 				Yes
+# 				SET_VAR Hint: 			No
+# 				Type: 					Boolean
+# 				Default: 				OFF
+#
+# 				Whether the slow query log is enabled. 
+#
+# 				0/OFF - disables the log
+#
+# 				1/ON  - enables the log
+#
+# 				The default value depends on whether the --slow_query_log option is given.
+# 				The destination for log output is controlled by the log_output SYS VAR.
+#
+# 				If log_output is NONE, no log entries are written - even if the log is on.
+#
+# 				"Slow" is defined by the long_query_time var.
+#
+# slow_query_log_file
+#
+# 				Cmd line format: 		--slow-query-log-file=file_name
+# 				Sys var: 				slow_query_log_file
+# 				Scope: 					Global
+# 				Dynamic: 				Yes
+# 				SET_VAR Hint: 			No
+# 				Type: 					File name
+# 				Default: 				host_name-slow.log
+#
+# 				The name of the slow query log file. 
+# 				Default is <host_name>-slow.log - but the intiial value can be changed with the
+# 				--slow_query_log_file option.
+#
+# socket
+#
+# 				cmd line format: 		--socket={file_name|pipe_name}
+# 				Sys var: 				socket
+# 				Scope: 					Global
+# 				Dynamic: 				No
+# 				SET_VAR Hint: 			No
+# 				Type: 					String
+# 				Default (Other) 		/tmp/mysql.sock
+# 				Default (Windows) 	MySQL
+#
+# 				On Unix platforms, this var is the name of the socket file that is used for local client connections.
+# 				The default is /tmp/mysql.sock (might be /var/lib/mysql for RPMs)
+#
+# 				On Windows, this var is the name of the named pipe that is used for local client connections. Default is MySQL. (non-case sensitive)
+#
+# sort_buffer_size
+#
+# 				cmd line format: 		--sort-buffer-size=#
+# 				Sys var: 				sort_buffer_size
+# 				Scope: 					Global, Session
+# 				Dynamic: 				Yes
+# 				SET_VAR Hint: 			Yes
+# 				Type: 					Integer
+# 				Default: 				262144
+# 				Min: 						32768
+#
+# 				Max (64-bit other) 	<a lot>
+# 				Max (32-bit other) 	<less>
+# 				Max (Windows) 			<same>
+#
+# 				Each session that must perform a sort allocates a buffer of this size.
+# 				sort_buffer_size is not specific to any storage engine and applies in a general manner for
+# 				optimization.
+#
+# 				At minimum the sort_buffer_size value must be large enough to accomodate fifteen tuples in the sort buffer.
+# 				Also, increasing the value of max_sort_length may require increasing the value of sort_buffer_size.
+#
+# 				If you see many Sort_merge_passes per second in SHOW_GLOBAL_STATUS output, you can consider increasing the
+# 				sort_buffer_size value to speed up ORDER BY or GROUP BY operations that cannot be improved with query
+# 				optimization or improved indexing.
+#
+# 				The optimizer tries to work out how much space is needed but can allocate more, up to said limit.
+# 				Setting it larger than required globally will slow down most queries that sort.
+#
+# 				Best ot increase as session setting, and only for sessions that need a larger size.
+#
+# 				On Linux, there are thresholds of 256kb and 2MB where larger values may significantly
+# 				slow down memory allocation - so you should consider staying below one of said sizes.
+#
+# 				The max permissible setting for sort_buffer_size is 4GB-1. Larger values are allowed for 64-bit platforms.
+# 				(Except 64-bit Windows, restraints to 4GB-1)
+#
+# sql_auto_is_null
+#
+# 				Sys var: 		sql_auto_is_null
+# 				Scope: 			Global, Session
+# 				Dynamic: 		Yes
+# 				SET_VAR Hint: 	Yes
+# 				Type: 			Boolean
+# 				Default: 		OFF
+#
+# 				If this is enabled, then after a statement that successfully inserts an automatically generated AUTO_INCREMENT value,
+# 				you can find said value with a query of:
+#
+# 				SELECT * FROM <tbl_name> WHERE <auto_col> IS NULL
+#
+# 				If the statement returns a row, the value returned is the same as if you invoked the LAST_INSERT_ID() function.
+#
+# 				If no AUTO_INCREMENT value was successfully inserted, the SELECT statement returns no row.
+#
+# 				The beavior of retrieving an AUTO_INCREMENT value by using an IS_NULL comparison is used by some
+# 				ODBC programs, such as Access.
+#
+# 				This beavior can be disabled by setting sql_auto_is_null to OFF.
+#
+# sql_big_selects
+#
+# 				Sys var: 		sql_big_selects
+# 				Scope: 			Global, Session
+# 				Dynamic: 		Yes
+# 				SET_VAR Hint: 	Yes
+# 				Type: 			Boolean
+# 				Default: 		ON
+#
+# 				If set to OFF, MySQL aborts SELECT statements that are likely to take a long time to execute (statements that estimate > rows cmp. to max_join_size)
+#
+# 				Useful when an inadivsable WHERE statement has been issued.
+# 				The default value for a new connection is ON, which permits all SELECT statements.
+#
+# 				If you set the max_join_size SYS_VAR to a value other than DEFAULT, sql_big_selects is set to OFF.
+#
+# sql_buffer_result
+#
+# 				Sys var: 		sql_buffer_result
+# 				Scope: 			Global, Session
+# 				Dynamic: 		Yes
+# 				SET_VAR Hint: 	Yes
+# 				Type: 			Boolean
+# 				Default: 		OFF
+#
+# 				If enabled, sql_buffer_result forces results from SELECT statements to be put into temporary tables.
+#
+# 				This helps MySQL free the table locks early and can be beneficial in cases where it takes a long time
+# 				to send results to the client. The default value is OFF.
+#
+# sql_log_off
+#
+# 				Sys var: 		sql_log_off
+# 				Scope: 			Global, Session
+# 				Dynamic: 		Yes
+# 				SET_VAR Hint: 	No
+# 				Type: 			Boolean
+# 				Default: 		OFF
+# 				Valid: 			OFF (enable logging), ON (disable logging)
+#
+# 				Controls whether logging to the general query log is disabled for the current session
+# 				(assuming that the general query log itself is enabled)
+#
+# 				The default value is OFF (that is, enable logging).
+#
+# 				To disable or enable general query logging for the current session, set the session sql_log_off variable
+# 				to ON or OFF.
+#
+# 				Restricted ops. Reqs privs enough for restricted session vars.
+#
+# sql_mode
+#
+# 				cmd line format: 		--sql-mode=name
+# 				Sys var: 				sql_mode
+# 				Scope: 					Global, Session
+# 				Dynamic: 				Yes
+# 				SET_VAR Hint: 			Yes
+# 				Type: 					Set
+# 				Default (>= 8.0.11) 	ONLY_FULL_GROUP_BY
+# 											STRICT_TRANS_TABLES
+# 											NO_ZERO_IN_DATE
+# 											NO_ZERO_DATE
+# 											ERROR_FOR_DIVISION_BY_ZERO
+# 											NO_ENGINE_SUBSTITUTION
+#
+# 				Default (<= 8.0.4) 	ONLY_FULL_GROUP_BY 
+# 											STRICT_TRANS_TABLES
+# 											NO_ZERO_IN_DATE
+# 											NO_ZERO_DATE
+# 											ERROR_FOR_DIVISION_BY_ZERO
+# 											NO_AUTO_CREATE_USER
+# 											NO_ENGINE_SUBSTITUTION
+#
+# 				Valid (>= 8.0.11) 	ALLOW_INVALID_DATES
+# 											ANSI_QUOTES
+# 											ERROR_FOR_DIVISION_BY_ZERO
+# 											HIGH_NOT_PRECEDENCE
+# 											IGNORE_SPACE
+# 											NO_AUTO_VALUE_ON_ZERO
+# 											NO_BACKSLASH_ESCAPES
+# 											NO_DIR_IN_CREATE
+# 											NO_ENGINE_SUBSTITUTION
+# 											NO_UNSIGNED_SUBTRACTION
+# 											NO_ZERO_DATE
+# 											NO_ZERO_IN_DATE
+# 											ONLY_FULL_GROUP_BY
+# 											PAD_CHAR_TO_FULL_LENGTH
+# 											PIPES_AS_CONCAT
+# 											REAL_AS_FLOAT
+# 											STRICT_ALL_TABLES
+# 											STRICT_TRANS_TABLES
+# 											TIME_TRUNCATE_FRACTIONAL
+#
+# 				Valid (>= 8.0.1, 		ALLOW_INVALID_DATES 
+# 						 <= 8.0.4) 		ANSI_QUOTES
+# 											ERROR_FOR_DIVISION_BY_ZERO
+# 											HIGH_NOT_PRECEDENCE
+# 											IGNORE_SPACE
+# 											NO_AUTO_CREATE_USER
+# 											NO_AUTO_VALUE_ON_ZERO
+# 											NO_BACKSLASH_ESCAPES
+# 											NO_DIR_IN_CREATE
+# 											NO_ENGINE_SUBSTITUION
+# 											NO_FIELD_OPTIONS
+# 											NO_KEY_OPTIONS
+# 											NO_TABLE_OPTIONS
+# 											NO_UNSIGNED_SUBTRACTION
+# 											NO_ZERO_DATE
+# 											NO_ZERO_IN_DATE
+# 											ONLY_FULL_GROUP_BY
+# 											PAD_CHAR_TO_FULL_LENGTH
+# 											PIPES_AS_CONCAT
+# 											REAL_AS_FLOAT
+# 											STRICT_ALL_TABLES
+# 											STRICT_TRANS_TABLES
+# 											TIME_TRUNCATE_FRACTIONAL
+#
+# 				Valid (8.0.0) 			ALLOW_INVALID_DATES
+# 											ANSI_QUOTES
+# 											ERROR_FOR_DIVISION_BY_ZERO
+# 											HIGH_NOT_PRECEDENCE
+# 											IGNORE_SPACE
+# 											NO_AUTO_CREATE_USER
+# 											NO_AUTO_VALUE_ON_ZERO
+# 											NO_BACKSLASH_ESCAPES
+# 											NO_DIR_IN_CREATE
+# 											NO_ENGINE_SUBSTITUTION
+# 											NO_FIELD_OPTIONS
+# 											NO_KEY_OPTIONS
+# 											NO_TABLE_OPTIONS
+# 											NO_UNSIGNED_SUBTRACTION
+# 											NO_ZERO_DATE
+# 											NO_ZERO_IN_DATE
+# 											ONLY_FULL_GROUP_BY
+# 											PAD_CHAR_TO_FULL_LENGTH
+# 											PIPES_AS_CONCAT
+# 											REAL_AS_FLOAT
+# 											STRICT_ALL_TABLES
+# 											STRICT_TRANS_TABLES
+#
+# 				The current SQL mode, can be set dynamically.
+#
+# 				Can be configured during install/Options.
+#
+#  											
+# sql_notes
+#
+# 				Sys var: 		sql_notes
+# 				Scope: 			Global, Session
+# 				Dynamic: 		yes
+# 				SET_VAR Hint: 	No
+# 				Type: 			Boolean
+# 				Default: 		ON
+#
+# 				If enabled (by default), warnings of Note level increment warning_count and the server records them.
+# 				If disabled, Note warnings do not increment warning_count and the server does not record them.
+#
+# 				mysqldump includes output to disable this variable so that reloading the dump file does not produce
+# 				warnings for events that do not affect the integrity of the reload ops.
+#
+# sql_quote_show_create
+#
+# 				Sys var: 		sql_quote_show_create
+# 				Scope: 			Global, Session
+# 				Dynamic: 		Yes
+# 				SET_VAR Hint: 	No
+# 				Type: 			Boolean
+# 				Default: 		ON
+#
+# 				If enabled (the default), the server quotes identifiers for SHOW_CREATE_TABLE and SHOW_CREATE_DATABASE statements.
+#
+# 				If disabled, quoting is disabled.
+# 				Enabled by default so that replication works for identifiers that require quoting.
+#
+# sql_require_primary_key
+#
+# 				Cmd line format: 		--sql-require-primary-key[={OFF|ON}]
+# 				Introduced: 			8.0.13
+# 				Sys var: 				sql_require_primary_key
+# 				Scope: 					Global, Session
+# 				Dynamic: 				Yes
+# 				SET_VAR Hint: 			Yes
+# 				Type: 					Boolean
+# 				Default: 				OFF
+#
+# 				Whether statements that create new tables or alter the structure of existing tables enforce the requirement that tables have a primary key.
+#
+# 				Setting this is a restricted ops.
+#
+# 				Enabling this variable helps avoid performance probblems in row-based replication that can occur when tables
+# 				have no primary key.
+#
+# 				Suppose that a table has no primary key and an update or delete modifies multiple rows.
+#
+# 				On the master server, this ops can be performed using a single table scan but, when replicate
+# 				using row-based replication, results in a table scan for each row to be modified on the slave.
+#
+# 				With a primary key, these table scans do not occur.
+#
+# 				sql_require_primary_key applies to both base tables and TEMPORARY tables, and changes to its
+# 				value are replicated to slave servers.
+#
+# 				When enabled, sql_require_primary_key has these effects:
+#
+# 					Attempts to create a new table with no primary key fail with an error.
+#
+# 					This includes CREATE TABLE ... LIKE. It also includes CREATE TABLE ... SELECT,
+# 					unless the CREATE TABLE includes a primary key def.
+#
+# 					Attempts to drop the primary key from an existing table fail with an error, with the exception
+# 					that dropping the primary key and adding a primary key in the same ALTER TABLE statement is permitted.
+#
+# 					Dropping the primary key fails even if the table also contains a UNIQUE NOT NULL index.
+# 
+# 					Attempts to import a table with no primary key fail with an error.
+#
+# sql_safe_updates
+#
+# 					Sys var: 		sql_safe_updates
+# 					Scope: 			Global, Session
+# 					Dynamic: 		Yes
+# 					SET_VAR Hint: 	Yes
+# 					Type: 			Boolean
+# 					Default: 		OFF
+#
+# 					If this variable is enabled, UPDATE and DELETE statements that do not use a key in the WHERE clause or a LIMIT clause
+# 					produce an error.
+#
+# 					This makes it possible to catch UPDATE and DELETE statements where keys are not used properly and that would
+# 					probably change or delete a large number of rows.
+#
+# 					For the mysql client, sql_safe_updates can be enabled by using the --safe-updates option.
+#
+# sql_select_limit
+#
+# 					Sys var: 		sql_select_limit
+# 					Scope: 			Global, Session
+# 					Dynamic: 		Yes
+# 					SET_VAR Hint: 	Yes
+# 					Type: 			Integer
+#
+# 					Max number of rows to return from SELECT statements.
+#
+# 					Default value for a new connection is the max number of rows that the server
+# 					permits per table.
+#
+# 					Typical default values are (2^32)-1 or (2^64)-1.
+#
+# 					If you have changed the limit, the default value can be restored by assigning a value of DEFAULT.
+#
+# 					If a SELECT has a LIMIT clause, the LIMIT takes precedence over the value of sql_select_limit.
+#
+# sql_warnings
+#
+# 					Sys var: 		sql_warnings
+# 					Scope: 			Global, Session
+# 					Dynamic: 		Yes
+# 					SET_VAR Hint: 	No
+# 					Type: 			Boolean
+# 					Default: 		OFF
+#
+# 					Controls whether single-row INSERT statements produce an information string if warnings occur.
+# 					Default is OFF.
+#
+# 					Turn to ON for info strings.
+#
+# ssl_ca
+#
+# 					cmd line: 		--ssl-capath=dir_name
+# 					Sys var: 		ssl_capath
+# 					Scope: 			Global
+# 					Dynamic: 		No
+# 					SET_VAR Hint: 	No
+# 					Type: 			Dir name
+#
+# 					Path to a dir that contains trusted SSL CA certs in PEM format.
+#
+# ssl_cert
+#
+# 					Cmd line: 		--ssl-cert=file_name
+# 					Sys var: 		ssl_cert
+# 					Scope: 			Global
+# 					Dynamic: 		No
+# 					SET_VAR Hint: 	No
+# 					Type: 			File name
+#
+# 					Name of the SSL cert to use for establishing a secure connection.
+#
+# ssl_cipher
+#
+# 					Cmd line: 		--ssl-cipher=name
+# 					Sys var: 		ssl_cipher
+# 					Scope: 			Global
+# 					Dynamic: 		No
+# 					SET_VAR Hint: 	No
+# 					Type: 			String
+# 					
+# 					List of permitted ciphers for SSL encryption.
+#
+# ssl_crl
+#
+# 					cmd line: 		--ssl-crl=file_name
+# 					Sys var: 		ssl_crl
+# 					Scope: 			Global
+# 					Dynamic: 		No
+# 					SET_VAR Hint: 	No
+# 					Type: 			File name
+#
+# 					Path to a file containing cert revocation lists in PEM format.
+# 					Revocation lists work for MySQL distributions compiled using OpenSSL. (but not wolfSSL)
+#
+# ssl_crlpath
+#
+# 					cmd line: 		--ssl-crlpath=dir_name
+# 					
+#https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
