@@ -17170,5 +17170,604 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # ssl_crlpath
 #
 # 					cmd line: 		--ssl-crlpath=dir_name
+# 					Sys var: 		ssl_crlpath
+# 					Scope: 			Global
+# 					Dynamic: 		No
+# 					SET_VAR Hint: 	No
+# 					Type: 			Dir name
+#
+# 					The path to a dir that contains files containing cert revocation lists in PEM format.
+# 					Revocation lists work for MySQL distributions compiled using OpenSSL (but not wolfSS)
+#
+# ssl_fips_mode
+#
+# 					cmd line format: 		--ssl-fips-mode={OFF|ON|STRICT}
+# 					Introduced: 			8.0.11
+# 					Sys var: 				ssl_fips_mode
+# 					Scope: 					Global
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					Enumeration
+# 					Default: 				OFF
+# 					Valid: 					OFF (or 0), ON (or 1), STRICT (or 2)
+#
+# 					Controls whether to enable FIPS mode on the server side. 
+#
+# 					The ssl_fips_mode system variable differs from other --ssl-xxx options
+# 					in that it is not used to control whether the server permits encrypted connections,
+# 					but rather to affect which cryptographic ops are permitted.
+#
+# 					These ssl_fips_mode values are permitted:
+#
+# 						OFF (or 0): Disable FIPS mode.
+#
+# 						ON (or 1): Enable FIPS mode.
+# 
+# 						STRICT (or 2): Enable "strict" FIPS mode.
+#
+# 					Note: If the OpenSSL FIPS Object Module is N/A, the only permitted value for ssl_fips_mode is OFF.
+# 							In this case, setting ssl_fips_mode to ON or STRICT at startup causes the server to produce
+# 							an error message and exit.
+#
+# ssl_key
+#
+# 					cmd line format: 		--ssl-key=file_name
+# 					Sys var: 				ssl_key
+# 					Scope: 					Global
+# 					Dynamic: 				No
+# 					SET_VAR Hint: 			No
+# 					Type: 					File name
+#
+# 					The name of the SSL key file to use for establishing a secure connection.
+#
+# stored_program_cache
+#
+# 					cmd line format: 		--stored-program-cache=#
+# 					Sys var: 				stored_program_cache
+# 					Scope: 					Global
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					Integer
+# 					Default: 				256
+# 					Min: 						16
+# 					Max: 						524288
+#
+# 					Sets a soft upper limit for the number of cached stored routines per connection.
+#
+# 					The value of this variable if specified in terms of the number of stored routines held
+# 					in each of the two caches maintained by the MySQL Server for, respectively, stored procedures
+# 					and stored functions. 				
+#
+# 					Whenever a stored routine is executed this cache size is checked before the first or top-level
+# 					statement in the routine is parsed; if the number of routines of the same type (stored procedures or
+#  				stored functions according to which is being executed) exceeds the limit specified by this var,
+# 					the corresponding cache is flushed and memory previously allocated for cached objects is freed.
+#
+# 					This allows for the cache to be flushed safely, even when there are dependencies between stored
+# 					routines.
+#
+# 					The stored procedure and stored function cache exists in parallel with the stored program definition
+# 					cache partition of the dictionary object cache.
+#
+# 					The stored procedure and stored function caches are per connection, while the stored program
+# 					definition cache is shared. The existence of objects in the stored procedure and stored function
+# 					caches have no dependence on the existence of objects in the stored program definition cache and vice
+# 					versa.
+#
+# 		
+# stored_program_definition_cache
+#
+# 					Cmd line format: 		--stored-program-definition-cache=N
+# 					Sys var: 				stored_program_definition_cache
+# 					Scope: 					Global
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					Integer
+# 					Default: 				256
+# 					Min: 						256
+# 					Max: 						524288
+#
+# 					Defines a limit for the number of stored program definition objects, both used
+# 					and unused, that can be kept in the dictionary object cache.
+#
+# 					Unused stored program definition objects are only kept in the dictionary object cache
+# 					when the number in use is less than the capacity defined by stored_program_definition_cache
+#
+# 					A setting of 0 means that stored program definition objects are only kept in the dictionary object
+# 					cache while they are in use.
+#
+# 					The stored program definition cache partition exists in parallel with the stored procedure and
+# 					stored function caches that are configured using the stored_program_cache option.
+#
+# 					The stored_program_cache option sets a soft upper limit for the number of cached stored procedures
+# 					or functions per connection, and the limits is checked each time a connection executes a stored
+# 					procedure or function.
+#
+# 					The stored program definition cache partition, on the other hand, is a shared cache that stores
+# 					stored program definition objects for other purposes.
+#
+# 					The existence of objects in the stored program definition cache partition has no dependence
+# 					on the existence of objects in the stored procedure cache or stored function cache, and vice versa.
+#
+# super_read_only
+#
+# 					cmd line format: 		--super-read-only[={OFF|ON}]
+# 					Sys var: 				super_read_only
+# 					Scope: 					Global
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					Boolean
+# 					Default: 				OFF
+#
+# 					If the read_only SYS_VAR is enabled, the server permits client updates only from users who have
+# 					the SUPER priv.
+#
+# 					If the super_read_only SYS_VAR is also enabled, the server prohibits client updates even from
+# 					users who have SUPER privs.
+#
+# 					Changes to super_read_only on a master server are not replicated to slave servers.
+# 					The value can be set on a slave server independent of the setting on the master.
+#
+# syseventlog.facility
+#
+# 					Cmd line format: 		--syseventlog.facility=value
+# 					Introduced: 			8.0.13
+# 					Sys var: 				syseventlog.facility
+# 					Scope: 					Global
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					String
+# 					Default: 				daemon
+#
+# 					The facility for error log output written to syslog (what type of program is sending the message)
+# 					This variable is unavailable unless the log_sink_syseventlog error log component is installed.
+#
+# 					Permitted values can vary per OS, consult your syslog documentation.
+#
+# 					Does not exist on Windows.
+#
+# syseventlog.include_pid
+#
+# 					Cmd line format: 		--syseventlog.include-pid[={0|1}]
+# 					Introduced: 			8.0.13
+# 					Sys var: 				syseventlog.include_pid
+# 					Scope: 					Global
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					Boolean
+# 					Default: 				ON
+#
+# 					Whether to include the server process ID in each line of error log output written to syslog.
+# 					This var is unavailable unless the log_sink_syseventlog error log component is installed.
+#
+# 					Does not exist on Windows.
+#
+# syseventlog.tag
+#
+# 					Cmd line format: 		--syseventlog.tag=tag
+# 					Introduced: 			8.0.13
+# 					Sys Var: 				syseventlog.tag
+# 					Scope: 					Global
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					String
+# 					Default: 				empty string
+#
+# 					The tag to be added to the server identifier in error log output written to syslog or 
+# 					the Windows Event Log.
+#
+# 					This var is unavailable unless the log_sink_syseventlog error log component is installed.
+#
+# 					By default, no tag is set - so the server identifier is simply MySQL on Windows,
+# 					and mysqld on other platforms.
+#
+# 					If a tag value of <tag> is specified, it is appended to the server identifier with
+# 					a leading hyphen, resulting in a syslog identifier of mysqld-<tag> (or MySQL-<tag> on Windows)
 # 					
-#https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
+# 					On Windows, to use a tag that does not already exist, the server must be run from an account
+# 					with Administrator privs, to permit creation of a registry entry for the tag.
+#
+# 					Elevated privs are not required if the tag already exists.
+#
+# system_time_zone
+#
+# 					Sys var: 			system_time_zone
+# 					Scope: 				Global
+# 					Dynamic: 			No
+# 					SET_VAR Hint: 		No
+# 					Type: 				String
+#
+# 					The server system time zone. When the server begins executing, it inherits a time zone
+# 					setting from the machine defaults, possibly modified by the environment of the account
+# 					used for running the server or the startup script.
+#
+# 					The value is used to set system_time_zone. Typically the time zone is specified by the
+# 					TZ environment variable.
+#
+# 					It also can be specified using the --timezone option of the mysqld_safe script.
+#
+# 					The system_time_zone variable differs from time_zone. Although they might have the same value,
+# 					the latter variable is used to initialize the time zone for each client that connects.
+#
+# table_definition_cache
+#
+# 					Sys var: 			table_definition_cache
+# 					Scope: 				Global
+# 					Dynamic: 			Yes
+# 					SET_VAR Hint: 		No
+# 					Type: 				Integer
+# 					Default: 			-1 (Autosizing;do not assign this literal value)
+# 					Min: 					400
+# 					Max: 					524288
+#
+# 					The number of table defs that can be stored in the def cache. 
+#
+# 					If you use a large number of tables, you can create a large table def cache to speed up opening of tables.
+# 
+#  				The table definition cache takes less space and does not use file descriptors, unlike the normal table cache.
+# 					The minimum value is 400.
+#
+# 					The default value is based on the following formula, capped to a limit of 2000:
+#
+# 						MIN(400 + table_open_cache / 2, 2000)
+#
+# 					For InnoDB, table_definition_cache acts as a soft limit for the number of open table instances in the InnoDB
+# 					data dir cache.
+#
+# 					If the number of open table instances exceed the table_definition_cache setting, the LRU mechanism begins to mark
+# 					table instances for eviction and eventually removes them from the data dictionary cache.
+#
+#					The limit helps address situations in which significant amounts of memory would be used to cache
+# 					rarely used table instances until the next server restart.
+#
+# 					The number of table instances with cached metadata could be higher than the limit defined by 
+# 					table_definition_cache, because parent and child table instances with foreign key relationships
+# 					are not placed on the LRU list and are not subject to eviction from memory.
+#
+# 					Additionally, table_definition_cache defines a soft limit for the number of InnoDB file-per-table tablespaces
+# 					that can be open at one time, which is also controlled by innodb_open_files.
+#
+# 					If both table_definition_cache and innodb_open_files are set, the highest setting is used.
+# 					If neither variable is set, table_definition_cache, which has a higher default value is used.
+#
+# 					If the number of open tablespace file handles exceeds the limit defined by table_definition_cache
+# 					or innodb_open_files, the LRU mechanism searches the tablespace file LRU list for files that are
+# 					fully flushed and are not currently being extended.
+#
+# 					The process is performed each time a new tablespace is opened. If there are no "inactive" tablespaces,
+# 					no tablespace files are closed.
+#
+# 					The table definition cache exists in parallel with the table definition cache partition of the dictionary
+# 					object cache.
+#
+# 					Both caches store table definitions but serve different parts of the MySQL server.
+# 					Objects in one cache have no dependence on the existence of objects in the other.
+#
+# 	
+# table_open_cache
+#
+# 					Sys var: 		table_open_cache
+# 					Scope: 			Global
+# 					Dynamic: 		Yes
+# 					SET_VAR Hint: 	No
+# 					Type: 			Integer
+# 					Default (>= 8.0.4) 4000
+# 					Default (<= 8.0.3) 2000
+# 					Min: 				1
+# 					Max: 				524288
+#
+# 					Number of open tables for all threads. Increasing this value increases the number of file descriptors
+# 					that mysqld requires. You can check whether you need to increase the table cache by checking
+# 					the Opened_tables STATUS_VAR.
+#
+# 					If the value of Opened_tables is large and you do not use FLUSH_TABLES often (which just forces all tables
+# 					to be closed and reopened), then you should increase the value of the table_open_cache variable.
+#
+# table_open_cache_instances
+#
+# 					Sys var: 			table_open_cache_instances
+# 					Scope: 				Global
+# 					Dynamic: 			No
+# 					SET_VAR Hint: 		No
+# 					Type: 				Integer
+# 					Default: 			16
+# 					Min: 					1
+# 					Max: 					64
+#
+# 					Number of open tables cache instances. 
+#
+# 					To improve scalability by reducing contention among sessions, the open tables cache 
+# 					can be partitioned into several smaller cache instances of size table_open_cache/table_open_cache_instances.
+#
+# 					A session needs to lock only one instance to access it for DML statements.
+#
+# 					This segments cache access among instances, permitting higher performance for
+# 					operations that use the cache when there are many sessions accessing tables.
+#
+# 					(DDL statements still require a lock on the entire cache, but such statements are much less
+# 					frequent than DML statements.)
+#
+# 					A value of 8 or 16 is recommended on systems that routinely use 16 or more cores.
+#
+# temptable_max_ram
+#
+# 					cmd line format: 		--temptable-max-ram=#
+# 					Introduced: 			8.0.2
+# 					Sys Var: 				temptable_max_ram
+# 					Scope: 					Global
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					Integer
+# 					Default: 				1073741824
+# 					Minimum: 				2097152
+# 					Max: 						2^64-1
+#
+# 					Defines the max amount of memory that can be occupied by the TempTable
+# 					storage engine before it starts storing data on disk.
+#
+# 					Default is 1 GiB.
+#
+# thread_cache_size
+#
+# 					cmd line format: 		--thread-cache-size=#
+# 					Sys Var: 				thread_cache_size
+# 					scope: 					Global
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					Integer
+# 					Default: 				-1 (autosizing)
+# 					Min: 						0
+# 					Max: 						16384
+#
+# 					How many threads the server should cache for reuse. When a client disconnects,
+# 					the client's threads are put in the cache if there are fewer than thread_cache_size
+# 					threads there.
+#
+# 					Requests for threads are satisfied by reusing threads taken from the cache if possible,
+# 					and only when the cache is empty is a new thread created.
+#
+# 					This variable can be increased to improve performance if you have a lot of new connections.
+# 					Normally, this does not provide a notable performance improvement if you have a good
+# 					thread implementation.
+#
+# 					However, if your server sees hundreds of connections per second you should normally
+# 					set thread_cache_size high enough so that most new connections use cached threads.
+#
+# 					By examining the difference between the Connections and Threads created status variables,
+# 					you can see how efficient the thread cache is.
+#
+# 					The default value is based on the following formula, capped to a limit of 100:
+#
+# 						8 + (max_connections / 100)
+#
+# thread_handling
+#
+# 					cmd line format: 		--thread-handling=name
+# 					Sys var: 				thread_handling
+# 					Scope: 					Global
+# 					Dynamic: 				No
+# 					SET_VAR Hint: 			No
+# 					Type: 					Enumeration
+# 					Default: 				one-thread-per-connection
+# 					Valid: 					no-threads, one-thread-per-connection, loaded-dynamically
+#
+# 					The thread-handling model used by the server for connection threads.
+# 					The permissible values are:
+#
+# 					 no-threads (the server uses a single thread to handle one connection) (useful for debugging under Linux)
+# 					
+# 					 one-thread-per-connection (the server uses one thread to handle each client connection)
+# 					 
+# thread_pool_algorithm
+#
+# 					cmd line format: 		--thread-pool-algorithm=#
+# 					introduced: 			8.0.11
+# 					Sys var: 				thread_pool_algorithm
+# 					Scope: 					Global
+# 					Dynamic: 				No
+# 					SET_VAR Hint: 			No
+# 					Type: 					Integer
+# 					Default: 				0
+# 					Min: 						0
+# 					Max: 						1
+#
+# 					This var controls which algorithm the thread pool plugin uses:
+#
+# 						A value of 0 (the default) uses a conservative low-concurrency algorithm which is most well tested and stable.
+#
+# 						A value of 1 increases the concurrency and uses a more aggressive algo which at times can perform 5-10% better,
+# 						on optimal thread counts, but has degrading performance as the number of connections increases. (Experimental, not supported)
+#
+# 					Available only if the thread pool plugin is enabled.
+# 
+# thread_pool_high_priority_connection
+#
+# 					cmd line format: 		--thread-pool-high-priority-connection=#
+# 					Introduced: 			8.0.11
+# 					Sys var: 				thread_pool_high_priority_connection
+# 					Scope: 					Global, Session
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					Integer
+# 					Default: 				0
+# 					Min: 						0
+# 					Max: 						1
+#
+# 					Affects queuing of new statements prior to execution.
+#
+# 					If the value is 0 (false, default) - statement queuing uses both the low-prio
+# 					and high-prio queues.
+#
+# 					If the value is 1 (true), queued statements always go to the high prio queue.
+#
+# 					Only available if the thread pool plugin is enabled.
+#
+# thread_pool_max_unused_threads
+#
+# 					cmd line format: 		--thread-pool-max-unused-threads=#
+# 					introduced: 			8.0.11
+# 					Sys Var: 				thread_pool_max_unused_threads
+# 					Scope: 					Global
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					Integer
+# 					Default: 				0
+# 					Min: 						0
+# 					Max: 						4096
+#
+# 					Max permitted number of unused threads in the thread pool.
+# 					This variable makes it possible to limit the amount of memory used by sleeping threads.
+#
+# 					A value of 0 (default) means no limit on the number of sleeping threads.
+#
+# 					A value of N where N is greater than 0, means 1 consumer thread and N-1 reserve threads.
+#
+# 					In this case, if a thread is ready to sleep but the number of sleeping threads is already at maximum,
+# 					the thread exits rather than going to sleep.
+#
+# 					A sleeping thread is either sleeping as a consumer thread or a reserve thread.
+# 					The thread pool permits one thread to be the consumer thread when sleeping.
+#
+# 					if a thread goes to sleep and there is no existing consumer thread, it will sleep as a consumer thread.
+#
+# 					When a thread must be woken up, a consumer thread is selected if there is one.
+# 					A reserve thread is selected only when there is no consumer thread to wake up.
+#
+# 					Only available if the thread pool plugin is enabled.
+#
+# thread_pool_prio_kickup_timer
+#
+# 					cmd line format: 		--thread-pool-prio-kickup-timer=#
+# 					Introduced: 			8.0.11
+# 					Sys var: 				thread_pool_prio_kickup_timer
+# 					Scope: 					Global, Session
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					Integer
+# 					Default: 				1000
+# 					Min: 						0
+# 					Max: 						<a lot>
+#
+# 					Affects statements waiting for execution in the low-prio queue.
+# 					The value is the number of MS before a waiting statement is moved to the high-prio queue.
+#
+# 					Default is 1000 ms (1 sec). Range is 0 to 2^32-2
+#
+# 					Only available if thread plugin is enabled.
+#
+# thread_pool_size
+#
+# 					cmd line format: 		--thread-pool-size=#
+# 					Introduced: 			8.0.11
+# 					Sys var: 				thread_pool_size
+# 					Scope: 					Global
+# 					Dynamic: 				No
+# 					SET_VAR Hint: 			No
+# 					Type: 					Integer
+# 					Default: 				16
+# 					Min: 						1
+# 					Max: 						64
+#
+# 					Number of thread groups in the thread pool. 
+# 					This is the most important parameter controlling thread pool performance.
+#
+# 					It affects how many statements can execute simultaneously.
+#
+# 					Defaults to 16, with a range from 1 to 64. Must be within range, plugin won't load and a error is written to the log.
+#
+# 					Only available if the thread pool plugin is enabled.
+#
+# thread_pool_stall_limit
+#
+# 					cmd line format: 		--thread-pool-stall-limit=#
+# 					Introduced: 			8.0.11
+# 					Sys var: 				thread_pool_stall_limit
+# 					Scope: 					Global
+# 					Dynamic: 				Yes
+## 				SET_VAR Hint: 			No
+# 					Type: 					Integer
+## 				Default: 				6
+# 					Min: 						4
+# 					Max: 						600
+#
+# 					Affects executing statements. 
+#
+# 					The value is the amount of time a statement has to finish after starting to execute before it becomes
+# 					defined as stalled, at which point the thread pool permits the thread group to begin
+# 					executing another statement.
+#
+# 					The value is measured in 10 milliseconds units, so a value of 6 (default),
+# 					means 60ms.
+#
+# 					The range of values is 4 to 600 (40ms to 6s).
+#
+# 					Short wait values permits threads to start more quickly.
+# 					Short values are also better for avoiding deadlock situations.
+#
+# 					Long wait values are useful for workloads that include long-running statements,
+# 					to avoid starting too many new statements while the current ones execute.
+#
+# 					Only available if thread pool plugin is enabled.
+#
+# thread_stack
+#
+# 					cmd line: 			--thread-stack=#
+# 					Sys var: 			thread_stack
+# 					Scope: 				Global
+# 					Dynamic: 			No
+# 					SET_VAR Hint: 		No
+# 					Type: 				Integer
+# 					Default (64-bit)  262144
+# 					Default (32-bit) 	196608
+# 					Min: 					131072
+# 					Max (64-bit) 		<a lot>
+# 					Max (32-bit) 		<less>
+#
+# 					Block Size: 		1024
+#
+# 					The stack size for each thread. Default is 192KB (256KB for 64-bit Systems) is large enough for most ops.
+#
+# 					If the thread stack size is too small, it limits the complexity of the SQL statements that the server can handle,
+# 					the recursion depth of stored procedures and other memory-consuming actions.
+#
+# time_format - Removed in 8.0.3
+#
+# time_zone 
+#
+# 					Sys var: 		time_zone
+# 					Scope: 			Global, Session
+# 					Dynamic: 		Yes
+# 					SET_VAR Hint: 	No
+# 					Type: 			String
+#
+# 					The current time zone. 
+#
+# 					This variable is used to initialize the time zone for each client that connects.
+# 					By default, the initial value of this is 'SYSTEM' (basically use the system_time_zone)
+#
+# 					Can be specified explicitly at server startup with the --default-time-zone option.
+#
+# 					NOTE: If set to SYSTEM, every MySQL function call that requires a timezone calc, makes a system lib call to find out the
+# 							current system timezone. May be protected by a global mutex, resulting on contention.
+#
+# timestamp
+#
+# 					Sys var: 		timestamp
+# 					Scope: 			Session
+# 					Dynamic: 		Yes
+# 					SET_VAR Hint: 	Yes
+# 					Type: 			Numeric
+#
+# 					Set the time for this client. 
+#
+# 					This is used to get the original timestamp if you use the binary log to restore rows.
+# 					<timestamp_value> should be a Unix epoch timestamp (a value like that returned by UNIX_TIMESTAMP() - not a 'YYYY-MM-DD hh:mm:ss'),
+# 					or DEFAULT.
+#
+# 					
+#
+# 							
+# 			
+#
+#
+# https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
