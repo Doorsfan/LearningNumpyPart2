@@ -17764,6 +17764,107 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 					<timestamp_value> should be a Unix epoch timestamp (a value like that returned by UNIX_TIMESTAMP() - not a 'YYYY-MM-DD hh:mm:ss'),
 # 					or DEFAULT.
 #
+# 					Setting timestamp to a constant value causes it to retain that value until it is changed again.
+# 					Setting timestamp to DEFAULT causes its value to be the current date and time as of the time it is accessed.
+#
+# 					In MySQL 8.0, timestamp is a DOUBLE rather than BIGINT because its value includes a microseconds part.
+#
+# 					SET timestamp affects the value returned by NOW() but not by SYSDATE().
+#					This means that timestamp settings in the binary log have no effect on invocations of
+# 					SYSDATE().
+#
+# 					The server can be started with the --sysdate-is-now option to cause SYSDATE() to be an alias for NOW(),
+# 					in which case SET timestamp affects both functions.
+#
+# tls_version
+#
+# 					cmd line format: 		--tls-version=protocol_list
+# 					Sys_var: 				tls_version
+# 					Scope: 					Global
+# 					Dynamic: 				No
+# 					SET_VAR Hint: 			No
+# 					Type: 					String
+# 					Default (>= 8.0.11) 	TLSv1, TLSv1.1, TLSv1.2
+# 					Default (<= 8.0.4) 	TLSv1, TLSv1.1, TLSv1.2 (OpenSSL), TLSv1, TLSv1.1 (yaSSL)
+#
+# 					The protocols permitted by the server for encrypted connections.
+# 					The value is a comma-separated list containing one or more protocol names.
+#
+# 					The protocols that can be named for this variable depends on the SSL library used to compile
+# 					MySQL.
+#
+# tmp_table_size
+#
+# 					cmd line format: 		--tmp-table-size=#
+# 					Sys_Var: 				tmp_table_size
+# 					Scope: 					Global, Session
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			Yes
+# 					Type: 					Integer
+# 					Default: 				16777216
+# 					Min: 						1024
+# 					Max: 						<a lot>
+#
+# 					Max size of internal in-memory temporary tables. Does not apply to user-created MEMORY tables.
+#
+# 					The actual limit is determined from whichever of the values of tmp_table_size and max_heap_table_size
+# 					is smaller.
+#
+# 					If an in-memory temporary table exceeds the limit, MySQL automatically converts it to an on-disk
+# 					temporary table.
+#
+# 					The internal_tmp_disk_storage_engine option defines the storage engine used for on-disk temporary tables.
+#
+# 					Increase the value of tmp_table_size (and max_heap_table_size if necessary) if you do many advanced
+# 					GROUP BY queries and you have lots of memory.
+#
+# 					You can compare the number of internal on-disk temporary tables created to the total number of internal
+# 					temp tables created by comparing the values of the Created_tmp_disk_tables and Created_tmp_tables Vars.
+#
+# tmpdir
+#
+# 					cmd line format: 		--tmpdir=dir_name
+# 					Sys_var: 				tmpdir
+# 					Scope: 					Global
+# 					Dynamic: 				No
+# 					SET_VAR Hint: 			No
+# 					Type: 					Dir name
+#
+# 					The dir used for temp files and temp tables.
+#
+# 					This var can be set to a list of several paths that are used in round-robin regards.
+#
+# 					Paths should be separated by : on Unix and ; on Windows.
+#
+# 					The multiple-directory feature can be used to spread the load between several physical disks.
+# 
+#	 				If the MySQL server is acting as a replication slave, you should not set tmpdir to point to a dir
+# 					on a memory-based file system or to a dir that is cleared when the server host restarts.
+# 
+# 					A replication slave needs some of its temp files to survive a machine restart so that it can replicate
+# 					temporary tables or LOAD_DATA_INFILE operations.
+#
+# 					If files in the temporary file dir are lost when the server restarts, replication fails.
+#
+# 					You can set the slave's temp dir using the slave_load_tmpdir variable.
+#
+# 					In that case, the slave will not use the general tmpdir value and you can set tmpdir to a nonpermanent location.
+#
+# transaction_alloc_block_size
+#
+# 					cmd line: 		--transaction-alloc-block-size=#
+# 					Sys_var: 		transaction_alloc_block_size
+# 					Scope: 			Global, Session
+# 					Dynamic: 		Yes
+# 					SET_VAR Hint: 	No
+# 					Type: 			Integer
+# 					Default: 		8192
+# 					Min: 				1024
+# 					Max: 				131072
+# 					Block Size: 	1024
+#
+# 							
+#
 # 					
 #
 # 							
