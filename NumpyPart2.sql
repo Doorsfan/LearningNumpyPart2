@@ -17863,8 +17863,321 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 					Max: 				131072
 # 					Block Size: 	1024
 #
-# 							
+# 					Amount in bytes by which to increase a per-transaction memory pool which needs memory.
 #
+# transaction_isolation
+#
+# 					cmd line format: 	--transaction-isolation=name
+# 					Sys_Var: 			transaction_isolation
+# 					Scope: 				Global, Session
+# 					Dynamic: 			Yes
+# 					SET_VAR Hint: 		No
+# 					Type: 				Enumeration
+# 					Default: 			REPEATABLE-READ
+# 					Valid: 				READ-UNCOMMITTED, READ-COMMITTED, REPEATABLE-READ, SERIALIZABLE
+#
+# 					Default transaction isolation level.
+# 					Defaults to REPEATABLE-READ.
+#
+# 					Can be set directly, or indirectly using the SET_TRANSACTION statement.
+#
+# 					If you set transaction_isolation directly to an isolation level name that contains a space,
+# 					the name should be enclosed with '' and spaces replaced with -
+#
+# 					SET transaction_isolation = 'READ-COMMITTED';
+#
+# 					Any unique prefix of a valid value may be used to set the value of this var.
+#
+# 					The default transaction isolation level can also be set at startup using the --transaction-isolation server option.
+#
+# 					This var has nonstandard semantics for runtime changes to the session value made using the SET statement.
+# 					For most session sys_vars - these statements are the same:
+#
+# 					SET @@var_name = value;
+# 					SET @@session.var_name = value;
+#
+# 					For transaction_isolation, these semantics apply instead:
+#
+# 						SET @@transaction_isolation = <value>
+#
+# 							Not permitted within transactions.
+#
+# 							Set the value only for the next single transaction within the session.
+#
+# 						SET @@session.transaction_isolation = <value>
+#
+# 							Permitted within transactions, but does not affect the current ongoing transaction.
+#
+# 							Sets the value for all subsequent transactions within the session.
+#
+# 							If executed between transactions, overrides any preceding SET @@transaction_isolation
+# 							statement to set the value for the next transaction.
+# 			
+# transaction_prealloc_size
+#
+# 					Cmd line format: 		--transaction-prealloc-size=#
+# 					Sys_var: 				transaction_prealloc_size
+# 					Scope: 					Global, Session
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					Integer
+# 					Default: 				4096
+# 					Min: 						1024
+# 					Max: 						131072
+# 					Block size: 			1024
+#
+# 					There is a per-transaction memory pool from which various transaction-related allocations take memory.
+# 					The initial size of the pool in bytes is transaction_prealloc_size.
+#
+# 					For every allocation that cannot be satisfied from the pool because it has insufficient memory available,
+# 					the pool is increased by transaction_alloc_block_size bytes.
+#
+# 					When the transaction ends, the pool is truncated to transaction_prealloc_size bytes.
+#
+# 					By making transaction_prealloc_size sufficiently large to contain all statements within a single transaction,
+# 					you can avoid many malloc() calls.
+#
+# transaction_read_only
+#
+# 					cmd line: 				--transaction-read-only
+# 					Sys var: 				transaction_read_only
+# 					Scope: 					Global, Session
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			No
+# 					Type: 					Boolean
+# 					Default: 				OFF
+#
+# 					Default transaction access mode. The value can be OFF (read/write, default) or ON (read only).
+#
+# 					Can be set directly, or indirectly using the SET_TRANSACTION statement.
+#
+# 					To set the default transaction access mode at startup, use the --transaction-read-only server option.
+#
+# 					This var has nonstandard semantics for runtime changes to the session value made using the SET statement.
+# 					For most session sys variables, these statements are equivalent:
+#
+# 						SET @@var_name = <value>;
+# 						SET @@session.var_name = <value>;
+#
+# 					For transaction_read_only, these semantics apply instead:
+#
+# 						SET @@transaction_read_only = <value>
+#
+# 							Not permitted within transactions
+#
+# 							Sets the value only for the next single transaction within the session.
+#
+# 						SET @@session.transaction_read_only = <value>
+#
+# 							Permitted within transactions, but does not affect the current ongoing transaction.
+#
+# 							Sets the value for all subsequent transactions within the session.
+#
+# 							If executed between transactions, overrides any preceding SET @@transaction_read_only statement
+# 							to set the value for the next transaction.
+# tx_isolation
+#
+# 					DEPRECATED -> 8.0.3
+# 					Sys_var: 		tx_isolation
+# 					Scope: 			Global, Session
+# 					Dynamic: 		Yes
+# 					SET_VAR Hint: 	No
+# 					Type: 			Enumeration
+# 					Default: 		REPEATABLE-READ
+# 					Valid: 			READ-UNCOMMITTED, READ-COMMITTED, REPEATABLE-READ, SERIALIZABLE
+#
+# 					Removed in 8.0.3 -> use transaction_isolation instead.
+# 
+# tx_read_only
+#
+# 					Deprecated ->  8.0.3
+# 					Sys_var: 	   tx_read_only
+# 					Scope: 			Global, Session
+# 					Dynamic: 		Yes
+# 					SET_VAR Hint: 	No
+# 					Type: 			Boolean
+# 					default: 		OFF
+#
+# 					Removed in 8.0.3 -> use transaction_read_only instead.
+#
+# unique_checks
+#
+# 					Sys var: 		unique_checks
+# 					Scope: 			Global, Session
+# 					Dynamic: 		Yes
+# 					SET_VAR Hint: 	Yes
+# 					Type: 			Boolean
+# 					Default: 		ON
+#
+# 					If set to 1 (default), uniqueness checks for secondary indexes in InnoDB tables are performed.
+# 					If set to 0, storage engines are permitted to assume that duplicate keys are not present in input data.
+#
+# 					If you know for certain that your data does not contain uniqueness violations, you can set this 
+# 					to 0 to speed up large table imports to InnoDB.
+#
+# 					Setting this variable to 0 does not <require> storage engines to ignore duplicate keys.
+# 					An engine is still permitted to check for them and issue duplicate-key errors if it 
+# 					detects them.
+#
+# updatable_views_with_limit
+#
+# 					Cmd line: 		--updatable-views-with-limit=#
+# 					Sys var: 		updatable_views_with_limit
+# 					Scope: 			Global, Session
+# 					Dynamic: 		Yes
+# 					SET_VAR Hint: 	Yes
+# 					Type: 			Boolean
+# 					Default: 		1
+#
+# 					This var controls whether updates to a view can be made when the view does not contain
+# 					all columns of the primary key defined in the underlying table, if the update statement
+# 					contains a LIMIT clause.
+#
+# 					(Such updates often are generated by GUI tools). An update is an UPDATE or DELETE statement.
+#
+# 					Primary key here means a PRIMARY KEY, or a UNIQUE index in which no column can contain NULL.
+#
+# 					The variable can have two values:
+#
+# 						1 or YES: Issue a warning only (not an error message). Default.
+#
+# 						0 or NO:  Prohibit the update.
+#
+# use_secondary_engine
+#
+# 					Introduced: 	8.0.13
+# 					Sys_var: 		use_secondary_engine
+# 					Scope: 			Session
+# 					Dynamic: 		Yes
+# 					SET_VAR Hint: 	Yes
+# 					Type: 			Enumeration
+# 					Default: 		OFF
+# 					Valid: 			OFF, ON, FORCE
+#
+# 					For future use.
+#
+# validate_password.<xxx>
+#
+# 					The validate_password components implements a set of system variables having names of the form
+# 					validate_password.<xxx>
+#
+# 					Affect password testing by that component.
+#
+# validate_user_plugins
+#
+# 					Sys_var: 		validate_user_plugins
+# 					Scope: 			Global
+# 					Dynamic: 		No
+# 					SET_VAR Hint: 	No
+# 					Type: 			Boolean
+# 					Default: 		ON
+#
+# 					If this var is enabled (default), the server checks each user account and produces a warning if conditions are
+# 					found that would make the account unusable:
+#
+# 						The account requires an authentication plugin that is not loaded.
+#
+# 						The account requires the sha256_password or caching_sha2_password authentication plugin
+# 						but the server was started with neither SSL nor RSA enabled as required by the plugin.
+#
+# 					Enabling validate_user_plugins slows down server initialization and FLUSH PRIVILEGES.
+#
+# 					If you do not require the additional checking, you can disable this variable at startup
+#  				to avoid the performance decrement.
+#
+# version
+#
+# 					The version number for the server. The value might also include a suffix indicating server build or
+# 					configuration information.
+#
+# 					-debug indicates that the server was built with debugging support enabled.
+#
+# version_comment
+#
+# 					Sys_var: 		version_comment
+# 					Scope: 			Global
+# 					Dynamic: 		No
+# 					SET_VAR Hint: 	No
+# 					Type: 			String
+#
+# 					The CMake configuration program has a COMPILATION_COMMENT option that permits a
+# 					comment to be specified when building MySQL.
+#
+# 					This var contains the value of that comment.
+#
+# version_compile_machine
+#
+# 					Sys_var: 		version_compile_machine
+# 					Scope: 			Global
+# 					Dynamic: 		No
+# 					SET_VAR Hint: 	No
+# 					Type: 			String
+#
+# 					Type of the server binary.
+#
+# version_compile_os
+#
+# 					Sys_var: 		version_compile_os
+# 					Scope: 			Global
+# 					Dynamic: 		No
+# 					SET_VAR Hint: 	No
+# 					Type: 			String
+#
+# 					The type of OS on which MySQL was built.
+#
+# version_compile_zlib
+#
+# 					Introduced: 	8.0.11
+# 					Sys_var: 		version_compile_zlib
+# 					Scope: 			Global
+# 					Dynamic: 		No
+# 					SET_VAR Hint: 	No
+# 					Type: 			String
+#
+# 					The version of the compiled-in zlib library.
+#
+# wait_timeout
+#
+# 					cmd line: 		--wait-timeout=#
+# 					Sys_var: 		wait_timeout
+# 					Scope: 			Global, Session
+# 					Dynamic: 		Yes
+# 					SET_VAR Hint: 	No
+# 					Type: 			Integer
+# 					Default: 		28800
+# 					Min: 				1
+# 					Max (Other): 	31536000
+# 					Max (Windows): 2147483
+#
+# 					Number of seconds the server waits for activity on a noninteractive connection before closing it.
+#
+# 					On thread startup, the session wait_timeout value is initialized from the global wait_timeout value
+# 					or from the global interactive_timeout value, depending on the type of client (as defined by the
+#  				CLIENT_INTERACTIVE connection option to mysql_real_connect())
+#
+# 					See also interactive_timeout.
+#
+# warning_count
+#
+# 					Number of errors, warnings and notes that resulted from the last statement that generated messages.
+# 					Read only.
+#
+# windowing_use_high_precision
+#
+# 					Cmd line format: 		--windowing-use-high-precision=#
+# 					Introduced: 			8.0.2
+# 					Sys_Var: 				windowing_use_high_precision
+# 					Scope: 					Global, Session
+# 					Dynamic: 				Yes
+# 					SET_VAR Hint: 			Yes
+# 					Type: 					Boolean
+# 					Default: 				ON
+#
+# 					Whether to compute window ops without loss of precision.
+#
+# The following section pertains to Using System Variables:
+#
+# https://dev.mysql.com/doc/refman/8.0/en/using-system-variables.html
 # 					
 #
 # 							
