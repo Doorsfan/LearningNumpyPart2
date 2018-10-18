@@ -18177,11 +18177,268 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # The following section pertains to Using System Variables:
 #
-# https://dev.mysql.com/doc/refman/8.0/en/using-system-variables.html
-# 					
+# The MySQL server maintains many system variables that configure its operation.
 #
-# 							
-# 			
+# Each sys var has a default. Can be set at server startup using options on the cmd line or in a option file.
 #
+# Most of them can be changed dynamically while the server is running by means of the SET statement,
+# which enables you to modify operation of the server without having to stop and restart it.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
+# Can also use them in expressions.
+#
+# Many of the sys vars are built in, but can be installed by server plugins or components:
+#
+# 		System vars implemented by a server plugin are exposed when the plugin is installed and have
+# 		names taht begin with the plugin name.
+#
+# 		For example - audit_log implements a sys_var named audit_log_policy
+#
+# 		System vars implemented by a server component are exposed when the component is installed and have
+# 		names that begin with a component-specific prefix.
+#
+# 		For instance - log_filter_dragment is a error log filter component that puts in a sys_var of log_error_filter_rules,
+# 		full name is dragnet.log_error_filter_rules. Use full name for this.
+#
+# There are two scopes for sys vars -> global and session.
+#
+# Global is for overall, systemwide
+#
+# Session is for individual client conns. A sys var can have both.
+#
+# 		When the server starts, it initializes each global variable to its default value.
+# 		These defaults can be changed by options specified on the cmd line or in an option file.
+#
+# 		The server also maintains a set of session variables for each client that connects.
+#
+# 		The client's session variables are initialized at connect time using the current values of 
+# 		the corresponding global vars.
+#
+# 		For example, a client's SQL mode is controlled by the session sql_mode value - initialized when
+# 		the client connects to the value of the global sql_mode value.
+#
+# 		For some system variables, the session value is not intialized from the corresponding global value;
+# 		if so, that is indicated in the variable desc.
+#
+# System var values can be set globally at server startup by using options on the cmd line or in an option file.
+# When you use a startup option to set a variable that takes numerical, it can have suffix of one of the following:
+#
+# 		K - 1024  (kb)
+# 		M - 1024^2 (mb)
+# 		G - 1024^3 (gb)
+# 		T - 1024^4 (tb)
+# 		P - 1024^5
+# 		E - 1024^6
+#
+# The following commands starts the server with an InnoDB log file size of 16 MB and a max pack size of 1 GB:
+#
+# 		mysqld --innodb_log_file_size=16M --max_allowed_packet=1G
+#
+# Within an option file, they are set as:
+#
+# 		[mysqld]
+# 		innodb_log_file_size=16M
+# 		max_allowed_packet=1G
+#
+# Case insensitive.
+#
+# To restrict the maximum value to which a system variable can be set at runtime with the SET
+# statement, specify this maximum by using an option of the form --maximum-<var_name>=<value> at server startup.
+#
+# For example, to prevent the value of innodb_log_file_size from being increased to more than 32MB
+# at runtime, use the option --maximum-innodb_log_file_size=32M.
+#
+# Many sys vars are dynamic and can be changed at runtime by using the SET statement.
+# To change a sys var with SET, refer to it by name, optionally preceded by a modifier.
+#
+# A global sys_var:
+#
+# 		SET GLOBAL max_connections = 1000;
+# 		SET @@global.max_connections = 1000;
+#
+# Persist a global sys var to the mysqld-auto.cnf file (and set the runtime value):
+#
+# 		SET PERSIST max_connections = 1000;
+# 		SET @@persist.max_connections = 1000;
+#
+# Persist a global system variable to the mysqld-auto.cnf file (without setting the runtime value):
+#
+# 		SET PERSIST_ONLY back_log = 1000;
+# 		SET @@persist_only.back_log = 1000;
+#
+# Set a session system variable:
+#
+# 		SET SESSION sql_mode = 'TRADITIONAL';
+# 		SET @@session.sql_mode = 'TRADITIONAL';
+# 		SET @@sql_mode = 'TRADITIONAL';
+#
+# Later on, a full showcasing of SET syntax is showcased.
+#
+# Suffixes for specifying a value multiplier can be used when setting a variable at server startup,
+# but not to set the value with SET at runtime.
+#
+# On the other hand, with SET you can assign a variable's value using an expression, which is not true
+# when you set a variable at server startup.
+#
+# For example, the first of the following line is legal at server startup - but the second is not:
+#
+# mysql --max_allowed_packet=16M #Legal at server startup
+# mysql --max_allowed_packet=16*1024*1024 #Illegal at server startup
+#
+# Conversely, for SET, second is legal at runtime - first is not:
+#
+# SET GLOBAL max_allowed_packet=16M;#
+# SET GLOBAL max_allowed_packet=16*1024*1024;
+#
+# NOTE: Some system vars can be enabled with SET by setting them to ON/1 or OFF/0.
+# 		  To set it on the cmd line or in an option file - Must be set to 1 or 0.
+#
+# To display system variable names and values; use the SHOW_VARIABLES statement:
+#
+# mysql> SHOW VARIABLES;
+#
+# +-----------------------------------------------------------------------------+
+# | Variable_name 					| 			Value 										  |
+# +-----------------------------------------------------------------------------+
+# | 										| 															  |
+# | auto_increment_increment 		| 			1 												  |
+# | auto_increment_offset 		   | 		   1 												  |
+# | automatic_sp_privileges 		| 			ON 											  |
+# | back_log 							| 			151 											  |
+# | basedir 							| 			/home/mysql/ 								  |
+# | binlog_cache_size 				| 			32768 										  |
+# | bulk_insert_buffer_size 		| 			8388608 										  |
+# | character_set_client 			| 			utf8 											  |
+# | character_set_connection 		| 			utf8 											  |
+# | character_set_database 		| 			utf8mb4 										  |
+# | character_set_filesystem 		| 			binary 										  |
+# | character_set_results 			| 			utf8 											  |
+# | character_set_server 			| 			utf8mb4 										  |
+# | character_set_system 			| 			utf8 											  |
+# | character_sets_dir 				| 			/home/mysql/share/mysql/charsets/ 	  |
+# | collation_connection 			| 			utf8_general_ci 							  |
+# | collation_database 				| 			utf8mb4_0900_ai_ci 						  |
+# | collation_server 				| 			utf8mb4_0900_ai_ci 						  |
+# ...
+# | innodb_autoextend_increment 	| 			8 												  |
+# | innodb_buffer_pool_size 		| 			8388608 										  |
+# | innodb_commit_concurrency 	| 			0 												  |
+# | innodb_concurrency_tickets 	| 			500  											  |
+# | innodb_data_file_path 		   | 			ibdata1:10M:autoextend 					  |
+# | innodb_data_home_dir 			| 															  |
+# ...
+# | version 							| 			8.0.1-dmr-log 								  |
+# | version_comment 					| 			Source distribution 						  |
+# | version_compile_machine 		| 			i686 											  |
+# | version_compile_os 				| 			suse-linux 									  |
+# | wait_timeout 						| 			28800 										  |
+# +-----------------------------------------------------------------------------+
+#
+# With a LIKE clause, the statement displays only those variables that match the pattern.
+# To obtain a specific variable name, use a LIKE clause as follows:
+#
+# 		SHOW VARIABLES LIKE 'max_join_size';
+# 		SHOW SESSION VARIABLES LIKE 'max_join_size';
+#
+# To get a list of variables whose name match a pattern, use % Wildchar regex matching in a LIKE clause:
+#
+# 		SHOW VARIABLES LIKE '%size%';
+# 		SHOW GLOBAL VARIABLES LIKE '%size%';
+#
+# Wildcard chars can be used in any pos within the pattern to be matched.
+# Stricly speaking, because _ is a wildcard char - you ought to escape it as \_
+#
+# For SHOW_VARIABLES, if you specify neither GLOBAL nor SESSION, MYSQL returns SESSION values.
+#
+# The reason for requiring the GLOBAL keyword when setting GLOBAL only vars but not when retrieving them
+# is to prevent problems in the future:
+#
+# 		Were a SESSION var to be removed that has the same name as a GLOBAL var, a client with privs sufficient
+# 		to modify global vars might accidentally change the GLOBAL variable rather than just the SESSION var for its own session.
+#
+# 		Were a SESSION variable to be added with the same name as a GLOBAL variable, a client that intends to change
+# 		the GLOBAL variable might find only its own SESSION var changed.
+#
+# The following covers System Variable Privs:
+#
+# A system variable can have a global value that affects server operations as a whole, a session value that affects the
+# the current session or both.
+#
+# Many SYS_VAR are dynamic and can be changed at runtime using the SET statement to affect operation of the current
+# server instance.
+#
+# SET can also be used to persist certain global SYS_VAR to the mysqld-auto.cnf file in the data dir,
+# to affect server operation for subsequent startups.
+#
+# RESET_PERSIST removes persisted settings from mysqld-auto.cnf
+#
+# This section pertains to setting privs required to assign values to SYS_VARs at runtime.
+#
+# This includes persistence-related privs because some statements that modify sys_var values
+# persist those settings to the mysqld-auto.cnf file.
+#
+# These privs apply to setting global SYS_VAR values:
+#
+# 		To set a global SYS_VAR at runtime, use the SET_GLOBAL statement, which requires the SYSTEM_VARIABLES_ADMIN or SUPER priv.
+#
+# 		To persist a global system var to the mysqld-auto.cnf (and set the runtime value), use the SET_PERSIST statement,
+# 		which requires the SYSTEM_VARIABLES_ADMIN or SUPER privilege.
+#
+# 		To persist a global system var to the mysqld-auto.cnf (WITHOUT setting runtime), use the SET_PERSIST_ONLY statement,
+# 		which requires the SYSTEM_VARIABLES_ADMIN and PERSIST_RO_VARIABLES_ADMIN privs.
+#
+# 		To remove a persisted global sys_var from the mysqld-auto.cnf file, use the RESET_PERSIST statement:
+# 
+# 			For dynamic sys_vars, this statement requires the SYSTEM_VARIABLES_ADMIN or SUPER privilege.
+#
+# 			For read-only sys_vars, this statement requires the SYSTEM_VARIABLES_ADMIN and PERSIST_RO_VARIABLES_ADMIN privs.
+#
+# The descriptions for individual SYS_VARs indicate any exceptions to the preceding priv requirements. An example is mandatory_roles.
+#
+# To set a session sys_var at runtime, use the SET_SESSION statement. In contrast to global sys_vars, setting session sys_vars at runtime
+# normally requires no special privs and can be done by any user to affect the current session.
+#
+# However, for some sys_vars, setting the session values can have effects outside the current session and thus is a restricted
+# ops, requiring privs:
+#
+# (MySQL 8.0.14 >=) - the priv required is SESSION_VARIABLES_ADMIN. However, any user who has SYSTEM_VARIABLES_ADMIN or SUPER effectively
+# 							 has SESSION_VARIABLES_ADMIN by implication and need not be granted SESSION_VARIABLES_ADMIN explicitly.
+#
+# (< 8.0.14 MysQL)  - The priv is SYSTEM_VARIABLES_ADMIN or SUPER.
+#
+# If a session sys_var is restricted, the var desc. indicates that restriction. Examples include binlog_format, sql_log_bin and sql_log_off
+#
+# The reason for restricting certain session sys_vars is that changing them can have effects beyond the current session.
+#
+# For example, setting the session binlog_format or sql_log_bin values affects binary logging for the current session,
+# but that may have implications for the integrity of server replication and backups.
+#
+# SESSION_VARIABLES_ADMIN enables admins to minimize the priv footprint of users who may previously have been granted
+# SYSTEM_VARIABLES_ADMIN or SUPER for the purpose of enabling them to modify restricted session sys_vars.
+#
+# Assume that a admin has created the following role to confer the ability to set restricted session Sys_var:
+#
+# 		CREATE ROLE set_session_sysvars;
+# 		GRANT SYSTEM_VARIABLES_ADMIN ON *.* TO set_session_sysvars;
+#
+# Any user granted the set_session_sysvars role (and who has that role active) is able to set restricted session sys_vars.
+# However, that user is also able to set global sys_vars - which may be undesirable.
+#
+# By modifying the role to have SESSION_VARIABLES_ADMIN instead of SYSTEM_VARIABLES_ADMIN, the role privs can be
+# reduced to the ability to set restricted session sys_vars and nothing else.
+#
+# i.e:
+#
+# GRANT SESSION_VARIABLES_ADMIN ON *.* TO set_session_sysvars;
+# REVOKE SYSTEM_VARIABLES_ADMIN ON *.* FROM set_session_sysvars;
+#
+# Modifying the role has an immediate effect. 
+#
+# Any account granted the set_session_sysvars role no longer has SYSTEM_VARIABLES_ADMIN and is not able to set
+# global sys_vars without explicit grants.
+#
+# A similar GRANT/REVOKE sequence can be applied to any account that was granted SYSTEM_VARIABLES_ADMIN
+# directly rather than by means of a role.
+#
+# 
+#
+# https://dev.mysql.com/doc/refman/8.0/en/dynamic-system-variables.html
