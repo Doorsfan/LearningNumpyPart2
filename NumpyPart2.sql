@@ -19322,6 +19322,111 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # The following pertains to structured system variables:
 #
+# A structured Sys_var differs from a regular sys_var in two respects:
+#
+# 		Its value is a structure with components that specify server parameters considered to be closely related.
+#
+# 		There might be several instances of a given type of structured variable. Each one has a different name and refers to
+# 		a different resource maintained by the server.
+#
+# MySQL supports one structured variable type, which specifies parameters governing the operation of key caches.
+# A key cached structured variable has these components:
+#
+# 		key_buffer_size
+#
+# 		key_cache_block_size
+#
+# 		key_cache_division_limit
+#
+# 		key_cache_age_threshold
+#
+# This section describes the syntax for referring to the structured vars. Key cache variables are for examples, their interactions are covered later.
+#
+# To refer to a component of a structured variable instance, you can use a compound name in instance_name.component_name format, example:
+#
+# 		hot_cache.key_buffer_size
+# 		hot_cache.key_cache_block_size
+# 		cold_cache.key_cache_block_size
+#
+# For each structured sys_var, an instance with the name of <default> is always predefined.
+# If you refer to a component of a structured var without any instance name, the <default> instance is used.
+#
+# Thus, default.key_buffer_size and key_buffer_size refer to the same sys_var.
+#
+# Structured var instances and components follows these naming rules:
+#
+# 		For a given type of structured variable, each instance must have a name that is unique within variables of that type.
+# 		However, instance names need not be unique across structured variable types.
+#
+# 		For example, each structured variable has an instance named default, so default is not unique across variable types.
+#
+# 		The names of the components of each structured variable type must be unique across all sys_var names.
+#
+# 		If this were not true (that is, two different types of structured vars could share component member names),
+# 		it would not be clear which default structured variable to use for references to member names that are not qualified
+# 		by an instance name.
+#
+# 		If a structured variable instance name is not legal as an unquoted identifier, refer to it as a quoted identifier
+# 		using backticks. For example, hot-cache is not legal - but `hot-cache` is.
+#
+# 		global, session and local are not legal instance names. This vaoids a conflict with notations such as @@global.<var_name>
+# 		for referring to nonstructured sys_vars.
+#
+# Currently, the first two rules have no possibility of being violated because the only structured variable type is the one
+# for key caches. These rules will assume greater significance if some other type of structured variable is created in the future.
+#
+# With one exception, you can refer to structured variable components using compound names in any context where simple var names 
+# can occur.
+#
+# For example, you can assign a value to a structured var using a cmd line option:
+#
+# 		mysqld --hot_cache.key_buffer_size=64K
+#
+# In a option file:
+#
+# 		[mysqld]
+# 		hot_cache.key_buffer_size=64K
+#
+# The above entails a key cache named hot_cache with a size of 64KB in addition to the default of 8MB.
+#
+# We could also do as follows:
+#
+# 		mysqld --key_buffer_size=256K \
+# 			--extra_cache.key_buffer_size=128K \
+# 			--extra_cache.key_cache_block_size=2048
+#
+# In this case, the server sets the size of the default key cache to 256KB. 
+# (we could also have written --default.key_buffer_size=256K). 
+#
+# In addition, we create a second cache named extra_cache that has a size of 128K, with size of
+# block buffers for caching table index blocks set to 2048 bytes.
+#
+# THe following example starts the server with three different key caches having sizes in a 3:1:1 ratio:
+#
+# 	mysqld --key_buffer_size=6M \
+# 		--hot_cache.key_buffer_size=2M \
+# 		--cold_cache.key_buffer_size=2M
+#
+# Structured var vlaues may be set and retrieved at runtime as well. For example, to set a key cache named hot_cache
+# to a size of 10MB, use either of:
+#
+# SET GLOBAL hot_cache.key_buffer_size = 10*1024*1024;
+# SET @@global.hot_cache.key_buffer_size = 10*1024*1024;
+#
+# To retrieve the cache size, do this:
+#
+# SELECT @@global.hot_cache.key_buffer_size;
+#
+# However, using:
+#
+# SHOW GLOBAL VARIABLES LIKE 'hot_cache.key_buffer_size'; 
+#
+# Would not work, as it would be considered a string match for LIKE regex ops of a simple variable naming.
+#
 # 
-# 		
-#https://dev.mysql.com/doc/refman/8.0/en/structured-system-variables.html
+# The following section pertains to Server Status Variables:
+#
+# 
+#
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/server-status-variables.html
