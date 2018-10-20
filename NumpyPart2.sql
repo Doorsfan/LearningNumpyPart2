@@ -18439,6 +18439,889 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # A similar GRANT/REVOKE sequence can be applied to any account that was granted SYSTEM_VARIABLES_ADMIN
 # directly rather than by means of a role.
 #
-# 
+# The following pertains to Dynamic Sys_Vars:
 #
-# https://dev.mysql.com/doc/refman/8.0/en/dynamic-system-variables.html
+# Many server vars are dynamic and can be set at runtime.
+#
+# The following pertains to Mysqld in relation to dynamic sys_vars.
+#
+# Var name 																Var type 						Var scope
+# activate_all_roles_on_login 								Boolean 								Global
+# audit_log_connection_policy 								Enumeration 						Global
+# audit_log_exclude_accounts 									String 								Global
+# audit_log_flush 												Boolean 								Global
+# audit_log_include_accounts 									String 								Global
+# audit_log_read_buffer_size 									Integer 								Varies
+#
+# audit_log_rotate_on_size 									Integer 								Global
+# audit_log_statement_policy 									Enumeration 						Global
+# authentication_ldap_sasl_auth_method_name 				String 								Global
+# authentication_ldap_sasl_bind_base_dn 					String 								Global
+# authentication_ldap_sasl_bind_root_dn 					String 								Global
+# authentication_ldap_sasl_bind_root_pwd 					String 								Global
+#
+# authentication_ldap_sasl_ca_path 							String 								Global
+# authentication_ldap_sasl_group_search_attr 			String 								Global
+# authentication_ldap_sasl_group_search_filter 			String 								Global
+# authentication_ldap_sasl_init_pool_size 				Integer 								Global
+# authentication_ldap_sasl_log_status 						Integer 								Global
+#
+# authentication_ldap_sasl_max_pool_size 					Integer 								Global
+# authentication_ldap_sasl_server_host 					String 								Global
+# authentication_ldap_sasl_server_port 					Integer 								Global
+# authentication_ldap_sasl_tls 								Boolean 								Global
+# authentication_ldap_sasl_user_search_attr 				String 								Global
+# authentication_ldap_simple_auth_method_name 			String 								Global
+# authentication_ldap_simple_bind_base_dn 				String 								Global
+# authentication_ldap_simple_bind_root_dn 				String 								Global
+#
+# authentication_ldap_simple_bind_root_pwd 				String 								Global
+# authentication_ldap_simple_ca_path 						String 								Global
+# authentication_ldap_simple_group_search_attr 			String 								Global
+# authentication_ldap_simple_group_search_filter 		String 								Global
+# authentication_ldap_simple_init_pool_size 				Integer 								Global
+# authentication_ldap_simple_log_status 					Integer 								Global
+#
+# authentication_ldap_simple_max_pool_size 				Integer 								Global
+# authentication_ldap_simple_server_host 					String 								Global
+# authentication_ldap_simple_server_port 					Integer 								Global
+# authentication_ldap_simple_tls 							Boolean 								Global
+# authentication_ldap_simple_user_search_attr 			String 								Global
+# auto_increment_increment 									Integer 								Both
+# auto_increment_offset 										Integer 								Both
+# autocommit 														Boolean 								Both
+# automatic_sp_privileges 										Boolean 								Global
+# avoid_temporal_upgrade 										Boolean 								Global
+# big_tables 														Boolean 								Both
+# binlog_cache_size 												Integer 								Global
+# binlog_checksum 												String 								Global
+#
+# binlog_direct_non_transactional_updates 				Boolean 								Both
+# binlog_error_action 											Enumeration 						Global
+# binlog_expire_logs_seconds 									Integer 								Global
+# binlog_format 													Enumeration 						Both
+# binlog_group_commit_sync_delay 							Integer 								Global
+# binlog_group_commit_sync_no_delay_count 				Integer 								Global
+# binlog_max_flush_queue_time 								Integer 								Global
+# binlog_order_commits 											Boolean 								Global
+# binlog_row_image=image_type 								Enumeration 						Both
+# binlog_row_metadata=metadata_type 						Enumeration 						Global
+# binlog_row_value_options 									Set 									Both
+# binlog_rows_query_log_events 								Boolean 								Both
+# binlog_stmt_cache_size 										Integer 								Global
+#
+# binlog_transaction_dependency_history_size 			Integer 								Global
+# binlog_transaction_dependency_tracking 					Enumeration 						Global
+# block_encryption_mode 										String 								Both
+# bulk_insert_buffer_size 										Integer 								Both
+# character_set_client 											String 								Both
+# character_set_connection 									String 								Both
+# character_set_database 										String 								Both
+# character_set_filesystem 									String 								Both
+# character_set_results 										String 								Both
+#
+# character_set_server 											String 								Both
+# check_proxy_users 												Boolean 								Global
+# collation_connection 											String 								Both
+# collation_database 											String 								Both
+# collation_server 												String 								Both
+# completion_type 												Enumeration 						Both
+# concurrent_insert 												Enumeration 						Global
+# connect_timeout 												Integer 								Global
+# connection_control_failed_connections_threshold 		Integer 								Global
+# connection_control_max_connection_delay 				Integer 								Global
+#
+# connection_control_min_connection_delay 				Integer 								Global
+# cte_max_recursion_depth 										Integer 								Both
+# debug 																String 								Both
+# debug_sync 														String 								Session
+# default_collation_for_utf8mb4 								Enumeration 						Both
+# default_password_lifetime 									Integer 								Global
+# default_storage_engine 										Enumeration 						Both
+# default_tmp_storage_engine 									Enumeration 						Both
+# default_week_format 											Integer 								Both
+# delay_key_write 												Enumeration 						Global
+# delayed_insert_limit 											Integer 								Global
+# delayed_insert_timeout 										Integer 								Global
+# delayed_queue_size 											Integer 								Global
+#
+# div_precision_increment 										Integer 								Both
+# dragnet.log_error_filter_rules 							String 								Global
+# end_markers_in_json 											Boolean 								Both
+# enforce_gtid_consistency 									Enumeration 						Global
+# eq_range_index_dive_limit 									Integer 								Both
+# event_scheduler 												Enumeration 						Global
+# executed_gtids_compression_period 						Integer 								Global
+# expire_logs_days 												Integer 								Global
+# explicit_defaults_for_timestamp 							Boolean 								Both
+# flush 																Boolean 								Global
+#
+# flush_time 														Integer 								Global
+# foreign_key_checks 											Boolean 								Both
+# ft_boolean_syntax 												String 								Global
+# general_log 														Boolean 								Global
+# general_log_file 												File name 							Global
+# group_concat_max_len 											Integer 								Both
+# group_replication_allow_local_disjoint_gtids_join 	Boolean 								Global
+# group_replication_allow_local_lower_version_join 	Boolean 								Global
+# group_replication_auto_increment_increment 			Integer 								Global
+# group_replication_bootstrap_group 						Boolean 								Global
+# group_replication_communication_debug_options 		String 								Global
+# group_replication_components_stop_timeout 				Integer 								Global
+# group_replication_compression_threshold 				Integer 								Global
+# group_replication_enforce_update_everywhere_checks 	Boolean 								Global
+# group_replication_exit_state_action 						Enumeration 						Global
+#
+# group_replication_flow_control_applier_threshold 	Integer 								Global
+# group_replication_flow_control_certifier_threshold 	Integer 								Global
+# group_replication_flow_control_hold_percent 			Integer 								Global
+# group_replication_flow_control_max_commit_quota 		Integer 								Global
+# group_replication_flow_control_member_quota_percent Integer 								Global
+# group_replication_flow_control_min_quota 				Integer 								Global
+# group_replication_flow_control_min_recovery_quota 	Integer 								Global
+# group_replication_flow_control_mode 						Enumeration 						Global
+# group_replication_flow_control_period 					Integer 								Global
+# group_replication_flow_control_release_percent 		Integer 								Global
+# group_replication_force_members 							String 								Global
+# group_replication_group_name 								String 								Global
+# group_replication_group_seeds 								String 								Global
+#
+# group_replication_gtid_assignment_block_size 			Integer 								Global
+# group_replication_ip_whitelist 							String 								Global
+# group_replication_local_address 							String 								Global
+# group_replication_member_expel_timeout 					Integer 								Global
+# group_replication_member_weight 							Integer 								Global
+# group_replication_poll_spin_loops 						Integer 								Global
+# group_replication_recovery_complete_at 					Enumeration 						Global
+# group_replication_recovery_get_public_key 				Boolean 								Global
+# group_replication_recovery_public_key_path 			File name 							Global
+# group_replication_recovery_reconnect_interval 		Integer 								Global
+# group_replication_recovery_retry_count 					Integer 								Global
+# group_replication_recovery_ssl_ca 						String 								global
+# group_replication_recovery_ssl_capath 					String 								Global
+#
+# group_replication_recovery_ssl_cert 						String 								Global
+# group_replication_recovery_ssl_cipher 					String 								Global
+# group_replication_recovery_ssl_crl 						String 								Global
+# group_replication_recovery_ssl_crlpath 					String 								Global
+# group_replication_recovery_ssl_key 						String 								Global
+# group_replication_recovery_ssl_verify_server_cert 	Boolean 								Global
+# group_replication_recovery_use_ssl 						Boolean 								Global
+# group_replication_single_primary_mode 					Boolean 								Global
+# group_replication_ssl_mode 									Enumeration 						Global
+# group_replication_start_on_boot 							Boolean 								Global
+# group_replication_transaction_size_limit 				Integer 								Global
+# group_replication_unreachable_majority_timeout 		Integer 								Global
+# gtid_executed_compression_period 							Integer 								Global
+# gtid_mode 														Enumeration 						Global
+# gtid_mode 														Enumeration 						Global
+# gtid_next 														Enumeration 						Session
+#
+# gtid_purged 														String 								Global
+# histogram_generation_max_mem_size 						Integer 								Both
+# host_cache_size 												Integer 								Global
+# identity 															Integer 								Session
+# information_schema_stats_expiry 							Integer 								Both
+# init_connect 													String 								Global
+# init_slave 														String 								Global
+# innodb_adaptive_flushing 									Boolean 								Global
+# innodb_adaptive_flushing_lwm 								Integer 								Global
+# innodb_adaptive_hash_index 									Boolean 								Global
+# innodb_adaptive_max_sleep_delay 							Integer 								Global
+# innodb_api_bk_commit_interval 								Integer 								Global
+# innodb_api_trx_level 											Integer 								Global
+# innodb_autoextend_increment 								Integer 								Global
+# innodb_background_drop_list_empty 						Boolean 								Global
+# innodb_buffer_pool_dump_at_shutdown 						Boolean 								Global
+# innodb_buffer_pool_dump_now 								Boolean 								Global
+# innodb_buffer_pool_dump_pct 								Integer 								Global
+#
+# innodb_buffer_pool_filename 								File name 							Global
+# innodb_buffer_pool_in_core_file 							Boolean 								Global
+# innodb_buffer_pool_load_abort 								Boolean 								Global
+# innodb_buffer_pool_load_now 								Boolean 								Global
+# innodb_buffer_pool_size 										Integer 								Global
+# innodb_change_buffer_max_size 								Integer 								Global
+# innodb_change_buffering 										Enumeration 						Global
+# innodb_change_buffering_debug 								Integer 								Global
+# innodb_checkpoint_disabled 									Boolean 								Global
+# innodb_checksum_algorithm 									Enumeration 						Global
+# innodb_cmp_per_index_enabled 								Boolean 								Global
+# innodb_commit_concurrency 									Integer 								Global
+# innodb_compress_debug 										Enumeration 						Global
+# innodb_compression_failure_threshold_pct 				Integer 								Global
+# innodb_compression_level 									Integer 								Global
+# innodb_compression_pad_pct_max 							Integer 								Global
+# innodb_concurrency_tickets 									Integer 								Global
+# innodb_ddl_log_crash_reset_debug 							Boolean 								Global
+#
+# innodb_deadlock_detect 										Boolean 								Global
+# innodb_default_row_format 									Enumeration 						Global
+# innodb_disable_sort_file_cache 							Boolean 								Global
+# innodb_fast_shutdown 											Integer 								Global
+# innodb_fil_make_page_dirty_debug 							Integer 								Global
+# innodb_file_per_table 										Boolean 								Global
+# innodb_fill_factor 											Integer 								Global
+# innodb_flush_log_at_timeout 								Integer 								Global
+# innodb_flush_log_at_trx_commit 							Enumeration 						Global
+# innodb_flush_neighbors 										Enumeration 						Global
+# innodb_flush_sync 												Boolean 								Global
+# innodb_flushing_avg_loops 									Integer 								Global
+# innodb_fsync_threshold 										Integer 								Global
+# innodb_ft_aux_table 											String 								Global
+# innodb_ft_enable_diag_print 								Boolean 								Global
+# innodb_ft_enable_stopword 									Boolean 								Both
+#
+# innodb_ft_num_word_optimize 								Integer 								Global
+# innodb_ft_result_cache_limit 								Integer 								Global
+# innodb_ft_server_stopword_table 							String 								Global
+# innodb_ft_user_stopword_table 								String 								Both
+# innodb_io_capacity 											Integer 								Global
+# innodb_io_capacity_max 										Integer 								Global
+# innodb_limit_optimistic_insert_debug 					Integer 								Global
+# innodb_lock_wait_timeout 									Integer 								Both
+# innodb_log_buffer_size 										Integer 								Global
+# innodb_log_checkpoint_fuzzy_now 							Boolean 								Global
+# innodb_log_checkpoint_now 									Boolean 								Global
+# innodb_log_checksums 											Boolean 								Global
+# innodb_log_compressed_pages 								Boolean 								Global
+# innodb_log_spin_cpu_abs_lwm 								Boolean 								Global
+#
+# innodb_log_spin_cpu_pct_hwm 								Integer 								Global
+# innodb_log_wait_for_flush_spin_hwm 						Integer 								Global
+# innodb_log_write_ahead_size 								Integer 								Global
+# innodb_lru_scan_depth 										Integer 								Global
+# innodb_max_dirty_pages_pct 									Numeric 								Global
+# innodb_max_dirty_pages_pct_lwm 							Numeric 								Global
+# innodb_max_purge_lag 											Integer 								Global
+# innodb_max_purge_lag_delay 									Integer 								Global
+# innodb_max_undo_log_size 									Integer 								Global
+# innodb_merge_threshold_set_all_debug 					Integer 								Global
+# innodb_monitor_disable 										String 								Global
+#
+# innodb_monitor_enable 										String 								Global
+# innodb_monitor_reset 											String 								Global
+# innodb_monitor_reset_all 									String 								Global
+# innodb_old_blocks_pct 										Integer 								Global
+# innodb_old_blocks_time 										Integer 								Global
+# innodb_online_alter_log_max_size 							Integer 								Global
+# innodb_optimize_fulltext_only 								Boolean 								Global
+# innodb_parallel_read_threads 								Integer 								Session
+# innodb_print_all_deadlocks 									Boolean 								Global
+# innodb_print_ddl_logs 										Boolean 								Global
+# innodb_purge_batch_size 										Integer 								Global
+# innodb_purge_rseg_truncate_frequency 					Integer 								Global
+# innodb_random_read_ahead 									Boolean 								Global
+# innodb_read_ahead_threshold 								Integer 								Global
+# innodb_redo_log_encrypt 										Boolean 								Global
+# innodb_replication_delay 									Integer 								Global
+# innodb_rollback_segments 									Integer 								Global
+#
+# innodb_saved_page_number_debug 							Integer 								Global
+# innodb_spin_wait_delay 										Integer 								Global
+# innodb_stats_auto_recalc 									Boolean 								Global
+# innodb_stats_include_delete_marked 						Boolean 								Global
+# innodb_stats_method 											Enumeration 						Global
+# innodb_stats_on_metadata 									Boolean 								Global
+# innodb_stats_persistent 										Boolean 								Global
+# innodb_stats_persistent_sample_pages 					Integer 								Global
+# innodb_stats_transient_sample_pages 						Integer 								Global
+# innodb_status_output 											Boolean 								Global
+# innodb_status_output_locks 									Boolean 								Global
+# innodb_strict_mode 											Boolean 								Both
+# innodb_sync_spin_loops 										Integer 								Global
+# innodb_table_locks 											Boolean 								Both
+# innodb_thread_concurrency 									Integer 								Global
+# innodb_thread_sleep_delay 									Integer 								Global
+# innodb_tmpdir 													Dir name 							Both
+#
+# innodb_trx_purge_view_update_only_debug 				Boolean 								Global
+# innodb_trx_rseg_n_slots_debug 								Integer 								Global
+# innodb_undo_log_encrypt 										Boolean 								Global
+# innodb_undo_log_truncate 									Boolean 								Global
+# innodb_undo_logs 												Integer 								Global
+# innodb_undo_tablespaces 										Integer 								Global
+# insert_id 														Integer 								Session
+# interactive_timeout 											Integer 								Both
+# internal_tmp_disk_storage_engine 							Enumeration 						Global
+# internal_tmp_mem_storage_engine 							Enumeration 						Both
+# join_buffer_size 												Integer 								Both
+# keep_files_on_create 											Boolean 								Both
+# key_buffer_size 												Integer 								Global
+# key_cache_age_threshold 										Integer 								Global
+# key_cache_block_size 											Integer 								Global
+# key_cache_division_limit 									Integer 								Global
+# keyring_aws_cmk_id 											String 								Global
+# keyring_aws_region 											Enumeration 						Global
+# keyring_encrypted_file_data 								File name 							Global
+# keyring_encrypted_file_password 							String 								Global
+# keyring_file_data 												File name 							Global
+# keyring_okv_conf_dir 											Dir name 							Global
+# keyring_operations 											Boolean 								Global
+# last_insert_id 													Integer 								Session
+# lc_messages 														String 								Both
+# lc_time_names 													String 								Both
+# local_infile 													Boolean 								Global
+#
+# lock_wait_timeout 												Integer 								Both
+# log_bin_trust_function_creators 							Boolean 								Global
+# log_builtin_as_identified_by_password 					Boolean 								Global
+# log_error_filter_rules 										String 								Global
+# log_error_services 											String 								Global
+# log_error_suppression_list 									String 								Global
+# log_error_verbosity 											Integer 								Global
+# log_output 														Set 									Global
+# log_queries_not_using_indexes 								Boolean 								Global
+# log_slow_admin_statements 									Boolean 								Global
+# log_slow_extra 													Boolean 								Global
+# log_slow_slave_statements 									Boolean 								Global
+# log_statements_unsafe_for_binlog 							Boolean 								Global
+# log_syslog 														Boolean 								Global
+# log_syslog_facility 											String 								Global
+# log_syslog_include_pid 										Boolean 								Global
+# log_syslog_tag 													String 								Global
+# log_throttle_queries_not_using_indexes 					Integer 								Global
+# log_timestamps 													Enumeration 						Global
+# log_warnings 													Integer 								Global
+# long_query_time 												Numeric 								Both
+#
+# low_priority_updates 											Boolean 								Both
+# mandatory_roles 												String 								Global
+# master_info_repository 										String 								Global
+# master_verify_checksum 										Boolean 								Global
+# max_allowed_packet 											Integer 								Both
+# max_binlog_cache_size 										Integer 								Global
+# max_binlog_size 												Integer 								Global
+# max_binlog_stmt_cache_size 									Integer 								Global
+# max_connect_errors 											Integer 								Global
+# max_connections 												Integer 								Global
+# max_delayed_threads 											Integer 								Both
+# max_error_count 												Integer 								Both
+# max_execution_time 											Integer 								Both
+# max_heap_table_size 											Integer 								Both
+# max_insert_delayed_threads 									Integer 								Both
+# max_join_size 													Integer 								Both
+# max_length_for_sort_data 									Integer 								Both
+# max_points_in_geometry 										Integer 								Both
+# max_prepared_stmt_count 										Integer 								Global
+# max_relay_log_size 											Integer 								Global
+# max_seeks_for_key 												Integer 								Both
+# max_sort_length 												Integer 								Both
+# max_sp_recursion_depth 										Integer 								Both
+# max_tmp_tables 													Integer 								Both
+#
+# max_user_connections 											Integer 								Both
+# max_write_lock_count 											Integer 								Global
+# min_examined_row_limit 										Integer 								Both
+# multi_range_count 												Integer 								Both
+# myisam_data_pointer_size 									Integer 								Global
+# myisam_max_sort_file_size 									Integer 								Global
+# myisam_repair_threads 										Integer 								Both
+# myisam_sort_buffer_size 										Integer 								Both
+# myisam_stats_method 											Enumeration 						Both
+# myisam_use_mmap 												Boolean 								Global
+# mysql_firewall_mode 											Boolean 								Global
+# mysql_firewall_trace 											Boolean 								Global
+# mysql_native_password_proxy_users 						Boolean 								Global
+# mysqlx-connect-timeout 										Integer 								Global
+#
+# mysqlx_connect_timeout 										Integer 								Global
+# mysqlx_document_id_unique_prefix 							Integer 								Global
+# mysqlx-idle-worker-thread-timeout 						Integer 								Global
+# mysqlx_idle_worker_thread_timeout 						Integer 								Global
+# mysqlx-interactive-timeout 									Integer 								Global
+# mysqlx_interactive_timeout 									Integer 								Global
+# mysqlx-max-allowed-packet 									Integer 								Global
+# mysqlx_max_allowed_packet 									Integer 								Global
+# mysqlx-max-connections 										Integer 								Global
+# mysqlx_max_connections 										Integer 								Global
+#
+# mysqlx-min-worker-threads 									Integer 								Global
+# mysqlx_min_worker_threads 									Integer 								Global
+# mysqlx-read-timeout 											Integer 								Session
+# mysqlx_read_timeout 											Integer 								Session
+# mysqlx_wait_timeout 											integer 								Session
+# mysqlx_wait_timeout 											integer 								Session
+# mysqlx_write_timeout 											Integer 								Session
+# mysqlx_write_timeout 											Integer 								Session
+#
+# ndb_blob_write_batch_bytes 									integer 								Both
+# ndb_deferred_constraints 									Integer 								Both
+# ndb_deferred_constraints 									Integer 								Both
+# ndb_distribution 												Enumeration 						Global
+# ndb_distribution={KEYHASH|LINHASH} 						Enumeration 						Global
+# ndb_eventbuffer_free_percent 								Integer 								Global
+# ndb_eventbuffer_max_alloc 									Integer 								Global
+# ndb_force_send 													Boolean 								Both
+# ndb_index_stat_enable 										Boolean 								Both
+# ndb_index_stat_option 										String 								Both
+# ndb_join_pushdown 												Boolean 								Both
+# ndb_log_binlog_index 											Boolean 								Global
+# ndb_log_empty_epochs 											Boolean 								Global
+# ndb_log_empty_update 											Boolean 								Global
+# ndb_log_updated_only 											Boolean 								Global
+# ndb_optimization_delay 										Integer 								Global
+# ndb_recv_thread_activation_threshold 					Integer 								Global
+# ndb_recv_thread_cpu_mask 									Bitmap 								Global
+# ndb_report_thresh_binlog_epoch_slip 						Integer 								Global
+# ndb_report_thresh_binlog_mem_usage 						Integer 								Global
+# ndb_show_foreign_key_mock_tables 							Boolean 								Global
+# ndb_table_no_logging 											Boolean 								Session
+#
+# ndb_use_transactions 											Boolean 								Both
+# ndbinfo_max_rows 												Integer 								Both
+# ndbinfo_show_hidden 											Boolean 								Both
+# net_buffer_length 												Integer 								Both
+# net_read_timeout 												Integer 								Both
+# net_retry_count 												Integer 								Both
+# net_write_timeout 												Integer 								Both
+# new 																Boolean 								Both
+# offline_mode 													Boolean 								Global
+# old_alter_table 												Boolean 								Both
+# old_passwords 													Enumeration 						Both
+# optimizer_prune_level 										Boolean 								Both
+# optimizer_search_depth 										Integer 								Both
+#
+# optimizer_switch 												Set 									Both
+# optimizer_trace 												String 								Both
+# optimizer_trace_features 									String 								Both
+# optimizer_trace_limit 										Integer 								Both
+# optimizer_trace_max_mem_size 								Integer 								Both
+# optimizer_trace_offset 										Integer 								Both
+# original_commit_timestamp 									Numeric 								Session
+#
+# parser_max_mem_size 											Integer 								Both
+# password_history 												Integer 								Global
+# password_require_current 									Boolean 								Global
+# password_reuse_interal 										Integer 								Global
+# performance_schema_max_digest_sample_age 				Integer 								Global
+# preload_buffer_size 											Integer 								Both
+# profiling 														Boolean 								Both
+# profiling_history_size 										Integer 								Both
+# pseudo_slave_mode 												Integer 								Session
+# pseudo_thread_id 												Integer 								Session
+# query_alloc_block_size 										Integer 								Both
+# query_cache_limit 												Integer 								Global
+# query_cache_min_res_unit 									Integer 								Global
+# query_cache_size 												Integer 								Global
+# query_cache_type 												Enumeration 						Both
+# query_cache_wlock_invalidate 								Boolean 								Both
+# query_prealloc_size 											Integer 								Both
+# rand_seed1 														Integer 								Session
+# rand_seed2 														Integer 								Session
+#
+# range_alloc_block_size 										Integer 								Both
+# range_optimizer_max_mem_size 								Integer 								Both
+# rbr_exec_mode 													Enumeration 						Both
+# read_buffer_size 												Integer 								Both
+# read_only 														Boolean 								Global
+# read_rnd_buffer_size 											Integer 								Both
+# regexp_stack_limit 											Integer 								Global
+# regexp_time_limit 												Integer 								Global
+# relay_log_info_repository 									String 								Global
+# relay_log_purge 												Boolean 								Global
+# require_secure_transport 									Boolean 								Global
+# resultset_metadata 											Enumeration 						Session
+# rewriter_enabled 												Boolean 								Global
+# rewriter_verbose 												Integer 								Global
+# rpl_read_size 													Integer 								Global
+# rpl_semi_sync_master_enabled 								Boolean 								Global
+# rpl_semi_sync_master_timeout 								Integer 								Global
+# rpl_semi_sync_master_trace_level 							Integer 								Global
+# rpl_semi_sync_master_wait_for_slave_count 				Integer 								Global
+# rpl_semi_sync_master_wait_no_slave 						Boolean 								Global
+# rpl_semi_sync_master_wait_point 							Enumeration 						Global
+# rpl_semi_sync_slave_enabled 								Boolean 								Global
+# rpl_semi_sync_slave_trace_level 							Integer 								Global
+#
+# rpl_stop_slave_timeout 										Integer 								Global
+# schema_definition_cache 										Integer 								Global
+# secure_auth 														Boolean 								Global
+# server_id 														Integer 								Global
+# session_track_gtids 											Enumeration 						Both
+# session_track_schema 											Boolean 								Both
+# session_track_state_change 									Boolean 								Both
+# session_track_system_variables 							String 								Both
+# session_track_transaction_info 							Enumeration 						Both
+# sha256_password_proxy_users 								Boolean 								Global
+# show_compatibility_56 										Boolean 								Global
+# show_create_table_verbosity 								Boolean 								Both
+# show_old_temporals 											Boolean 								Both
+# slave_allow_batching 											Boolean 								Global
+# slave_checkpoint_group=# 									Integer 								Global
+# slave_checkpoint_period=# 									Integer 								Global
+# slave_compressed_protocol 									boolean 								Global
+# slave_exec_mode 												Enumeration 						Global
+#
+# slave_max_allowed_packet 									Integer 								Global
+# slave_net_timeout 												Integer 								Global
+# slave_parallel_type 											Enumeration 						Global
+# slave_parallel_workers 										Integer 								Global
+# slave_pending_jobs_size_max 								Integer 								Global
+# slave_preserve_commit_order 								Boolean 								Global
+# slave_rows_search_algorithms=list 						Set 									Global
+# slave_sql_verify_checksum 									Boolean 								Global
+# slave_transaction_retries 									Integer 								Global
+# slow_launch_time 												Integer 								Global
+# slow_query_log 													Boolean 								Glboal
+# slow_query_log_file 											File name 							Global
+# sort_buffer_size 												Integer 								Both
+# sql_auto_is_null 												Boolean 								Both
+# sql_big_selects 												Boolean 								Both
+# sql_buffer_result 												Boolean 								Both
+# sql_log_bin 														Boolean 								Session
+# sql_log_off 														Boolean 								Both
+# sql_mode 															Set 									Both
+# sql_notes 														Boolean 								Both
+# sql_quote_show_create 										Boolean 								Both
+# sql_require_primary_key 										Boolean 								Both
+# sql_safe_updates 												Boolean 								Both
+# sql_select_limit 												Integer 								Both
+# sql_slave_skip_counter 										Integer 								Global
+#
+# sql_warnings 													Boolean 								Both
+# ssl_fips_mode 													Enumeration 						global
+# stored_program_cache 											Integer 								Global
+# stored_program_definition_cache 							Integer 								Global
+# super_read_only 												Boolean 								Global
+# sync_binlog 														Integer 								Global
+# sync_master_info 												Integer 								Global
+# sync_relay_log 													Integer 								Global
+# sync_relay_log_info 											Integer 								Global
+# syseventlog.facility 											String 								Global
+# syseventlog.include_pid 										Boolean 								Global
+# syseventlog.tag 												String 								Global
+# table_definition_cache 										Integer 								Global
+# table_open_cache 												Integer 								Global
+# tablespace_definition_cache 								Integer 								Global
+# temptable_max_ram 												Integer 								Global
+# thread_cache_size 												Integer 								Global
+#
+# thread_pool_high_priority_connection 					Integer 								Both
+# thread_pool_max_unused_threads 							Integer 								Global
+# thread_pool_prio_kickup_timer 								Integer 								Both
+# thread_pool_stall_limit 										Integer 								Global
+# time_zone 														String 								Both
+# timestamp 														Numeric 								Session
+# tmp_table_size 													Integer 								Both
+# transaction_alloc_block_size 								Integer 								Bothh
+# transaction_isolation 										Enumeration 						Both
+# transaction_prealloc_size 									Integer 								Both
+# transaction_read_only 										Boolean 								Both
+# transaction_write_set_extraction 							Enumeration 						Both
+# tx_isolation 													Enumeration 						Both
+# tx_read_only 													Boolean 								Both
+# unique_checks 													Boolean 								Both
+# updatable_views_with_limit 									Boolean 								Both
+# use_secondary_engine 											Enumeration 						Session
+# validate_password_check_user_name 						Boolean 								Global
+# validate_password_dictionary_file 						File name 							Global
+# validate_password_length 									Integer 								Global
+# validate_password_mixed_case_count 						INteger 								Global
+# validate_password_number_count 							Integer 								Global
+# validate_password_policy 									Enumeration 						Global
+# validate_password_special_char_count 					Integer 								Global
+# validate_password.check_user_name 						Boolean 								Global
+# validate_password.dictionary_file 						File name 							Global
+# validate_password.length 									integer 								Global
+# validate_password.mixed_case_count 						Integer 								Global
+# validate_password.number_count 							Integer 								Global
+# validate_password.policy 									Enumeration 						Global
+# validate_password.special_char_count 					Integer 								Global
+# version_tokens_session 										String 								Both
+# wait_timeout 													Integer 								Both
+# windowing_use_high_precision 								Boolean 								Both
+#
+# The following pertains to Persisted System Variables:
+#
+# The MySQL server maintains sys vars that configure its operations. A sys var can have a global value that
+# effects server ops as a whole, current session or both.
+#
+# Many sys vars are dynamic, can be changed during runtime using SET to affect current session.
+# SET can also be used to persist certain global sys vars to the mysqld-auto.cnf in the data dir - which affects subsequent startups.
+#
+# RESET_PERSIST removes persisted settings from mysqld-auto.cnf
+#
+# The following pertains to a OVERVIEW of the persisted Sys vars:
+#
+# Many sys_vars can be set at startup from a my.cnf option file or at runtime using the SET
+# statement, those methods of configing the server either requires a login access to the server host,
+# or do not provide the capability of persistently configuring the server at runtime or remotely:
+#
+# 		Modifying an option file requires direct access to that file, which requires login access to the MySQL server host.
+#
+# 		MOdifying sys_vars with SET_GLOBAL is a runtime capability that can be done from clients run locally 
+# 		or from remote hosts, but the changes affect only the current running server instance. i.e, nont persistent.
+#
+# To persist sys_vars to a file named mysqld-auto.cnf - in the data dir - we can do as follows:
+#
+# 		SET PERSIST max_connections = 1000;
+# 		SET @@persist.max_connections = 1000;
+#
+# 		SET PERSIST ONLY back_log = 100;
+# 		SET @@persist_only.back_log = 100;
+#
+# MySQL also provides a RESET PERSIST statement for removing persisted sys vars from mysqld-auto.cnf
+#
+# Server configs performed by persisted sys_vars, has these chareteristics:
+#
+# 		Made at runtime
+#
+# 		Permanent, apply across server restarts
+#
+# 		Can be made from local or clients who connect from a remote host.
+# 		(can configure multiple remote MySQL servers from a central client host)
+#
+# 		To persist sys_vars only reqs the privs for it, not login access or akin.
+#
+# 		Admin rights allows you to reconfig servers by persisting sys_vars, then cause the 
+# 		server to use the changed settings by executing a RESTART statement.
+#
+# 		Persisted settings provide immediate feedback about errors, because if you try to SET 
+# 		a malformed setting or syntax error - it does not change the server config, due to failing.
+#
+# The following pertains to the SYNTAX for persisting Sys_Vars:
+#
+# 		To persist a global sys_var to mysqld-auto.cnf option file in the data dir, we can use PERSIST Or the @@persist qualifier:
+#
+# 			SET PERSIST max_connections = 1000;
+# 			SET @@persist.max_connections = 1000;
+#
+# 			Like SET_GLOBAL, SET_PERSIST sets the global var runtime - but also writes the var setting to mysqld-auto.cnf 
+# 			(replaces existing var settings if they are there)
+#
+# 		To persist a global sys var to the mysqld-auto.cnf without setting the global var runtime value - we can use PERSIST_ONLY or @@persist_only.back_log
+#
+# 			SET PERSIST_ONLY back_log = 1000;
+# 			SET @@persist_only.back_log = 1000;
+#
+# 			(Writes to the mysqld-auto.cnf file - but does not modify the global var runtime value)
+# 			(Suitable for configing read_only sys_vars that can only be done at server startup)
+#
+# These RESET_PERSIST syntax ops can be used for removing persisted sys_vars:
+#
+# 		To remove all persisted vars from mysqld-auto.cnf, use RESET_PERSIST without naming any sys var:
+# 			
+# 			RESET PERSIST;
+#
+# 		To remove a specified persisted var from mysqld-auto.cnf, name it in the statement:
+#
+# 			RESET PERSIST system_var_name;
+#
+# 		To remove a specific persisted var from mysqld-auto.cnf, but produce a warning rather than an error
+# 		if the var is not present in the file, we can do IF EXISTS:
+#
+# 			RESET PERSIST IF EXISTS system_var_name;
+#
+#
+# A sys_var implemented by a plugin can be persisted if the plugin is installed when the SET statement is executed.
+# Assignment of the persisted plugin variable takes effect for subsequent server restarts if the plugin is still installed.
+#
+# If the plugin is no longer installed, the plugin variable will not exist when the server reads the mysqld-auto.cnf file
+# The server writes a warning to the error log and continues:
+#
+# 		currently unknown variable '<var_name>'
+# 		was read from the persisted config file
+#
+# The following pertains to obtaining information About Persisted Sys Vars:
+#
+# 		The Performance Schema <persisted_variables> table provides an SQL interface to the mysqld-auto.cnf file, enabling its
+# 		contents to be inspected at runtime using SELECT statements.
+#
+# 		The Performance Schema <variables_info> table contains info showing when and by which user each sys_var was most recently set.
+#
+# 		RESET_PERSIST affects the contents of the persisted_variables table because the table contents correspond to the contents
+# 		of the mysqld-auto.cnf file.
+#
+# 		On the other hand, because RESET_PERSIST does not change variable values, it has no effect on the contents of the variables_info
+# 		table until the server is restarted.
+#
+# The following pertains to FORMAT AND SERVER HANDLING OF THE MYSQLD-AUTO.CNF FILE:
+#
+# It's akin to JSON:
+#
+# {
+# 		"Version": 1,
+# 		"mysql_server": {
+# 			"max_connections": {
+# 				"Value": 	"152",
+# 				"Metadata": {
+# 					"Timestamp": 1.51.. (etc.)
+# 					"User": 	"root",
+# 					"Host": 	"localhost"
+# 				}
+# 		},
+# 		"transaction_isolation": {
+# 			"Value": "READ-COMMITTED",
+# 			"Metadata": {
+# 				"Timestamp": 1.51.. (etc)
+# 				"User": "root",
+# 				"Host": "localhost"
+# 			}
+# 		},
+# 		"mysql_server_static_options": {
+# 			"innodb_api_enable_mdi": {
+# 				"Value": "0",
+# 				"Metadata": {
+# 					"Timestamp": 1.51.. (etc)
+# 					"User": "root",
+# 					"Host": "localhost"
+# 				}
+# 			},
+# 			"log_slave_updates": {
+# 				"Values": "1",
+# 				"Metadata": {
+# 					"Timestamp": 1.51... (etc)
+# 					"User": "root",
+# 					"Host": "localhost"
+# 				}
+# 			}
+# 		}
+# 	}	
+#}
+#
+# At startup the server processes the mysqld-auto.cnf file after all other option files.
+# The server handles the file contents as follows:
+#
+# 		If the persisted_globals_load sys_var is disabled, the server ignores the mysqld-auto.cnf file.
+#
+# 		Only read-only variables persisted using SET_PERSIST_ONLY appear in the "mysql_server_static_options" section.
+# 		All variables present inside this section are appended to the cmd line and processed with other cmd line options.
+#
+# 		All remaining persisted variables are set by executing the equivalent of a SET_GLOBAL statement later, just before
+# 		the server starts listening for client connections.
+#
+# 		These settings therefore do not take effect until late in the startup process, which might be unsuitable for certain
+# 		sys_vars.
+#
+# 		For example, a variable such as log_error_verbosity that affects logging to the error log takes effect later in the 
+# 		startup process if persisted to mysqld-auto.cnf than if set in my.cnf. It may be preferable to set such variables
+# 		in my.cnf rather than in mysqld-auto.cnf
+#
+# Management of the mysqld-auto.cnf file should be left to the server. Manipulation of it should only occur through SET and RESET_PERSIST statements.
+#
+# Removing the file, causes loss of all persisted settings at hte next server startup.
+#
+# Manual changes to the file may result in a parse error at server startup.
+# In this case, the server reports an error and exits.
+#
+# If said issue occurs, start the server with the persisted_globals_load sys_var disabled,
+# or with the --no-defaults option.
+#
+# Or remove mysqld-auto.cnf.
+#
+# The following pertains to nonpersistent Sys_vars:
+#
+# SET_PERSIST and SET_PERSIST_ONLY enable Global sys_vars to be persisted to the mysqld-auto.cnf option file in the data dir.
+# However, not all sys_vars can be persisted.
+#
+# Might be prevented from being persisted by virtue of:
+#
+# 		A sys var might be read only. Cannot be set at all, whether at server startup or at runtime.
+#
+# 		A sys var might be intended only for internal use.
+#
+# 		A sys var might involve sensitive data. A variable such as secure_file_priv should be settable
+# 		only by a user who has direct access to the server host file system - not a remote user. (Due to possible priv escalation)
+#
+# 		Session sys_vars cannot be persisted. Cannot be set at server startup, so cannot be persisted (no reason)
+#
+# The following are sys_vars of which cannot be persisted:
+#
+# 	audit_log_current_session
+# 	audit_log_file
+# 	audit_log_filter_id
+# 	audit_log_format
+# 	auto_generate_certs
+#
+# 	basedir
+# 	bind_address
+# 	caching_sha2_password_auto_generate_rsa_keys
+# 	caching_sha2_password_private_key_path
+# 	caching_sha2_password_public_key_path
+# 	character_set_system
+# 	character_sets_dir
+# 	core_file
+# 	daemon_memcached_engine_lib_name
+#
+# 	daemon_memcached_engine_lib_path
+# 	daemon_memcached_option
+# 	datadir
+# 	default_authentication_plugin
+# 	ft_stopword_file
+# 	have_statement_timeout
+# 	have_symlink
+# 	hostname
+# 	init_file
+#
+# 	innodb_buffer_pool_load_at_startup
+# 	innodb_data_file_path
+# 	innodb_data_home_dir
+# 	innodb_dedicated_server
+# 	innodb_directories
+# 	innodb_force_load_corrupted
+# 	innodb_log_group_home_dir
+# 	innodb_page_size
+# 	innodb_read_only
+#
+# 	innodb_temp_data_file_path
+# 	innodb_temp_tablespaces_dir
+# 	innodb_undo_directory
+# 	innodb_undo_tablespaces
+# 	innodb_version
+# 	keyring_encrypted_file_data
+# 	keyring_encrypted_file_password
+# 	large_files_support
+# 	large_page_size
+# 	lc_messages_dir
+#
+# 	license
+# 	locked_in_memory
+# 	log_bin
+# 	log_bin_basename
+# 	log_bin_index
+# 	log_error
+# 	lower_case_file_system
+# 	mecab_rc_file
+# 	named_pipe
+# 	persisted_globals_load
+# 	pid_file
+# 	plugin_dir
+# 	port
+#
+# 	protocol_version
+#  relay_log
+# 	relay_log_basename
+# 	relay_log_index
+# 	relay_log_info_file
+# 	secure_file_priv
+# 	server_uuid
+#
+# 	sha256_password_auto_generate_rsa_keys
+# 	sha256_password_private_key_path
+# 	sha256_password_public_key_path
+# 	shared_memory
+# 	shared_memory_base_name
+# 	skip_external_locking
+# 	skip_networking
+# 	slave_load_tmpdir
+# 	socket
+# 	ssl_ca
+# 	ssl_capath
+# 	ssl_cert
+# 	ssl_crl
+# 	ssl_crlpath
+# 	ssl_key
+# 	system_time_zone
+# 	tmpdir
+# 	version_comment
+# 	version_compile_machine
+# 	version_compile_os
+# 	version_compile_zlib
+# 	version_tokens_session_number
+#
+# The following pertains to structured system variables:
+#
+# 
+# 		
+#https://dev.mysql.com/doc/refman/8.0/en/structured-system-variables.html
