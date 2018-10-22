@@ -19426,7 +19426,932 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 
 # The following section pertains to Server Status Variables:
 #
-# 
+# The MySQL server maintains many status variables that provide information about its operation.
+# You can view these vars and their values by using the SHOW [GLOBAL | SESSION] STATUS statement.
 #
+# The optional GLOBAL keyword aggregates the values over all connections, and SESSION shows for the current connection.
+#
+# SHOW GLOBAL STATUS;
+#
+# +-------------------------------------------------+
+# | Variable_name 						| 	Value 		 |
+# +---------------------------------+---------------+
+# | 											| 					 |
+# | Aborted_clients 						| 0 				 |
+# | Aborted_connects 					| 0 				 |
+# | Bytes_received 						| 155372598 	 |
+# | Bytes_sent 							| 1176560426 	 |
+# ...
+# | Connections 							| 30023 			 |
+# | Created_tmp_disk_tables 			| 0 				 |
+# | Created_tmp_files 					| 3				 |
+# | Created_tmp_tables 					| 2 				 |
+# ...
+# | Threads_created 						| 217 			 |
+# | Threads_running 						| 88 				 |
+# | Uptime 									| 1389872 		 |
+# +---------------------------------+---------------+
+#
+# Several status vars provide statement counts. To determine the amount of statements executed, use:
+#
+# SUM(Com_xxx)
+# = Questions + statements executed within stored programs
+# = Queries
+#
+# Many status variables are reset to 0 by the FLUSH_STATUS statement.
+#
+# The status variables have the following meanings:
+#
+# 		Aborted_clients
+#
+# 			Number of connections that were aborted because the client died without closing the connection properly.
+#
+# 		Aborted_connects
+#
+# 			The number of failed attempts to connect to the MySQL server.
+#
+# 			For additional connection-related info, check the Connection_errors_xxx status vars and the host_cache table.
+#
+# 		Binlog_cache_disk_use
+#
+# 			Number of transactions that used the temporary binary log cache but that exceeded the value of binlog_cache_size
+# 			and used a temporary file to store statements from the transaction.
+#
+# 			The number of nontransactional statements that caused the binary log transaction cache to be written to disk
+# 			is tracked separately in the Binlog_stmt_cache_disk_use status variable.
+#
+# 		Acl_cache_items_count
+#
+# 			Number of cached privlege objects. Each object is the privlege combination of a user and its active roles.
+#
+# 		Binlog_cache_use
+#
+# 			Number of transactions that used the binary log cache.
+#
+# 		Binlog_stmt_cache_disk_use
+#
+# 			Number of nontransaction statements that used the binary log statement cache but that exceeded
+# 			the value of of binlog_stmt_cache_size and used a temporary file to store those statements.
+#
+# 		Binlog_stmt_cache_use
+#
+# 			Number of nontransactional statements, that used the binary log statement cache.
+#
+# 		Bytes_received
+#
+# 			Number of bytes received from all clients.
+#
+# 		Bytes_sent
+#
+# 			Number of bytes sent to all clients.
+#
+# 		Caching_sha2_password_rsa_public_key
+#
+# 			Public key used by the caching_sha2_password authentication plugin for RSA key-pair based PW exchange.
+#
+# 			The value is nonempty only if the server successfully intiializes the private and public keys in the
+# 			files named by the caching_sha2_password_private_key_path and caching_sha2_password_public_key_path SYS_VARS.
+#
+# 			The value of Caching_sha2_password_rsa_public_key comes from the latter file.
+#
+# 		Com_xxx
+#
+# 			The Com_xxx statement counter variables indicate the number of times each xxx statement has been executed.
+#
+# 			There is one status variable for each type of statement.
+# 			For example, Com_delete and Com_update count DELETE and UPDATE statements, respectively.
+#
+# 			Com_delete_multi and Com_update_multi are similar but apply to DELETE and UPDATE statements that use multiple-table syntax.
+#
+# 			All of the Com_stmt_xxx variables are increased even if a prepared statement argument is unknown or an error occured
+# 			during execution. In other words, their values correspond to the number of requests issued - not the number of requests successfully completed.
+#
+# 			The Com_stmt_xxx status variables are as follows:
+#
+# 				Com_stmt_prepare
+#
+# 				Com_stmt_execute
+#
+# 				Com_stmt_fetch
+#
+# 				Com_stmt_send_long_data
+#
+# 				Com_stmt_reset
+#
+# 				Com_stmt_close
+#
+# 			Those variables stand for prepared statement commands. Their names refer to the COM_xxx command set used
+# 			in the network layer.
+#
+# 			In other words, their values increase whenever prepared statement API calls such as mysql_stmt_prepare(),
+# 			mysql_stmt_execute() and so forth are executed.
+#
+# 			However, Com_stmt_prepare, Com_stmt_execute and Com_stmt_close also increase for PREPARE, EXECUTE or DEALLOCATE_PREPARE,
+# 			respectively.
+#
+# 			Additionally, the values of the older statement counter variables Com_prepare_sql, Com_execute_sql and Com_dealloc_sql
+# 			increase for the PREPARE, EXECUTE and DEALLOCATE_PREPARE statements.
+#
+# 			Com_stmt_fetch stands for the total number of network round-trips issued when fetching from cursors.
+#
+# 			Com_stmt_reprepare indicates the number of times statements were automatically reprepared by the server after
+# 			metadata changes to tables or views referred to by the statement.
+#
+# 			A reprepare operation increments Com_stmt_reprepare and also Com_stmt_prepare.
+#
+# 			Com_explain_other indicates the number of EXPLAIN_FOR_CONNECTION statements executed.
+#
+# 			Com_change_repl_filter indicates the number of CHANGE_REPLICATION_FILTER statements executed.
+#
+# 		Compression
+#
+# 			Whether the client connection uses compression in the client/server protocol.
+#
+# 		Connection_errors_xxx
+#
+# 			These variables provide info about errors that occur during the client connection process.
+#
+# 			They are global only and represent error counts aggregated across connections from all hosts.
+#
+# 			These variable track errors not accounted for by the host cache - such as errors that are not
+# 			associated with TCP connections, occur very early in the connection process (even before an IP address is known),
+# 			or are not specific to any particular IP address (such as out of memory conditions).
+#
+# 				Connection_errors_accept
+#
+# 					The number of errors that occurred during calls to accept() on the listening port.
+#
+# 				Connection_errors_internal
+#
+# 					The number of connections refused due to internal errors in the server, such as failure to start
+# 					a new thread or an out-of-memory condition.
+#
+# 				Connection_errors_max_connections
+#
+# 					Number of connections refused because the server max_connections limit was reached.
+#
+# 				Connection_errors_peer_address
+#
+# 					The number of errors that occurred while searching for connecting clientIP addresses.
+#
+# 				Connection_errors_select
+#
+# 					Number of errors that occured during calls to select() or poll() on the listening port.
+# 					(Failure of this operation does not necessarily mean a client connection was rejected)
+#
+# 				Connection_errors_tcpwrap
+#
+# 					The number of connections refused by the libwrap library.
+#
+# 		Connections - Number of connection attempts (successful or not) to the MySQL server.
+#
+# 		Created_tmp_disk_tables
+#
+# 			Number of internal on-disk temporary tables created by the server while executing statements.
+#
+# 			If an internal temp table is created initially as an in-memory table but becomes too large, MySQL automatically
+# 			converts it to an on-disk table.
+#
+# 			The max size for in-memory temp tables is the minimum of the tmp_table_size and max_heap_table_size values.
+#
+# 			If Created_tmp_disk_tables is large, you may want to increase the tmp_table_size or max_heap_table_size value
+# 			to lessen the likelihood that internal temp tables in memory will be converted to on-disk tables.
+#
+# 			You can compare the number of internal on-disk temp tables created to the total number of internal temp tables
+# 			created by comparing the values of the Created_tmp_disk_tables and Created_tmp_tables variables.
+#
+# 		Created_tmp_files
+#
+# 			How many temporary files mysqld has created.
+#
+# 		Created_tmp_tables
+#
+# 			Number of internal temporary tables created by the server while executing statements.
+#
+# 			You can compare the number of internal-on-disk temp tables created to the total number of internal
+# 			temp tables created by comparing the values of the Created_tmp_disk_tables and Created_tmp_tables vars.
+#
+# 			Each invocation of the SHOW_STATUS statement uses an internal temp table and increment the global Created_tmp_tables value.
+#
+# 		Delayed_errors
+#
+# 			This status variable is DEPRECATED (delayed is not supported)
+#
+# 		Delayed_insert_threads, Delayed_writes - Deprecated.
+#
+# 		dragnet.Status 
+#
+# 			The result of the most recent assignment to the dragnet.log_error_filter_rules SYS_VAR, empty if no such assignment has occurred.
+#
+# 		Flush_commands
+#
+# 			Number of times the server flushes tables, whether because a user executed a FLUSH_TABLES statement or due to internal 
+# 			server operation.
+#
+# 			It is also incremented by receipt of a COM_REFRESH packet. This is in contrast to Com_flush, which indicates how many
+# 			FLUSH statements have been executed, whether FLUSH_TABLES, FLUSH_LOGS etc.
+#
+# 		group_replication_primary_member
+#
+# 			Shows the primary member's UUID when the group is operating in single-primary mode.
+# 			If the group is operating multi-primary mode, shows an empty string.
+#
+# 			The group_replication_primary_member status variable is deprecated.
+#
+# 		Handler_commit
+#
+# 			Number of internal COMMIT statements.
+#
+# 		Handler_delete
+#
+# 			Number of times that rows have been deleted from tables.
+#
+# 		Handler_external_lock
+#
+# 			The server increments this variable for each call to its external_lock() function, which generally occurs at the
+# 			beginning and end of access to a table instance.
+#
+# 			There might be differences amongst storage engines. This variable can be used, for example, to discover for a statement
+# 			that accesses a partitioned table how many partitions were pruned before locking occurred:
+#
+# 			Check how much the counter increased for the statement, subtract 2 (2 calls for the table itself), then /2 to get number of
+# 			partitions locked.
+#
+# 		Handler_mrr_init
+#
+# 			Number of times the server uses a storage engine's own Multi-Range Read implementation for table access.
+#
+# 		Handler_prepare
+#
+# 			A counter for the prepare phase of two-phase commit operations.
+#
+# 		Handler_read_first
+#
+# 			Number of times the first entry in an index was read. If this value is high, it suggests that the server
+# 			is doing a lot of full index scans; for example, SELECT col1 FROM foo - assuming that col1 is indexed.
+#
+# 		Handler_read_key
+#
+# 			Number of requests to read a row based on a key. If this value is high, it is a good indication that your tables 
+# 			are properly indexed for your queries.
+#
+# 		Handler_read_last
+#
+# 			The number of requests to read the last key in an index. 
+#
+# 			With ORDER BY, the server will issue a first-key request followed by several next-key requests,
+# 			whereas with ORDER BY DESC, the server will issue a last-key request followed by several previous-key requests.
+#
+# 		Handler_read_next
+#
+# 			The number of requests to read the next row in key order. This value is incremented if you are querying an index column with
+# 			a range constraint or if you are doing an index scan.
+#
+# 		Handler_read_prev
+#
+# 			The number of requests to read the previous row in key order. This read method is mainly used to optimize ORDER BY ... DESC
+#
+# 		Handler_read_rnd
+#
+# 			Number of requests to read a row based on a fixed position. 
+#
+# 			This value is high if you are doing a lot of queries that require sorting of the result.
+# 		   You probably have a lot of queries that require MySQL to scan entire tables or you have joins that do not use keys properly.
+#
+# 		Handler_read_rnd_next
+#
+# 			The number of requests to read the next row in the data file.
+#
+# 			This value is high if you are doing a lot of table scans. 
+#
+# 			Generally this suggests that your tables are not properly indexed or that your queries
+# 			are not written to take advantage of the indexes you have.
+#
+# 		Handler_rollback
+#
+# 			Number of requests for a storage engine to perform a rollback operation.
+#
+# 		Handler_savepoint
+#
+# 			Number of requests for a storage engine to place a savepoint.
+#
+# 		Handler_savepoint_rollback
+#
+# 			The number of requests for a storage engine to roll back to a savepoint.
+#
+# 		Handler_update
+#
+# 			Number of requests to update a row in a table.
+#
+# 		Handler_write
+#
+# 			Number of requests to insert a row in a table.
+#
+# 		Innodb_available_undo_logs
+#
+# 			Innodb_available_undo_logs was removed in MySQL 8.0.2.
+#
+# 			Number of available rollback segments per tablespace may be retrieved using SHOW VARIABLES LIKE 'innodb_rollback_segments';
+#
+# 		Innodb_buffer_pool_dump_status
+#
+# 			The progress of an operation to record the pages held in the InnoDB buffer pool, triggered by the setting of
+# 			innodb_buffer_pool_dump_at_shutdown or innodb_buffer_pool_dump_now
+#
+# 		Innodb_buffer_pool_load_status
+#
+# 			The progress of an operation to warm up the InnoDB buffer pool by reading in a set of pages corresponding to an earlier
+# 			point in time, triggered by the setting of innodb_buffer_pool_load_at_startup or innodb_buffer_pool_load_now.
+#
+# 			If the operation introduces too much overhead, you can cancel it by setting innodb_buffer_pool_load_abort
+#
+# 		Innodb_buffer_pool_bytes_data
+#
+# 			The total number of bytes in the InnoDB buffer pool containing data.
+#
+# 			The number includes borth dirty and clean pages.
+#
+# 			For more accurate memory usage calculations than with Innodb_buffer_pool_pages_data,
+# 			when compressed tables cause the buffer pool to hold pages of different sizes.
+#
+# 		Innodb_buffer_pool_pages_data
+#
+# 			The number of pages in the InnoDB buffer pool containing data. The number includes both dirty and clean pages.
+#
+# 			When using compressed tables, the reported Innodb_buffer_pool_pages_data value may be larger than
+# 			Innodb_buffer_pool_pages_total (Bug #595550)
+#
+# 		Innodb_buffer_pool_bytes_dirty
+#
+# 			The total current number of bytes held in dirty pages in the InnoDB buffer pool.
+#
+# 			For more accurate memory usage calculations than with Innodb_buffer_pool_pages_dirty,
+# 			when compressed tables cause the buffer pool to hold pages of different sizes.
+#
+# 		Innodb_buffer_pool_pages_dirty
+#
+# 			The current number of dirty pages in the InnoDB buffer pool.
+#
+# 		Innodb_buffer_pool_pages_flushed
+#
+# 			The number of requests to flush pages from the InnoDB buffer pool.
+#
+# 		Innodb_buffer_pool_pages_free
+#
+# 			The number of free pages in the InnoDB buffer pool.
+#
+# 		Innodb_buffer_pool_pages_latched
+#
+# 			The number of latched pages in the InnoDB buffer pool.
+#
+# 			These are pages currently being read or written, or that cannot be flushed or removed for
+# 			some other reason.
+#
+# 			Calculation of this variable is expensive, so it is available only when the UNIV_DEBUG system is defined at server build time.
+#
+# 		Innodb_buffer_pool_pages_misc
+#
+# 			The number of pages in the InnoDB buffer pool that are busy because they have been allocated for admin overhead,
+# 			such as row locks or the adaptive hash index.
+#
+# 			This value can also be calculated as Innodb_buffer_pool_pages_total - Innodb_buffer_pool_pages_free - Innodb_buffer_pool_pages_data.
+#
+# 			When using compressed tables, Innodb_buffer_pool_pages_misc may report an out-of-bounds value (Bug #59550)
+#
+# 		Innodb_buffer_pool_pages_total
+#
+# 			The total size of the InnoDB buffer pool, in pages. 
+#
+# 			When using compressed tables, the reported Innodb_buffer_pool_pages_data value may be larger than
+# 			Innodb_buffer_pool_pages_total (Bug #59550)
+#
+# 		Innodb_buffer_pool_read_ahead
+#
+# 			The number of pages read into the InnoDB buffer pool by the read-ahead background thread.
+#
+# 		Innodb_buffer_pool_read_ahead_evicted
+#
+# 			The number of pages read into the InnoDB buffer pool by the read-ahead background thread that were
+# 			subsequently evicted without having been accessed by queries.
+#
+# 		Innodb_buffer_pool_read_ahead_rnd
+#
+# 			The number of "random" read-aheads initated by InnoDB. 
+#
+# 			This happens when a query scans a large portion of a table but in a random order.
 # 
+# 		Innodb_buffer_pool_read_requests
+#
+# 			The number of logical read requests.
+#
+# 		Innodb_buffer_pool_reads
+#
+# 			The number of logical reads that InnoDB could not satisfy from the buffer pool, and had to read directly
+# 			from disk.
+#
+# 		Innodb_buffer_pool_resize_status
+#
+# 			The status of an operation to resize the InnoDB buffer pool dynamically triggered by setting the innodb_buffer_pool_size param dynamically.
+#
+# 			The innodb_buffer_pool_size parameter is dynamic, which allows you to resize the buffer pool without restarting the server.
+#
+# 		Innodb_buffer_pool_wait_free
+#
+# 			Normally, writes to the InnoDB buffer pool happen in the background.
+#
+# 			When InnoDB needs to read or create a page and no clean pages are available, InnoDB flushes
+# 			some dirty pages first and waits for that ops. to finish.
+#
+# 			This counter counts instances of these waits. If innodb_buffer_pool_size has been set properly,
+# 			this value should be small.
+#
+# 		Innodb_buffer_pool_write_requests
+#
+# 			Number of writes done to the InnoDB buffer pool.
+#
+# 		Innodb_data_fsyncs
+#
+# 			The number of fsync() operations so far.
+#
+# 			The frequency of fsync() calls influenced by the setting of the innodb_flush_method configuration option.
+#
+# 		Innodb_data_pending_fsyncs
+#
+# 			The current number of pending fsyncs() operations.
+#
+# 			The frequency of fsync() calls is influenced by the setting of the innodb_flush_method configuration ops.
+#
+# 		Innodb_data_pending_reads
+#
+# 			The current number of pending reads.
+#
+# 		Innodb_data_pending_writes
+#
+# 			The current number of pending writes.
+#
+# 		Innodb_data_read
+#
+# 			The amount of data read since the server was started (in bytes)
+#
+# 		Innodb_data_reads
+#
+# 			The total number of data reads (OS file reads)
+#
+# 		Innodb_data_writes
+#
+# 			Total number of data writes
+#
+# 		Innodb_data_written
+#
+# 			The amount of data written so far, in bytes.
+#
+# 		Innodb_dblwr_pages_written
+#
+# 			The number of pages that have been written to the doublewrite buffer.
+#
+# 		Innodb_dblwr_writes
+#
+# 			Number of doublewrite operations that have been performed.
+#
+# 		Innodb_have_atomic_builtins
+#
+# 			Indicates whether the server was built with atomic instructions.
+#
+# 		Innodb_log_waits
+#
+# 			The number of times that the log buffer was too small and a wait was required for it to be flushed before continuing.
+#
+# 		Innodb_log_write_requests
+#
+# 			The number of write requests for the InnoDB redo log.
+#
+# 		Innodb_log_writes
+#
+# 			The number of physical writes to the InnoDB redo log file.
+#
+# 		Innodb_num_open_files
+#
+# 			The number of files InnoDB currently holds open.
+#
+# 		Innodb_os_log_fsyncs
+#
+# 			The number of fsync() writes done to the InnoDB redo log files.
+#
+# 		Innodb_os_log_pending_fsyncs
+#
+# 			The number of pending fsync() operations for the InnoDB redo log files.
+#
+# 		Innodb_os_log_pending_writes
+#
+# 			The number of pending writes to the InnoDB redo log files.
+#
+# 		Innodb_os_log_written
+#
+# 			The number of bytes written to the InnoDB redo log files.
+#
+# 		Innodb_page_size
+#
+# 			InnoDB page size (default 16KB).
+#
+# 			Many values are counted in pages; the page size enables them to be easily converted to bytes.
+#
+# 		Innodb_pages_created
+#
+# 			Number of pages created by operations on InnoDB tables.
+#
+# 		Innodb_pages_read
+#
+# 			Number of pages read from the InnoDB buffer pool by operations on InnoDB tables.
+#
+# 		Innodb_pages_written
+#
+# 			The number of pages written by operations on InnoDB tables.
+#
+# 		Innodb_row_lock_current_waits
+#
+# 			The number of row locks currently being waited for by operations on InnoDB tables.
+#
+# 		Innodb_row_lock_time
+#
+# 			The total time spent in acquiring row locks for InnoDB tables, in MS.
+#
+# 		Innodb_row_lock_time_avg
+#
+# 			The average time to acquire a row lock for InnoDB tables, in MS.
+#
+# 		Innodb_row_lock_time_max
+#
+# 			The max time to acquire a row lock for InnoDB tables, in MS.
+#
+# 		Innodb_row_lock_waits
+#
+# 			Number of times operations on InnoDB tables had to wait for a row lock.
+#
+# 		Innodb_rows_deleted
+#
+# 			The number of rows deleted from InnoDB tables.
+#
+# 		Innodb_rows_inserted
+#
+# 			The number of rows inserted into InnoDB tables.
+#
+# 		Innodb_rows_read
+#
+# 			The number of rows read from InnoDB tables.
+#
+# 		Innodb_rows_updated
+#
+# 			The number of rows updated in InnoDB tables.
+#
+# 		Innodb_truncated_status_writes
+#
+# 			The number of times output from the SHOW ENGINE INNODB STATUS statement has been truncated.
+#
+# 		Key_blocks_not_flushed
+#
+# 			The number of key blocks in the MyISAM key cache that have changed but have not yet been flushed to disk.
+#
+# 		Key_blocks_unused
+#
+# 			The number of unused blocks in the MyISAM key cache.
+#
+# 			You can use this value to determine how much of the key cache is in use. (Relates to key_buffer_size)
+#
+# 		Key_blocks_used
+#
+# 			The number of used blocks in the MyISAM key cache.
+#
+# 			This value is a high-water mark that indicates the max number of blocks that have ever been
+# 			in use at one time.
+#
+# 		Key_read_requests
+#
+# 			Number of requests to read a key block from the MyISAM key cache.
+#
+# 		Key_reads
+#
+# 			The number of physical reads of a key block from the disk into the MyISAM key cache.
+#
+# 			If Key_reads is large, then your key_buffer_size value is probably too small.
+#
+# 			The cache miss rate can be calculated as Key_reads/Key_read_requests
+#
+# 		Key_write_requests
+#
+# 			Number of requests to write a key block to the MyISAM key cache.
+#
+# 		Key_writes
+#
+# 			Number of physical writes of a key block from the MyISAM key cache to disk.
+#
+# 		Last_query_cost
+#
+# 			The total cost of the last compiled query as computed by the query optimizer.
+#
+# 			Useful for comparing the cost of different query plans for the same query.
+#
+# 			The default value of 0 means that no query has been compiled yet.
+#
+# 			The default value is 0. 
+#
+# 			This var has session scope.
+#
+# 			The Last_query_cost value can be computed accurately only for simple "flat" queries,
+# 			not complex queries such as those with subqueries or UNION.
+#
+# 			For UNION, it is set to 0.
+#
+# 		Last_query_partial_plans
+#
+# 			Number of iterations the query optimizer made in execution plan construction for the previous query.
+# 			Has session scope.
+#
+# 		Locked_connects
+#
+# 			Number of attempts to connect to locked user accounts.
+#
+# 			Covered later.
+#
+# 		Max_execution_time_exceeded
+#
+# 			The number of SELECT statements for which the execution timeout was exceeded.
+#
+# 		Max_execution_time_set
+#
+# 			The number of SELECT statements for which a nonzero execution timeout was set.
+#
+# 			This includes statements that include a nonzero MAX_EXECUTION_TIME optimizer hint,
+# 			and statements that include no such hint but execute while the timeout indicated by the max_execution_time SYS_VAR is nonzero.
+#
+# 		Max_execution_time_set_failed
+#
+# 			The number of SELECT statements for which the attempt to set an execution timeout failed.
+#
+# 		Max_used_connections
+#
+# 			The max number of connections that have been in use simultaneously since the server started.
+#
+# 		Max_used_connections_time
+#
+# 			The time at which Max_used_connections reached its current value.
+#
+# 		Not_flushed_delayed_rows
+#
+# 			This Status var is DEPRECATED (DELAYED not supported)
+#
+# 		mecab_charset
+#
+# 			The char set currently used by the MeCab full-text parser plugin.
+#
+# 		Ongoing_anonymous_transaction_count
+#
+# 			Shows the number of ongoing transactions which have been marked as anon.
+# 			This can be Used to ensure that no further transactions are waiting to be processed.
+#
+# 		Ongoing_anonymous_gtid_violating_transaction_count
+#
+# 			This status var is only available in debug builds. 
+# 			Shows the number of ongoing transactions which use gtid_next=ANONYMOUS and that violate GTID consistency.
+#
+# 		Ongoing_automatic_gtid_violating_transaction_count
+#
+# 			This status var is only available in debug builds.
+# 			Shows the number of ongoing transactions which use gtid_next=AUTOCOMMIT and that violate GTID consistency.
+#
+# 		Open_files
+#
+# 			Number of files that are open. This count includes regular files opened by the server.
+#
+# 			It does not include other types of files such as sockets or pipes.
+#
+# 			Also, the count does not include files that storage engines open using their own internal functions
+# 			rather than asking the server level to do so.
+#
+# 		Open_streams
+#
+# 			Number of streams that are open (used mainly for logging)
+#
+# 		Open_table_definitions
+#
+# 			Number of cached table defs.
+#
+# 		Open_tables
+#
+# 			The number of tables that are open.
+#
+# 		Opened_files
+#
+# 			The number of files that have been opened with my_open() 
+# 			(a mysys lib function).
+#
+# 			Parts of the server that open files without using this function do not increment
+# 			the count.
+#
+# 		Opened_table_definitions
+#
+# 			Number of table definitions that have been cached.
+#
+# 		Opened_tables
+#
+# 			Number of tables that have been opened. 
+# 			If Opened_tables is big, your table_open_cache value is probably too small.
+#
+# 		Performance_schema_xxx
+#
+# 			Performance Schema status variables are listed later.
+#
+# 			They provide info about instrumentation that could not be loaded or created due to memory constraints.
+#
+# 		Prepared_stmt_count
+#
+# 			The current number of prepared statements. (max number of statements is given by the max_prepared_stmt_count SYS_VAR)
+#
+# 		Qcache_free_blocks/Qcache_free_memory/Qcache_hits/Qcache_inserts/Qcache_lowmem_prunes/Qcache_not_cached/Qcache_queries_in_cache/Qcache_total_blocks
+#
+# 			Removed in 8.0.3
+#
+# 		Queries
+#
+# 			Number of statements executed by the server.
+#
+# 			This var includes statements executed within stored programs, unlike the Questions variable.
+#
+# 			Does not count COM_PING or COM_STATISTICS commands.
+#
+# 		Questions
+#
+# 			THe number of statements executed by the server.
+#
+# 			This includes only statements sent ot hte server by clients and not statements executed
+# 			within stored programs, unlike the Queries variable.
+#
+# 			This variable does not count COM_PING, COM_STATISTICS, COM_STMT_PREPARE, COM_STMT_CLOSE or COM_STMT_RESET commands.
+#
+# 		Rpl_semi_sync_master_clients
+#
+# 			Number of semisynch slaves
+#
+# 			Only available if the master-side semisynch replication plugin is installed.
+#
+# 		Rpl_semi_sync_master_net_avg_wait_time
+#
+# 			Average time in MS the master waited for a slave reply.
+#
+# 			Always 0, deprecated. Only available if master-side semisynch replication plugin is installed.
+#
+# 		Rpl_semi_sync_master_net_wait_time
+#
+# 			Total time, same as above. Deprecated.
+#
+# 		Rpl_semi_sync_master_net_waits
+#
+# 			Total number of times the master waited for slave replies.
+#
+# 			Only available if the master-side semisynch replication plugin is installed.
+#
+# 		Rpl_semi_sync_master_no_times
+#
+# 			Number of times the master turned off semisynch replication.
+#
+# 			Onl available if the master-side semisynch replication plugin is installed.
+#
+# 		Rpl_semi_sync_master_no_tx
+#
+# 			Number of commits that were not acknowledged successfully by a slave.
+#
+# 			Same as above, reqs semisynch repl. plugin
+#
+# 		Rpl_semi_sync_master_status
+#
+# 			Whether semisynch replication currently is operational on the master.
+#
+# 			The value is ON if the plugin has been enabled and a commit acknowledgement has occurred.
+#
+# 			OFF if plugin is off or the Master has fallen back to asynch replication due to commit aknowledge timeout.
+#
+# 			Reqs the semisynch repl. plugin installed on master-side
+#
+# 		Rpl_semi_sync_master_timefunc_failures
+#
+# 			Number of times the master failed when calling time functions such as gettimeofday()
+#
+# 			Only available if master-side semi-synch replication plugin is installed.
+#
+# 		Rpl_semi_sync_master_tx_avg_wait_time
+#
+# 			The average time in ms the master waited for each transaction.
+#
+# 			Only available if the master-side semi-synch replication plugin is installed.
+#
+# 		Rpl_semi_sync_master_tx_wait_time
+#
+# 			Total time in MS instead of avg.
+# 			Same req as before.
+#
+# 		Rpl_semi_sync_master_tx_waits
+#
+# 			Total number of times the master waited for transactions.
+#
+# 			Same req as before.
+#
+# 		Rpl_semi_sync_master_wait_pos_backtraverse
+#
+# 			total number of times the master waited for an event with binary co-ords lower than events waited for previously.
+#
+# 			This can occur when the order in which transactions start waiting for a reply is different from the
+# 			order in which their binary log events are written.
+#
+# 			Same req as before
+#
+# 		Rpl_semi_sync_master_wait_sessions
+#
+# 			Number of sessions currently waiting for slave replies.
+#
+# 			Same req as before.
+#
+# 		Rpl_semi_sync_master_yes_tx
+#
+# 			Number of commits that were acknowledged successfully by a slave.
+#
+# 			Same req as before.
+#
+# 		Rpl_semi_sync_slave_status
+#
+# 			Whether semisynch replication currently is operational on the slave.
+#
+# 			This is ON if the plugin has been enabled and the slave I/O thread is running, OFF otherwise.
+#
+# 			same req as before.
+#
+# 		Rsa_public_key
+#
+# 			If MySQL was compiled with OpenSSL.
+#
+# 			Is the public key vlaue used by the sha256_password authentication plugin for RSA key pair PW exchange.
+#
+# 			Nonempty only if hte server successfully intiializes the private and public keys in the files named by the
+# 			sha256_password_private_key_path and sha256_password_public_key_path SYS_VARs.
+#
+# 			The Rsa_public_key comes from the latter one.
+#
+# 		Secondary_engine_execution_count
+#
+# 			Future use.
+#
+# 		Select_full_join
+#
+# 			Number of joins that perform table scans because they do not use indexes.
+#
+# 			If this value is not 0, check indexes of tables.
+#
+# 		Select_full_range_join
+#
+# 			Number of joins that used a range search on a reference table.
+#
+# 		Select_range
+#
+# 			Number of joins that used ranges on the first table.
+#
+# 			Normally not a critical issue even if large.
+#
+# 		Select_range_check
+#
+# 			Number of joins without keys that check for key usage after each row.
+#
+# 			If not 0, check indexes of tables.
+#
+# 		Select_scan
+#
+# 			Number of joins that did a full scan of the first table.
+#
+# 		Slave_heartbeat_period
+#
+# 			Obsolete. Use HEARTBEAT_INTERVAL column of the replication_connection_configuration table.
+#
+# 		Slave_last_heartbeat
+#
+# 			Obsolete. use LAST_HEARTBEAT_TIMESTAMP column of the replication_connection_status table.
+#
+# 		Slave_open_temp_tables
+#
+# 			Number of temp tables that the slave SQL thread currently has open.
+#
+# 			If the value is greater than 0, it is not safe to shut down the slave.
+#
+# 			This variable reports the total count of open temp tables for ALL replication channels.
+#
+# 		Slave_received_heartbeats
+#
+# 			 Obsolete. Use COUNT_RECEIVED_HEARTBEATS column of the replication_connection_status table.
+#
+# 		Slave_retired_transactions
+#
+# 			Obsolete. Use COUNT_TRANSACTIONS_RETRIES column of the replication_applier_status table.
+#
+# 		Slave_rows_last_search_algorithm_used
+#
+# 			https://dev.mysql.com/doc/refman/8.0/en/server-status-variables.html
+#
+# 		
+# 	 
 # https://dev.mysql.com/doc/refman/8.0/en/server-status-variables.html
