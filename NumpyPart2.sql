@@ -20350,8 +20350,771 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # 		Slave_rows_last_search_algorithm_used
 #
-# 			https://dev.mysql.com/doc/refman/8.0/en/server-status-variables.html
+# 			The search algorithm that was most recently used by this slave to locate rows for row-based replication.
 #
+# 			The result shows whether the slave used indexes, a table scan or hashing as the search algorithm for the
+# 			last transaction executed on any channel.
+#
+# 			The method used depends on the setting for the slave_rows_search_algorithms SYS_VAR, and the keys
+# 			that are available on the relevant table.
+#
+# 			Only available for debug builds of MySQL.
+#
+# 		Slave_running
+#
+# 			Obsolete, removed in 8.0.1. Use SERVICE_STATE column of the replication_connection_status and replication_applier_status tables.
+#
+# 		Slow_launch_threads
+#
+# 			The number of threads that have taken more than slow_launch_time seconds to create.
+#
+# 		Slow_queries
+#
+# 			The number of queries that have taken more than long_query_time seconds.
+# 			Increments regardless of whether the slow query log is enabled.
+#
+# 		Sort_merge_passes
+#
+# 			The number of merge passes that the sort algorithm has had to do.
+# 			If this value is large, you should consider increasing the value of the sort_buffer_size SYS_VAR.
+#
+# 		Sort_range
+#
+# 			Number of sorts that were done using ranges
+#
+# 		Sort_rows
+#
+# 			Number of sorted rows
+#
+# 		Sort_scan
+#
+# 			Number of sorts that were done by scanning the table.
+#
+# 		Ssl_accept_renegotiates.
+#
+# 			Number of negotiates needed to establish the connection.
+#
+# 		Ssl_accepts
+#
+# 			Number of accepted SSL connections
+#
+# 		Ssl_callback_cache_hits
+#
+# 			Number of callback cache hits
+#
+# 		Ssl_cipher
+#
+# 			Current encryption cipher (empty for unencrypted connections)
+#
+# 		Ssl_cipher_list
+#
+# 			The list of possible SSL ciphers (empty for non-SSL connections)
+#
+# 		Ssl_client_connects
+#
+# 			Number of SSL connection attempts to an SSL-enabled master.
+#
+# 		Ssl_connect_renegotiates
+#
+# 			Number of negotiates needed to establish the connection to an SSL-enabled master.
+#
+# 		Ssl_ctx_verify_depth
+#
+# 			The SSL context verification depth (how many certs in the chain are tested)
+#
+# 		Ssl_ctx_verify_mode
+#
+# 			The SSL context verification mode
+#
+# 		Ssl_default_timeout
+#
+# 			The default SSL timeout
+#
+# 		Ssl_finished_accepts
+#
+# 			Number of successful SSL connections to the server
+#
+# 		Ssl_finished_connects
+#
+# 			The number of successful slave connections to an SSL-enabled master.
+#
+# 		Ssl_server_not_after
+#
+# 			The last date for which the SSL certificate is valid.
+#
+# 			To check SSL certificate expiration information, use this statement:
+#
+# 				SHOW STATUS LIKE 'Ssl_server_not%';
+# 				+--------------------------------------------------+
+# 				| Variable_name 		   | 	  Value                 |
+# 				+-----------------------+--------------------------+
+# 				| Ssl_server_not_after  | Apr 28 14:16:39 2025 GMT |
+# 				| Ssl_server_not_before | May  1 14:16:39 2015 GMT |
+# 				+-----------------------+--------------------------+
+#
+# 		Ssl_server_not_before
+#
+# 			The first date for which the SSL certificate is valid.
+#
+# 		Ssl_session_cache_hits
+#
+# 			The number of SSL session cache hits.
+#
+# 		Ssl_session_cache_misses
+#
+# 			The number of SSL session cache misses.
+#
+# 		Ssl_session_cache_mode
+#
+# 			The SSL session cache mode.
+#
+# 		Ssl_session_cache_overflows
+#
+# 			The number of SSL session cache overflows.
+#
+# 		Ssl_session_cache_size
+#
+# 			The SSL session cache size.
+#
+# 		Ssl_session_cache_timeouts
+#
+# 			The number of SSL session cache timeouts
+#
+# 		Ssl_sessions_reused
+#
+# 			How many SSL connections were reused from the cache.
+#
+# 		Ssl_used_session_cache_entries
+#
+# 			How many SSL session cache entries were used.
+#
+# 		Ssl_verify_depth
+#
+# 			The verification depth for replication SSL connections.
+#
+# 		Ssl_verify_mode
+#
+# 			The verification mode used by the server for a connection that uses SSL.
+#
+# 			The value is a bitmask; bits are defined in the openssl/ssl.h header file:
+#
+# 				# define SSL_VERIFY_NONE 					  0x00
+# 				# define SSL_VERIFY_PEER 					  0x01
+# 				# define SSL_VERIFY_FAIL_IF_NO_PEER_CERT 0x02
+# 				# define SSL_VERIFY_CLIENT_ONCE 			  0x04
+#
+# 			SSL_VERIFY_PEER indicates that the server asks for a client cert.
+#
+# 			If the client supplies one, the server performs verification and proceeds only
+# 			if verification is successful.
+#
+# 			SSL_VERIFY_CLIENT_ONCE indicates that a request for the client certificate will be done
+# 			only in the initial handshake.
+#
+# 		Ssl_version
+#
+# 			The SSL protocol version of the connection; for example, TLSV1. 
+# 			If the connection is not encrypted, the value is empty. 
+#
+#
+# 		Table_locks_immediate
+#
+# 			The number of times that a request for a table lock could be granted immediately.
+#
+# 		Table_locks_waited
+#
+# 			The number of times that a request for a table could not be granted immediately and a wait was needed.
+#
+# 			If this is high and you have performance problems, you should first optimize your queries, and then either
+# 			split your table or tables or use replication.
+#
+# 		Table_open_cache_hits
+#
+# 			The number of hits for open tables cache lookups
+#
+# 		Table_open_cache_misses
+#
+# 			The number of misses for open table cache lookups.
+#
+# 		Table_open_cache_overflows
+#
+# 			The number of overflows for the open tables cache.
+#
+# 			This is the number of times, after a table is opened or closed, a cache instance has an unused
+# 			entry and the size of the instance is larger than table_open_cache/table_open_cache_instances
+#
+# 		tablespace_definition_cache
+#
+# 			Cmd-line: 		--tablespace-definition-cache=N
+# 			Sys_Var: 		tablespace_definition_cache
+# 			Scope: 			Global
+# 			Dynamic: 		Yes
+# 			SET_VAR Hint: 	No
+# 			Type: 			Integer
+# 			Default: 		256
+# 			Min: 				256
+# 			Max: 				524288
+#
+# 			Defines a limit for the number of tablespace definition objects, both used and unused, that can be kept in the dictionary
+# 			object cache.
+#
+# 			Unused tablespace definition objects are only kept in the dictionary object cache when the number in use is less
+# 			than the capacity defined by tablespace_definition_cache
+#
+# 			A setting of 0 means that tablespace definition objects are only kept in the dictionary object cache while they are in use.
+#
+# 		Tc_log_max_pages_used
+#
+# 			For the memory-mapped implementation of the log that is used by mysqld when it acts as the transaction coordinator for recovery
+# 			of internal XA transactions, this variable indicates the largest number of pages used for the log since the server started.
+#
+# 			If the product of Tc_log_max_pages_used and Tc_log_page_size is always significantly less than the log size, the size is larger
+# 			than necessary and can be reduced.
+#
+# 			(The size is set by the --log-tc-size option)
+#
+# 			This variable is unused, it is unneeded for binary log-based recovery, and the memory-mapped recovery log
+# 			method is not used unless the number of storage engines that are capable of two-phase commit and that 
+# 			supports XA transactions is greater than one.
+#
+# 			(InnoDB is the only one)
+#
+# 		Tc_log_page_size
+#
+# 			The page size used for the memory-mapped implementation of the XA recovery log.
+# 			The default value is determined using getpagesize()
+#
+# 			Unused for the same reason as Tc_log_max_pages_used
+#
+# 		Tc_log_page_waits
+#
+# 			For the memory-mapped implementation of the recovery log, this variable increments each time the server
+# 			was not able to commit a transaction and had to wait for a free page in the log.
+#
+# 			If this value is large, might want to increase the log size (with the --log-tc-size option).
+#
+# 			For binary log-based recovery, this variable increments each time the binary log cannot be closed because
+# 			there are two-phase commits in progress.
+#
+# 			(The close operation waits until all such transactions are finished)
+#
+# 		Threads_cached
+#
+# 			The number of threads in the thread cache
+#
+# 		Threads_connected
+#
+# 			The number of currently open connections
+#
+# 		Threads_created
+#
+# 			The number of threads created to handle connections.
+#
+# 			If Threads_created is big, you may want to increase the thread_cache_size value.
+#
+# 			The cache miss rate can be calculated as Threads_created/Connections
+#
+# 		Threads_running
+#
+# 			The number of threads that are not sleeping
+#
+# 		Uptime
+#
+# 			The number of seconds that the server has been up
+#
+# 		Uptime_since_flush_status
+#
+# 			The number of seconds since the most recent FLUSH STATUS statement.
+#
+# The following section covers the interactions of Server SQL Modes:
+#
+# The MySQL server can operate in different SQL modes, and can apply these modes differently for different clients,
+# depending on the value of the sql_mode SYS_VAR.
+#
+# DBAs can set the global SQL mode to match site server OS reqs, and each application can set its session SQL mode to its own
+# requirements.
+#
+# Modes affect the SQL syntax MySQL supports and the data validation checks it performs.
+# This makes it easier to use MySQL in different envs and to use MySQL together with other DB servers.
+#
+# When working with InnoDB - we have to keep innodb_strict_mode SYS_VAR. It enables additional error checks for InnoDB tables.
+#
+#
+#
+#
+#
+# The following section pertains to Setting the SQL Mode:
+#
+# The default SQL mode in MySQL 8.0 includes these modes:
+#
+# 		ONLY_FULL_GROUP_BY
+# 		STRICT_TRANS_TABLES
+# 		NO_ZERO_IN_DATE
+# 		NO_ZERO_DATE
+# 		ERROR_FOR_DIVISION_BY_ZERO
+# 		NO_ENGINE_SUBSTITUTION
+#
+# To set the SQL mode at server startup, use the --sql-mode="modes" option on the cmd line,
+# or sql-mode="modes" in an option file such as my.cnf (Unix OS's) or my.ini (Windows).
+#
+# modes is a list of different modes separated by commas. 
+#
+# To clear the SQL mode explicitly, set it to an empty string using --sql-mode="" on
+# the cmd line, or sql-mode="" in an option file.
+#
+# Note: MySQL installation programs may configure the SQL mode during the install process.
+# 			
+# 		  If the SQL mode differs from the default or from what you expect, check for a setting.
+#
+# To set at runtime:
+#
+# 		SET GLOBAL sql_mode = 'modes';
+# 		SET SESSION sql_mode = 'modes';
+#
+# Setting the GLOBAL variable requires the SYSTEM_VARIABLES_ADMIN or SUPER privs and affects the operation
+# of all clients that connect from that time on.
+#
+# Setting the SESSION variable affects only the current client.
+#
+# Each client can change its session sql_mode value at any time.
+#
+# To determine the current value:
+#
+# SELECT @@GLOBAL.sql_mode;
+# SELECT @@SESSION.sql_mode;
+#
+# NOTE: 	SQL mode and user-defined partitioning 
+#
+# 			Changing the server SQL mode after creating and inserting data into partitioned tables can cause major
+# 			changes in the behavior of such tables, and could lead to loss or corruption of data.
+#
+# 			It is strongly recommended that you never change the SQL mode once you have created tables
+# 			employing user-defined partitioning.
+#
+# 			When replicating partitioned tables, differing SQL modes on the master and slave can also lead to
+# 			problems.
+#
+# 			For best results, you should always use the same server SQL mode on the master and slave.
+#
+# The most important sql_mode values are probably these:
+#
+# 		ANSI - This mode changes syntax and behavior to conform more closely to standard SQL.
+#
+# 		STRICT_TRANS_TABLES - If a value could not be inserted as given into a transactional table, abort the statement.
+#
+# 									 For a nontransactional table, abort the statement if the value occurs in a single-row statement
+# 									 or the first row of a multiple-row statement.
+#
+# 		TRADITIONAL - Make MySQL behave like a "traditional" SQL DB system. Give an error instead of a warning when inserting a incorrect
+# 						  value into a column.
+#
+# 						  NOTE - With TRADITIONAL mode enabled, an INSERT or UPDATE aborts as soon as an error occurs.
+#
+# 									If you are using a nontransactional storage engine, this may not be what you want because
+# 									data changes made prior to the error may not be rolled back, resulting in a "partiall done" update.
+#
+# "strict mode" here - will refer to STRICT_TRANS_TABLES/STRICT_ALL_TABLES enabled.
+#
+# The following covers all supported SQL modes:
+#
+# ALLOW_INVALID_DATES - Do not perform full checking of dates. Check only that the month is in the range from 1 to 12 and that the
+# 								day is in the range from 1 to 31.
+#
+# 								This may be useful for Web applications that obtain year, month and day in three different fields and 
+# 								store exactly what the user inserted, without date validation.
+#
+# 								This mode applies to DATE and DATETIME columns.
+# 								It does not apply TIMESTAMP columns, which always require a valid date.
+#
+# 								With ALLOW_INVALID_DATES enabled, the server requires that month and day values be legal,
+# 								and not merely in the range 1 to 12 and 1 to 31.
+#
+# 								With strict disabled, invalid dates such as '2004-04-31' are converted to '0000-00-00'
+# 								and a warning is generated.
+#
+# 								With strict mode enabled, invalid dates generate an error. To permit it, enable ALLOW_INVALID_DATES.
+#
+# ANSI_QUOTES - 			Treat " as an identifier quote char (like `) and not as a string quote char.
+#
+# 								You can still use `to quote identifiers with this mode enabled.
+#
+# 								With ANSI_QUOTES enabled, you cannot use double quotation marks to quote literal strings
+# 								because they are interpreted as identifiers.
+#
+# ERROR_FOR_DIVISION 	The ERROR_FOR_DIVISION_BY_ZERO mode affects handling of division by zero, which includes MOD(N, 0).
+# _BY_ZERO  				
+# 								For data-change operations (INSERT,UPDATE) - its effect also depends on whether strict SQL mode is enabled.
+#
+# 									If this mode is not enabled, division by 0 inserts NULL and produces no warning.
+#
+# 									If this mode is enabled, division by 0 inserts NULL and produces a warning.
+#
+# 									If this mode and strict mode are enabled, division by zero produces an error, unless IGNORE is given as well.
+# 									For INSERT IGNORE and UPDATE IGNORE, division by zero inserts NULL and produces a warning.
+#
+# 								For SELECT, division by zero returns NULL. 
+#
+# 								Enabling ERROR_FOR_DIVISION_BY_ZERO causes a warning to be produced as well, regardless of whether strict mode is enabled.
+# 							
+# 								ERROR_FOR_DIVISION_BY_ZERO is deprecated. Not part of strict mode, should be used with Strict, on by default.
+# 								Causes error if used without strict, and vice versa.
+#
+# HIGH_NOT_PRECEDENCE 	The precedence of the NOT operator is such that expressions such as NOT a BETWEEN b AND c are parsed as NOT (a BETWEEN b AND c).
+#
+# 								In some older versions of MySQL, the expression was parsed as (NOT a) BETWEEN b AND c.
+#
+# 								The old higher-precedence behavior can be obtained by enabling the HIGH_NOT_PRECEDENCE SQL mode.
+#
+# 								SET sql_mode = '';
+# 								SELECT NOT 1 BETWEEN -5 AND 5; #Gives 0 (False), because 1 is between -5 and 5 (1, True), to which inverse of NOT is (0, False)
+#
+# 								SET sql_mode = 'HIGH_NOT_PRECEDENCE';
+# 								SELECT NOT 1 BETWEEN -5 AND 5; #Gives 1 (True), because inversing the result, due to higher not precedence of operator
+#
+# IGNORE_SPACE 			Permit spaces between a function name and the ( char.
+# 								This causes built-in function names to be treated as reserved words.
+#
+# 								As a result, identifiers that are the same as function names must be quoted.
+#
+# 								An example, because there is COUNT(), the use of count as a table name, causes an error:
+#
+# 									CREATE TABLE count (i INT);
+# 									ERROR 1064 (42000): You have an error in your SQL syntax
+#
+# 								The table name should be quoted:
+#
+# 									CREATE TABLE `count` (i INT);
+# 									Query OK, 0 rows affected (0.00 sec)
+#
+# 								The IGNORE_SPACE SQL mode applies to built-in functions, not to user-defined functions or stored functions.
+#
+# 								It is always permissible to have spaces after a UDF or stored function name, regardless of whether IGNORE_SPACE is enabled.
+#
+# NO_AUTO_VALUE_ON_ZERO Affects handling of AUTO_INCREMENT columns.
+#
+# 								Normally, you generate the next sequence number for the column by inserting either NULL or 0
+# 								into it. NO_AUTO_VALUE_ON_ZERO suppresses this behavior for 0 so that only NULL generates the
+# 								next sequence number.
+#
+# 								This mode can be useful if 0 has been stored in a tables AUTO_INCREMENT column.
+# 								(Storing 0 is not a recommended practice, by the way)
+#
+# 								For example, if you dump the table with mysqldump and then reload it, MySQL
+# 								normally generates new sequence numbers when it encounters the 0 value, resulting
+# 								in a table with contents different from the one that was dumped.
+#
+# 								Enabling NO_AUTO_VALUE_ON_ZERO before reloading the dump file solves this problem.
+#
+# 								For this reason, mysqldump automatically includes in its output a statement that enables
+# 								NO_AUTO_VALUE_ON_ZERO
+#
+# NO_BACKSLASH_ESCAPES 	Disables the use of the \ char as an escape char within strings. With this mode enabled, \ becomes an ordinary char like any other.
+#
+# NO_DIR_IN_CREATE 		When creating a table, ignore all INDEX DIRECTORY and DATA DIRECTORY directives. Useful on slave replication servers.
+#
+# NO_ENGINE 				Control automatic substitution of the default storage engine when a statement such as CREATE_TABLE or ALTER_TABLE specifies a 
+# _SUBSTITUTION 			storage engine that is disabled or not compiled in.
+#
+# 								By default, NO_ENGINE_SUBSTITUTION is enabled.
+#
+# 								Because storage engines can be pluggable at runtime, unavailable engines are treated the same way.
+#
+# 								With NO_ENGINE_SUBSTITUTION disabled, for CREATE TABLE the default engine is used and a warning occurs if the desired
+# 								engine is unavailable.
+#
+# 								For ALTER_TABLE, a warning occurs and the table is not altered.
+#
+# 								With NO_ENGINE_SUBSTITUTION enabled, an error occurs and the table is not created or altered if the desired engine is unavailable.
+#
+# NO_UNSIGNED 				Subtraction between integer values, where one is of type UNSIGNED, produces an unsigned result by default.
+# _SUBTRACTION 			If the result would otherwise have been negative, an error results:
+#
+# 									SET sql_mode = '';
+# 									Query OK, 0 rows affected (0.00 sec)
+#
+# 									SELECT CAST(0 AS UNSIGNED) -1;
+# 									ERROR 1690 (22003): BIGINT UNSIGNED value is out of range in '(cast(0 as unsigned) - 1)'
+#
+# 								If the NO_UNSIGNED_SUBTRACTION SQL mode is enabled, the result is negative:
+#
+# 									SET sql_mode = 'NO_UNSIGNED_SUBTRACTION';
+# 									SELECT CAST(0 AS UNSIGNED) - 1;
+# 
+# 									+---------------------------------------+
+# 									| CAST(0 AS UNSIGNED) 	-  	1 			 |
+# 									+---------------------------------------+
+# 									| 									  -1 			 |
+# 									+---------------------------------------+
+#
+# 								If the result of such an operation is used to update an UNSIGNED integer column, the result is 
+# 								clipped to the maximum value for the column type - or clipped to 0 if NO_UNSIGNED_SUBTRACTION is enabled.
+#
+# 								With strict SQL mode enabled, an error occurs and the column remains unchanged.
+#
+# 								When NO_UNSIGNED_SUBTRACTION is enabled, the subtraction result is signed, even if any operand is unsigned.
 # 		
-# 	 
-# https://dev.mysql.com/doc/refman/8.0/en/server-status-variables.html
+# 								For example - compare the type of column c2 in table t1 with that of column c2 in table t2:
+#
+# 									SET sql_mode='';
+# 									CREATE TABLE test (c1 BIGINT UNSIGNED NOT NULL);
+# 									CREATE TABLE t1 SELECT c1 - 1 AS c2 FROM test;
+# 									DESCRIBE t1;
+#
+# 									+-----------------------------------------------------------------+
+# 									| Field 	| 	Type 							| Null | Key | Default| Extra |
+# 									+--------+--------------------------+------+-----+--------+-------+
+# 									| c2 		| bigint(21) unsigned 		| NO 	 | 	 | 0 		 | 		|
+# 									+--------+--------------------------+------+-----+--------+-------+
+#
+# 									SET sql_mode='NO_UNSIGNED_SUBTRACTION';
+# 									CREATE TABLE t2 SELECT c1 - 1 AS c2 FROM test;
+# 									DESCRIBE t2;
+#
+# 									+------------------------------------------------------------------+
+# 									| Field | Type 							| Null | Key | Default | Extra |
+# 									+-------+---------------------------+------+-----+---------+-------+
+# 									| c2 	  | bigint(21) 					| NO 	 | 	 | 0 		  | 		 |
+# 									+-------+---------------------------+------+-----+---------+-------+
+#
+# 								This simply means that BIGINT UNSIGNED is not 100% usable in all contexts.
+#
+# NO_ZERO_DATE
+#
+# 								The NO_ZERO_DATE mode affects whether the server permits '0000-00-00' as a valid date.
+# 								Its effect also depends on whether strict SQL mode is enabled.
+#
+# 									If this mode is not enabled, '0000-00-00' is permitted and inserts produce no warning.
+#
+# 									If this mode is enabled, '0000-00-00' is permitted and inserts produce a warning.
+#
+# 									If this mode and strict is enabled, '0000-00-00' is not permitted and inserts produce an error,
+# 									unless IGNORE is given as well. (For INSERT IGNORE and UPDATE IGNORE, '0000-00-00' is permitted and inserts produce a warning)
+#
+# 								This mode is deprecated. Should be used with Strict, is not part of it. Produces warning if one is used without other, etc.
+#
+# NO_ZERO_IN_DATE 		The NO_ZERO_IN_DATE mode affects whether the server permits dates in which the year part is nonzero but the month or day part is 0.
+# 								(This mode affects dates such as '2010-00-01' or '2010-01-00' - but not '0000-00-00')
+#
+# 								To control whether the server permits '0000-00-00', use the NO_ZERO_DATE mode.
+#
+# 								The effect of NO_ZERO_IN_DATE also depends on whether strict SQL mode is enabled.
+#
+# 									If this mode is not enabled, dates with zero parts are permitted and inserts produce no warning.
+#
+# 									If this mode is enabled, dates with zero parts are inserted as '0000-00-00' and produce a warning.
+#
+# 									If this mode and strict mode is enabled,  dates with zero parts are not permitted and inserts produce an error,
+# 									unless IGNORE is given as well. (For INSERT IGNORE and UPDATE IGNORE, dates with zero parts are inserted as '0000-00-00' and produce a warning).
+#
+#
+# 								Deprecated. not part of Strict. Warning if not used with Strict, etc.
+#
+# ONLY_FULL_GROUP_BY 	Reject queries for which the select list, HAVING condition or ORDER BY list refer to nonaggregated columns that are 
+# 								neither named in the GROUP BY clause nor are functionally dependant on (uniquely determined by) GROUP BY columns.
+#
+# 								A MySQL extension to standard SQL permits references in the HAVING clause to aliased expressions in the select list.
+# 								The HAVING clause can refer to aliases regardless of whether ONLY_FULL_GROUP_BY is enabled.
+#
+# PAD_CHAR_TO_FULL_LENGTH
+#
+# 								By default, trailing spaces are trimmed from CHAR column values on retrieval.
+#
+# 								If PAD_CHAR_TO_FULL_LENGTH is enabled, trimming does not occur and retrieved CHAR values are padded
+# 								to their full length.
+#
+# 								This mode does not apply to VARCHAR columns, for which trialing spaces are retained on retrieval.
+#
+# 								NOTE: Deprecated as of 8.0.13
+#
+# 								CREATE TABLE t1 (c1 CHAR(10));
+# 								Query OK, 0 rows affected (0.37 secs)
+#
+# 								INSERT INTO t1 (c1) VALUES('xy'));
+#  							Query OK, 1 row affected (0.01 sec)
+#
+# 								SET sql_mode = '';
+# 								Query OK, 0 rows affected (0.00 sec)
+#
+# 								SELECT c1 CHAR_LENGTH(c1) FROM t1;
+#
+# 								+----------------------------------+
+# 								| c1 		| 	CHAR_LENGTH(c1) 		  |
+# 								+--------+-------------------------+
+# 								| xy 		| 								2 |
+# 								+--------+-------------------------+
+# 								1 row in set (0.00 sec)
+#
+# 								SET sql_mode = 'PAD_CHAR_TO_FULL_LENGTH';
+# 								Query OK, 0 rows affected (0.00 sec)
+#
+# 								SELECT c1, CHAR_LENGTH(c1) FROM t1;
+# 								+----------------------------------+
+# 								| c1 			| 	CHAR_LENGTH(c1) 	  |
+# 								+-----------+----------------------+
+# 								| xy 			| 						 	10|
+# 								+-----------+----------------------+
+# 								1 row in set (0.00 sec)
+#
+# PIPES_AS_CONCAT
+#
+# Treat |_| as a string concatenation operator (same as CONCAT()) rather than as a synonym for OR.
+#
+# REAL_AS_FLOAT
+#
+# Treat REAL as a synonym for FLOAT. By default, MySQL treats REAL as a synonym for DOUBLE.
+#
+# STRICT_ALL_TABLES
+#
+# Enable strict SQL mode for all storage engines. INvalid data values are rejected.
+#
+# STRICT_TRANS_TABLES
+#
+# Enable strict SQL mode for transactional storage engines, and when possible for nontransactional storage engines.
+#
+# TIME_TRUNCATE_FRACTIONAL
+#
+# Control whether rounding or truncation occurs when inserting a TIME, DATE, or TIMESTAMP value with a fractional
+# seconds part into a column having the same type but fewer fractional digits.
+#
+# The behavior is to use rounding. If this mode is enabled, truncation occurs instead.
+# The followin sequence of statements illustrates the difference:
+#
+# 		CREATE TABLE t (id INT tval TIME(1));
+# 		SET sql_mode='';
+# 		INSERT INTO t (id, tval) VALUES(1, 1.55);
+# 		SET sql_mode='TIME_TRUNCATE_FRACTIONAL';
+# 		INSERT INTO t (id, tval) VALUES(2, 1.55);
+#
+# The resulting table looks like this, where the first value has been subject to rounding and the second to truncation:
+#
+# 		SELECT id, tval FROM t ORDER BY id;
+# 		+--------------------------+
+# 		| id 		| 		tval 			|
+# 		+--------+-----------------+
+# 		| 		1 	| 00:00:01.6 		|
+# 		| 		2  | 00:00:01.5 		|
+# 		+--------+-----------------+
+#
+# ANSI is equivalent to:
+#
+# 		REAL_AS_FLOAT, PIPES_AS_CONCAT, ANSI_QUOTES, IGNORE_SPACE and ONLY_FULL_GROUP_BY
+#
+# 		ANSI mode also causes the server to return an error for queries where a set function S with an outer reference S(outer_ref) cannot be
+# 		aggregated in the outer query against which the outer reference has been resolved. This is such a query:
+#
+# 			SELECT * FROM t1 WHERE t1.a IN (SELECT MAX(t1.b) FROM t2 WHERE ...);
+#
+# 		Here - MAX(t1.b) cannot aggregate in the outer query because it appears in the WHERE clause of that query.
+#
+# 		Standard SQL requires an error in this situation. If ANSI mode is not enabled, the server treats S(outer_ref) in such
+# 		queries the same way that it would interpret S(const)
+#
+# TRADITIONAL
+#
+# 		TRADITIONAL is equivalent to STRICT_TRANS_TABLES, STRICT_ALL_TABLES, NO_ZERO_IN_DATE, NO_ZERO_DATE, ERROR_FOR_DIVISION_BY_ZERO
+# 		and NO_ENGINE_SUBSTITUION
+#
+# The following pertains to STRICT SQL MODE:
+#
+# Controls how MySQL handles invalid or missing values in data-change statements such as INSERT or UPDATE.
+# A value can be invalid for several reasons.
+#
+# For example, it might have the wrong data type for the column, or it might be out of range.
+#
+# A value is missing when a new row to be inserted does not contain a value for a non-NULL column that has
+# no explicit DEFAULT clause in its definition. (For a NULL column, NULL is inserted if the value is missing).
+#
+# Strict mode also affects DDL statements such as CREATE_TABLE.
+#
+# If strict mode is not in effect, MySQL inserts adjusted values for invalid or missing values and produces warnings.
+#
+# In strict mode, you can produce this behavior by using INSERT_IGNORE or UPDATE_IGNORE.
+#
+# For statements such as SELECT that do not change data, invalid values generate a warning in stirct mode, not an error.
+#
+# Strict mode produces an error for attempts to create a key that exceeds the max key length. When strict mode is not enabled,
+# this results in a warning and truncation of the key to the max key length.
+#
+# Strict mode does not affect whether foreign key constraints are checked. Foreign_key_checks can be used for that.
+#
+# Strict SQL mode is in effect if either STRICT_ALL_TABLES or STRICT_TRANS_TABLES is enabled, although the effects of these
+# modes differ somewhat:
+#
+# 		For transactional tables, an error occurs for invalid or missing values in a data-change statement when either STRICT_ALL_TABLES or 
+# 		STRICT_TRANS_TABLES is enabled. The statement is aborted and rolled back.
+#
+# 		For nontransactional tables, the behavior is the same for either mode if the bad value occurs in the first row to be inserted or updated:
+# 			The statement is aborted and the table remains unchanged.
+#
+# 			If the statement inserts or modifies multiple rows and the bad value occurs in the second or later row, the result depends
+# 			on which strict mode is enabled:
+#
+# 				For STRICT_ALL_TABLES, MySQL returns an error and ignores the rest of the rows.
+# 											  However, because the earlier rows have been inserted or updated, the result is a partial update.
+# 											  To avoid this, use single-row statements which can be aborted without changing the table.
+#
+# 				For STRICT_TRANS_TABLES, MySQL converts an invalid value to the closest valid value for the column and inserts the adjusted value.
+# 											  If a value is missing, MySQL inserts the implicit default value for the column data type.
+#
+# 											  In either case, MySQL generates a warning rather than an error and continues processing the statement.
+# 											  Implicit defaults are described later.
+#
+# 		Strict mode affects handling of division by zero, zero dates  and zero in dates as follows:
+#
+# 			Strict mode affects handling of division by zero, which includes MOD(N,0):
+#
+# 				For data-change operations (INSERT,UPDATE):
+#
+# 					If strict mode is not enabled, division by zero inserts NULL and produces no warning.
+#	
+# 					If strict mode is enabled, division by zero produces an error, unless IGNORE is given as well.
+# 					For INSERT IGNORE and UPDATE IGNORE, division by zero inserts NULL and produces a warning.
+#
+# 				For SELECT, division by zero returns NULL. Enabling strict mode causes a warning to be produced as well.
+#
+# 			Strict mode affects whether the server permits '0000-00-00' as a valid date:
+#
+# 				If strict mode is not enabled, '0000-00-00' is permitted and inserts produce no warning.
+#
+# 				If strict mode is enabled, '0000-00-00' is not permitted and inserts produce an error, unless IGNORE is given as well.
+# 				For INSERT IGNORE and UPDATE IGNORE '0000-00-00' is permitted and inserts produce a warning.
+#
+# 			Strict mode affects whether the server permits dates in which the year part is nonzero but the month or day part is 0 (dates such as '2010-00-01' or '2010-01-00'):
+#
+# 				If stict mode is not enabled, dates with zero parts are permitted and inserts produce no warning.
+#
+# 				If strict mode is enabled, dates with zero parts are not permitted and inserts produce an error, unless IGNORE is given as well.
+# 				For INSERT IGNORE and UPDATE IGNORE, dates with zero parts are inserted as '0000-00-00' (which is considered valid with IGNORE) and produces a warning.
+#
+# 			Strict mode affects handling of division by zero, zero dates, and zeros in dates in conjunction with the ERROR_FOR_DIVISION_BY_ZERO, NO_ZERO_DATE and
+# 			NO_ZERO_IN_DATE modes.
+#
+# COMPARISON OF THE IGNORE KEYWORD AND STRICT SQL MODE
+#
+# 		Compres the effect on statement execution of the IGNORE keyword (which downgrades errors to warnings) and strict SQL mode (which upgrades warnings to
+# 		errors). It describes which statements they affect, and which errors they apply to.
+#
+# 		THe following table presents a summary comparison of statement behavior when the default is to produce an error versus a warning.
+#
+# 		An example of when the default is to produce an error is inserting a NULL into a NOT NULL column.
+#
+# 		An example of when the default is to produce a warning is inserting a value of the wrong data type into a 
+# 		column (such as inserting the string 'abc' into a integer column)
+#
+# 						OPS MODE 										WHEN STATEMENT DEFAULT IS ERROR 							WHEN STATEMENT DEFAULT IS WARNING
+# 				Without IGNORE or strict SQL mode 				Error 															Warning
+# 				With IGNORE 											Warning 															Warning (same as without IGNORE or strict SQL mode)
+# 				With strict SQL mode 								Error (same as without IGNORE or strict SQL mode) 	Error
+# 				With IGNORE and strict SQL mode 					Warning 															Warning
+#
+# 		One conclusion to draw from the table is that when the IGNORE keyword and strict SQL mode are both in effect,
+# 		IGNORE takes precedence.
+#
+# 		This means that, although IGNORE and strict SQL mode can be considered to have opposite effects on error handling, they do not cancel each other.
+#
+# THE EFFECT OF IGNORE ON STATEMENT EXECUTION
+#
+# 		https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_high_not_precedence
+# 
+# 		
+# 								
