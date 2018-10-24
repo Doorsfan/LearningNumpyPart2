@@ -21114,7 +21114,1156 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # THE EFFECT OF IGNORE ON STATEMENT EXECUTION
 #
-# 		https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_high_not_precedence
+# Several statements in MySQL support an optional IGNORE keyword. This keyword causes the server to downgrade certain types of errors
+# and generate warnings instead. 
+#
+# For a multiple-row statement, IGNORE causes the statements to skip to the next row instead of aborting.
+#
+# For example, if the table t has a primary key column i, attempting to insert the same value of i into multiple
+# rows normally produces a duplicate-key error:
+#
+# INSERT INTO t (i) VALUES(1),(1);
+# ERROR 1062 (23000): Duplicate entry '1' for key 'PRIMARY'
+#
+# If we run with IGNORE, A warning is produced instead of an error - though, duplication is still not inserted:
+#
+# INSERT IGNORE INTO t (i) VALUES(1),(1);
+# Query OK, 1 row affected, 1 warning (0.01 sec)
+# Records: 2 Duplicates: 1 Warnings: 1
+#
+# SHOW WARNINGS;
+# +----------------------------------------------------------+
+# | Level 	| 	Code 	| Message 					  					 |
+# +---------+--------+---------------------------------------+
+# | Warning | 1062 	| Duplicate entry '1' for key 'PRIMARY' |
+# +----------------------------------------------------------+
+#
+# 1 row in set (0.00 sec)
+#
+# These statements supports the IGNORE keyword:
+#
+# 		CREATE TABLE ... SELECT. IGNORE does not apply to the CREATE TABLE or SELECT parts of the statement but to inserts into
+# 		the table of rows produced by the SELECT.
+#
+# 		Rows that duplicate an existing row on a unique key value are discarded.
+#
+# 		DELETE: IGNORE causes MySQL to ignore errors during the process of deleting rows.
+#
+# 		INSERT: With IGNORE, rows that duplicate an existing row on a unique key value are discarded.
 # 
-# 		
-# 								
+# 				  Rows set to values that would cause data conversion errors are set to the closest valid values instead.
+#
+# 				  For partitioned tables where no partition matching a given value is found, IGNORE causes the insert operation 
+# 				  to fail silently for rows containing the unmatched value.
+#
+# 		LOAD_DATA, LOAD_XML: With IGNORE, rows that duplicate an existing row on a unique key value are discarded.
+#
+# 		UPDATE: With IGNORE, rows for which duplicate-key conflicts occur on a unique key value are not updated.
+#
+# 				  Rows updated to values that would cause data conversion errors are updated to the closest valid values instead.
+#
+# The IGNORE keyword applies to the following errors:
+#
+# 		ER_BAD_NULL_ERROR
+# 		ER_DUP_ENTRY
+# 		ER_DUP_ENTRY_WITH_KEY_NAME
+# 		ER_DUP_KEY
+# 		ER_NO_PARTITION_FOR_GIVEN_VALUE
+# 		ER_NO_PARTITION_FOR_GIVEN_VALUE_SILENT
+# 		ER_NO_REFERENCED_ROW_2
+#
+# 		ER_ROW_DOES_NOT_MATCH_GIVEN_PARTITION_SET
+# 		ER_ROW_IS_REFERENCED_2
+# 		ER_SUBQUERY_NO_1_ROW
+# 		ER_VIEW_CHECK_FAILED
+#
+# THE EFFECT OF STRICT SQL MODE ON STATEMENT EXECUTION
+#
+# The MySQL server can operate in different SQL modes, and can apply these modes differently for different clients, depending
+# on the value of the sql_mode SYS_VAR.
+#
+# In "strict" SQL mode, the server upgrades certain warnings to errors.
+#
+# For example, in non-strict SQL mode, inserting the string 'abc' into an integer column results in conversion of
+# the value to 0 and a warning:
+#
+# SET sql_mode = '';
+# Query OK, 0 rows affected (0.00 sec)
+#
+# INSERT INTO t (i) VALUES('abc');
+# Query OK, 1 row affected, 1 warning (0.01 sec)
+#
+# SHOW WARNINGS;
+# +------------------------------------------------------------------------------+
+# | Level 		| Code 	| 		Message 															|
+# +------------+--------+--------------------------------------------------------+
+# | Warning 	| 1366 	| Incorrect integer value: 'abc' for column 'i' at row 1 |
+# +------------+--------+--------------------------------------------------------+
+#
+# 1 row in set (0.00 sec)
+#
+# In strict SQL mode, the invalid value is rejected with an error:
+#
+# SET sql_mode = 'STRICT_ALL_TABLES';
+# Query OK, 0 rows affected (0.00 sec)
+#
+# INSERT INTO t (i) VALUES ('abc');
+# ERROR 1366 (HY000): Incorrect integer value: 'abc' for column 'i' at row 1
+#
+# Strict SQL mode applies the following statements under conditions for which some value might be out of
+# range or an invalid row is inserted into or deleted from a table:
+#
+# ALTER_TABLE
+#
+# CREATE_TABLE
+#
+# CREATE_TABLE_..._SELECT
+#
+# DELETE (both single table and multiple table)
+#
+# INSERT
+#
+# LOAD_DATA
+# 
+# LOAD_XML
+#
+# SELECT_SLEEP()
+#
+# UPDATE (both single and multiple tables)
+#
+# Within stored programs, individual statements of the types just listed execute in strict SQL mode if the program was defined 
+# while strict mode was in effect.
+#
+# Strict SQL mode applies to the following errors, represent a class of errors in which an input value is either invalid or missing.
+# A value is invalid if it has the wrong data type for the column or might be out of range.
+#
+# A value is missing if a new row to be inserted does not contain a value for a NOT NULL column that has no explicit DEFAULT clause
+# in its definition.
+#
+# ER_BAD_NULL_ERROR
+# ER_CUT_VALUE_GROUP_CONCAT
+# ER_DATA_TOO_LONG
+# ER_DATETIME_FUNCTION_OVERFLOW
+# ER_DIVISION_BY_ZERO
+# ER_INVALID_ARGUMENT_FOR_LOGARITHM
+# ER_NO_DEFAULT_FOR_FIELD
+# ER_NO_DEFAULT_FOR_VIEW_FIELD
+#
+# ER_TOO_LONG_KEY
+# ER_TRUNCATED_WRONG_VALUE
+# ER_TRUNCATED_WRONG_VALUE_FOR_FIELD
+# ER_WARN_DATA_OUT_OF_RANGE
+# ER_WARN_NULL_TO_NOTNULL
+# ER_WARN_TOO_FEW_RECORDS
+# ER_WRONG_ARGUMENTS
+# ER_WRONG_VALUE_FOR_TYPE
+# WARN_DATA_TRUNCATED
+#
+# The following section pertains to IPv6 Support
+#
+# Support for IPv6 in MySQL includes these capabilities:
+#
+# 		MySQL Server can accept TCP/IP connections from clients connecting over IPv6.
+#
+# 		For example, this command connects over IPv6 to the MySQL server on the local host:
+#
+# 			mysql -h ::1
+#
+# 		To use this capability - two conditions must hold true:
+#
+# 			The system must be configured to support IPv6.
+#
+# 			The default MySQL server configuration permits IPv6 connections in addition to IPv4 connections.
+# 			To change the default configuration, start the server with an appropiate --bind-address option.
+#
+# 		MySQL account names permit IPv6 addresses to enable DBAs to specify privs for clients that connect 
+# 		to the server over IPv6.
+#
+# 		IPv6 addresses can be specified in account names in statements such as CREATE_USER, GRANT, and REVOKE.
+#
+# 		For example:
+#
+# 			CREATE USER 'bill'@'::1' IDENTIFIED BY 'secret';
+# 			GRANT SELECT ON mydb.* TO 'bill'@'::1';
+#
+# 		IPv6 functions enable conversion between string and internal format IPv6 address formats, and checking whether
+# 		values represent valid IPv6 addresses.
+#
+# 		For example, INET6_ATON() and INET6_NTOA() are similar to INET_ATON() and INET_NTOA(), but handle IPv6 in addition
+# 		to IPv4 addresses.
+#
+# The following pertains to verifying system support for IPv6.
+#
+# Before MySQL server can accept IPv6 connections, the operating system on your server host must support IPv6.
+# As a simple test to determine whether that is true - try:
+#
+# 		ping6 ::1
+# 		16 bytes from ::1, icmp_seq=0 hlim=64 time=0.171 ms
+# 		16 bytes from ::1, icmp_seq=1 hlim=64 time=0.077 ms
+#
+# To produce a description of your system's network interfaces, invoke ifconfig -a and look for IPv6 addresses in the output.
+#
+# If your host does not support IPv6, the reasoning can differ. It can require configuring an existing network config to add an IPv6 address.
+# Or you might need to rebuild the kernel with IPv6 options enabled.
+#
+# There are links to cover for the Linux integrations. But this project focuses on MySQL - one part at a time.
+#
+# The MySQL server listens on a single network socket for TCP/IP connections.
+#
+# This socket is bound to a single address, but it is possible for an address to map unto multiple network interfaces.
+# To specify an address, use the --bind-address=<addr> option at server startup, where <addr> is an IPv4 or IPv6 address or a host name.
+#
+# The following pertains to connecting to Local Host address connections using IPv6.
+#
+# The following procedure shows how to configure MySQL to permit IPv6 connections by clients that connect to the local server using
+# the ::1 local host address.
+#
+# The instructions are based on support of IPv6.
+#
+# 		1. Start the MySQL server with an appropriate --bind-address option to permit it to accept IPv6 connections.
+# 			For example, put the following lines in the server option file and restart the server:
+#
+# 				[mysqld]
+# 				bind-address = *
+#
+# 			Alternatively, you can bind the server to ::1, but that makes the server more restrictive for TCP/IP connections.
+# 			It accepts only IPv6 connections for that single address and rejects IPv4 connections. 
+#
+# 		2. As an administrator, connect to the server and create an account for a local user who will connect from the ::1 local IPv6 host address:
+#
+# 				CREATE USER 'ipv6user'@'::1' IDENTIFIED BY 'ipv6pass';
+#
+# 			For the permitted syntax of Ipv6 addresses in account names - it's covered later.
+#
+# 			In addition to the CREATE_USER statement, you can issue GRANT statements that give specific
+# 			privs to the account, although that is not necessary for this part.
+#
+# 		3. Invoke the mysql client to connect to the server using the new account:
+#
+# 				mysql -h ::1 -u ipv6user -pipv6pass
+#
+# 		4. Try some simple statements that show connection information:
+#
+# 				STATUS
+# 				...
+# 				Connection: 	::1 via TCP/IP
+# 				...
+# 
+# 				SELECT CURRENT_USER(), @@bind_address;
+# 				+------------------------------------+
+# 				| CURRENT_USER() | @@bind_address 	 |
+# 				+----------------+-------------------+
+# 				| ipv6user@::1   | :: 					 |
+# 				+----------------+-------------------+
+#
+# The following section pertains to Connecting Using IPv6 Nonlocal Host Addresses
+#
+# The following procedure shows how to configure MySQL to permit IPv6 connections by remote clients.
+#
+# It is similar to the preceding procedure for local clients, but the server and client hosts are
+# distinct and each has its own nonlocal ipv6 address.
+#
+# The example uses the addresses of:
+#
+# Server host: 2001:db8:0:f101::1
+# Client host: 2001:db8:0:f101::2
+#
+# These addresses are chosen from the nonroutable address range recommended by IANA for documentation purposes/testing.
+# To accept IPv6 connections from clients outside the local network, the server host must have a public address.
+#
+# If your network provider assigns you an IPv6 address, you can use that.
+#
+# Otherwise, another way to obtain an address is to use an IPv6 broker.
+#
+# 		1. Start the MySQL server with an appropriate --bind-address option to permit it to accept IPv6 connections.
+# 			For example, put the following lines in the server option file and restart the server:
+#
+# 				[mysqld]
+# 				bind-address = *
+#
+# 			Alternatively, you can bind the server to 2001:db8:0:f101::1, but that makes the server more restrictive for TCP/IP
+# 			connections.
+#
+# 			It accepts only IPv6 connections for that single address and rejects IPv4 connections.
+#
+# 		2. On the server host (2001:db8:0:f101::1), create an account for a user who will connect from the client host (2001:db8:f101::2)
+#
+# 			CREATE USER 'remoteipv6user'@'2001:db8:0:f101::2' IDENTIFIED BY 'remoteipv6pass';
+#
+# 		3. On the client host (2001:db8:0:f101::2), invoke the mysql client to connect to the server using the new account:
+#
+# 			mysql -h 2001:db8:0:f101::1 -u remoteipv6user -premoteipv6pass
+#
+# 		4. Trying some simple commands to see that it works:
+#
+# 				STATUS
+# 				...-
+# 				Connection: 	2001:db8:0:f101::1 via TCP/IP
+# 				...- 
+# 
+# 				SELECT CURRENT_USER(), @@bind_address;
+# 				+-----------------------------------+----------------+
+# 				| CURRENT_USER() 						   | @@bind_address |
+# 				+-----------------------------------+----------------+
+# 				| remoteipv6user@2001:db8:0:f101::2 | :: 				  |
+# 				+-----------------------------------+----------------+
+#
+# The following part pertains on how to obtain an IPv6 Address from a Broker
+#
+# If you do not have a public IPv6 address that enables your system to communicate over IPv6 outside of your local network,
+# you can obtain one from an Ipv6 broker.
+#
+# After configuring your server host to use a broker-supplied IPv6 address, start the MySQL server with an appropiate --bind-address
+# option to permit the server to accept IPv6 connections.
+#
+# For example, put the following lines in the server option file and restart the server:
+#
+# 		[mysqld]
+# 		bind-address = *
+#
+# Alternatively, you can bind the server to the specific IPv6 address provided by the broker, but that makes the server more
+# restrictive for TCP/IP connections.
+#
+# In addition, if the broker allocates dynamic addresses, the address provided for your system might change the next time
+# you connect to the broker.
+#
+# If so, any accounts you create that name the original address, become invalid.
+#
+# To bind to a specific address but avoid this change-of-address problem, you may be able to arrange with the broker
+# for a static IPv6 address.
+#
+# The following example is for how ot use the Freenet6 as the broker and the gogoc IPv6 client package on Gentoo Linux.
+#
+# 1. Create an acc on their website -> http://gogonet.gogo6.com
+#
+# 2. Create the user ID and PW for the IPv6 broker: -> http://gogonet.gogo6.com/page/freenet6-registration
+#
+# 3. As root, install gogoc:
+#
+# 		emerge gogoc
+#
+# 4. Edit /etc/gogoc/gogoc.conf to set the userid and password values. For example:
+#
+# 		userid=gogouser
+# 		passwd=gogopass
+#
+# 5. Start gogoc:
+#
+# 		/etc/init.d/gogoc start
+#
+# 		To start gogoc on system boot:
+#
+# 		rc-update add gogoc default
+#
+# 6. ping6 to ping a host:
+#
+# 		ping6 ipv6.google.com
+#
+# 7. to see your Ipv6 address:
+#
+# 		ifconfig tun
+#
+# The following section pertains to MySQL Server Time Zone Support
+#
+# MySQL Server maintains several time zone settings:
+#
+# 		1. The system time zone. When the server starts, it attempts to determine the time zone of the host machine and uses it to set the 
+# 		system_time_zone SYS_VAR. Does not change thereafter.
+#
+# 		Can set the SYS_VAR time zone for MySQL Server at startup with the --timezone=<timezone_name> option to mysqld_safe.
+#
+# 		You can also set it by setting the TZ environment variable before you start mysqld.
+#
+# 		The permissible values for --timezone or TZ are system dependent. 
+#
+# 		2. The server's current time zone. The global time_zone system variable indicates the time zone the server currently is operating in.
+# 			The initial value for time_zone is 'SYSTEM', which indicates that the server time zone is the same as the system time zone.
+#
+# 				NOTE: If set to SYSTEM, every MySQL function call that requires a timezone calculation makes a system library call to determine
+# 						the current system timezone. This call may be protected by a global mutex, resulting in contention.
+#
+# 			The initial global server time zone value can be specified explicitly at startup with the --default-time-zone=<timezone> option on the
+# 			cmd line, or you can use the following line in an option file:
+#
+# 				default-time-zone='timezone'
+#
+# 			If you have the SYSTEM_VARIABLES_ADMIN or SUPER priv, you can set the global server time zone value at runtime with this statement:
+#
+# 				SET GLOBAL time_zone = timezone;
+#
+# 			Per-connection time zones. Each client that connects has its own time zone setting, given by the session time_zone variable.
+# 			Initially, the session variable takes its value from the global time_zone variable, but the client can change its own time zone
+# 			with this statement:
+#
+# 				SET time_zone = timezone;
+#
+# 		The current session time zone setting affects display and storage of time values that are zone-sensitive.
+#
+# 		This includes the values displayed by functions such as NOW() or CURTIME(), and values stored in and retrieved
+# 		from TIMESTAMP columns.
+#
+# 		Values for TIMESTAMP columns are converted from the current time zone to UTC for storage, and from UTC to the current
+# 		time zone for retrieval.
+#
+# 		The current time zone setting does not affect values displayed by functions such as UTC_TIMESTAMP() or values in DATE, TIME, or DATETIME
+# 		columns.
+#
+# 		Nor are values in those data types stored in UTC; the time zone applies for them only when converting from TIMESTAMP values.
+# 		If you want locale-specific arithmetic for DATE, TIME or DATETIME - convert them to UTC, perform the arithemtic, and convert back.
+#
+# 		The current values of the global and client-specific time zones can be retrieved like this:
+#
+# 			SELECT @@global.time_zone, @@session.time_zone;
+#
+# 		<timezone> values can be given in several formats, none of which are case-sensitive:
+#
+# 			The value 'SYSTEM' indicates that hte time zone should be the same as hte SYS time zone.
+#
+# 			The vlaue can be given as a string indicating an offset from UTC, such as '+10:00' or '-6:00'
+#
+# 			The value can be given as a named time zone, such as 'Europe/Helsinki', 'US/Eastern', or 'MET'.
+# 			Named time zones can be used only if the time zone information tables in the mysql DB have been created and populated.
+#
+# POPULATING THE TIME ZONE TABLES
+#
+# Several tables in the MySQL system DB exists to maintain time zone info.
+# The MySQL installation procedure creates the time zone tables, but does not load them.
+#
+# You must do so manually using the following instructions.
+#
+# NOTE: Loading the time zone information is not necessarily a one-time operation because the information 
+# 		  changes ocassionally. When such changes occur, applications that use the old rules becomes out of date
+# 	     and you may find it necessary to reload the time zone tables to keep the information used by your MySQL
+# 		  sever current.
+#
+# If your system has its own zoneinfo DB (the set of files describing time zones), you should use the mysql_tzinfo_to_sql
+# program for filling the time zone tables.
+#
+# Examples of such systems are Linux, FreeBSD, Solaris and macOS. One likely location for these files is the /usr/share/zoneinfo dir.
+# If your system does not have a zoneinfo db, you can use the downloadable package described later.
+#
+# The mysql_tzinfo_to_sql program is used to load the time zone tables.
+#
+# On the cmd line, pass the zoneinfo dir path name to mysql_tzinfo_to_sql and send the output into the mysql program.
+# For example:
+#
+# 		mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql
+#
+# mysql_tzinfo_to_sql reads your Systems time zone files and generates SQL statements from them.
+# mysql processes those statements to load the time zone tables.
+#
+# mysql_tzinfo_to_sql also can be used to load a single time zone file or to generate leap second information.
+#
+# 		> To load a single time zone file <tz_file> that correponds to a time zone name <tz_name>, invoke mysql_tzinfo_to_sql as such:
+#
+# 			mysql_tzinfo_to_sql <tz_file> <tz_name> | mysql -u root mysql
+#
+# 		With this approach, you must execute a separate command to load the time zone files for each named zone that hte server needs to know about.
+#
+# 		> If your time zone needs to account for leap seconds, intiialize the leap second information like this, where <tz_file> is the name of your time zone file:
+#
+# 			mysql_tzinfo_to_sql --leap <tz_file> | mysql -u root mysql
+#
+# 		> After running mysql_tzinfo_to_sql, it is best to restart the server so that it does not continue to use any previously cached time zone data.
+#
+# 		If your system is one that has no zoneinfo DB (for example, Windows), you can use a package that is available for download at the MySQL Developer Zone:
+#
+# 			https://dev.mysql.com/downloads/timezones.html
+#
+# 		Download a time zone package that contains SQL statements and unpack it, then load the package file contents into the time zone tables:
+#
+# 			mysql -u root mysql < <file_name>
+#
+# 		THen restart the server.
+#
+# 		Warning: Do NOT use a downloadable package that contains any MyISAM tables. MySQL uses INnoDB for the Time zone Tables. Trying to replace them with MyISAM tables causes issues.
+#
+# 		Warning: Do NOT use a downloadable package that if your system has a zoneinfo database. Use the mysql_tzinfo_to_sql utility instead.
+# 					Othehrwise, you may cause a difference in datetime handling between MySQL and other apps on your system.
+#
+# The following section pertains to Staying Current with Time Zone Changes
+#
+# 		When time zone rules change, applications that use the old rules become out of date.
+#
+# 		TO stay current, it is necessary to make sure that oyur system uses current time zone info.
+# 		There are two factors to consider in this.
+#
+# 			1) The OS time affects the value that the MySQL server uses for times if its time zone is set to SYSTEM.
+# 				Make sure that your OS is using the latest time zone info.
+#
+# 				For most OS's, the latest update or service pack prepares your system for the time changes.
+# 				
+# 			2) If you replace the system's /etc/localtime timezone file with a version that uses rules differing from those in
+# 				effect at mysqld startup, you should restart mysqld so that it uses the updated rules.
+#
+# 				Otherwise, mysqld might not notice when the system changes its time.
+#
+# 			3) If you use named time zones with MySQL, make sure that the time zone tables in the mysql DB are up to date.
+# 				
+# 				IF your system has its own zoneinfo DB, you should reload the MySQL time zone tables whenever hte zoneinfo
+# 				DB is updated.
+#
+# 				FOr systems that do not have their own zoneinfo DB, check the MySQL Develop Zone for updates.
+#
+# 				When a new update is available, download it and use it to replace the current time zone tables.
+#
+# 				Mysqld caches time zone information that it looks up, so after updating the time zone tables, you should
+# 				restart mysqld to make sure that it does not continue to serve outdated time zone data.
+#
+# 		If you are uncertain whether named time zones are available, for use either as the server's time zone setting or by clients that
+# 		set their own time zone, check whether your time zone tables are empty.
+#
+# 		The following query determines whether the table that contains time zone names has any rows.
+#
+# 				SELECT COUNT(*) FROM mysql.time_zone_name;
+# 				+-----------------------------+
+# 				| COUNT(*) 							|
+# 				+-----------------------------+
+# 				| 		0 								|
+# 				+-----------------------------+
+#
+# 		A count of zero indicates that its empty.
+#
+# 		In this case, no one can be using named time zones, and you do not need to update the tables.
+#
+# 		A count greater than zero indicates that the table is not empty and that its contents are available
+# 		to be used for named time support.
+#
+# 		In this case, you should be sure to reload your time zone tables so that anyone who uses named time zones will get correct query results.
+#
+# 		To check whether your MySQL installation is updated properly for a change in Daylight Saving Time rules, use a test like the one following.
+# 		The example uses values that are appropiate for the 2007 DST 1-hour change that occurs in the US on march 11 at 2 a.m.
+#
+# 		SELECT CONVERT_TZ('2007-03-11 2:00:00', 'US/Eastern', 'US/Central');
+# 		SELECT CONVERT_TZ('2007-03-11 3:00:00', 'US/Eastern', 'US/Central');
+#
+# 		The two time values indicate the times at which the DST change occurs, and the use of named time zones requires that the time zone tables be used.
+# 		THe desired result is that both queries return the same result (the input time, converted to the equivalent value in the 'US/Central' time zone).
+#
+# 		Before updating the time zone tables, you would see an incorrect result like this:
+#
+# 			SELECT CONVERT_TZ('2007-03-11 2:00:00', 'US/Eastern', 'US/Central');
+# 			+-------------------------------------------------------------------+
+# 			| CONVERT_TZ('2007-03-11 2:00:00', 'US/Eastern', 'US/Central') 	  |
+# 			+-------------------------------------------------------------------+
+# 			| 2007-03-11 01:00:00 															  |
+# 			+-------------------------------------------------------------------+
+#
+# 			SELECT CONVERT_TZ('2007-03-11 3:00:00', 'US/Eastern', 'US/Central');
+# 			+-------------------------------------------------------------------+
+# 			| CONVERT_TZ('2007-03-11 3:00:00', 'US/Eastern', 'US/Central') 	  |
+# 			+-------------------------------------------------------------------+
+# 			| 2007-03-11 02:00:00 															  |
+# 			+-------------------------------------------------------------------+
+#
+# 		After updating the tables, you should get hte correct results:
+#
+# 			SELECT CONVERT_TZ('2007-03-11 3:00:00', 'US/Eastern', 'US/Central');
+# 			+-------------------------------------------------------------------+
+## 		| CONVERT_TZ('2007-03-11 3:00:00', 'US/Eastern', 'US/Central') 	  |
+# 			+-------------------------------------------------------------------+
+# 			| 2007-03-11 01:00:00 															  |
+# 			+-------------------------------------------------------------------+
+#
+# The following section covers Time Zone Leap Seond Support
+#
+# Leap second values are returned with a time part that ends with :59:59.
+#
+# THis means that a function such as NOW() can return the same value for two or three consecutive
+# seconds during the leap second.
+#
+# It remains true that literal temporal values having a time part that ends with :59:60 or :59:61 are considered invalid.
+#
+# If it is necessary to search for TIMESTAMP values one second before the leap second, anomalous results may be obtained if you
+# use a comparison with 'YYYY-MM-DD hh:mm:ss' values.
+#
+# The following example demonstrates this. It changes the local time zone to UTC so there is no difference between internal values
+# (which are in UTC) and displayed values (which have time zone correction applied)
+#
+# 		CREATE TABLE t1 (
+# 				a INT, ts TIMESTAMP DEFAULT NOW(), PRIMARY KEY (ts));
+# 		Query OK, 0 rows affected (0.01 sec)
+# 
+# 		-- Change to UTC
+# 		SET time_zone = '+00:00';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		-- Simulate NOW() = '2008-12-31 23:59:59' -
+# 		SET timestamp = 1230767999
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		INSERT INTO t1 (a) VALUES (1);
+# 		Query OK, 1 row affected (0.00 sec)
+#
+# 		-- Simulate NOW() = '2008-12-31 23:59:60'
+# 		SET timestamp = 1230768000;
+# 		Query OK, rows affected (0.00 sec)
+#
+# 		INSERT INTO t1 (a) VALUES (2);
+# 		Query OK, 1 row affected (0.00 sec)
+#
+# 		-- values differ internally but display the same
+# 		SELECT a, ts, UNIX_TIMESTAMP(ts) FROM t1;
+# 		+--------+-----------------+------------------------+
+# 		| a 		| ts 					    | UNIX_TIMESTAMP(ts) |
+# 		+--------+-----------------+------------------------+
+# 		| 		1 	| 2008-12-31 23:59:59 | 1230767999 			 |
+# 		| 		2  | 2008-12-31 23:59:59 | 1230768000 			 |
+# 		+--------+---------------------+--------------------+
+# 		2 rows in set (0.00 sec)
+#
+# 		-- only the non-leap value matches
+# 		SELECT * FROM t1 WHERE ts = '2008-12-31 23:59:59';
+# 		+---------+-----------------------------------------+
+# 		| a 		 | ts 												 |
+# 		+---------+-----------------------------------------+
+# 		| 		1 	 | 2008-12-31 		23:59:59 					 |
+# 		+---------+-----------------------------------------+
+#
+# 		-- the leap values with seconds=60 is invalid
+# 		SELECT * FROM t1 WHERE ts = '2008-12-31 23:59:60';
+# 		Empty set, 2 warnings (0.00 sec)
+#
+# To work around this, you can use a comparison based on the UTC value actually stored in column,
+# which has the leap second correction applied:
+#
+# -- selecting using UNIX_TIMESTAMP value return leap value
+# SELECT * FROM t1 WHERE UNIX_TIMESTAMP(ts) = 1230768000;
+# +---------------+----------------------------------------+
+# | a 				| 	ts 											  |
+# +---------------+----------------------------------------+
+# | 		2 			| 	2008-12-31 23:59:59 						  |
+# +---------------+----------------------------------------+
+# 1 row in set (0.00 sec)
+#
+# The following section pertains to Server Tracking of Client Session State Changes
+#
+# The MySQL server implements several session state trackers. A client can enable these trackers to receive notification 
+# of changes to its session state.
+#
+# One use for the tracker mechanism is to provide a means for MySQL connectors and client applications to determine whether
+# any session context is available to permit session migration from one server to another.
+#
+# (To change sessions in a load-balanced environment, it is necessary to detect whether there is session states to take into
+#  consideraiton when deciding whether a switch can be made)
+#
+# Another use for the tracker mechanism is to permit applications to know when transactions can be moved from one session to another.
+# Transaction state tracking enables this, which is useful for applications that may wish to move transactions from a busy server
+# to one that is less loaded.
+#
+# For example, a load-balancing connector managing a client connection pool could move transactions between available sessions in the pool.
+#
+# However, session switching cannot be done at arbitrary times. If a session is in the middle of a transaction for which reads or writes
+# have been done, switching to a different session implies a transaction rollback on the original session.
+#
+# A session switch must be done only when a transaction does not yet have any reads or writes performed within it.
+#
+# Examples of when transactions might reasonably be switched:
+#
+# 		Immediately after START_TRANSACTION
+#
+# 		After COMMIT_AND_CHAIN
+#
+# In addition to knowing transaction state, it is useful to know transaction characteristics, so as to use the same characteristics if
+# the transaction is moved to a different session.
+#
+# The following characteristics are relevant for this purpose:
+#
+# 		READ ONLY 
+# 		READ WRITE
+# 		ISOLATION LEVEL
+# 		WITH CONSISTENT SNAPSHOT
+#
+# To support the preceding session-switching activities, notification is available for these types of client session state information.
+#
+# 		1) Changes to these attributes of client session state:
+#
+# 				The default schema (database)
+#
+# 				Session-specific values for system variables
+#
+# 				User-defined variables
+#
+# 				Temporary tables
+#
+# 				Prepared statements
+#
+# 			The session_track_state_change system variable controls this tracker.
+#
+# 		2) Changes to the default schema name. The session_track_schema SYS_VAR controls this tracker.
+#
+# 		3) Changes to the session values of SYS_VARs. The session_track_system_variables SYS_VAR controls this tracker.
+#
+# 		4) Available GTIDs. The session_track_gtids SYS_VAR controls this tracker.
+#
+# 		5) Information about transaction state and characteristics. The session_track_transaction_info SYS_VAR controls this tracker.
+#
+# The SYS_VARs that permit control over which change notifications occur, but do not provide a way to access notification information.
+#
+# Notification occurs in the MySQL client/server protocol, which includes tracker information in OK packets so that session
+# state changes can be detected.
+#
+# To enable client applications to extract state-change information from OK packets returned by the server, the MySQL C API
+# provides a pair of functions:
+#
+# 		mysql_session_track_get_first() fetches the first part of the state-change information received from the server.
+#
+# 		mysql_session_track_get_next() fethces any remaining state-change information received from the server.
+# 		Following a successful call to mysql_session_track_get_first(), call this function repeatedly as long as it returns success.
+#
+# The mysqltest program has disable_session_track_info and enable_session_track_info commands that control whether session tracker
+# notifications occur.
+#
+# You can use theese commands to see from the cmd line what notifications SQL statements produce.
+# Suppose that a file testscript contains the following mysqltest script:
+#
+# 		DROP TABLE IF EXISTS test.t1;
+# 		CREATE TABLE test.t1 (i INT, f FLOAT);
+# 		--enable_session_track_info
+# 		SET @@session.session_track_schema=ON;
+# 		SET @@session.session_track_system_variables='*';
+# 		SET @@session.session_track_state_change=ON;
+# 		USE information_schema;
+# 		SET NAMES 'utf8mb4';
+# 		SET @@session.session_track_transaction_info='CHARACTERISTICS';
+# 		SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+# 		SET TRANSACTION READ WRITE;
+# 		START TRANSACTION;
+# 		SELECT 1;
+# 		INSERT INTO test.t1() VALUES();
+# 		INSERT INTO test.t1() VALUES(1, RAND());
+# 		COMMIT;
+#
+# Run the script as follows to see the information provided by the enabled trackers.
+#
+# For a description of the Tracker: information displayed by mysqltest for the various trackers, its' covered later.
+#
+# mysqltest < testscript
+# DROP TABLE IF EXISTS test.t1;
+# CREATE TABLE test.t1 (i INT, f FLOAT);
+# SET @@session.session_track_schema=ON;
+# SET @@session.session_track_system_variables='*';
+# -- Tracker : SESSION_TRACK_SYSTEM_VARIABLES
+# -- session_track_system_variables
+# -- *
+#
+# SET @@session.session_track_state_change=ON;
+# -- Tracker : SESSION_TRACK_SYSTEM_VARIABLES
+# -- session_track_state_change
+# -- ON
+#
+# USE information_schema;
+# -- Tracker : SESSION_TRACK_SCHEMA
+# -- information_schema
+#
+# -- Tracker : SESSION_TRACK_STATE_CHANGE
+# -- 1
+#
+# SET NAMES 'utf8mb4';
+# -- Tracker : SESSION_TRACK_SYSTEM_VARIABLES
+# -- character_set_client
+# -- utf8mb4
+# -- character_set_connection
+# -- utf8mb4
+# -- character_set_results
+# -- utf8mb4
+#
+# -- Tracker : SESSION_TRACK_STATE_CHANGE
+# -- 1
+#
+# SET @@session.session_track_transaction_info='CHARACTERISTICS';
+# -- Tracker : SESSION_TRACK_SYSTEM_VARIABLES
+# -- session_track_transaction_info
+# -- CHARACTERISTICS
+#
+# -- Tracker : SESSION_TRACK_STATE_CHANGE
+# -- 1
+#
+# -- Tracker : SESSION_TRACK_TRANSACTION_CHARACTERISTICS
+# --
+#
+# -- Tracker : SESSION_TRACK_TRANSACTION_STATE
+# -- ________
+#
+# SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+# -- Tracker : SESSION_TRACK_TRANSACTION_CHARACTERISTICS
+# -- SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+#
+# SET TRANSACTION READ WRITE;
+# -- Tracker : SESSION_TRACK_TRANSACTION_CHARACTERISTICS
+# -- SET TRANSACTION ISOLATION LEVEL SERIALIZABLE; SET TRANSACTION READ WRITE;
+#
+# START TRANSACTION;
+# -- Tracker : SESSION_TRACK_TRANSACTION_CHARACTERISTICS
+# -- SET TRANSACTION ISOLATION LEVEL SERIALIZABLE; START TRANSACTION READ WRITE;
+#
+# -- Tracker : SESSION_TRACK_TRANSACTION_STATE
+# -- T______
+#
+# SELECT 1;
+# 1
+# 1
+# -- Tracker : SESSION_TRACK_TRANSACTION_STATE
+# -- T_____S_
+#
+# INSERT INTO test.t1 () VALUES();
+# -- Tracker : SESSION_TRACK_TRANSACTION_STATE
+# -- T___W_S_
+#
+# INSERT INTO test.t1 () VALUES(1, RAND());
+# -- Tracker : SESSION_TRACK_TRANSACTION_STATE
+# -- T___WsS_
+#
+# COMMIT;
+# -- Tracker : SESSION_TRACK_TRANSACTION_CHARACTERISTICS
+# --
+#
+# -- Tracker : SESSION_TRACK_TRANSACTION_STATE
+# -- ________
+#
+# ok
+#
+# The following section covers Server-Side Help
+#
+# MySQL Server supports a HELP statement that returns information from the MySQL HELP Syntax.
+# Several tables in the mysql system DB contain the information needed to support this statement.
+#
+# The proper operation of this statement requires that these help tables be initialized, which is done 
+# by processing the contents of the fill_help_tables.sql script.
+#
+# If you install MySQL using a binary or source distrib on Unix, help table content intialization occurs when
+# you initialize the data dir.
+#
+# For an RPM distrib on Linux or binary distrib on Windows, content initialization occurs as part of the MySQL
+# install process.
+#
+# If you upgrade MySQL using a binary distrib, help table content is not upgraded automatically, but you can upgrade it manually.
+# Locate the fill_help_tables.sql file in the share or share/mysql dir.
+#
+# Change location into that dir and process the file with the mysql client as follows:
+#
+# 		mysql -u root mysql < fill_help_tables.sql
+#
+# You can also obtain the latest fill_help_tables.sql at any time to upgrade your help tables.
+#
+# Download the proper file for your version of MySQL from https://dev.mysql.com/doc/index-other.html
+#
+# Process it as above.
+#
+# If you are working with Git and a MySQL dev source tree, you must use a download copy of the fill_help_tables.sql, because the source
+# tree is a stub.
+#
+# NOTE: For a server that participates in replication, the help table content upgrade process involves multiple servers.
+#
+# The following part pertains to Server Response to Signals
+#
+# On Unix, signals can be sent to processes. mysqld responds to signals sent to it as follows:
+#
+# 		1) SIGTERM causes the server to shut down
+#
+# 		2) SIGHUP causes the server to reload the grant tables and to flush tables, logs, the thread cache and the host cache.
+# 			These actions are like various forms of the FLUSH statement.
+#
+# 			The server also writes a status report to the error log that has this format:
+#
+# 				Status information:
+#
+# 				Current dir: /var/mysql/data/
+# 				Running threads: 0 Stack size: 196608
+# 				Current locks:
+#
+# 				Key caches:
+# 				default
+# 				Buffer_size: 			8388600
+# 				Block_size: 				1024
+# 				Division_limit: 			 100
+# 				Age_limit: 					 300
+# 				blocks used: 				   0
+# 				not flushed: 					0
+# 				w_requests: 					0
+# 				writes: 							0
+# 				r_requests: 					0
+# 				reads: 							0
+#
+# 				handler status:
+# 				read_key: 			0
+# 				read_next: 			0
+# 				read_rnd: 			0
+# 				read_first: 		1
+# 				write: 				0
+# 				delete: 				0
+# 				update: 				0
+#
+# 				Table status:
+# 				Opened tables: 				5
+# 				Open tables: 					0
+# 				Open files: 					7
+# 				Open streams: 					0
+#
+# 				Alaram status: 
+# 				Active alarms: 		1
+# 				Max used alarms: 		2
+# 				Next alarm time: 		67
+#
+# The following section pertains to The Server Shutdown Process
+#
+# The server shutdown process takes place as follows:
+#
+# 		1. The shutdown process is initiated.
+#
+# 			This can occur initiated several ways. For example, a user with the SHUTDOWN priv can execute a mysqladmin shutdown command.
+#
+# 			mysqladmin can be used on any platform supported by MySQL. Other OS specific shutdown intiaition methods are possible, as well:
+#
+# 				The server shuts down on Unix when it receives a SIGTERM signal.
+# 				A server running as a service on Windows shuts down when the services manager tells it to.
+#
+# 		2. The server creates a shutdown thread if necessary.
+#
+# 			Depending on how shutdown was initiated, the server might create a thread to handle the shutdown process.
+# 			If shutdown was requested by a client, a shutdown thread is created. 
+#
+# 			If shutdown is the result of receiving a SIGTERM signal, the signal thread might handle shutdown itself, or it
+# 			might create a separate thread to do so.
+#
+# 			If the server tries to create a shutdown thread and cannot (for example, if memory is exhausted) - it issues a diagnostic message
+# 			that appears in the error log:
+#
+# 				Error: Can't create thread to kill server
+#
+# 		3. The server stops accepting new connections
+#
+# 			To prevent new activity from being initiated during shutdown, the server stops accepting new client connections 
+# 			by closing the handlers for the network interfaces to which it normally listens for connections:
+#
+# 				The TCP/IP port, the Unix socket file, the Windows named pipe, and shared memory on Windows.
+#
+# 		4. The server terminates current activity
+#
+# 			For each thread associated with a client connection, the server breaks the connection to the client and marks the thread as killed.
+# 			Threads die when they notice that they are marked for it.
+#
+# 			Threads for idle connections die quickly. 
+# 			Threads that currently are processing statements check their state periodically and take longer to die.
+# 			
+# 			There is more info on the KILL syntax, later on.
+#
+# 			For threads that have an open transaction, the transaction is rolled back.
+#
+# 			If a thread is updating a nontransactional table, an operation such as multiple-row
+# 			UPDATE or INSERT may leave the table partially updated because the operation can terminate before completion. 
+#
+# 			If the server is a master replication server, it treats threads associated with currently connected slaves like other
+# 			client threads.
+#
+# 			That is - each one is marked as killed and exits when it next checks its state.
+#
+# 			If the server is a slave replication server, it stops the I/O and SQL threads, if they are active, before
+# 			marking client threads as killed.
+#
+# 			The SQL thread is permitted to finish its current statement (to avoid causing replication problems), and then stops.
+#
+# 			If the SQL thread is in the middle of a transaction at this point, the server waits until the current replication 
+# 			event group (if any) has finished executing, or until the user issues a KILL_QUERY or KILL_CONNECTION statement.
+#
+# 			Since nontransactional statements cannot be rolled back, in order to guarantee crash-safe replication, only transactional
+# 			tables should be used.
+#
+# 			NOTE: To guarantee crash safety on the slave, you must run the slave with --relay-log-recovery enabled.
+#
+# 		5. The server shuts down or closes storage engines.
+#
+# 			At this stage, the server flushes the table cache and closes all open tables.
+#
+# 			Each storage engine performs any actions necessary for tables that it manages.
+#
+# 			InnoDB flushes its buffer pool to disk (unless innodb_fast_shutdown is 2), writes the
+# 			current LSN to the tablespace, and terminates its own internal threads. 
+#
+#			MyISAM flushes any pending index writes for a table. 
+#
+# 		6. The server exits.
+#
+# To provide information to management processes, the server returns one of the exit codes described in the following list.
+#
+# The phrase in paranthesis indicates the action taken by systemd in response to the code, for platforms on which systemd
+# is used to manage the server.
+#
+# 0 = successful termination (no restart done)
+# 1 = unsuccessful termination (no restart done)
+# 2 = unsuccessful termination (restart done)
+#
+# The following section pertains to The MySQL Data Directory
+#
+# Information managed by the MySQL server is stored under a dir known as the data dir.
+#
+# The following list briefly decribes the items typically found in the data dir, with cross
+# references for additional info: 			
+#
+# 		1) Data dir subdirs. Each subdir of the data dir is a DB directory and corresponds to a DB managed by the server.
+# 			All mySQL installations have certain standard DBs:
+#
+# 				a) The mysql dir corresponds to the mysql system DB, which contains information required by the MySQL server as it runs.
+# 					The DB contains data dictionary tables and system tables.
+#
+# 				b) The performance_schema dir corresponds to the Performance schema, which provides information used to inspect the
+# 					internal execution of the server at runtime.
+#
+# 				c) The sys directory corresponds to the sys schema, which provides a set of objects to help interpret Performance Schema
+# 					information more easily.
+#
+# 				d) The ndbinfo directory corresponds to the ndbinfo database that stores information specific to NDB Cluster 
+# 					(present only for installations built to include NDB Cluster)
+#
+# 				-> Other Subdirs correspond to DBs created by users and applications.
+#
+# 				NOTE: INFORMATION_SCHEMA is a standard DB, but its implementation uses no corresponding database dir.
+#
+# 		2) Log files written by the server.
+#
+# 		3) InnoDB tablespace and log files.
+#
+# 		4) Default/autogenerated SSL and RSA certificate and key files.
+#
+# 		5) The server process ID (while the server is running)
+#
+# 		6) The mysqld-auto.cnf file that stores persisted global SYS_VARs.
+#
+# Some items in the list can be relocated elsewhere by reconfiguring the server.
+#
+# In addition, the --datadir option enables the location of the data directory itself to be changed.
+# For a given MySQL installation, check the server configuration to determine whether items have been moved.
+#
+# The following section pertains to The mysql System Database
+#
+# The mysql database is the system database. It contains tables that store information required by the MySQL server as it runs.
+#
+# A broad categorization is that the mysql database contains data dictionary tables that store DB objects metadata, and system
+# tables used for other operational purposes.
+#
+# The following discussion furhet subdivies the set of system tables into smaller categories:
+#
+# Data Dictionary Tables
+#
+# Grant System Tables
+#
+# Object Information System Tables
+#
+# Log System Tables
+#
+# Server-Side Help System Tables
+#
+# Time Zone System Tables
+# 
+# Replication System Tables
+#
+# Optimizer System Tables
+#
+# Miscellaneous System Tables
+#
+# The remainder of this section enumerates the tables in each category, with cross references for additional information.
+#
+# Data dictionary tables and system tables use the InnoDB storage engine unless otherwise indicated.
+#
+# mysql system tables and data dictionary tables reside in a single InnoDB tablespace file named mysql.ibd in the MySQL data dir.
+# Previously, these tables were created in individual tablespace files in the mysql database dir.
+#
+# DATA DICTIONARY TABLES
+#
+# These tables comprise the data dictionary, which contains metadata about DB objects.
+#
+# IMPORTANT: The data dictionary is new in MysQL 8.0 - A data dictionary-enabled server entails some general operational differences compared to
+# 				 previous MySQL releases.
+#
+# 				More details covered later.
+#
+# catalogs: Catalog information.
+#
+# character_sets: Information about available character sets.
+#
+# collations: Information about collations for each character set.
+#
+# column_statistics: Histogram statistics for column values.
+#
+# column_type_elements: Information about types used by columns.
+#
+# columns: Information about columns in tables.
+#
+# dd_properties: A table that identifies data dictionary properties, such as its version.
+# 					  The server uses this to determine whether the data dictionary must be upgraded to a newer version.
+#
+# events: Information about Event Scheduler events. The server loads events listed in this table during its startup sequence,
+# 			 unless started with the --skip-grant-tables option.
+#
+# foreign_keys, foreign_key_column_usage: Information about foreign keys.
+#
+# index_column_usage: Information about columns used by indexes.
+#
+# index_partitions: information about partitions used by indexes.
+#
+# index_stats: Used to store dynamic index statitics generated when ANALYZE_TABLE is executed.
+#
+# indexes: Information about table indexes.
+#
+# innodb_ddl_log: Stores DDL logs for crash-safe DDL operations.
+#
+# parameter_type_elements: Information about stored procedure and function parameters, and about return values for stored functions.
+#
+# parameters: Information about stored procedures and functions.
+# 
+# resource_groups: information about resource groups.
+#
+# routines: Information about stored procedures and functions.
+#
+# schemata: information about schemata. In MySQL, a schema is a database, so this table provides info about DBs.
+#
+# st_spatial_reference_systems: Information about available spatial reference systems for spatial data.
+#
+# table_partition_values: Information about values used by table partitions.
+#
+# table_partitions: Information about partitions used by tables.
+#
+# table_stats: Information about dynamic table statitics generated when ANALYZE_TABLE is executed.
+#
+# tables: Information about tables in DBs.
+#
+# tablespace_files: Information about files used by tablespaces.
+#
+# tablespaces: Information about active tablespaces.
+#
+# triggers: Information about triggers
+#
+# view_routine_usage: Information about dependencies between views and stored functions used by them.
+#
+# view_table_usage: Used to track dependencies between views and their underlying tables.
+#
+# Data dictionary tables are invisible. They cannot be read with SELECT, do not appear in the output of
+# SHOW_TABLES, are not listed in the INFORMATION_SCHEMA.TABLES table, and so forth.
+#
+# However, in most cases there are corresponding INFORMATION_SCHEMA tables that can be queried.
+# Conceptually, the INFORMATION_SCHEMA provides a view through which MySQL exposes data dictionary metadata.
+#
+# For example, you cannot select from the mysql.schemata table directly:
+#
+# 		SELECT * FROM mysql.schemata;
+# 		ERROR 3554 (HY000): 	Access to data dictionary table 'mysql.schemata' is rejected.
+#
+# Instead, select that information from the corresponding INFORMATION_SCHEMA table:
+#
+# 		SELECT * FROM INFORMATION_SCHEMA.SCHEMATA\G
+# 		*************************** 1. row *******************************
+# 							CATALOG_NAME: def
+# 							SCHEMA_NAME : mysql
+# 		DEFAULT_CHARACTER_SET_NAME : utf8mb4
+# 			DEFAULT_COLLATION_NAME  : utf8mb4_0900_ai_ci
+# 							SQL_PATH    : NULL
+# 		*************************** 2. row *******************************
+# 							CATALOG_NAME: def
+# 							SCHEMA_NAME : information_schema
+# 		DEFAULT_CHARACTER_SET_NAME : utf8
+# 			DEFAULT_COLLATION_NAME 	: utf8_general_ci
+# 							SQL_PATH 	: NULL
+#
+#  
+#
+# https://dev.mysql.com/doc/refman/8.0/en/system-database.html
