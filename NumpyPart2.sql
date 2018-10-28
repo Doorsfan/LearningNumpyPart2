@@ -23192,14 +23192,445 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 		MySQL error code MY-001131 (ER_PASSWORD_ANONYMOUS_USER):
 # 		You are using MySQL as an anonymous user and anonymous users are not allowed to change PWs.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/error-log-filtering.html
+# Substituting error symbols for numbers, the rule set becomes:
+#
+# 		IF err_code == ER_ACCESS_DENIED_FOR_USER_ACCOUNT_LOCKED
+# 			OR err_code == ER_ABORTING_USER_CONNECTION THEN drop.
+# 		IF err_code == ER_PASSWORD_ANONYMOUS_USER THEN drop.
+#
+# Symbolic names can be specified as quoted strings for comparison with string fields, but in such cases
+# the names are strings that have no special meaning and log_filter_dragnet does not resolve them to
+# the corresponding numeric value.
+#
+# Also, typos may go undetected, whereas an error is thrown immediately on SET for attempts to use an unquoted
+# symbol unknown to the server.
+#
+# LOG_FILTER_DRAGNET RULE ACTIONS
+#
+# log_filter_dragnet supports these actions in filter rules:
+#
+# 		drop: Drop the current log event (do not log it)
+#
+# 		throttle: apply rate limiting to reduce log verbosity for events matching particular conditions.
+# 					 The argument indicates a rate, in the form <count> or <count>/<window_size>.
+#
+# 					The <count> value indicates the permitted number of events to log per time window.
+# 					The <window_size> value is the time window in seconds; if omitted, the default window is 60 seconds.
+#
+# 					Both values must be integer literals.
+#
+# 					This rule throttles plugin-shutdown messages to 5/60 sec:
+#
+# 						IF err_code == ER_PLUGIN_SHUTTING_DOWN_PLUGIN THEN throttle 5.
+#
+# 					This rule throttles errors and warnings to 1000/hour and information messages to 100/hour:
+#
+# 						IF prio <= INFORMATION THEN throttle 1000/3600 ELSE throttle 100/3600.
+#
+# 		set: Assign a value to a field (and cause the field to exist if it did not already).
+# 			  In subsequent rules, EXISTS tests against the field name are true, and the new value can
+# 			  be tested by comparison conditions.
+#
+# 		unset: Discard a field. In subsequent rules, EXISTS tests against hte field name are false and comparisons of the field against
+# 				 any value are false.
+#
+# 				 In the case that the condition refers to exactly one field name, the field name following unset is optional and
+# 				 unset discards the named field..
+#
+# 				 These rules are equivalent:
+#
+# 						IF myfield == 2 THEN unset myfield.
+# 						IF myfield == 2 THEN unset.
+#
+# LOG_FILTER_DRAGNET RULE FIELDS
+#
+# 		log_filter_dragnet supports core, optional and user-defined fields in rules:
+#
+# 			1) A core field is set up automatically for error events. However, its presence in the event is not guaranteed because
+# 			a core field, like any type of field, may be unset by filter rules.
+#
+# 			If so, the field will be found missing by later rules within the rule set and by components that execute after the filter (such as log writers)
+#
+# 			2) An optional field is normally absent but may be present for certain event types. When present, an optional field provides additional event 
+# 				information as appropriate and available.
+#
+# 			3) A user-defiend field is any field with a name that is not already defined as a core or optional field.
+# 				A user-defined label does not exist until created with the <set> action.
+#
+# 		As implied by the preceding desc., any given field may be absent, either because it was not present or discarded by a filtering rule.
+#
+# 		For log writers, the effect of field absence is writer specific. For example, a writer might omit the field from the log message,
+# 		indicate that the field is missing or substitute a default.
+#
+# 		When in doubt, use a filter rule to unset the field, then check what the log writer does with it.
+#
+# 		These fields are core fields:
+#
+# 			time
+#
+# 				The event timestamp
+#
+# 			msg
+#
+# 				THe event message string
+#
+# 			prio
+#
+# 				The event priority, to indicate error, warning or note/information event. This field corresponds to severity in syslog.
+#
+# 				In comparisons, each prio can be specified as a symbolic severity name or an integer literal.
+# 				Severity symbols are recognized only in comparisons with the prio field.
+#
+# 				These comparisons are equivalent:
+#
+# 					IF prio == INFORMATION THEN ...
+# 					IF prio == 3 THEN ...
+#
+# 				The prio levels are:
+#
+# 					Error events: 1, Warning events: 2, Note/information events: 3
+#
+# 				Prio values follow hte principle that higher prios have lower values, and vice versa.
+# 				Prio values begin at 1 for the most severe events (errors) and increase for events with decreasing severity.
+#
+# 				For example, to discard events with lower prio than warnings, test for prio values higher than WARNING:
+#
+# 					IF prio > WARNING THEN drop.
+#
+# 				The following shows the log_filter_dragnet rules to achieve an effect similar to each log_error_verbosity
+# 				value permitted by the log_filter_internal filter:
+#
+# 					Errors only (log_error_verbosity=1):
+#
+# 						IF prio > ERROR THEN drop.
+#
+# 					Errors and Warnings (log_error_verbosity=2):
+# 
+# 						IF prio > WARNING THEN drop.
+#
+# 					Errors, warnings and notes (log_error_verbosity=3):
+#
+# 						IF prio > INFORMATION THEN drop.
+#
+# 					This rule can actually be omitted because it drops nothing.
+#
+# err_code
+#
+# 		The numeric event error code. In comparisons, the value to test can be specified as a symbolic error name or an 
+# 		integer literal.
+#
+# 		Error symbols are recognized only in comparisons with the err_code field and user-defined roles.
+#
+# 		These comparisons are equal:
+#
+# 			IF err_code == ER_ACCESS_DENIED_ERROR THEN ...
+# 			IF err_code == 1045 THEN ...
+#
+# err_symbol
+#
+# 		The event error symbol, as a string; for example, 'ER_DUP_KEY'
+#
+# 		err_symbol values are intended more for identifying particular lines in log output than for use in filter
+# 		rule comparisons because log_filter_dragnet does not resolve comparison values specified as strings to the equivalent numeric error codes.
+#
+# SQL_state
+#
+# 		The event SQLSTATE value, as a string, for example '23000'
+#
+# subsystem
+#
+# 		The subsystem in which the event occurred. Possible values are InnoDB (the InnoDB storage engine), 
+# 		Repl (the replication subsystem), Server (otherwise)
+#
+# OPtional fields fall into the following categories:
+#
+# 		Additional information about the error, such as the error signaled by the OS or the error lable:
+#
+# 			OS_errno
+#
+# 				The OS error number
+#
+# 			OS_errmsg
+#
+# 				The OS error message
+#
+# 			label
+#
+# 				The label corresponding to the prio value, as a string.
+# 				Filter rules can change the label for log writers that support custom labels.
+#
+# 				label values are intended more for identifying parituclar lines in log output than
+# 				for use in filter rule comparisons because log_filter_dragnet does not resolve
+# 				comparison values specified as strings to the equivalent Numeric Prio.
+#
+# Identification of the client for which the event occurred:
+#
+# 		user
+# 			The client User
+#
+# 		host
+# 			The client host
+#
+# 		thread
+# 			The thread ID
+#
+# 		query_id
+# 			The query ID
+#
+# Debugging information:
+#
+# 		source_file
+#
+# 			The source file in which the event occurred. The file name should omit any leading path.
+# 			For example, to test for the sql/gis/distance.cc file, write the comparison like this:
+#
+# 				IF source_file == "distance.cc" THEN ...
+#
+# 		source_line
+#
+# 			The line within the source file at which the event occurred
+#
+# 		function
+#
+# 			The function in which the event occurred.
+#
+# 		component
+#
+# 			The component or plugin in which the event occurred.
+#
+# The following pertains to ERROR LOG MESSAGE FORMAT
+#
+# Each error log sink (writer) component has a characteristic output format it uses to write messages to its destination,
+# but other factors may influence the content of the messages:
+#
+# 			) The information available to the log writer.
+#
+# 			  If a log filter component executed prior to execution of the writer component removes a log event attribute,
+# 			  that attribute is not available for writing.
+#
+# 			) System variables that may affect log writers.
+#
+# For all log writers, the ID included in error log messages is that of the thread within mysqld responsible for writing the message.
+#
+# This indicates which part of the server produced the message, and consistent with general query log and slow query log messages, which include
+# the connection thread ID. 
+#
+# OUTPUT FORMAT FOR LOG_SINK_INTERNAL
+#
+# This log writer produces the traditional error log output. It writes messages using this format:
+#
+# 		timestamp thread_id [severity] [err_code] [subsystem] message
+#
+# The [] are literal chars in the message format, it does not indicate optional.
+#
+# The [err_code] and [subsystem] fields were added in MySQL 8.0.
+# THey will be missing from logs generated by older servers.
+#
+# Log parsers can treat these fields as parts of the message text that will present only for logs written by servers
+# recent enough to include them.
+#
+# Parsers must treat the err_code part of [err_code] indicators as a string value.
+#
+# Examples:
+#
+# 		2018-03-22T12:35:47.... 0 [Note] [MY-012487] [InnoDB] InnoDB: DDL log recovery : begin
+# 		2018-03-22T12:35:47.... 0 [Warning] [MY-010068] [Server] CA certificate /var/mysql/sslinfo/cacert.pem is self signed.
+# 		2018-03-22T12:35:47.... 4 [Note] [MY-010051] [Server] Event Scheduler: scheduler thread started with id 4
+# 		2018-03-22T12:35:47.... 0 [Note] [MY-010253] [Server] IPv6 is available.
+#
+# OUTPUT FORMAT FOR LOG_SINK_JSON
+#
+# The JSON-format log writer produces messages as JSON objects that contain key/value pairs. For example:
+#
+#  { 	"prio": 3, "err_code": 10051, "subsystem": "Server",
+# 		"source_file": "event_scheduler.cc", "function": "run",
+# 		"msg": "Event Scheduler: scheduler thread started with id 4",
+# 		"time": "2018-03-22T12:35:47....", "thread": 4,
+# 		"err_symbol": "ER_SCHEDULER_STARTED", "SQL_state": "HY000",
+# 		"label": "Note" }
+#
+# OUTPUT FORMAT FOR LOG_SINK_SYSEVENTLOG
+#
+# The system log writer produces output that conforms to the system log format used on the local platform.
+#
+# OUTPUT FORMAT FOR EARLY-STARTUP LOGGING
+#
+# The server generates some error log messages before startup options have been processed,
+# and thus before it knows error log settings such as the log_error_verbosity and log_timestamps values,
+# and which log components are to be used.
+#
+# The server handles error log messages that are generated early in the startup process as follows:
+#
+# 		) Prior to MySQL 8.0.14, the server generates messages with the default timestamp, format and verbosity level, and buffers them.
+# 	     After the startup options are processed and the error log configuration is known, the server flushes the buffered messages.
+#
+# 		  Because these early messages use the default log configuration, they may differ from what is specified by the startup options.
+# 		  Also, the early messages are not flushed to log writers other than the default.
+#
+# 		  For example, logging to the JSON writer does not include these messages because they are not in JSON format.
+#
+# 		) As of MySQL 8.0.14, the server buffer log events rather than formatted log messages.
+# 		  This enables it to retroactively apply configuration settings to those events after hte settings are known,
+# 		  with the result that flushed messages use the configured settings, not the defaults.
+#
+# 		  Also messages are flushed to all configured writers, not just the default writer.
+#
+# 		  If a fatal error occurs before log configuration is known and the server must exit, the server so they are not lost.
+#
+# 		  If no fatal error occurs but startup is excessively slow prior to processing startup options, the server
+# 		  periodically formats and flushes buffered messages using the logging defaults so as not to appear unresponsive.
+#
+# 		  Although these behaviors are similar to pre-8.0.14 in that the defaults are used, they are preferable to losing messages
+# 		  when exceptional conditions occur.
+#
+# Sytem variables That affect error log format
+#
+# The log_timestamps SYS_VAR controls the time zone of timestamps in messages written to the error log
+# (as well as to general query log and slow query log files).
+#
+# Permitted values are UTC (The default), and SYSTEM(local system time zone)
+#
+# The following section pertains to ERROR LOG FILE FLUSHING AND RENAMING
+#
+# If you flush the error log using FLUSH_ERROR_LOGS, FLUSH_LOGS or mysqladmin flush-logs, the server closes
+# and reopens any error log file to which it is writing.
+#
+# To rename an error log file, do so manually before flushing.
+# Flushing the logs then opens a new file with the original file name.
+#
+# For example, assuming a log file name of <host_name>.err - to rename the file and create a new one,
+# use the following commands:
+#
+# 		mv host_name.err host_name.err-old
+# 		mysqladmin flush-logs
+# 		mv host_name.err-old backup-directory
+#
+# On windows, use rename rather than MV.
+#
+# If the location of an error log file is not writable by the server, the log-flushing ops fail to 
+# create a new log file.
+#
+# For example, on Linux, the server might write hte error log to the /var/log/mysqld.log file, where the
+# /var/log directory is owned by root and is not writable by mysqld.
+#
+# If the server is not writing to a named error log file, no error log file renaming occurs when the error log is flushed.
+#
+# The following Chapter pertains to THE GENERAL QUERY LOG
+#
+# The general query log is a general record of what mysqld is doing.
+# The server writes information to this log when clients connect or disconnect, and it logs each SQL
+# statement received from clients.
+#
+# The general query log can be very useful when you suspect an error in a client and want to know exactly what
+# the client sent to mysqld.
+#
+# Each line that shows when a client connects also includes using <connection_type> to indicate the protocol used
+# to establish the connection.
+#
+# <connection_type> is one of:
+#
+#		 TCP/IP (TCP/IP connection established without SSL)
+# 		 SSL/TLS (TCP/IP established with SSL),
+# 		 Socket (Unix socket file connection)
+# 		 Named pipe (Windows named pipe)
+# 		 Shared memory (Windows shared memory connection)
+#
+# mysqld writes statements to the query log in the order that it receives them, which might differ from the order
+# in which they are executed.
+#
+# This logging order is in contrast with that of the binary log, for which statements are written after they are
+# executed but before any locks are released.
+#
+# In addition, the query log may contain statements that only select data while such statements are never written to the binary log..
+#
+# When using statement-based binary logging on a replication master server, statements received by its slaves are written to the query
+# log of each slave.
+#
+# Statements are written to the query log of the master service if a client reads events with the mysqlbinlog utility and passes them to
+# the server.
+#
+# However, when using row-based binary logging, updates are sent as row changes rather than SQL statements, and thus these statements
+# are never written to the query log when binlog_format is ROW.
+#
+# A given update also might not be written to teh query log when this variable is set to MIXED, depending on the statement used.
+#
+# By default, the general query log is disabled. To specify the initial general query log state state explicitly, use --general_log[={0|1}].
+# With no argument or an argument of 1, --general_log enables the log.
+#
+# With an argument of 0, this option disables the log.
+#
+# To specify a log file name, use --general_log_file=<file name>.
+# To specify the log destination, use the log_output SYS_VAR.
+#
+# If you specify no name for the general query log file, the default name is <host_name>.log
+# The server creates the file in the data dir unless an absolute path name is given to specify a different dir.
+#
+# To disable or enable the general query log or change the log file name at runtime, use the global general_log and
+# general_log_file SYS_VAR.
+#
+# Set general_log to 0/OFF to disable the log or to 1/ON to enable.
+#
+# Set general_log_filter to specify name of the log file.
+#
+# If a log file is already opened, it's closed and a new one is opened.
+#
+# When the general query log is enabled, the server writes output to any destinations specified by the log_output SYS_VAR.
+# If you enable the log, the server opens the log file and writes startup messages to it.
+#
+# However, further logging of queries to the file does not occur unless the FILE log designation is selected.
+# If that destination is NONE, the server writes no queries even if it is enabled.
+#
+# Setting the log file name has no effect on logging if the log destination value does not contain FILE.
+#
+# Server restarts and log flushing do not cause a new general query log file to be generated (although flushing closes and reopens it).
+# To rename the file and create a new one, use the following commands:
+#
+# 		mv <host_name>.log <host_name>-old.log
+# 		mysqladmin flush-logs
+# 		mv <host_name>-old.log <backup-dir>
+#
+# On Windows, use rename instead of mv.
+#
+# You can also rename the general query log file at runtime by disabling the log:
+#
+# 		SET GLOBAL general_log = 'OFF';
+#
+# With the log disabled, rename the log file externally -- for example, by cmd. THen enable it again:
+#
+# 		SET GLOBAL general_log = 'ON';
+#
+# This method works on any platform and does not require a server restart.
+#
+# To disable or enable general query logging for the current session, set the session sql_log_off variable to ON or OFF.
+# (This assumes that the general query log itself is enabled)
+#
+# PWs in statements written to the general query log are rewritten by the server not to occur literally in plain text.
+# Password rewriting can be suppressed for the general query log by starting the server with --log-raw option.
+#
+# THis option may be useful for diagnostics purposes, to see the exact text of statements as received by the
+# server, but for security reasons - do not use this kind of mode in production mode.
+#
+# An implication of PW rewriting is that statements that cannot be parsed (due, for example, to syntax errors)
+# are not written to the general query log because they cannot be known to be PW free.
+#
+# If you wish to log all, use --log-raw 
+#
+# PW rewriting occurs only when plain text PWs are expected.
+# For statements with syntax that expect a PW hash value, no rewriting occurs.
+#
+# If plain text PW is supplied errorneously for such syntax, teh PW is logged as given - without rewriting.
+#
+# The log_timestamps SYS_VAR controls the time zone of timestamps in messages written to the general query log file
+# (as well as to the slow query log file and the error log)
+#
+# It does not affect the time zone of general query log and slow query log messages written to log tables, but rows retrieved
+# from those tables can be converted from the local system time zone ot any desired time zone with CONVERT_TZ() or by setting the
+# session time_zone SYS_VAR.
 #
 # 
+# The following pertains to THE BINARY LOG
 #
-#
-#
-
-# https://dev.mysql.com/doc/refman/8.0/en/error-log-syslog.html
+# https://dev.mysql.com/doc/refman/8.0/en/binary-log.html
 #
 #
 # 
