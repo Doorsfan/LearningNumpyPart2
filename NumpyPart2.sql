@@ -22264,6 +22264,942 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 			DEFAULT_COLLATION_NAME 	: utf8_general_ci
 # 							SQL_PATH 	: NULL
 #
-#  
+# There is no INFORMATION_SCHEMA table that corresponds exactly to mysql.indexes, but INFORMATION_SCHEMA.STATISTICS contains
+# much of the same information.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/system-database.html
+# As of yet, there are no INFORMATION_SCHEMA tables that correspond exactly to mysql.foreign_keys,
+# mysql.foreign_key_column_usage.
+#
+# The standard SQL way to obtain foreign key information is by using the :
+#
+# INFORMATION_SCHEMA, REFERENTIAL_CONSTRAINTS and KEY_COLUMN_USAGE tables; 
+#
+# These tables are now implemented as views on the foreign_keys, foreign_key_column_usage,
+# and other data dictionary tables.
+#
+# Some system tables from before MySQL 8.0 have been replaced by data dictionary tables and are 
+# no longer present in the mysql system database:
+#
+# 		The events data dictionary table supersedes the event table from before MySQL 8.0
+#
+# 		The parameters and routines data dictionary tables together supersede the proc table from before MySQL 8.0
+#
+# GRANT SYSTEM TABLES
+#
+# These system tables contain grant information about user accounts and the privileges held by them.
+# For additional information about the structure, contents and purpose - it is covered later.
+#
+# As of MySQL 8.0, the grant tables are InnoDB (transactional) tables.
+# Previously, these were MyISAM (nontransactional) tables.
+#
+# The change of grant-table storage engine underlies an accompanying change in MySQL 8.0 to the
+# behavior of account-management statements such as CREATE_USER and GRANT.
+#
+# Previously, an account-management statement that named multiple users could succeed for some 
+# users and fail for others.
+#
+# The statements are now transactional and either succeed for all named users or roll back and 
+# have no effect if any error occurs.
+#
+# NOTE: If MySQL is upgraded from an older version but the grant tables have not been upgraded from
+# 		  MyISAM to InnoDB, the server considers them read only and account-management statements
+# 	     produce an error.
+#
+# user: User accounts, global privs, and other non-privilege columns.
+#
+# global_grants: Assignments of dynamic global privileges to users
+#
+# db: Database-level privileges
+#
+# tables_priv: Table-level privileges
+#
+# columns_priv: Column-level privileges
+#
+# procs_priv: Stored procedure and function privileges
+#
+# proxies_priv: Proxy-user privileges
+#
+# default_roles: This table lists default roles to be activated after a user connects and authenticates, or executes SET_ROLE_DEFAULT
+#
+# role_edges: This table lists edges for role subgraphs
+#
+# 				  A given user table row might refer to a user account or a role.
+#
+# 				  The server can distinguish whether a row represents a user account, a role or both by
+# 				  consulting the role_edges table for information about relations between authentication IDs.
+#
+# password_history: Information about password changes
+#
+# OBJECT INFORMATION SYSTEM TABLES
+#
+# These system tables contain information about stored programs, components, user-defined functions, and server-side plugins:
+#
+# 		component: The registry for server components. Any components listed in this table are installed by a loader service
+# 					  during the server startup sequence.
+#
+# 		func: 	  Information about user-defined functions (UDFs).
+# 					  The server loads UDFs listed in this table during its startup sequence, unless
+# 					  started with the --skip-grant-tables option.
+#
+# 		plugin: 	  Information about server-side plugins.
+# 					  The server loads plugins listed in this table during its startup sequence,
+# 					  unless started with the --skip-grant-tables option.
+#
+# LOG SYSTEM TABLES
+#
+# The server uses these system tables for logging:
+#
+# 		general_log: The general query log table.
+#
+# 		slow_log: The slow query log table.
+#
+# Log tables use the CSV storage engine.
+#
+# SERVER-SIDE HELP SYSTEM TABLES
+#
+# These system tables contain server-side help information:
+#
+# 		help_category: Information about help categories.
+#
+# 		help_keyword: Keywords associated with help topics.
+#
+# 		help_relation: Mappings between help keywords and topics.
+#
+# 		help_topic: Help topic contents.
+#
+# TIME ZONE SYSTEM TABLES
+#
+# These system tables contain time zone information:
+#
+# 		time_zone: Time zone IDs and whether they use leap seconds.
+#
+# 		time_zone_leap_second: When leap seconds occur.
+#
+# 		time_zone_name: Mappings between time zone IDs and names.
+#
+# 		time_zone_transition,
+# 		time_zone_transition_type: Time zone descriptions.
+#
+# REPLICATION SYSTEM TABLES
+#
+# The server uses these system tables to support replication:
+#
+# 		gtid_executed: Table for storing GTID values.
+#
+# 		ndb_binlog_index: Binary log information for NDB Cluster replication.
+#
+# 								The ndb_binlog_index table uses the MyISAM storage engine.
+# 								It is created only if the server is built with NDB.
+#
+# 		slave_master_info, : Used to store replication information on slave servers.
+# 		slave_relay_log_info,
+# 		slave_worker_info 
+#  
+# OPTIMIZER SYSTEM TABLES
+#
+# These system tables are for use by the optimizer:
+#
+# 		innodb_index_stats, innodb_table_stats: Used for InnoDB persistent optimizer statistics.
+#
+# 		server_cost, engine_cost: The optimizer cost model uses tables that contain cost estimate 
+# 										  information about operations that occur during query execution.
+#
+# 										  server_cost contains optimizer cost estimates for general server operations.
+#
+# 										  engine_cost contains estimates for operations specific to particular storage engines.
+#
+# MISC SYSTEM TABLES
+#
+# 		Other system tables do not fit the preceding categories:
+#
+# 			audit_log_filter, audit_log_user: If MySQL Enterprise Audit is installed, these tables provide persistent storage
+# 														 of audit log filter defs and user accounts.
+#
+# 			firewall_users, firewall_whitelist: If MySQL Enterprise Firewall is installed, these tables provide persistent storage for info
+# 															used by the firewall.
+#
+# 			servers: Used by the FEDERATED storage engine.
+#
+# 			innodb_dynamic_metadata: Used by the InnoDB storage engine to store fast-changing table metadata such as auto-increment counter
+# 											 value and index tree corruption flags.
+#
+# 											 Replaces the data dictionary buffer table that resided in the InnoDB system tablespace.
+#
+# The following section pertains to MySQL Server Logs
+#
+# MySQL Server has several logs that can help you find out what activity is taking place.
+#
+# Log Type 					Info Written to Log
+#
+# Error Log 					Problems encountered starting, running or stopping mysqld
+#
+# General query log 			Established client connections and statements received from clients
+#
+# Binary log 					Statements that change data (also used for replication)
+#
+# Relay log 					Data changes received from a replication master server
+#
+# Slow query log 				Queries that took more than long_query_time seconds to execute
+#
+# DDL log (metadata log) 	Metadata operations performed by DDL statements
+#
+# By default, no logs are enabled, except the error log on Windows.
+# (The DDL log is always created when required, and has no user-configurable options)
+#
+# The following log-specific sections provide information about the server options that enable logging.
+#
+# By default, the server writes files for all enabled logs in the data directory.
+#
+# You can force the server to close and reopen the log files (or in some cases switch to a new log file)
+# by flushing the logs.
+#
+# Log flushing occurs when you issue a FLUSH_LOGS statement; execute mysqladmin with a flush-logs or
+# or refresh argument; or execute mysqldump with a --flush-logs or --master-data option.
+#
+# In addition, the binary log is flushed when its size reaches the value of the max_binlog_size SYS_VAR.
+#
+# You can control the general query and slow query logs during runtime.
+# You can enable or disable logging, or change the log file name.
+#
+# You can tell the server to write general query and slow query entries to log tables, log files or both.
+#
+# The relay log is used only on slave replication servers, to hold data changes from the master server that must
+# also be made on the slave.
+#
+# Covered later.
+#
+# THE FOLLOWING PERTAINS TO SELECTING GENERAL QUERY LOG AND SLOW QUERY LOG OUTPUT DESTINATIONS
+#
+# MySQL Server provides flexible control over the destination of output written to the general query log and the slow query log, if those logs are enabled.
+#
+# Possible destinations for log entries are log files or the general_log and slow_log tables in the mysql system DB.
+# File output, table output, or both can be selected.
+#
+# LOG CONTROL AT SERVER STARTUP
+#
+# The log_output system variable specifies the destination for log output. Setting this variable does not in itself enable the logs;
+# they must be enabled separately.
+#
+# 		If log_output is not specified at startup, the default logging destination is FILE.
+#
+# 		If log_output is specified at startup, its value is a list one or more comma-separated words chosen from TABLE (log to tables),
+# 		FILE (log to files), or NONE (do not log tables or files).
+#
+# 		NONE, if part of the list, has the highest precidence.
+#
+# The general_log SYS_VAR controls logging to the general query log for the selected log destinations.
+# If specified at server startup, general_log takes an optional argument of 1 or 0 to enable or disable the log.
+#
+# To specify a file name other than the default for file logging, set the general_log_file variable.
+#
+# Similarly, the slow_query_log variable controls logging to the slow query log for the selected destinations
+# and setting slow_query_log_file specifies a file name for file logging.
+#
+# If either log is enabled, the server opens the corresponding log file and writes startup messages to it.
+#
+# However, further logging of queries to the file does not occur unless the FILE log destination is selected. 
+#
+# Examples:
+#
+# 		To write general query log entries to the log table and the log file, use --log_output=TABLE,FILE to select both
+# 		log destinations and --general_log to enable the general query log.
+#
+# 		To write general and slow query log entries only to the log tables, use --log_output=TABLE to select tables as the log
+# 		destinations and --general_log and --slow_query_log to enable both logs.
+#
+# 		To write slow query log entries only to the log file, use --log_output=FILE to select files as the log destination and
+# 		--slow_query_log to enable the slow query log. In this case, because the default log destination is FILE, you could omit the log_output setting.
+#
+# LOG CONTROL AT RUNTIME
+#
+# The system variables associated with log tables and files enable runtime control over logging:
+#
+# 		The log_output variable indicates the current logging destination. It can be modified at runtime to change
+# 		the destination.
+#
+# 		The general_log and slow_query_log variables indicate whether the general query log and slow query log are enabled
+# 		(ON) or disabled (OFF). You can set these variables at runtime to control whether the logs are enabled.
+#
+# 		The general_log_file and slow_query_log_file variables indicate the names of the general query log and slow query log files.
+# 		You can set these variables at server startup or at runtime to change the names of the log files.
+#
+# 		To disable or enable general query logging for the current session, set the session sql_log_off variable to ON or OFF.
+# 		(Assuming the general query log itself is enabled)
+#
+# LOG TABLE BENEFITS AND CHARACTERISTICS
+#
+# The use of tables for log output offers the following benefits:
+#
+# 		1) Log entries have a standard format. To display the current structure of the log tables, use these statements:
+#
+# 				SHOW CREATE TABLE mysql.general_log;
+# 				SHOW CREATE TABLE mysql.slow_log;
+#
+# 		2) Log contents are accessible through SQL statements. This enables the use of queries that selects only those log entries
+# 			that satisfy specific criteria.
+#
+# 			For example, to select log contents associated with a particular client (which can be useful for identifying problematic
+# 			queries from that client), it is easier to do this using a log table than a log file.
+#
+# 		3) Logs are accessible remotely through any client that can connect to the server and issue queries (if the client has the appropiate
+# 			log table privileges). It is not necessary to log in to the server host and directly access the file system.
+#
+# The log table implementation has the following characteristics:
+#
+# 		1) In general, the primary purpose of log tables is to provide an interface for users to observe the runtime execution of the server,
+# 			not to interfere with its runtime execution.
+#
+# 		2) CREATE_TABLE, ALTER_TABLE and DROP_TABLE are valid operations on a log table. 
+# 			For ALTER_TABLE and DROP_TABLE, the log table cannot be in use and must be disabled.
+#
+# 		3) By default, the log tables use the CSV storage engine that writes data in comma-separated values format.
+#
+# 			For users who have access to the .CSV files that contain log table data, the files are easy to import into
+# 			other programs such as spreadsheets that can process CSV input.
+#
+# 			The log tables can be altered to use the MyISAM storage engine. You cannot use ALTER_TABLE to alter a log table
+# 			that is in use.
+#
+# 			The log must be disabled first. No engines other than CSV or MyISAM are legal for the log tables.
+#
+# 				Log Tables and "Too many open files" Errors: If you select TABLE a log destination and the log tables use the CSV storage engine,
+# 																			you may find that disabling and enabling the general query log or slow query log repeatedly at runtime
+# 																			can open a number of open file descriptors for the .CSV file, possibly resulting in a "Too many open files" error.
+#
+# 																			To work around this issue, execute FLUSH_TABLES or ensure that the value of open_files_limit is greater than
+# 																			the value of table_open_cache_instances.
+#
+# 		4) To disable logging so that you can alter (or drop) a log table, you can use the following strategy.
+# 			The example uses the general query log; the procedure for the slow query log is similar but uses the slow_log table
+# 			and slow_query_log SYS_VAR.
+#
+# 				SET @old_log_state = @@GLOBAL.general_log;
+# 				SET GLOBAL general_log = 'OFF';
+# 				ALTER TABLE mysql.general_log ENGINE = MyISAM;
+# 				SET GLOBAL general_log = @old_log_state;
+#
+# 		5) TRUNCATE_TABLE is a valid operation on a log table. It can be used to expire log entries.
+#
+# 		6) RENAME_TABLE is a valid operation on a log table. You can automatically rename a log table (to perform log rotation, for example)
+# 			using the following strategy:
+#
+# 			USE mysql;
+# 			DROP TABLE IF EXISTS general_log2;
+# 			CREATE TABLE general_log2 LIKE general_log;
+# 			RENAME TABLE general_log TO general_log_backup, general_log2 TO general_log;
+#
+# 		7) CHECK_TABLE is a valid operation on a log table.
+#
+# 		8) LOCK_TABLES cannot be used on a log table.
+#
+# 		9) INSERT, DELETE and UPDATE cannot be used on a log table. These operations are permitted only internally to the server itself.
+#
+# 		10) FLUSH_TABLES_WITH_READ/LOCK and the state of the read_only SYS_VAR have no effect on log tables.
+# 			 The server can always write to the log tables.
+#
+# 		11) Entries written to the log tables are not written to the binary log and thus are not replicated to slave servers.
+#
+# 		12) To flush the log tables or log files, use FLUSH_TABLES or FLUSH_LOGS, respectively.
+#
+# 		13) Partitioning of log tables is not permitted.
+#
+# 		14) A mysqldump dump includes statements to recreate those tables so that they are not missing after reloading the dump file. Log table contents are not dumped.
+#
+# The following section pertains to The Error Log:
+#
+# This section discusses how to configure the MySQL server for logging of diagnostic messages to the error log.
+# For information about selecting the error message character set or language - it is covered later.
+#
+# The error log contains a record of mysqld startup and shutdown times.
+#
+# It also contains diagnostic messages such as errors, warnings and notes that occur during
+# server startup and shutdown, and while the server is running. 
+#
+# For example, if mysqld notices that a table needs to be automatically checked or repaired, it writes
+# a message to the error log.
+#
+# On some OS's the error log contains a stack trace if mysqld exits abnormally.
+#
+# The trace can be used to determine where mysqld exited.
+#
+# If used to start mysqld, mysqld_safe may write messages to the error log.
+#
+# For example, when mysqld_safe notices abnormal mysqld exits, it restarts mysqld
+# and writes a mysqld restarted message to the error log.
+#
+# The following sections are configurations of error logging.
+#
+# The following section covers Error Log Component Configuration:
+#
+# In MySQL 8.0, error logging uses the MySQL component architechture since before.
+#
+# The error log subsystem consists of components that perform log event filter and writing,
+# as well as a system variable that configures which components to enable to achieve the desired logging result.
+#
+# This section is for selecting components for error logging.
+# For instructions specific to the system log and JSON log writers - it is covered later.
+#
+# Component-based error logging offers these features:
+#
+# 		Log events can be filtered by filter components to affect the information available for writing.
+#
+# 		Log events are output by sink (writer) components. Multiple sink components can be enabled, to write error log output to multiple destinations.
+#
+# 		Built-in filter and writer components combine to implement the default error logging format.
+#
+# 		A loadable writer enables logging to the system log.
+#
+# 		A loadable writer enables logging in JSON format.
+#
+# 		System variables control which log components to enable and the rules for filtering log events.
+#
+# The log_error_services SYS_VAR controls which log components to enable for error logging.
+# The variable may contain a list with 0,1 or many elements.
+#
+# In the latter case, elements may be delimieted by ; or , (>= MySQL 8.0.12), optionally followed by a space.
+#
+# A given setting cannot use both semicolon and comma separators.
+#
+# Component order is significant because the server executes components in the order listed.
+#
+# By default, log_error_services has this  value:
+#
+# 		SELECT @@GLOBAL.log_error_services;
+# 		+---------------------------------------+
+# 		| @@GLOBAL.log_error_services 	  		 |
+# 		+---------------------------------------+
+# 		| log_filter_internal; log_sink_internal|
+# 		+---------------------------------------+
+#
+# That value indicates that log events first pass through the built-in filter component, log_filter_internal,
+# then through the built-in log writer component, log_sink_internal.
+#
+# A filter modifies log events seen by components named later in the log_error_services value.
+# A sink is a destination for log events. 
+#
+# Typically, a sink processes log events into log messages that have a particular format and writes these
+# messages to its associated output, such as file or the system log.
+#
+# NOTE:
+#
+# 		If log_error_services is assigned a value that contains no writer components, no log output is written from that point.
+#
+# 		The final component in the log_error_services value should be a writer. If the final component is a filter, it has no effect
+# 		because the filtered events are not sent to any writer.
+#
+# The combination of log_filter_internal and log_sink_internal implements the default error log filtering and output behavior.
+# The action of these components is affected by other server options and system variables:
+#
+# 		1) The output destination is determined by the --log-error option (and, on Windows --pid-file and --console).
+# 			These determine whether to write error messages to the console or a file and - if to a file - the error log file name.
+#
+# 		2) The log_error_verbosity SYS_VAR affects which types of log events log_filter_internal permits or suppresses.
+#
+# To change the set of log components used for error logging, load components as necessary and modify the log_error_services value.
+#
+# Adding or removing log components is subject to these constraints:
+#
+# 		3) To enable a log component, first load it using INSTALL_COMPONENT (unless it is built in or already loaded), then list the component in the
+# 			log_error_service value.
+#
+# 			For a component to be permitted in the log_error_services value - it must be known.
+#
+# 		 	A component is known by default if it is built in or if it is loadable and has been loaded
+# 			using INSTALL_COMPONENT.
+#
+# 			Attempts to name an unknown component at server startup cause log_error_services to be set to its default value.
+# 			Attempts to name an unknown component at runtime produces an error and the log_error_services value remains unchanged.
+#
+# 		4) To disable a log component, remove it from the log_error_services value. Then, if the component is loadable and you also
+# 			want to unload it, use UNINSTALL COMPONENT.
+#
+# 			Attempts to use UNINSTALL_COMPONENT to unload a loadable component that is still named in the log_error_services value produces an error.
+#
+# For example, to use the system log writer (log_sink_syseventlog) instead of the default writer (log_sink_internal) - first load the writer component,,
+# then modify the log_error_services values:
+#
+# 		INSTALL COMPONENT 'file://component_log_sink_syseventlog';
+# 		SET GLOBAL log_error_services = 'log_filter_internal; log_sink_syseventlog';
+#
+# NOTE: 
+#
+# 		The URN to use for loading a log component with INSTALL_COMPONENT is the component name prefixed with file://component_
+#
+# 		For example, for the log_sink_syseventlog component, the corresponding URN is file://component_log_sink_syseventlog
+#
+# It is possible to configure multiple log writers to send output to multiple destinations.
+#
+# To enable the sys log writer in addition to (rather than instead of) the default writer - set the log_error_services as:
+#
+# 		SET GLOBAL log_error_services = 'log_filter_internal; log_sink_internal; log_sink_syseventlog';
+#
+# To revert to using only the default writer and unload the system log writer, execute these statements:
+#
+# 		SET GLOBAL log_error_services = 'log_filter_internal; log_sink_internal;
+# 		UNINSTALL COMPONENT 'file://component_log_sink_syseventlog';
+#
+# To configure a log component to be enabled at each server startup, use this procedure:
+#
+# 		1) If the component is loadable, load it using INSTALL_COMPONENT. Loading the component registers it in the mysql.component
+# 			system table that the server loads it automatically for subsequent startups.
+#
+# 		2) Set the log_error_services value at startup to include the component name.
+#
+# 			Set the value either in the server my.cnf file, or use SET_PERSIST - which sets the value for for the running MySQL instance
+# 			and also saves the value to be used for subsequent server restarts.
+#
+# 			A value set in my.cnf takes effect at the next restart. A value set using SET_PERSIST takes effect immediately and for subsequent restarts.
+#
+# Suppose that you want to configure, for every server startup, use of the JSON log writer (log_sink_json) in addition to the built-in log filter and
+# writer (log_filter_internal, log_sink_internal).
+#
+# First load the JSON Writer if it is not loaded:
+#
+# INSTALL COMPONENT 'file://component_log_sink_json';
+#
+# Then set log_error_services to take effect at server startup. You can set it in my.cnf:
+#
+# [mysqld]
+# log_error_services='log_filter_internal; log_sink_internal; log_sink_json'
+#
+# Or you can set it using SET_PERSIST:
+#
+# SET PERSIST log_error_services = 'log_filter_internal; log_sink_internal; log_sink_json';
+#
+# The order of components named in log_error_services is significant, particularly with respect to the 
+# relative order of filters and writers. Consider this log_error_services value:
+#
+# log_filter_internal; log_sink_1; log_sink_2
+#
+# In this case, log events pass to the built-in filter, then to the first writer, then to the second writer.
+# Both writers receive filtered log events.
+#
+# Compare that to this log_error_services value:
+#
+# 		log_sink_1; log_filter_internal; log_sink_2
+#
+# In this case, the only is only applied to the output before being piped to the second writer.
+# i.e, sink_1 is unfiltered, sink_2 is filtered.
+#
+# The following section pertains to DEFAULT ERROR LOG DESTINATION CONFIGURATION
+#
+# This section discusses which server options configure the default error log destination, which can be the console 
+# or a named file.
+#
+# It also indicates which log writer components base their own output destination on the default destination.
+#
+# In this discussion, "console" means stderr, the standard error output.
+#
+# This is your terminal or console window unless the standard error output has been redirected.
+#
+# The server interprets options that determine the default error log destination somewhat differently for Windows and Unix systems.
+# Be sure to configure the destination using the information appropiate to your OS.
+#
+# After the server interprets the default error log destination options, it sets the log_error SYS_VAR to indicate the default destination,
+# which affects where several log writer components writer error messages.
+#
+# The following section pertains to Default Error Log Destination on Windows
+#
+# On Windows, mysqld uses the --log-error, --pid-file and --console options to determine whether the default error log destination
+# is the console or a file and if a file , the file name:
+#
+# 		If --console is given, the default destination is the console (--console takes precedence over --log-error if both are given, and the following
+# 																							items regarding --log-error do not apply)
+#
+# 		If --log-error is not given, or is given without naming a file, the default destination is a file named <host_name.err> in the data directory,
+# 		unless the --pid-file option is specified. In that case, the file name is the PID file base name with a suffix of .err in the data dir.
+#
+# 		If --log-error is given to name a file, the default destination is that file (with an .err suffix added if the name has no suffix), located
+# 		under the data directory unless an absolute path name is given to specify a different location.
+#
+# If the default error log destination is the console, the server sets the log_error SYS_VAR to stderr.
+# Otherwise, the default destination is a file and the server sets log_error to the file name.
+#
+# The following pertains to Default Error Log Destination on Unix and Unix-Like Systems
+#
+# On Unix and Unix-like systems, mysqld uses the --log-error option to determine whether the default error log destination
+# is the console or a file - and, if a file - the file name
+#
+# 		If --log-error is not given, the default destination is the console.
+#
+# 		If --log-error is given without naming a file, the default destination is a file named <host_name.err> in the data dir.
+#
+# 		If --log-error is given to name a file, the default destination is that file (with an .err suffix added if the name has no suffix),
+# 		located under the data dir unless an absolute path name is given to specify a different location.
+#
+# 		If --log-error is given an option file in a [mysqld], [server], or [mysqld_safe] section, mysqld_safe finds and uses the option, and passes it to mysqld.
+#
+# 			NOTE:
+#
+# 				It is common for Yum or APT package installations to configure an error log file location under /var/log with an option like log-error=/var/log/mysqld.log
+# 				in a server configuration file.
+#
+# 				Removing the file name from the option causes the <host_name.err> file in the data directory to be used.
+#
+# If the default error log destination is the console, the server sets the log_error SYS_VAR to stderr. Otherwise, the default destination is a file and
+# the server sets log_error to the file name.
+#
+# HOW THE DEFAULT ERROR LOG DESTINATION AFFECTS LOG WRITERS
+#
+# After the server interprets the error log destination configuration options, it sets the log_error SYS_VAR to indicate the
+# default error log destination.
+#
+# Log writer components may base their own output destination on the log_error value, or determine their destination independently of log_error.
+#
+# If log_error is stderr, the default error log destination is the console, and log writers that base their output destination also write to the
+# console:
+#
+# 		log_sink_internal, log_sink_json, log_sink_test: These writers write to the console.
+#
+# 																		 This is true even for writers such as log_sink_json that can be enabled multiple times; all instances write to the console.
+#
+# 		log_sink_syseventlog: This writer writes to the system log, regardless of the log_error value.
+#
+# If log_error is not stderr, the default error log destination is a file and log_error indicates the file name.
+#
+# Log writers that base their output destination on the default destination base output file naming on that file name.
+#
+# (A writer might use exactly that name, or it might use some variant thereof). Suppose that the log_error value <file_name>.
+# Then log writers use the name like this:
+#
+# 		log_sink_internal, log_sink_test: These writers write to <file_name>
+#
+# 		log_sink_json: Successive instances of this writer named in the log_error_services value 	write to files named <file_name> plus a numbered .<NN>.json suffix:
+#			
+# 			<file_name>.00.json, <file_name>.01.json and so forth
+#
+# 		log_sink_syseventlog: This writer writes to the system log, regardless of the log_error value.
+#
+# The following section pertains to the Error Logging to the System Log
+#
+# It is possible to have mysqld write the error log to the system log (the Event Log on Windows, and syslog on Unix and Unix-like systems)
+#
+# This section describes how to configure error logging using the built-in filter, log_filter_internal, and the system log writer,
+# log_sink_syseventlog - to take effect immediately and for subsequent server startups.
+#
+# To enable the system log writer, first load the writer component, then modify the log_error_services value:
+#
+# 		INSTALL COMPONENT 'file://component_log_sink_syseventlog';
+# 		SET GLOBAL log_error_services = 'log_filter_internal; log_sink_syseventlog';
+#
+# To set log_error_services to take effect at server startup - use earlier sectioning desc.
+#
+# Those instructions apply to other error-logging SYS_VARs as well.
+#
+# NOTE:
+#
+# 		For MySQL 8.0 configuration, you must enable error logging to the system log explicitly.
+#
+# 		This differs from 5.7 MySQL and earlier, for which error logging to the sys log is enabled by default on Windows,
+# 		and on all platforms requires no component loading.
+#
+# 		Error logging to the system log may require additional SYS_CONFIG.
+#
+# On Windows, error messages written to the Event Log within the Application log have these characteristics:
+#
+# 		Entries marked as Error, Warning, and Note are written to the Event Log, but not messages such as information statements from
+# 		individual storage engines.
+#
+# 		Event Log entries have a source of MySQL (or MySQL-<tag> if syseventlog.tag is defined as <tag>)
+#
+# On Unix and Unix-like systems, logging to the system log uses syslog.
+# The following SYS_VARs affect syslog messages:
+#
+# 		syseventlog.facility - The default facility for syslog messages is daemon. Set this variable to specify a different facility.
+#
+# 		syseventlog.include_pid - Whether to include the server process ID in each line of syslog output.
+#
+# 		syseventlog.tag - This variable defines a tag to add to the server identifier (mysqld) in syslog messages.
+# 								If defined, the tag is appended to the identifier with a leading hyphen.
+#
+# 			NOTE: Prior to MySQL 8.0.13, use the log_syslog_facility, log_syslog_include_pid and log_syslog_tag SYS_VAR rather than
+# 					the syseventlog.<xxx> variables.
+#
+# MySQL uses the custom label "System" for important system messages about non-error situations, such as startup, shutdown and some significant
+# changes to settings.
+#
+# In logs that do not support custom labels, including the Event Log on Windows, and syslog on Unix and Unix-like systems, system messages
+# are assigned the label used for the information level of severity.
+#
+# However, these messages are printed to the log even if the MySQL log_error_verbosity setting would normally exclude
+# messages at the information level.
+#
+# When a log writer must fall back to a label of "Information" instead of "System" in this way, and the log event is further
+# processed outside of the MySQL server (for example, filtered or forwarded by a syslog configuration), these events may
+# by default be processed by the secondary application as being of "Information" severity rather than "System" severity.
+#
+# The following section pertains to Error Logging in JSON Format:
+#
+# This section describes how to configure error logging using the built-in filter, log_filter_internal, and the JSON writer, log_sink_json to take
+# effect immediately and  for subsequent server startups.
+#
+# To enable the JSON writer, first load the writer component, then modify the log_error_services value:
+#
+# 		INSTALL COMPONENT 'file://component_log_sink_json';
+# 		SET GLOBAL log_error_services = 'log_filter_internal; log_sink_json';
+#
+# It is permitted to name log_sink_json multiple times in the log_error_services value.
+#
+# For example, to write unfiltered events with one instance and filtered events with another instance,
+# you could set log_error_services like this:  		
+#
+# 		SET GLOBAL log_error_services = 'log_sink_json; log_filter_internal; log_sink_json';
+#
+# The JSON log writer determines its output destination based on the default error log destination, which is given by
+# the log_error SYS_VAR.
+#
+# If log_error names a file, the JSON writer bases output file naming on that file name, plus a numbered .<NN>.json suffix,
+# with <NN> starting at 00.
+#
+# For example, if log_error is <file_name> - successive instances of log_sink_json named in the log_error_services value 
+# write to <file_name>.00.json, <file_name>.01.json and so forth.
+#
+# If log_error is stderr, the JSON writer writes to the console.
+#
+# If log_json_writer is named multiple times in the log_error_services value, they all write
+# to the console which is likely not useful.
+#
+# The following section pertains to Error Log Filtering:
+#
+# Error log configuration normally includes one log filter component and one or more log writer component.
+# For error log filtering, MySQL offers a choice of components:
+#
+# 		log_filter_internal: This filter component provides error log filtering based on log event prio, in combination with
+# 									the log_error_verbosity SYS_VAR.
+#
+# 									log_filter_internal is built in and enabled by default.
+#
+# 		log_filter_dragnet: 	This filter component provides error log filtering based on user-supplied rules, in combination
+# 									with the dragnet.log_error_filter_rules SYS_VAR.
+#
+# log_filter_internal: Priority-Based Error Log Filtering
+#
+# 		Error log verbosity control is a simple form of log filtering based on error event prio.
+# 		It is implemented by the log_filter_internal log filter component.
+#
+# 		To affect how log_filter_internal is built in and enabled by default, but if disabled, changes to log_error_verbosity has no effect.
+#
+# 		Permitted log_error_verbosity values are 1 (errors only), 2 (errors and warnings), 3 (errors, warnings and notes)
+#
+# 		If log_error_verbosity is set to >= 2, the server logs messages about statements that are unsafe for statement-based logging.
+# 		If the value is 3, the server logs aborted connections and access-denied errors for new connection attempts.
+#
+# 		If you use replication, setting log_error_verbosity to >= 2 is recommended, to get more info about what is happening, such as messages
+# 		about network failures and reconnections.
+#
+# 		If a slave server has log_error_verbosity >= 2, the slave prints messages to the error log to provide information about its status, such as
+# 		the binary log and relay log coordinates where it starts its job, when it is switching to another relay log, when it reconnects after a DC, etc.
+#
+# 		Selected important system messages about non-error situations are printed to the error log regardless of the log_error_verbosity value.
+# 		These messages include startup and shutdown messages, and some significant changes to settings.
+#
+# 		In the MySQL error log, system messages are labeled as "System". Other log writers might or might not follow the same convention,
+# 		and in the resulting logs, system messages might be assigned the label used for the information level of severity, such as "Note"
+# 		or "Information".
+#
+#		If you apply any additional filtering or redirection for logging based on the labeling of messages, system messages do not override
+# 		your filter, but are handeled by it in the same way as other messages.
+#
+# log_filter_dragnet: Rule-Based Error Log Filtering
+#
+#		The log_filter_dragnet log filter component enables log filtering based on user-defined rules.
+# 		To define the applicable rules, set the dragnet.log_error_filter_rules SYS_VAR.
+#
+# 		To enable the log_filter_dragnet filter, first load the filter component, then modify the log_error_services value.
+# 		The following example enables log_filter_dragnet in combination with the built-in log writer:
+#
+# 			INSTALL COMPONENT 'file://component_log_filter_dragnet';
+# 			SET GLOBAL log_error_services = 'log_filter_dragnet; log_sink_internal';
+#
+# 		To set log_error_services to take effect at server startup, see earlier notes.
+#
+# 		With log_filter_dragnet enabled, define its filter rules by setting the dragnet.log_error_filter_rules SYS_VAR.
+# 		A rule set consists of zero or more rules, where each rule is an IF statement terminated by a period (.) char.
+#
+# 		If the var value is empty (zero rules), no filtering occurs.
+#
+# 		Example 1.
+#
+# 			This rule set drops information events, and, for other events, removes the source_line field:
+#
+# 				SET GLOBAL dragnet.log_error_filter_rules = 
+# 					'IF prio>=INFORMATION THEN drop. IF EXISTS source_line THEN unset source_line.';
+#
+# 			This effect is similar to the filtering performed by the log_sink_internal filter with a setting of
+# 			log_error_verbosity=2
+#
+# 		Example 2.
+#
+# 			This rule limits information events to no more than one per 60 seconds:
+#
+# 				SET GLOBAL dragnet.log_error_filter_rules = 
+# 					'IF prio>=INFORMATION THEN throttle 1/60.';
+#
+# Once you have the filtering configuration set up, consider assignment dragnet.log_error_filter_rules using SET_PERSIST rather than
+# the SET_GLOBAL to make the setting persist across server restarts.
+#
+# Alternatively, add the setting to the server option file.
+#
+# To stop using the filtering language, first remove it from the set of error logging components. Usually this means using a
+# different filter component rather than no filter component.
+#
+# For example:
+#
+# 		SET GLOBAL log_error_services = 'log_filter_internal; log_sink_internal';
+#
+# Again, consider using SET_PERSIST rather than SET_GLOBAL to make the settings persist across server restarts.
+#
+# Then uninstall the filter log_filter_dragnet component:
+#
+# 		UNINSTALL COMPONENT 'file://component_log_filter_dragnet';
+#
+# THe following section describes aspects of log_filter_dragnet operation in more detail:
+#
+# 		log_filter_dragnet Rule language
+#
+# 		log_filter_dragnet Rule Actions
+#
+# 		log_filter_dragnet Rule Fields
+#
+# log_filter_dragnet Rule Language
+#
+# The following grammar defines the language for log_filter_dragnet filter rules.
+# Each rule is an IF statement terminated by a (.) char.
+#
+# The language is not case sensitive:
+#
+# rule:
+# 		IF condition THEN action
+# 		[ELSEIF condition THEN action] ...
+# 		[ELSE action]
+#
+# condition: 	{
+# 		drop
+# 	| throttle {count | count / window_size}
+# 	| set field [:= | =] value
+# 	| unset [field]
+# }
+#
+# field: {
+# 		core_field
+# 	| optional_field
+# 	| user_defined_field
+# }
+#
+# 
+# core_field: {
+# 		time
+# 	| msg
+# 	| prio
+# 	| label
+# 	| err_code
+# 	| err_symbol
+# 	| SQL_state
+# 	| subsystem
+# }
+#
+# optional_field: {
+# 		OS_errno
+# 	 | OS_errmsg
+# 	 | user
+# 	 | host
+# 	 | thread
+# 	 | query_id
+# 	 | source_file
+# 	 | source_line
+# 	 | function
+# }
+#
+# user_defined_field:
+# 		sequence of characters in [a-zA-Z0-9_] class
+#
+# comparator: {== | != | <> | >= | => | <= | =< | < | >}
+#
+# value: {
+# 		string_literal
+# 	 | integer_literal
+# 	 | float_literal
+# 	 | error_symbol
+# 	 | severity
+# }
+#
+# count: integer_literal
+# window_size: integer_literal
+#
+# string_literal:
+# 		sequence of characters quoted as '...' or "..."
+#
+# integer_literal:
+# 		sequence of characters in [0-9] class
+#
+# float_literal:
+# 		integer_literal[.integer_literal]
+#
+# error_symbol:
+# 		valid MySQL error symbol such as ER_ACCESS_DENIED_ERROR or ER_STARTUP
+#
+# severity: {
+# 		ERROR
+# 	 | WARNING
+# 	 | INFORMATION
+# }
+#
+# Simple conditions compare a field to a value or test field existence.
+# To construct more complex conditions, use the AND and OR operators.
+#
+# Both operators have the same precedence and evaluate left to right.
+#
+# To escape a character within a string, precede it with \.
+# A backslash is required to include \ or the string-quoting char, optional for othe chars.
+#
+# For convenience, log_filter_dragnet supports symbolic names for comparisons to certain fields.
+# Where applicable, symbols are preferable to numeric - for readability and portability.
+#
+# 		) Event severity values 1,2 and 3 can be specified as ERROR, WARNING , and INFORMATION.
+# 		  Severity symbols are recognized only in comparisons with the prio field.
+#
+# 		  These comparisons are equivalent:
+#
+# 				IF prio == INFORMATION THEN ...
+# 				IF prio == 3 THEN ...
+
+# 		) Error codes can be specified in numeric form or as the corresponding error symbol.
+#
+# 		  For example, ER_STARTUP is the symbolic name for error 1408, so these comparisons are eqv.:
+#
+# 				IF err_code == ER_STARTUP THEN ...
+# 				IF err_code == 1408 THEN ...
+#
+# Error symbols are recognized only in comparisons with the err_code field and user-defined fields.
+#
+# To find hte error symbol corresponding to a given error code number:
+#
+# 		Use the perror command, which when given an error number argument, displays info about the error, including its symbol.
+#
+# Suppose that a rule set with error numbers looks like this:
+#
+# 		IF err_code == 10927 OR err_code == 10914 THEN drop.
+# 		If err_code == 1131 THEN drop.
+#
+# Using perror, determine the error symbols:
+#
+# 		perror 10927 10914 1131
+# 		MySQL error code MY-010927 (ER_ACCESS_DENIED_FOR_USER_ACCOUNT_LOCKED)::
+# 		Access denied for user '%-.48s'@'%-.64s'. Account is locked.
+# 		MySQL error code MY-010914 (ER_ABORTING_USER_CONNECTION):
+# 		Aborted connection %u to db: '%-.192s' user: '%-.48s' host:
+# 		'%-.64s' (%-.64s).
+# 		MySQL error code MY-001131 (ER_PASSWORD_ANONYMOUS_USER):
+# 		You are using MySQL as an anonymous user and anonymous users are not allowed to change PWs.
+#
+# https://dev.mysql.com/doc/refman/8.0/en/error-log-filtering.html
+#
+# 
+#
+#
+#
+
+# https://dev.mysql.com/doc/refman/8.0/en/error-log-syslog.html
+#
+#
+# 
