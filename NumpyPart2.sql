@@ -23797,5 +23797,442 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # At that point, mysqld writes the entire transaction to the binary log before the COMMIT is executed.
 #
+# Modifications to nontransactional tables cannot be rolled back. If a transaction that is rolled back
+# includes modifications to nontransactional tables, the entire transaction is logged with a ROLLBACK
+# statement at the end to ensure that the modifications to those tables are replicated.
+#
+# When a thread that handles the transaction starts, it allocates a buffer of binlog_cache_size to buffer
+# statements.
+#
+# If a statement is bigger than this, the thread opens a temporary file to store the transaction.
+# The temporary file is deleted when the thread ends.
+#
+# The Binlog_cache_use status variable shows the number of transactions that used this buffer (and possibly a temporary file) for storing statements.
+# The Binlog_cache_disk_use status variable shows how many of those transactions actually had to use a temporary file.
+#
+# These two variables can be used for tuning binlog_cache_size to a large enough value that avoids the use of temporary files.
+#
+# The max_binlog_cache_size SYS_VAR (default 4GB, which is also the maximum), can be used to restrict the total size used
+# to cache a multiple-statement transaction.
+#
+# If a transaction is larger than this many bytes, it fails and rolls back. The min value is 4096.
+#
+# If you are using the binary log and row based logging, concurrent inserts are converted to normal inserts for CREATE ... SELECT or
+# INSERT ... SELECT statements.
+#
+# This is done to ensure that you can re-create an exact copy of your tables by applying the log during a backup operation.
+#
+# If you are using statement-based logging, the original statement is written to the log.
+#
+# The binary log format has some known limitations that can affect recovery from backups. Later covered.
+#
+# Binary logging for stored programs is done and described later.
+#
+# Note htat hte binary log format differs in MySQL 8.0 from previous versions of MySQL, due to enhancements in replication.
+#
+# Writes to the binary log file and binary log index file are handled in the same way as writes to MyISAM tables.
+#
+# By default, the binary log is synched to disk at each write (sync_binlog=1). 
+#
+# If sync_binlog was not enabled, and the OS or machine (not only the MySQL server) crashed, there is a chance that the last
+# statements of the binary log could be lost.
+#
+# To prevent this, enable the sync_binlog SYS_VAR to synch the binary log to disk after every N commit groups.
+#
+# The safest value for sync_binlog is 1 (the default), but this is also the slowest.
+#
+# In earlier MySQL releases, there was a chance of inconsistency between the table content and binary log content if a crash occured,
+# even with sync_binlog set to 1.
+#
+# For example, if you are using InnoDB tables and the MySQL server processes a COMMIT statement, it writes many prepared transactions
+# to the binary log in sequence, synchs the binary log, and then commits the transaction into InnoDB.
+#
+# If the server crashed between those two operations, the transaction would be rolled back by InnoDB at restart but still exist in the binary log.
+#
+# Such an issue was resolved in previous releases by enabling InnnoDB support for two-phase commit in XA transactions.
+#
+# In >= 5.8, the InnoDB support for two-phase commit in XA transactions is always enabled.
+#
+# InnoDB support for two-phase commit in XA transactions ensures that the binary log and InnoDB data files are synched.
+# However, the MySQL server should also be configured to synch the binary log and the InnoDB logs to disk before committing the transactions.
+#
+# THe InnoDB logs are synched by default, and sync_binlog=1 ensures that the binary log is synchronized.
+#
+# The effect of implicit InnoDB support for two-phase commit in XA transactions and sync_binlog=1 is that at restart
+# after a crash, after doing a rollback of transactions, the MySQL server scans the latest binary log file to collect
+# transactions <xid> values and calculate the last valid position in the binary log file.
+#
+# The MySQL server then tells InnoDB to complete any prepared transactions that were successfully written to the binary log,
+# and truncates the binary log to the last valid position.
+#
+# This ensures that the binary log reflects the exact data of InnoDB tables, and therefore the slave remains in synch
+# with the master because it does not receive a statement which has been rolled back.
+#
+# If the MySQL Server discovers at crash recovery that the binary log is shorter than it should have been, it lacks at least
+# one successfully committed InnoDB transaction.
+#
+# This should not happen if sync_binlog=1 and the disk/file system do an actual sync when they requested to (some do not), so the
+# server prints an error message:
+#
+# 		The binary log <file_name> is shorter than its expected size.
+#
+# In this case, this binary log is not correct and replication should be restarted from a fresh snapshot of the master's data.
+#
+# The session values of the following SYS_VAR's are written to the binary log and honored by the replication slave when parsing the binary log:
+#
+# 		sql_mode (except that the NO_DIR_IN_CREATE mode is not replicated)
+#
+# 		foreign_key_checks
+#
+# 		unique_checks
+#
+# 		character_set_client
+#
+# 		collation_connection
+#
+# 		collation_database
+#
+# 		collation_server
+#
+# 		sql_auto_is_null
+#
+# The following pertains to Binary Logging Formats
+#
+# The server uses several logging formats to record information in the binary log:
+#
+# 		) Replication capabilities in MySQL originally were based on propagation of SQL statements from master to slave.
+# 		  This is called statement-based logging.
+#
+# 		  You can cause this format to be used by starting the server with --binlog-format=STATEMENT
+#
+# 		) In <row-based loggin> (the default), the master writes events to the binary log that indicate how individual table rows
+# 		  are affected.
+#
+# 		  You can cause the server to use row-based logging by starting it with --binlog-format=ROW
+#
+# 		) A third option is also available: mixed logging.
+#
+# 		  With mixed logging, the statement-based logging is used by default, but the logging mode switches automatically to
+# 		  row-based in certain cases as described below.
+#
+# 		  You can cause MySQL to use mixed logging explicitly by starting mysqld with the option --binlog-format=MIXED
+#
+# The logging format can also be set or limited by the storage engine being used.
+#
+# This helps to eliminate issues when replicating certain statements between a master and slave which are using different storage engines.
+#
+# With statement-based replication, there may be issues with replicating nondeterministic statements.
+#
+# In deciding whether or not a given statement is safe for statement-based replication, MySQL determines whether it can guarantee
+# that the statement can be replicated using statement-based logging.
+#
+# If MySQL cannot make this guarantee, it marks the statement as potentionally unreliable and issues the warning, Statement may not be safe to log in statement format.
+#
+# You can avoid these issues by using MySQL's row-based replication instead.
+#
+# The following pertains to Setting The Binary Log Format
+#
+# You can select the binary logging format explicitly by starting the MySQL server with --binlog-format=<type>.
+# The supported values for <type> are:
+#
+# 		STATEMENT causes logging to be statement based.
+#
+# 		ROW causes logging to be row based. This is the default.
+#
+# 		MIXED causes logging to use mixed format.
+#
+# The logging format also can be switched at runtime, although note that there are a number of situations in which
+# you cannot do this, as discussed later in this section.
+#
+# Set the global value of the binlog_format SYS_VAR to specify the format for clients that connect subsequent to the change:
+#
+# 		SET GLOBAL binlog_format = 'STATEMENT';
+# 		SET GLOBAL binlog_format = 'ROW';
+# 		SET GLOBAL binlog_format = 'MIXED';
+#
+# An individual client can control the logging format for its own statements by setting the session value of binlog_format:
+#
+# 		SET SESSION binlog_format = 'STATEMENT';
+# 		SET SESSION binlog_format = 'ROW';
+# 		SET SESSION binlog_format = 'MIXED';
+#
+# Changing the global binlog_format value requires privs sufficient to set Global SYS_VARs.
+#
+# Changing the session binlog_format value requires privs sufficient to set restricted SYS_VARs. 
+#
+# There are several reasons why a client might want to set binary logging on a per-session basis:
+#
+# 		) A session that makes many small changes to the DB might want to use row-based logging.
+#
+# 		) A session that performs updates that match many rows in the WHERE clause might want to use statement-based logging
+# 		  because it will be more efficient to log a few statements than many rows.
+#
+# 		) Some statements require a lot of execution time on the master, but result in just a few rows being modified.
+#
+# 		  It might therefore be beneficial to replicate them using row-based logging.
+#
+# There are exceptions when you cannot switch the replication format at runtime:
+#
+# 		) The replication format cannot be changed from within a stored function or a trigger.
+#
+# 		) If the NDB storage engine is enabled.
+#
+# 		) If a session has open temporary tables, the replication format cannot be changed for the session (SET @@SESSION.binlog_format)
+#
+# 		) If any replication channel has open temporary tables, the replication format cannot be changed globally (SET @@GLOBAL.binlog_format or 
+# 		  SET @@PERSIST.binlog_format)
+#
+# 		) If any replication channel applier thread is currently running, the replication format cannot be changed globally
+# 		  (SET @@GLOBAL.binlog_format or SET @@PERSIST.binlog_format)
+#
+# Trying to switch the replication format in any of these cases (or attempting to set the current replication format) results in an error.
+#
+# You can, however - use PERSIST_ONLY (SET @@PERSIST_ONLY.binlog_format) to change the replication format at any time, because this action
+# does not modify the runtime global SYS_VAR and takes effect only after a server restart.
+#
+# Switching the replication format at runtime is not recommended when any temporary table exist, because temporary tables are logged only
+# when using statement-based replication, whereas with row-based replication and mixed replication, they are not logged.
+#
+# Switching the replication format while replication is ongoing can also cause issues.
+#
+# Each MySQL Server can set its own and only its own binary logging format (true whether binlog_format is set with global or session scope).
+#
+# This means that changing the logging format on a replication master does not cause a slave to change its logging format to match.
+#
+# When using STATEMENT mode, the binlog_format SYS_VAR is not replicated.
+#
+# When using MIXED or ROW logging mode, it is replicated but is ignored by the slave.
+#
+# A replication slave is not able to convert binary log entries received in ROW Logging format to STATEMENT format for use in its own binary log.
 # 
+# The slave must therefore use ROW or MIXED format if the master does. 
+#
+# Changing the binary logging format on the master from STATEMENT to ROW or MIXED while replication is ongoing to a slave with
+# STATEMENT format can cause replication to fail with errors such as Error executing row event:
+#
+# 	 'Cannot execute statement: impossible to write to binary log since statement is in row format and BINLOG_FORMAT = STATEMENT.'
+#
+# Changing the binary logging format on the slave to STATEMENT format when the master is still using MIXED or ROW format also
+# causes the same type of replication failure.
+#
+# To change the format safely, you must stop replication and ensure that the same change is made on both the master and the slave.
+#
+# If you are using InnoDB tables and the transaction isolation level is READ_COMMITTED or READ_UNCOMMITTED, only row-based logging
+# can be used.
+#
+# It is possible to change the logging format to STATEMENT, but doing so at runtime leads very rapidly to errors because InnoDB can no longer perform inserts.
+#
+# With the binary log format set to ROW, many changes are written to the binary log using the row-based format.
+# Some changes, however, still use the statement-based format.
+#
+# Examples include all DDL (data definition language) statements such as CREATE_TABLE, ALTER_TABLE or DROP_TABLE.
+#
+# The --binlog-row-event-max-size option is available for servers that are capable of row-based replication.
+# Rows are stored into the binary log in chunks having a size in bytes not exceeding the value of this option.
+#
+# The value must be a x of 256. Default is 8192.
+#
+# WARNING:
+#
+# 		When using <statement-based logging> for replication, it is possible for the data on the master and slave to become different if a statement
+# 		is designed in such a way that the data modification is nondeterministic.
+#
+# 		That is, it is left to the will of the query optimizer.
+#
+# 		In general, this should not be done - even outside of replication.
+#
+# The following pertains to Mixed Binary Logging Format.
+#
+# When running in MIXED logging format, the server automatically switches from statement-based to row-based logging under the following conditions:
+#
+# 		) When a function contains UUID()
+#
+# 		) When one or more tables with AUTO_INCREMENT columns are updated and a trigger or stored function is invoked.
+# 		  Like all other unsafe statements, this generates a warning if binlog_format = <STATEMENT>
+#
+# 		) When the body of a view requires row-based replication, the statement creating the view also uses it.
+#
+# 		  For example, this occurs when the statement creating a view uses the UUID() function.
+#
+# 		) When a call to a UDF is involved.
+#
+# 		) When FOUND_ROWS() or ROW_COUNT() is used (Bug #12092, Bug #30244)
+#
+# 		) When USER(), CURRENT_USER(), or CURRENT_USER is used. (Bug #28086)
+#
+# 		) When one of the tables involved is a log table in the mysql database.
+#
+# 		) When the LOAD_FILE() function is used. (Bug #39701)
+#
+# 		) When a statement refers to one or more SYS_VARs (Bug #31168)
+#
+# 			Exception: The following SYS_VAR, when used with session scope (only), do not cause the logging format to switch:
+#
+# 				) auto_increment_increment
+#
+# 				) auto_increment_offset
+#
+# 				) character_set_client
+#
+# 				) character_set_connection
+#
+# 				) character_set_database
+#
+# 				) character_set_server
+#
+# 				) collation_connection
+#
+# 				) collation_database
+#
+# 				) collation_server
+#
+# 				) foreign_key_checks
+#
+# 				) identity
+#
+# 				) last_insert_id
+#
+# 				) lc_time_names
+#
+# 				) pseudo_thread_id
+#
+# 				) sql_auto_is_null
+#
+# 				) time_zone
+#
+# 				) timestamp
+#
+# 				) unique_checks
+#
+# 
+# In earlier releases, when mixed binary logging format was in use, if a statement was logged by row and the session that executed the
+# statement had any temporary tables, all subsequent statements were treated as unsafe and logged in row-based format until all 
+# temporary tables in use by that session were dropped.
+#
+# As of MySQL 8.0, operations on temporary tables are not logged in mixed binary logging format, and the presence of temporary tables
+# in the session has no impact on the logging mode used for each statement.
+#
+# 		NOTE:
+#
+# 			A warning is generated if you try to execute a statement using statement-based logging that should be written using row-based logging.
+# 			The warning is shown both in the client (in the output of SHOW_WARNINGS) and through the mysqld error log.
+#
+# 			A warning is added to the SHOW_WARNINGS table each time such a statement is executed.
+# 			However, only the first statement that generated the warning for each client session is written to the error log to prevent flooding the log.
+#
+# In addition to the decisions above, individual engines can also determine the logging format used when information in a table is updated.
+# The logging capabilities of an individual engine can be defined as follows:
+#
+# 		) If an engine supports row-based logging, the engine is said to be row-logging capable.
+#
+# 		) If an engine supports statement-based logging, the engine is said to be statement-logging capable.
+#
+# A given storage engine can support either or both logging formats.
+#
+# The following table lists the formats supported by each engine.
+#
+# 	Storage Engine 	Row Logging Supported 				Statement Logging Supported
+# 	ARCHIVE  			Yes 										Yes
+# 	BLACKHOLE 			Yes 										Yes
+#  CSV 					Yes 										Yes
+# 	EXAMPLE 				Yes 										No
+# 	FEDERATED 			Yes 										Yes
+# 	HEAP 					Yes 										Yes
+# 	
+# 	InnoDB 				Yes 										Yes when the transaction isolation level is REPEATABLE_READ or SERIALIZABLE. No otherwise.
+# 	MyISAM 				Yes 										Yes
+# 	MERGE 				Yes 										Yes
+# 	NDB 					Yes 										No
+#
+# Whether a statement is to be logged and the logging mode to be used is determined according to:
+#
+# 		) the type of statement (safe, unsafe, or binary injected)
+#
+# 		) the binary logging format (STATEMENT, ROW or MIXED)
+# 
+# 		) the logging capabilities of the storage engine (statement capable, row capable, both or neither)
+#
+# 		(Binary injection refers to logging a change that must be logged using ROW format)
+#
+# Statements may be logged with or without a warning; failed statements are not logged, but generate errors in the log.
+# This is shown in the following decision table:
+#
+# 		Type, binlog_format, SLC and RLC columns outline the conditions
+#
+# 		Error/Warning and Logged as columns represent the corresponding actions.
+#
+# 		SLC/RLC is for "statement-logging capable"/"row-logging capable"
+#
+# 	Type 		binlog_format 			SLC 		RLC 		Error/Warning 								 			Logged as
+#
+# 	* 			* 							No 		No 		Error: Cannot execute statement. 	 			-
+# 																	Binary logging is impossible since
+# 																	at least one engine is involved that is
+# 																	both row-incapable and statement-incapable.
+#
+#  Safe 		STATEMENT 				Yes 		No 		- 															STATEMENT
+#
+# 	Safe 		MIXED 					Yes 		No 		- 															STATEMENT
+#
+# 	Safe 		ROW 						Yes 		No 		Error: Cannot execute statement. 				- 				-
+# 																	Binary logging is impossible since
+# 																	BINLOG_FORMAT = ROW and at least one
+# 																	table uses a storage engine that is not
+# 																	capable of row-based logging.
+#
+# 	Unsafe 	STATEMENT 				Yes 		No 		Warning: Unsafe statement binlogged in 		STATEMENT
+# 																	statement format, since BINLOG_FORMAT = 
+# 																	STATEMENT.
+#
+# 	Unsafe 	MIXED 					Yes 		No 		Error: Cannot execute statement. 				-
+# 																	Binary logging of an unsafe statement
+# 																	is impossible when the storage engine
+# 																	is limited to statement-based logging,
+# 																	even if BINLOG_FORMAT = MIXED.
+#
+# 	Unsafe 	ROW 						Yes 		No 		Error: Cannot execute statement. 				-
+# 																	Binary logging is impossible since 
+# 																	BINLOG_FORMAT = ROW and at least one
+# 																	table uses a storage engine that is not
+# 																	capable of row-based logging.
+#
+# 	Row inj. STATEMENT 				Yes 		No 		Error: Cannot execute row injection. 			-
+# 																	Binary logging is not possible since
+# 																	at least one table uses a storage engine
+# 																	that is not capable of row-based logging.
+#
+# 	Row inj. MIXED 					Yes 		No 		Error: Cannot execute row injection. 			-
+# 																	Binary logging is not possible since at
+# 																	least one table uses a storage engine
+# 																	that is not capable of row-based logging.
+#
+# 	Row inj. ROW 						Yes 		No 		Error: Cannot execute row injection. 			-
+# 																	Binary logging is not possible since at least
+# 																	one table uses a storage engine that is not
+# 																	capable of row-based logging.
+#
+# 	Safe 		STATEMENT 				No 		Yes 		Error: Cannot execute statement. 		 		-		-
+#	 																Binary logging is impossible since
+#  																BINLOG_FORMAT = STATEMENT and at least one
+# 																	table uses a storage engine that is 
+# 																	not capable of statement-based logging.
+#
+# 	Safe 		MIXED 					No 		Yes 		- 															ROW
+#
+# 	Safe 		ROW 						No 		Yes 		- 															ROW
+#
+# 	Unsafe 	STATEMENT 				No 		Yes 		Error: Cannot execute statement.  				-				-
+# 																	Binary logging is impossible since BINLOG
+# 																	_FORMAT = STATEMENT and at least one
+# 																	table uses a storage engine that is not
+# 																	capable of statement-based logging.
+#
+# 	Unsafe 	MIXED 					No 		Yes 		- 															ROW
+#
+# 	Unsafe 	ROW 						No 		Yes 		- 															ROW
+#
+# 	https://dev.mysql.com/doc/refman/8.0/en/binary-log-mixed.html
+#
+#
+
 # https://dev.mysql.com/doc/refman/8.0/en/binary-log.html
