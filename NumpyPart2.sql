@@ -24231,8 +24231,353 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # 	Unsafe 	ROW 						No 		Yes 		- 															ROW
 #
-# 	https://dev.mysql.com/doc/refman/8.0/en/binary-log-mixed.html
+# 	Row Inj. STATEMENT 				No 		Yes 		Error: Cannot execute row injection. 			-
+# 																	Binary logging is not possible since
+# 																	BINLOG_FORMAT = STATEMENT.
+#
+# 	Row Inj. MIXED 					No 		Yes 		- 															ROW
+#
+# 	Row Inj. ROW 						No 		Yes 		- 															ROW
+#
+# 	Safe 		STATEMENT 				Yes 		Yes 		- 															STATEMENT
+#
+# 	Safe 		MIXED 					Yes 		Yes 		- 															STATEMENT
+#
+# 	Safe 		ROW 						Yes 		Yes 		- 															ROW
+#
+# 	Unsafe 	STATEMENT 				Yes 		Yes 		Warning: Unsafe statement binlogged in  		STATEMENT
+# 																	statement format since BINLOG_FORMAT =
+# 																	STATEMENT.
+#
+# 	Unsafe 	MIXED 					Yes 		Yes 		- 															ROW
+#
+# 	Unsafe 	ROW 						Yes 		Yes 		- 															ROW
+#
+# 	Row Inj. STATEMENT 				Yes 		Yes 		Error: Cannot execute row injection. 			-
+# 																	Binary logging is not possible because
+# 																	BINLOG_FORMAT = STATEMENT.
+#
+# 	Row Inj. MIXED 					Yes 		Yes 		- 															ROW
+#
+# 	Row Inj. ROW 						Yes 		Yes 		- 															ROW
+#
+# When a warning is produced by determination, a standard MySQL warning is produced (and is available using SHOW_WARNINGS).
+# The information is also written to the mysqld error log.
+#
+# Only one error for each error instance per client connection is logged to prevent flooding the log.
+# The log message includes the SQL statement that was attempted.
+#
+# If a slave server has log_error_verbosity set to display warnings, the slave prints messages to the error log to provide
+# information about its status, such as the binary log and relay log co-ords where it starts its job, when it is switching
+# to another relay log - when it reconnects after a disconnect, statements that are unsafe for statement-based logging, etc.
+#
+# The following pertains to Logging Format for Changes to mysql Database Tables
+#
+# The contents of the grant tables in the mysql database can be modified directly (for example, with INSERT or DELETE) or 
+# indirectly (for example, with GRANT or CREATE USER).
+#
+# Statements that affect mysql database tables are written to the binary log using the following rules:
+#
+# 		) Data manipulation statements that change data in mysql database tables directly are logged according ot the setting of
+# 		  the binlog_format SYS_VAR.
+#
+# 	     This pertains to statements such as INSERT, UPDATE, DELETE, REPLACE, DO, LOAD_DATA_INFILE, SELECT, and TRUNCATE_TABLE.
+#
+# 		) Statements that change the mysql db indirectly are logged as statements regardless of the value of binlog_format.
+#
+# 		  This pertains to statements such as GRANT, REVOKE, SET_PASSWORD, RENAME_USER, CREATE (all forms except CREATE_TABLE_..._SELECT),
+# 		  ALTER(all forms) and DROP(all forms)
+#
+# CREATE_TABLE_..._SELECT is a combination of data definition and data manipulation.
+#
+# The CREATE_TABLE part is logged using statement format and the SELECT part is logged according to the value of binlog_format.
+#
+# The following pertains to The Slow Query Log:
+#
+# The slow query log consists of SQL statements that take more than long_query_time seconds to execute and require at least
+# min_examined_row_limit rows to be examined.
+#
+# The slow query log can be used to find queries that take a long time to execute and are therefore candidates for optimizations.
+#
+# However, examining a long slow query log can be a time-consuming task. You can use mysqldumpslow to process a slow query log file
+# and summarize its contents.
+#
+# The time to acquire the initial locks is not counted as execution time. 
+#
+# mysqld writes a statement to the slow query log after it has been executed and after all locks have been released, so log order might differ from execution order.
+#
+# The following pertains to Slow Query Log Parameters
+#
+# The minimum and default values of long_query_time are 0 and 10, respectively.
+# The value can be specified to a resolution of microseconds.
+#
+# By default, administrative statements are not logged, nor are queries that do not use indexes for lookups.
+#
+# This behavior can be changed using log_slow_admin_statements and log_queries_not_using_indexes, described later.
+#
+# By default, the slow query log is disabled.
+# To specify the initial slow query log state explicitly, use --slow_query_log[={0|1}].
+#
+# WIth no argument or an arg of 1, --slow_query_log enables the log.
+# With an arg of 0, this option disables the log.
+#
+# To specify a log file name, use --slow_query_log_file=<file_name>.
+# To specify log destination, use the log_output SYS_VAR.
+#
+# 		NOTE: If you specify the TABLE log destination - a possible error is too many tables opening.
+#
+# If you specify no name for the slow query log file, the default name is <host_name>-slow.log
+# The server creates the file in the data directory unless an absolute path name is given to specify a different one.
+#
+# To disable or enable the slow query log or change the log file name at runtime, use the global slow_query_log and slow_query_log_file SYS_VARs.
+# Set slow_query_log to 0 to disable the log or to 1 to enable it.
+#
+# Set slow_query_log_file to specify the name of the log file.
+# If a log file already is open, it is closed and the new file is opened.
+#
+# The server writes less info to the slow query log if you use the --log-short-format option.
+#
+# To include slow admin statements in the slow query log, enable the log_slow_admin_statements SYS_VAR.
+# Admin statements include ALTER_TABLE, ANALYZE_TABLE, CHECK_TABLE, CREATE_INDEX, DROP_INDEX, OPTIMIZE_TABLE
+# and REPAIR_TABLE.
+#
+# To include queries that do not use indexes for row lookups in the statements written to the slow query log,
+# enable the log_queries_not_using_indexes SYS_VAR.
+#
+# Even with that var enabled, the server does not log queries that would not benefit from the presence of an index
+# due to the table having fewer than two rows.
+#
+# When queries that do not use an index are logged, the slow query log may grow quickly.
+#
+# It is possible to put a rate limit on these queries by setting the log_throttle_queries_not_using_indexes SYS_VAR.
+#
+# By default, this var is 0 - which means there is no limit. Positive values imposes a per-minute limit on logging
+# of queries that do not use indexes.
+#
+# The first such query opens a 60-second widnow within which the server logs queries up to the given limit, then suppresses
+# additional queries.
+#
+# If there are suppressed queries when the window ends, the server logs a summary that indicates how many there were and the
+# aggregate time spent in them.
+#
+# The next 60-second window begins when the server logs the next query that does not use indexes.
+#
+# The server uses the controlling parameter in the following order to determine whether to write a query to the slow query log:
+#
+# 		1) The query must either not be an administrative statement, or log_slow_admin_statements must be enabled.
+#
+# 		2) The query must have taken at least long_query_time seconds, or log_queries_not_using_indexes must be enabled and the query
+# 			used no indexes for row lookups.
+#
+# 		3) THe query must have examined at least min_examined_row_limit rows.
+#
+# 		4) The query must not be suppressed according to the log_throttle_queries_not_using_indexes setting.
+#
+# The log_timestamps SYS_VAR controls the time zone of timestamps in messages written to the slow query log file 
+# (as well as to the general query log file and the error log).
+#
+# It does not affect the time zone of general query log and slow query log messages written to log tables, but rows
+# retrieved from those tables can be converted from the local system time zone to any desired time zone with CONVERT_TZ()
+# or by setting the session time_zone SYS_VAR.
+#
+# By default, a replication slave does not write replicated queries to the slow query log.
+# To change this, enable the log_slow_slave_statements SYS_VAR.
+#
+# The following pertains to Slow Query Log Contents
+#
+# When the slow query log is enabled, the server writes output to any destinations specified by the log_output SYS_VAR.
+# If you enable the log, the server opens the log file and writes startup messages to it.
+#
+# However, further logging of queries to the file does not occur unless the FILE log destination is selected.
+# If the destination is NONE, the server writes no queries even if the slow query log is enabled.
+#
+# Setting the log file name has no effect on logging if FILE is not selected as an output destination.
+#
+# If the slow query log is enabled and FILE is selected as an output destination, each statement written to the log
+# is preceded by a line that begins with a # char and has these fields (with all fields or a single line):
+#
+# 		Query_time: <duration>
+#
+# 			The statement execution time in seconds
+#
+# 		Lock_time: <duration>
+#
+# 			The time to acquire locks in seconds.
+#
+# 		Rows_sent: <N>
+#
+# 			The number of rows sent to the client
+#
+# 		Rows_examined:
+#
+# 			The number of rows examined by the optimizer.
+#
+# Enabling the log_slow_extra SYS_VAR (available as of MySQL 8.0.14) causes the server to write the following extra fields
+# to FILE output in addition to those just listed (TABLE output is unaffected).
+#
+# Some field descriptions refer to Status variables names.
+# In the slow query log, the counters are per-statement values, not cumulative per-session values.
+#
+# 		Thread_id: ID
+#
+# 			The statement thread identifier.
+#
+# 		Errno: <error_number>
+#
+# 			The statement error number, or 0 if no error occurred.
+#
+# 		Killed: <N>
+#
+# 			If the statement was terminated, the error number indicating why or 0 if the statement terminated normally.
+#
+# 		Bytes_received: <N>
+#
+# 			The Bytes_received value for the statement.
+#
+# 		Bytes_sent: <N>
+#
+# 			The Bytes_sent value for the statement.
+#
+# 		Read_first: <N>
+#
+# 			The Handler_read_first value for the statement
+#
+# 		Read_last: <N>
+#
+# 			The Handler_read_last value for the statement.
+#
+# 		Read_key: <N>
+#
+# 			The Handler_read_key value for the statement
+#
+# 		Read_next: <N>
+#
+# 			The Handler_read_next value for the statement
+#
+# 		Read_prev: <N>
+#
+# 			The Handler_read_prev value for the statement.
+#
+# 		Read_rnd: <N>
+#
+# 			The Handler_read_rnd value for the statement.
+#
+# 		Read_rnd_next: <N>
+#
+# 			The Handler_read_rnd_next value for the statement.
+#
+# 		Sort_merge_passes: <N>
+#
+# 			The Sort_merge_passes value for the statement.
+#
+# 		Sort_range_count: <N>
+#
+# 			The Sort_range value for the statement.
+#
+# 		Sort_rows: <N>
+#
+# 			The Sort_rows value for the statement.
+#
+# 		Sort_scan_count: <N>
+#
+# 			The Sort_scan value for the statement.
+#
+# 		Created_tmp_disk_tables: <N>
+#
+# 			The Created_tmp_disk_tables value for the statement.
+#
+# 		Created_tmp_tables: <N>
+#
+# 			The Created_tmp_tables value for the statement.
+#
+# 		Start: <timestamp>
+#
+# 			The statement execution start time
+#
+# 		End: <timestamp>
+#
+# 			The statement execution end time.
+#
+# A given slow query log file may contain a mix of lines with and without the extra fields added by enabling log_slow_extra.
+# Log file analyzers can determine whether a line contains the additional fields by the field count.
+#
+# Each statement written to the slow query log file is preceded by a SET statement that includes a timestamp.
+# As of MySQL 8.0.14 - the timestamp indicates when the slow statement began executing.
+#
+# < 8.0.14 MySQL the timestamp indicates when the slow statement was logged (which occurs after statement finishes executing)
+#
+# PWs in statements written to the slow query log are rewritten by the server not to occur literally in plain text.
+#
+# The following pertains to The DDL Log:
+#
+# The DDL log, or metadata log, records metadata operations generated by data definition statements such as DROP_TABLE and ALTER_TABLE.
+#
+# MySQL uses this log to recover from crashes occurring in the middle of a metadata operation.
+#
+# When executing the statement DROP TABLE t1, t2 - we need to ensure that both t1 and t2 are dropped, and that each table
+# drop is complete.
+#
+# ANother example of this type of SQL statement is ALTER_TABLE_t3_DROP_PARTITION_p2, where we must make certain that the partition
+# is completely dropped and that its definition is removed from the list of partitions for table t3.
+#
+# A record of metadata operations such as those just described are written to the file ddl_log.log in the MySQL Data dir.
+# This is a binary file, it is not intended to be human-readable, and do not modify it.
+#
+# ddl_log.log is not created until it is actually needed for recording metadata statements, and is removed following a successful start of
+# mysqld.
+#
+# Thus, it is possible for this file not ot be present on a MySQL server that is functioning in a completely normal manner.
+#
+# Currently, ddl_log.log can hold up to 1048573 entries, or 4 GB. once this limit is exceeded, you must rename or remove the file before
+# it is possible to execute any additional DDL statements. This is a known issue being worked on.
+#
+# There are no user-config server options or variables related to this file.
+#
+# The following pertains to Server Log Maintenance:
+#
+# MySQL Servers can create several different log files to help you see what activity is taking place.
+# However, one must regularly clean up the logs.
+#
+# When using MySQL with logging enabled, you may want to back up and remove old log files from time to time and tell MySQL to start
+# logging to new files.
+#
+# On a Linux (Red Hat) installation, you can use the mysql-log-rotate scripts for this.
+#
+# If you installed MySQL from an RPM distrib, this script should have been installed automatically.
+#
+# Be careful with said script if you are using binary log for replication. You should not remove binary logs until you are certain that
+# their contents have been processed by all slaves.
+#
+# On other systems, you must install a short script yourself that you start from cron (or its equivalent) for hanling log files.
+#
+# Binary logs are automatically removed after the server's binary log expiration period.
+# Removal of the files can take place at startup and when the binary log is flushed.
+#
+# The default binary log expiration period is 30 days. You can specify an alternative expiration period using the binlog_expire_logs_seconds
+# SYS_VAR.
+#
+# If you are using replication, you should specify an expiration period that is no lower than the maximum amount of time your slaves might lag
+# behind the master.
+#
+# To remove binary logs on demand, use the PURGE_BINARY_LOGS statement.
+#
+# You can force MySQL to start using new log files by flushing the logs.
+#
+# Log flushing occurs when you issue a FLUSH_LOGS statement or execute a mysqladmin flush-logs,
+# mysqladmin refresh, mysqldump --flush-logs or mysqldump --master-data cmd.
+#
+# In addition, the binary log is flushed when its size reaches the value of the max_binlog_size SYS_VAR.
+#
+# FLUSH_LOGS supports optional modifiers to enable selective flushing of individual logs (for example, FLUSH_BINARY_LOGS)
+#
+# A log-flushing operation does the following:
+#
+# 		) If general query logging or slow query logging to a log file is enabled, the server closes and reopens the general query log file or slow query log file.
+#
+# 		) If binary logging is enabled, the server closes the current binary log file and opens a new log file with the next sequence number.
+#
+# 		) If the server was started with the --log-error 
+# 
 #
 #
-
-# https://dev.mysql.com/doc/refman/8.0/en/binary-log.html
+# https://dev.mysql.com/doc/refman/8.0/en/log-file-maintenance.html
