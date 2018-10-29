@@ -23630,7 +23630,172 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 
 # The following pertains to THE BINARY LOG
 #
-# https://dev.mysql.com/doc/refman/8.0/en/binary-log.html
+# The binary log contains "events" that describe DB changes such as table creation operations or changes to table data.
+# 
+# It also contains events for statements that potentionally could have made changes (for example, a DELETE which matched no rows),
+# unless row-based logging is used.
 #
+# The binary log also contains information about how long each statement took that updated data.
+# The binary log has two important purposes:
+#
+# 		) For replication, the binary log on a master replication server provides a record of the data changes to be sent to slave servers.
+#
+# 		  The master server sends the events contained in its binary log to its slaves, which execute those events to make the same
+# 		  data changes that were made on the master.
+#
+# 		) Certain data recovery operations require use of the binary log.
+#
+# 			After a backup has been restored, the events in the binary log that were recorded after the backup was
+# 			made are re-executed.
+#
+# 			These events bring databases up to date from the point of the backup.
+#
+# The binary log is not used for statements such as SELECT or SHOW that do not modify data.
+#
+# To log all statements (for example, to identify a problem query), use the general query log
+#
+# Running a server with binary logging enabled makes performance slightly slower. 
+#
+# However, the benefits of the binary log in enabling you to set up replication and 
+# for restore operations generally outweigh this minor performance decrement.
+#
+# The binary log is resillient to unexpected halts. Only complete events or transactions are logged or read back.
+#
+# PWs in statements written to the binary log are rewritten by the server not to occur literally in plain text.
+#
+# The following section pertains to server options and variables that affect the operation of binary logging.
+#
+# Binary logging is enabled by default (the log_bin SYS_VAR is set to ON). 
+#
+# The exception is if you use mysqld to initialize the data dir manually by invoking it with 
+# the --initialize or --initialize-insecure option, when binary logging is disabled by default, but can be enabled by specifying the --log-bin option.
+#
+# To disable binary logging, you can specify the --skip-log-bin or --disable-log-bin option at startup.
+# If either of these options is specified and --log-bin is also specified, the option specified later takes precedence.
+#
+# The --log-slave-updates and --slave-preserve-commit-order options require binary logging.
+#
+# If you disable binary logging, either omit these options, or specify --skip-log-slave-updates and
+# --skip-slave-preserve-commit-order.
+#
+# MySQL disables these options by default when --skip-log-bin or --disable-log-bin is specified.
+#
+# If you specify --log-slave-updates or --slave-preserve-commit-order together with --skip-log-bin or
+# --disable-log-bin, a warning error message is issued.
+#
+# The --log-bin[=<base name>] option is used to specify the base name for binary log files.
+# If you do not supply the --log-bin option, MySQL uses binlog as the default base name for the binary log files.
+#
+# For compability with earlier releases, if you supply the --log-bin option with no string or with an empty string,
+# the base name defaults to <host_name>-bin, using the name of the host machine.
+#
+# It is recommended that you specify a base name, so that if the host name changes, you can easily continue to use
+# the same binary log file names. 
+#
+# If you supply an extension in the log name (for example, --log-bin=<base_name.extension>), the extension is silently removed and ignored.
+# 
+# mysqld appends a numeric extension to the binary log base name to generate binary log file names. The number increases each time the server
+# creates a new log file, thus creating an ordered series of files.
+#
+# The server creates a new file in the series each time it starts or flushes the logs.
+# The server also creates a new binary log file automatically after the current log's size reaches max_binlog_size.
+#
+# A binary log file may become larger than max_binlog_size if you are using large transaction because a transaction
+# is written ot hte file in one piece, never split between files.
+#
+# To keep track of which binary log files have been used, mysqld also creates a binary log index file that contains the names
+# of all used binary log files. 
+#
+# By default, this has the same base name as the binary log file, with the extension '.index'.
+#
+# You can change the name of the binary log index file with the --log-bin-index[=<file name>] option.
+# You should not manually edit this file while mysqld is running: doing so would confuse mysqld.
+#
+# The term "binary log file" denotes a individual numbered file containing DB events. The term "binary log" collectively
+# denotes the set of numbered binary log files plus the index file.
+#
+# The default location for binary log files and the binary log index file is the data directory.
+#
+# You can use the --log-bin option to specify an alternative location, by adding a leading absolute path name to the base name
+# to specify a different dir.
+#
+# When the server reads an entry from the binary log index file, which tracks the binary log files that have been used,
+# it checks whether the entry contains a relative path.
+#
+# If it does, the relative part of the path is replaced with the absolute path set using the --log-bin option.
+#
+# An absolute path recorded in the binary log index file remains unchanged; in such a case, the index file must be edited
+# manually to enable a new path or paths to be used. 
+#
+# The binary log file base name and any specified path are available as the log_bin_basename SYS_VAR.
+#
+# In MySQL 5.7, a server ID had to be specified when binary logging was enabled, or the server would not start.
+#
+# In MySQL 8.0, the server_id SYS_VAR is set to 1 by default.
+#
+# The server can be started with this default ID when binary logging is enabled, but an informational message is issued
+# if you do not specify a server ID explicitly using the --server-id option.
+#
+# For servers that are used in a replication topology, you must specify a unique nonzero server ID for each server.
+#
+# A client that has privs sufficient to set restricted session SYS_VARs can disable binary logging of its own statements
+# by using a SET_sql_log_bin=OFF statement.
+#
+# By default, the server logs the length of the event as well as the event itself and uses this to verify that the event
+# was written correctly.
+#
+# You can also cause the server to write checksums for the events by setting the binlog_checksum SYS_VAR.
+#
+# When reading back from the binary log, the master uses the event length by default, but can be made to use checksums
+# if available by enabling the master_verify_checksum SYS_VAR.
+#
+# The slave I/O thread also verifies events received from the master. 
+# You can cause the slave SQL thread to use checksums if available when reading from the relay log by enabling the slave_sql_verify_checksum SYS_VAR.
+#
+# The format of the events recorded in the binary log is dependent on the binary logging format. 
+# Three format types are supported: row-based logging, statement-based logging and mixed-based logging.
+#
+# The binary logging format used depends on the MySQL version.
+#
+# The server evaluates the --binlog-do-db and --binlog-ignore-db options in the same way as it does the
+# --replicate-do-db and --replicate-ignore-db options.
+#
+# A replication slave server is started with the --log-slave-updates setting enabled by default, meaning that the
+# slave writes to its own binary log any data modifications that are received from the replication master.
+#
+# The binary log must be enabled for this setting to work.
+# This setting enables the slave to act as a master to other slaves in chained replication.
+#
+# You can delete all binary log files with the RESET_MASTER statement or a subset of them with PURGE_BINARY_LOGS.
+#
+# If you are using replication, you should not delete old binary log files on the master until you are sure that no slave
+# still needs to use them.
+#
+# For example, if your slaves never run more than three days behind, once a day you can execute mysqladmin flush-logs on the master
+# and then remove any logs that are more than three days old.
+#
+# You can remove the files manually, but it is preferable to use PURGE_BINARY_LOGS, which also safely updates the binary log index
+# file for you (and which can take a date argument)
+#
+# You can display the contents of binary log files with the mysqlbinlog utility.
+# This can be useful when you want to reprocess statements in the log for a recovery operation.
+#
+# For example, you can update MySQL server from the binary log as follows:
+#
+# 	mysqlbinlog <log_file> | mysql -h <server_name>
+#
+# mysqlbinlog also can be used to display replication slave relay log file contents because they are written using the same
+# format as binary log files.
+#
+# Binary logging is done immediately after a statement or transaction completes but before any locks are released or any commit is done.
+# This ensures that the log is logged in commit order.
+#
+# Updates to nontransactional tables are stored in the binary log immediately after execution.
+#
+# Within an uncommitted transaction, all updates (UPDATE, DELETE or INSERT) that change transactional tables such as InnoDB tables
+# are cached until a COMMIT statement is received by the server. 
+#
+# At that point, mysqld writes the entire transaction to the binary log before the COMMIT is executed.
 #
 # 
+# https://dev.mysql.com/doc/refman/8.0/en/binary-log.html
