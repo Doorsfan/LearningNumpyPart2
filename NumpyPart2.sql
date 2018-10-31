@@ -24576,8 +24576,723 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # 		) If binary logging is enabled, the server closes the current binary log file and opens a new log file with the next sequence number.
 #
-# 		) If the server was started with the --log-error 
+# 		) If the server was started with the --log-error option to cause the error log to be written to a file, the server closes and reopens the log file.
+#
+# The server creates a new binary log file when you flush the logs.
+# However, it just closes and reopens the general and slow query log files.
+#
+# To cause new files to be created on Unix, rename the current log files before flushing them.
+# At flush time, the server opens new log files with the original names.
+#
+# For example, if the general and slow query log files are named mysql.log and mysql-slow.log, you can use
+# a series of commands akin to:
+#
+# 	cd <mysql-data-directory>
+# 	mv mysql.log mysql.old
+# 	mv mysql-slow.log mysql-slow.old
+# 	mysqladmin flush-logs
+#
+# On Windows, it's rename rather than mv.
+#
+# At this point, you can make a backup of mysql.old and mysql-slow.old and remove them from the disk.
+#
+# A similar strategy can be used to back up the error log file, if there is one.
+#
+# You can rename the general query log or slow query log at runtime by disabling the log:
+#
+# 		SET GLOBAL general_log = 'OFF';
+# 		SET GLOBAL slow_query_log = 'OFF';
+#
+# With the logs disabled, rename the log files externally; for example, from the cmd line.
+# Then enable the logs again:
+#
+# 		SET GLOBAL general_log = 'ON';
+# 		SET GLOBAL slow_query_log = 'ON';
+#
+# This method works on any platform and does not require a server restart.
+#
+# NOTE:
+#
+# 		For the server to recreate a given log file after you have renamed the file externally, the file location
+# 		must be writable by the server.
+#
+# 		This may not always be the case. For example, on Linux, the server might write the error log as /var/log/mysqld.log,
+# 		where /var/log is owned by root and not writable by mysqld.
+#
+# 		In this case, the log-flushing operation will fail to create a new log file.
+#
+# 		To handle this situation, you must manually create the new log file with the proper ownership after renaming
+# 		the original log file.
+#
+# 		For example, execute these commands as root:
+#
+# 			mv /var/log/mysqld log /var/log/mysqld.log.old
+# 			install -omysql -gmysql -m0644 /dev/null /var/log/mysqld.log
+#
+# The following pertains to MySQL Server Components
+#
+# MySQL Server includes a component-based infrastructure for extending server capabilities.
+# A component provides services that are available to the server and other components.
+#
+# (With respect to service use, the server is a component, equal to other components)
+# Components interact with each other only through the services they provide.
+#
+# MySQL distributions include several components that implement server extensions:
+#
+# 		) Components for configuring error logging.
+#
+# 		) A component for checking PWs.
+#
+# SYS_VARs and STATUS_VARs implemented by a server component are exposed when the component is installed and have names that
+# begin with a component-specific prefix.
+#
+# For example, the log_filter_dragnet error log filter component implements a SYS_VAR named log_error_filter_rules,
+# the full name of which is dragnet.log_error_filter_rules.
+#
+# To refer to this var, use the full name.
+#
+# The following section describes how to install and uninstall components, and how to determine at runtime which components
+# are installed and obtain information about them.
+#
+# For information about the internal implementation of components, it's covered later.
+# For example, if you intend to write your own components, this information is important for understanding how components work.
+#
+# The following pertains to Installing and Uninstalling Components
+#
+# Server components must be loaded into the server before they can be used.
+# MySQL supports component loading at runtime.
+#
+# The INSTALL_COMPONENT and UNINSTALL_COMPONENT SQL statements enable component loading and unloading.
+# For example:
+#
+# 		INSTALL COMPONENT 'file://component_validate_password';
+# 		UNINSTALL COMPONENT 'file://component_validate_password';
+#
+# A loader service handles component loading and unloading, and also lists loaded components in the <component> table of the
+# <mysql> SYS_DB that serves as a registry.
+#
+# The SQL statements for component manipulation affect server operation and the mysql.component SYS_TABLE as follows:
+#
+# 		) INSTALL_COMPONENT loads components into the server.
+# 		The components become active immediately.
+#
+# 		The loader service also registers loaded components in the mysql.component SYS_TABLE.
+#
+# 		For subsequent server restarts, the loader service loads any components listed in mysql.component during
+# 		the startup sequence.
+#
+# 		This occurs even if the server is started with the --skip-grant-tables option.
+#
+# 		) UNINSTALL_COMPONENT deactivates components and unloads them from the server.
+#
+# 		The loader service also unregisters the components from the mysql.component SYS_TABLE
+# 		so that they are no longer loaded during the startup sequence for subsequent server restarts.
+#
+# Compared to the corresponding INSTALL_PLUGIN statement for server plugins, the INSTALL_COMPONENT statement for components
+# offers the significant advantage that it is not nessecary to know any platform-specific file name suffix for naming the component.
+#
+# This means that a given INSTALL_COMPONENT statement can be executed uniformly across platforms.
+#
+# The following pertains to Obtaining Server Component Information:
+#
+# The component table in the mysql system database contains information about currently loaded components and shows which
+# components have been registered with INSTALL_COMPONENT.
+#
+# To see which components are installed, use:
+#
+# 		SELECT * FROM mysql.component;
+#
+# The following pertains to Error Log Components:
+#
+# This section describes the characteristics of individual error log components.
 # 
+# A log component can be a filter or a sink:
 #
+# 		) A filter processing log events, to add, remove or modify event fields, or to delete events entirely.
+# 		  The resulting events pass to the next log component named in the log_error_services SYS_VAR.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/log-file-maintenance.html
+# 		) A sink is a destination (writer) for log events. Typically, a sink processes log events into log messages
+# 		  that have a particular format and writes these messages to its associated output, such as a file or the system log.
+#
+# The server executes filters and sinks in the log_error_services value in the order they are named.
+# The rightmost component should therefore be a sink.
+#
+# If the rightmost component is a filter, any changes it has on events have no effect on output.
+#
+# The following sections describe individual log components, grouped by component type:
+#
+# 		Error Log Filter Components
+#
+# 		Error Log Sink Components
+#
+# Component descriptions include these types of information:
+#
+# 		) The component name and intended purpose.
+#
+# 		) Whether the component is built in or must be loaded.
+#
+# 		  For a loadable component, the description specifies the URN to use to load and unload the component with
+# 		  the INSTALL_COMPONENT and UNINSTALL_COMPONENT statements.
+#
+# 		) Whether the component can be listed multiple times in the log_error_services value.
+#
+# 		) For a sink component, the destination to which the component writes output.
+#
+# Error Log Filter Components
+#
+# 		Error log filter components implement filtering of error log events:
+#
+# 			) If no filter component is enabled, no filtering occurs.
+#
+# 			) Any enabled filter component affects log events only for components listed later in the log_error_services value.
+# 			  In particular, for any log sink component listed in log_error_services earlier than any filter component, no log event filtering occurs.
+#
+# The log_filter_internal Component
+#
+# 		) Purpose: Implements filtering based on the log_error_verbosity SYS_VAR.
+#
+# 		) URN: This component is built in and need not be loaded with INSTALL_COMPONENT before use.
+#
+# 		) Multiple uses permitted: No.
+#
+# 		Because log_error_verbosity affects the log_filter_internal component, log_error_verbosity has no effect on logging if
+# 		log_filter_internal is not enabled.
+#
+# The log_filter_dragnet Component
+#
+# 		) Purposes: Implements filtering based on the rules defined by the dragnet.log_error_filter_rules SYS_VAR.
+# 		
+# 		) URN: file://component_log_filter_dragnet
+#
+# 		) Multiple uses permitted: No.
+#
+# Error Log Sink Components
+#
+# Error log sink components are writers that implement error log output. If no sink component is enabled, no log output occurs.
+#
+# Some sink component descriptions refer to the default error log destination.
+# This is the console or a file and is indicated by the fault of the log_error SYS_VAR.
+#
+# The log_sink_internal Component
+#
+# 		) Purpose: Implements traditional error log message output format.
+#
+# 		) URN: This component is built in and need not be loaded with INSTALL_COMPONENT before use.
+#
+# 		) Multiple uses permitted: No.
+#
+# 		) Output destination: Writes to the default error log destination.
+#
+# The log_sink_json Component
+#
+# 		) Purpose: Implements JSON-format error logging.
+#
+# 		) URN: file://component_log_sink_json
+#
+# 		) Multiple uses permitted: Yes.
+#
+# 		) Output destination: The JSON log writer determines its output destination based on the default error log destination,
+# 									 which is given by the log_error SYS_VAR:
+#
+# 									 		) If log_error names a file, the JSON writer bases output file naming on that file name, plus a numbered .<NN> json suffix,
+# 											  with NN starting at 00.
+#
+# 											  For example, if log_error is <file_name>, successive instances of log_sink_json named in the log_error_services
+# 											  value write to <file_name>.00.json, <file_name>.01.json and so forth.
+#
+# 											) If log_error is stderr, the JSON writer writes to the console.
+#
+# 											  If log_json_writer is named multiple times in the log_error_services value, they all write
+# 											  to the console, which is likely not useful.
+#
+# The log_sink_syseventlog Component:
+#
+# 		) Purpose: Implements error logging to the system log. This is the Event Log on Windows, and syslog on Unix and Unix-like systems.
+#
+# 		) URN: file://component_log_sink_syseventlog
+#
+# 		) Multiple uses permitted: No.
+#
+# 		) Output destination: Writes to the system log. Does not use the default error log destination.
+#
+# The log_sink_test Component:
+#
+# 		) Purposes: intended for internal use in writing test cases. Not intended for production use.
+#
+# 		) URN: file://component_log_sink_test
+#
+# 		) Multiple uses permitted: Yes.
+#
+# 		) Output destination: Writes to the default error log destination.
+#
+# The following pertains to MySQL Server Plugins:
+#
+# MySQL supports a plugin API that enables creation of server components.
+#
+# PLugins can be loaded at server startup, or loaded and unloaded at runtime without restarting the server.
+#
+# The components supported by this interface include, but are not limited to, storage engines, INFORMATION_SCHEMA tables,
+# full-text parser plugins and server extensions.
+#
+# MySQL distributions include several plugins that implement server extensions:
+#
+# 		) Plugins for authenticating attempts by clients to connect to MySQL Server.
+# 		  Plugins are available for several authentication protocols.
+#
+# 		) A connection-control plugin that enables administrators to introduce an increasing delay after a certain number of consecutive
+# 		  failed client connection attempts.
+#
+# 		) A password-validation plugin implements password strength policies and assesses the strength of potentional PWs.
+#
+# 		) Semisynch replication plugins implement an interface to replication capabilities that permit the master to proceed
+# 		  as long as at least one slave has responded to each transaction.
+#
+# 		) Group Replication enables you to create a highly available distributed MySQL service across a group of MySQL server instances,
+# 		  with data consistency, conflict detection and resolution, and group membership services - are all built-in.
+#
+# 		) MySQL Enterprise Edition includes a thread pool plugin that manages connection threads to increase server performance by
+# 		  effectively managing statement execution threads for large numbers of client connections.
+#
+# 		) MySQL Enterprise Edition includes an audit plugin for monitoring and logging of connection and query activity.
+#
+# 		) MySQL Enterprise Edition includes a firewall plugin that implements an application-level firewall to enable DB admin to permit
+# 		  or deny SQL statement execution based on matching against whitelists of accepted statement patterns.
+#
+# 		) A query rewrite plugin examines statements received by MySQL Server and possibly rewrites them before the server executes them.
+#
+# 		) Version Tokens enable creation of and Synching around server tokens that applications can use to prevent accessing incorrect or
+# 		  out-of-date data.
+#
+# 		  Version Tokens is based on a plugin lib that implements a version_tokens plugin and a set of user-defined functions.
+#
+# 		) Keyring plugins provide secure storage for sensitive info.
+#
+# 		) X Plugin extends MySQL server to be able to function as a document store.
+#
+# 		  Running X Plugin enables MySQL Server to communicate with clients using the X protocol, which is designed 
+# 		  to expose the ACID compliant storage abilities of MySQL as a document store.
+#
+# 		) Test framework plugins test server services. 
+#
+# The following section pertains to installation and uninstallation of plugins, and how to determine at runtime which plugins
+# are installed and obtain information about them.
+#
+# More info about writing them later.
+#
+# The following section pertains to Installing and Uninstalling Plugins:
+#
+# Server plugins must be loaded into the server before they can be used.
+# MySQL supports plugin loading at server startup and runtime.
+#
+# It is also possible to control the activation state of loaded plugins at startup, and to unload them at runtime.
+#
+# While a plugin is loaded, information about it is available from the INFORMATION_SCHEMA.PLUGINS table and the SHOW_PLUGINS statement.
+#
+# INSTALLING PLUGINS:
+#
+# Before a server plugin can be used, it must be installed using one of the following methods.
+#
+# In the desc., <plugin_name> stands for a plugin name such as innodb, csv or validate_password.
+#
+# Built-in plugins:
+#
+# 		A built-in plugin is known by the server automatically. Normally, the server enables the plugin at startup.
+# 		Some built-in plugins permits this to be changed with the --plugin_name[=<activation_state>] option.
+#
+# Plugins registered in the mysql.plugin system table:
+#
+# 		The plugin table in the mysql system database serves as a registry of plugins (other than built-in plugins, which need not be registered).
+#
+# 		At startup, the server loads each plugin listed in the table. Normally, for a plugin loaded from the mysql.plugin table,
+# 		the server also enables the plugin.
+#
+# 		This can be changed with the --plugin_name[=<activation_state>] option.
+#
+# 		If the server is started with the --skip-grant-tables option, it does not consult the mysql.plugin table and does not
+# 		load the plugins listed there.
+#
+# Plugins named with command-line options:
+#
+# 		A plugin located in a plugin library file can be loaded at server startup with the --plugin-load, --plugin-load-add,
+# 		or --early-plugin-load option.
+#
+# 		Normally, for a plugin loaded at startup, teh server also enables the plugin. This can be changed with the --<plugin_name>[=<activation_state>] option.
+#
+# 		The --plugin-load and --plugin-load-add options load plugins after built-in plugins and storage engines have initialized during the
+# 		server startup sequence.
+#
+# 		The --early-plugin-load option is used to load plugins that must be available prior to initialization of built-in plugins and storage engines.
+#
+# 		The value of each plugin-loading option is a semicolon-separated list of <name>=<plugin_library> and <plugin_library> values.
+#
+# 		Each <name> is the name of a plugin to load, and <plugin_library> is the name of the library file that contains the plugin code.
+# 		If a plugin library is named without any preceding plugin name, the server loads all plugins in the library.
+#
+# 		The server looks for plugin library files in the directory named by the plugin_dir SYS_VAR.
+#
+# 		Plugin-loading options do not register any plugin in the mysql.plugin table.
+#
+# 		For subsequent restarts, the server loads the plugin again only if --plugin-load, --plugin-load-add, or --early-plugin-load is given again.
+# 		 		 		
+# 		I.e, it produces a one-time plugin-installation operation that persists for a single server invocation.
+#
+# 		--plugin-load, --plugin-load-add, and --early-plugin-load enable plugins to be loaded even when --skip-grant-tables is given
+# 		(which causes the server to ignore the mysql.plugin table)
+#
+# 		--plugin-load, --plugin-load-add and --early-plugin-load also enables plugins to be loaded at startup that cannot be loaded at runtime.
+# 		
+# 		The --plugin-load-add option complements the --plugin-load option:
+#
+# 			) Each instance of --plugin-load resets the set of plugins to load at startup, whereas --plugin-load-add adds a plugin or plugins to the set
+# 			of plugins to be loaded without resetting the current set.
+#
+# 			Consequently, if multiple instances of --plugin-load are specified, onl the last one takes effect.
+# 			With multiple instances of --plugin-load-add, all of them take effect.
+#
+# 			) The argument format is the same as for --plugin-load, but multiple instances of --plugin-load-add can be used to avoid specifying
+# 			a large set of plugins as a single long unwieldy --plugin-load argument.
+#
+# 			) --plugin-load-add can be given in the absence of --plugin-load, but any instance of --plugin-load-add that appears before --plugin-load
+# 			has no effect because --plugin-load resets the set of plugins to load.
+#
+# For example, these options:
+#
+# 		--plugin-load=x --plugin-load-add=y is equivalent to --plugin-load="x;y"
+#
+# But:
+#
+# 		--plugin-load-add=y --plugin-load=x is equal to --plugin-load=x (due to ordering)
+#
+# The following pertains to Plugins installed with the INSTALL_PLUGIN statement:
+#
+#		A plugin located in a plugin library file can be loaded at runtime with the INSTALL_PLUGIN statement.
+#
+# 		The statement also registers the plugin in the mysql.plugin table to cause the server to load it on 
+# 		on subsequent restarts. For this reason, INSTALL_PLUGIN requires the INSERT privs for the mysql.plugin table.
+#
+# 		The plugin library file base name depends on your platform. Common suffixes are .so (Unix/Unix-based systems), .dll for Windows
+#
+# 		Example: The --plugin-load option installs a plugin at server startup. To install a plugin named myplugin from a plugin library file
+# 					named somepluglib.so, use these lines in a my.cnf file:
+#
+# 					[mysqld]
+# 					plugin-load=myplugin=somepluglib.so
+#
+# 		In this case, the plugin is not registered in mysql.plugin. Restarting the server without the --plugin-load option causes the plugin not to be loaded at startup.
+#
+# 		Alternatively, the INSTALL_PLUGIN statement causes the server to lodd the plugin code from the library file at runtime:
+#
+# 			INSTALL PLUGIN myplugin SONAME 'somepluglib.so';
+#
+# 		INSTALL_PLUGIN also causes "permanent" plugin registration: The plugin is listed in the mysql.plugin table to ensure that the
+# 		server loads it on subsequent restarts.
+#
+# 		Many plugins can be loaded either at server startup or at runtime. However, if a plugin is designed such that it must be loaded
+# 		and initialized during server startup, attempts to load it at runtime using INSTALL_PLUGIN produces an error:
+#
+# 			INSTALL PLUGIN myplugin SONAME 'somepluglib.so';
+# 			ERROR 1721 (HY000): Plugin 'myplugin' is marked as not dynamically
+# 			installable. You have to stop the server to install it.
+#
+# 		In this case, you must use --plugin-load, --plugin-load-add or --early-plugin-load.
+#
+# 		If a plugin is named both using a --plugin-load, --plugin-load-add or --early-plugin-load option
+# 		(as a result of an earlier INSTALL_PLUGIN statement) in the mysql.plugin table, the server starts but
+# 		writes these mesages to the error log:
+#
+# 			[ERROR] Function 'plugin_name' already exists
+# 			[Warning] Couldn't load plugin named 'plugin_name' with soname 'plugin_object_file'
+#
+# Controlling Plugin Activation State:
+#
+# 		If the server knows about a plugin when it starts (for example, because the plugin is named using a --plugin-load option or is registered
+# 		in the mysql.plugin table), the server loads and enables the plugin by default.
+#
+# 		It is possible to control activation state for such a plugin using a --<plugin_name>[=<activation_state>] startup option,
+# 		where <plugin_name> is the name of the plugin to affect, such as innodb, csv or validate_password.
+#
+# 		As with other options, dashes and underscores are interchangable in option names.
+# 		Also, activation state values are not case-sensitive.
+#
+# 		For example, --my_plugin=ON and --my-plugin=on are equivalent.
+#
+# 			--<plug_name>=OFF - Tells the server to disable the plugin. This may not be possible for certain built-in plugins, such as mysql_native_password.
+#
+# 			--<plugin_name>[=ON] - tells the server to enable the plugin. (Specifying the option as --<plugin_name> without a value has the same effect.)
+# 										  If the plugin fails to initialize, the server runs with the plugin disabled.
+#
+# 			--<plugin_name>=FORCE - Tells the server to enable the plugin, but if plugin initialization fails, the server does not start.
+# 											In other words, this option forces the server to run with the plugin enabled or not at all.
+#
+# 			--<plugin_name>=FORCE_PLUS_PERMANENT - Like FORCE, but in addition prevents the plugin from being unloaded at runtime.
+# 																If a user attempts to do so with UNINSTALL_PLUGIN, an error occurs.
+#
+# 		PLugin activation states are visible in the LOAD_OPTION column of the INFORMATION_SCHEMA.PLUGINS table.
+#
+# 		Suppose that CSV, BLACKHOLE and ARCHIVE are built-in pluggable storage engines and that you want the server to load them at startup,
+# 		subject to these conditions:
+#
+# 			) The server is permitted to run if CSV initialization fails 
+# 			) must require that BLACKHOLE initialization succeeds 
+# 			) should disable ARCHIVE.
+# 			
+# 			To accomplish that, use these lines in an option file:
+#
+# 				[mysqld]
+# 				csv=ON
+# 				blackhole=FORCE
+# 				archive=OFF
+#
+# 			The --enable-<plugin_name> option format is a synonym for --<plugin_name>=ON.
+# 			The --disable-<plugin_name> and --skip-<plugin_name> option formats are synonyms for --<plugin_name>=OFF
+#
+# 			If a plugin is disabled, either explicitly with OFF or implicitly because it was enabled with ON but failed to initialize,
+# 			aspects of server operation that require the plugin will change.
+#
+# 			For example, if the plugin implements a storage engine, existing tables for the storage engine becomes inaccessible,
+# 			and attempts to create new tables for the storage engine result in tables that use the default storage engine unless
+# 			the NO_ENGINE_SUBSTITUTION SQL mode is enabled to cause an error to occur instead.
+#
+# 			Disabling a plugin may require adjustment to other options.
+#
+# 			For example, if you start the server using --skip-innodb to disable InnoDB, other innodb_<xxx> options likely
+# 			will need to be omitted at startup.
+#
+# 			In addition, because InnoDB is the default storage engine - it will not start unless you specify another available storage
+# 			engine with --default_storage_engine.
+#
+# 			You must also set --default_tmp_storage_engine.
+#
+# UNINSTALLING PLUGINS
+#
+# 		At runtime, the UNINSTALL PLUGIN statement disables and uninstalls a plugin known to the server.
+#
+# 		The statement unloads the plugin and removes it from the mysql.plugin system table, if it is registered there.
+# 		
+# 		For this reason, UNINSTALL_PLUGIN statements require the DELETE privs for the mysql.plugin table.
+# 		With the plugin no longer registered in the table, the server does not load the plugin automatically for subsequent restarts.
+#
+# 		UNINSTALL_PLUGIN can load a plugin regardless of whether it was loaded at runtime with INSTALL_PLUGIN or at startup with a 
+# 		plugin-loading option, subject to these conditions:
+#
+# 			) It cannot unload plugins that are built in to the server. These can be identified as those that have a library name of NULL in the output
+# 			  from INFORMATION_SCHEMA.PLUGINS or SHOW_PLUGINS.
+#
+# 			) It cannot unload plugins for which the server was started with --<plugin_name>=FORCE_PLUS_PERMANENT, which prevents plugin unloading at runtime.
+# 			  These can be identified from the LOAD_OPTION column of the INFORMATION_SCHEMA.PLUGINS table.
+#
+# 		To uninstall a plugin that currently is loaded at server startup with a plugin-loading option, use this procedure:
+#
+# 			1. Remove any options related to the plugin from the my.cnf file.
+#
+# 			2. Restart the server.
+#
+# 			3. Plugins normally are installed using either a plugin-loading option at startup or with INSTALL_PLUGIN at runtime,
+# 				but not both.
+#
+# 				However, removing options fora plugin from the my.cnf file may not be sufficient to uninstall it if at some point,
+# 				INSTALL_PLUGIN has also been used.
+#
+# 				If the plugin still appears in the output from INFORMATION_SCHEMA.PLUGINS or SHOW_PLUGINS,
+# 				use UNINSTALL_PLUGIN to remove it from the mysql.plugin table.
+#
+# 				Then restart the server again.
+#
+# The following pertains to Obtaining Server PLugin Information:
+#
+# There are several ways to determine which plugins are installed in the server:
+#
+# 		) The INFORMATION_SCHEMA.PLUGINS table contains a row for each loaded plugin. 
+#
+# 		  Any that have a PLUGIN_LIBRARY value of NULL are built in and cannot be unloaded.
+#
+# 		  		SELECT * FROM INFORMATION_SCHEMA PLUGINS\G
+# 				**************************** 1. row ****************************
+# 									PLUGIN_NAME: binlog
+# 								PLUGIN_VERSION: 1.0
+# 								PLUGIN_STATUS:  ACTIVE
+# 									PLUGIN_TYPE: STORAGE ENGINE
+# 						 PLUGIN_TYPE_VERSION: 50158.0
+# 								PLUGIN_LIBRARY: NULL
+# 					 PLUGIN_LIBRARY_VERSION: NULL
+# 					 			 PLUGIN_AUTHOR: MySQL AB
+# 						  PLUGIN_DESCRIPTION: This is a pseudo storage engine to represent the binlog in a transaction
+# 						  	   PLUGIN_LICENSE: GPL
+# 									LOAD_OPTION: FORCE
+# 				...
+# 				*************************** 10. row ******************************
+# 									PLUGIN_NAME: InnoDB
+# 								PLUGIN_VERSION: 1.0
+# 								 PLUGIN_STATUS: ACTIVE
+# 								 	PLUGIN_TYPE: STORAGE ENGINE
+# 						 PLUGIN_TYPE_VERSION: 50158.0
+# 						      PLUGIN_LIBRARY: ha_innodb_plugin.so
+# 					 PLUGIN_LIBRARY_VERSION: 1.0
+# 								 PLUGIN_AUTHOR: Innobase Oy
+# 						  PLUGIN_DESCRIPTION: Supports transactions, row-level locking, and foreign keys
+# 								PLUGIN_LICENSE: GPL
+# 									LOAD_OPTION: ON
+# ...
+#
+# 		) The SHOW_PLUGINS statement displays a row for each loaded plugin. Any that have a Library value of NULL are built in and cannot be unloaded.
+#
+# 				SHOW PLUGINS\G
+# 				***************************** 1. row ********************************
+# 
+# 					Name: binlog
+# 				 Status: ACTIVE
+# 				   Type: STORAGE ENGINE
+#  			Library: NULL
+# 				License: GPL
+# 				...
+# 				****************************** 10. row *******************************
+#
+# 					Name: InnoDB
+# 				 Status: ACTIVE
+# 				 	Type: STORAGE ENGINE
+# 				Library: ha_innodb_plugin.so
+# 				License: GPL
+# 				...
+#
+# 		) The mysql.plugin table shows which plugins have been registered with INSTALL_PLUGIN.
+#
+# 		  The table contains only plugin names and library file names, so it does not provide as much information as the
+# 		  PLUGIN table or the SHOW_PLUGINS statement.
+#
+# The following section pertains to MySQL Enterprise Thread Pool
+#
+# NOTE: MySQL Enterprise Thread Pool is an extension included in MySQL Enterprise Edition, a commercial product.
+#
+# MySQL Enterprise Edition includes MySQL Enterprise Thread Pool, implemented using a server plugin.
+# The default thread-handling model in MySQL Server executes statements using one thread per client connection.
+#
+# As more clients connect to the server and execute statements, overall performance decreases.
+#
+# The thread pool plugin provides an alternative thread-handling model designed to reduce overhead and improve performance.
+#
+# The plugin implements a thread pool that increases server performance by efficiently managing statement execution
+# threads for large numbers of client connections.
+#
+# The thread pool addresses several problems of the model that uses one thread per connection:
+#
+# 		) Too many thread stacks make CPU caches almost useless in highly parallel execution workloads.
+#
+# 		  The thread pool promotes thread stack reuse to minimize the CPU cache footprint.
+#
+# 		) With too many threads executing in parallel, context switching overhead is high.
+#
+# 		  This also presents a challenging task to the OS system scheduler. 
+#
+# 		  The thread pool controls the number of active threads to keep the parallelism within the MySQL server at a level that it can handle
+# 		  and that is appropiate for the server host on which MySQL is executing.
+#
+# 		) Too many transactions executing in parallel increases resource contention. In InnoDB, this increases the time
+# 		  spent holding central mutexes.
+#
+# 		  The thread pool controls when transactions start to ensure that not too many execute in parallel.
+#
+# The following pertains to the Thread Pool Components:
+#
+# The thread pool features comprises these components:
+#
+# 		) A plugin library file implements a plugin for the thread pool code as well as several associated monitoring tables that provide info about thread pool ops:
+#
+# 			) As of MySQL 8.0.14, the monitoring tables are Performance Schema Tables
+#
+# 			)	< 8.0.14, the monitoring tables are INFORMATION_SCHEMA tables.
+#
+# 			 	The INFORMATION_SCHEMA tables now are deprecated.
+#
+# 				To transition old tables to new tables, this is pertinent:
+#
+# 					 SELECT * FROM INFORMATION_SCHEMA.TP_THREAD_STATE;
+#
+# 				The application should use this query instead:
+#
+# 					SELECT * FROM performance_schema.tp_thread_state;
+#
+# 		NOTE: If you do not load all the monitoring tables, some or all MySQL Enterprise Monitor thread pool graphs will be empty.
+#
+# 		) Several SYS_VARs are related to the thread pool. The thread_handling SYS_VAR has a value of loaded-dynamically when the server
+# 		  successfully loads the thread pool plugin.
+#
+# 		  The other related VARs are implemented by the thread pool plugin; they are not available unless it is enabled:
+#
+# 				) thread_pool_algorithm: The concurrency algorithm to use for scheduling
+#
+# 				) thread_pool_high_priority_connection: How to shcedule statement execution for a session
+#
+# 				) thread_pool_prio_kickup_timer: How long before the thread pool moves a statement awaiting execution from the low-prio queue to high-prio queue.
+#
+# 				) thread_pool_max_unused_threads: How many sleeping threads to permit.
+#
+# 				) thread_pool_size: The number of thread groups in the thread pool. This is the most improtant param controlling thread pool performance.
+#
+# 				) thread_pool_stall_limit: The time before an executing statement is considered to be stalled.
+#
+# 			If any variable implemented by the plugin is set to an illegal value at startup, plugin initialization fails and the plugin does not load.
+#
+# 		) The Performance Schema has instruments that expose information about the thread pool and may be used to investiage operational performance.
+# 		  
+# 		  SELECT * FROM performance_schema.setup_instruments WHERE NAME LIKE '%thread_pool%';
+#
+# The following section pertains to Thread Pool Installation:
+#
+# 		This section describes how to install MySQL Enterprise Thread Pool.
+# 
+# 		To be usable by the server, the plugin library file must be located in the MySQL plugin directory (the directory named by the plugin_dir SYS_VAR).
+# 		If necessary - configure the plugin directory location by setting the value of plugin_dir at server startup.
+#
+# 		The plugin library file base name is thread_pool. The file name suffix differs per platform (for example, .so on UNIX based systems, .dll for Windows)
+#
+# THREAD POOL INSTALLATION >= MySQL 8.0.14
+#
+# 		In MySQL 8.0.14 and higher, the thread pool monitoring tables are Performance Schema tables that are loaded and unloaded along with
+# 		the thread pool plugin.
+#
+# 		The INFORMATION_SCHEMA versions of the tables are deprecated but still there. Those are installed per < 8.0.14
+#
+# 		To enable thread pool capability, load the plugin by starting the server with the --plugin-load-add option.
+#
+# 		To do this, put these lines in the server my.cnf file (adjust the .so suffix for your platform if needed):
+#
+# 			[mysqld]
+# 			plugin-load-add=thread_pool.so
+#
+# 		To verify plugin installation, examine the INFORMATION_SCHEMA.PLUGINS table or use the SHOW_PLUGINS statement.
+# 		For instance:
+#
+# 			SELECT PLUGIN_NAME, PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME LIKE 'thread%';
+# 			+---------------+---------------+
+# 			| PLUGIN_NAME 	 | PLUGIN_STATUS |
+# 			+---------------+---------------+
+# 			| thread_pool 	 | ACTIVE 		  |
+# 			+---------------+---------------+
+#
+# 		To verify that the Performance Schema monitoring tables are available, examine the INFORMATION_SCHEMA.TABLES table or use
+# 		the SHOW_TABLES statement.
+#
+# 		For example:
+#
+# 			SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'performance_schema' AND TABLE_NAME LIKE 'tp%';
+# 			+-------------------------+
+# 			| TABLE_NAME 				  |
+# 			+-------------------------+
+# 			| tp_thread_group_state   |
+# 			| tp_thread_group_stats   |
+# 			| tp_thread_state 		  |
+# 			+-------------------------+
+#
+# If the server loads the thread pool plugin successfully, it sets the thread_handling SYS_VAR to loaded-dynamically.
+#
+# If the plugin fails to initialize, check the server error log for diagnostic messages.
+#
+# THREAD POOL INSTALLATION PRIOR TO MySQL 8.0.14
+#
+# < 8.0.14, the thread pool monitoring tables are plugins separate from the thread pool plugin and can be installed separately.
+#
+# To enable thread pool capability, load the plugins to be used by starting the server with the --plugin-load-add option.
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/thread-pool-installation.html 		 								
+#
+
