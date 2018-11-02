@@ -25292,7 +25292,1748 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # < 8.0.14, the thread pool monitoring tables are plugins separate from the thread pool plugin and can be installed separately.
 #
 # To enable thread pool capability, load the plugins to be used by starting the server with the --plugin-load-add option.
+# To do this, put these lines in the server my.cnf (adjust the .so suffix for your platformas necessary):
+#
+# 		[mysqld]
+# 		plugin-load-add=thread_pool.so
+#
+# To verify plugin installation, examine the INFORMATION_SCHEMA.PLUGINS table or use the SHOW_PLUGINS statement.
+#
+# SELECT PLUGIN_NAME, PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME LIKE 'thread%';
+# +---------------------------------------+
+# | PLUGIN_NAME 		| PLUGIN_STATUS 		|
+# +------------------+--------------------+
+# | thread_pool 	 	| ACTIVE 				|
+# +------------------+--------------------+
+#
+# To verify that the Performance Schema monitoring table are available, examine the INFORMATION_SCHEMA.TABLES or use the 
+# SHOW_TABLES statement.
+#
+# For example:
+#
+# SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'performance_schema' AND TABLE_NAME LIKE 'tp%';
+#
+# +------------------------------------------+
+# | TABLE_NAME 										|
+# +------------------------------------------+
+# | tp_thread_group_state 							|
+# | tp_thread_group_stats 							|
+# | tp_thread_state 									|
+# +------------------------------------------+
+#
+# If the server loads the thread pool plugin successfully, it sets the thread_handling SYS_VAR to loaded-dynamically.
+#
+# If the plugin fails to initialize, check the server error log for diagnostic messages.
+#
+# THREAD POOL INSTALLATION PRIOR TO 8.0.14
+#
+# Before 8.0.14 - the thread pool monitoring tables are plugins separate from the thread pool plugin and can be installed
+# separetely.
+#
+# To enable thread pool capability, load the plugins to be used by starting the server with the --plugin-load-add option.
+#
+# For example, if you name only hte plugin library file, the server loads all plugins that it contains (that is, the thread pool
+# plugin and all the INFORMATION_SCHEMA tables).
+#
+# To do this, put these lines in the server my.cnf file (adjust the .so suffix for your platform as necessary):
+#
+# [mysqld]
+# plugin-load-add=thread_pool.so
+#
+# That is equivalent to loading all thread pool plugins by manually naming them individually:
+#
+# [mysqld]
+# plugin-load-add=thread_pool=thread_pool.so
+# plugin-load-add=tp_thread_state=thread_pool.so
+# plugin-load-add=tp_thread_group_state=thread_pool.so
+# plugin-load-add=tp_thread_group_stast=thread_pool.so
+#
+# If desired, you can load individual plugins from the library file. To load the thread pool plugin but not the INFORMAITON_SCHEMA tables,
+# use an option as this:
+#
+# [mysqld]
+# plugin-load-add=thread_pool=thread_pool.so
+#
+# To load the thread pool plugin and only the TP_THREAD_STATE INFORMATION_SCHEMA table, use options like this:
+#
+# [mysqld]
+# plugin-load-add=thread_pool=thread_pool.so
+# plugin-load-add=tp_thread_state=thread_pool.so
+#
+# To verify plugin installation, examine the INFORMATION_SCHEMA.PLUGINS table or use the SHOW_PLUGINS statement.
+#
+# SELECT PLUGIN_NAME, PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME LIKE 'thread%' OR PLUGIN_NAME LIKE 'tp%';
+#
+# +------------------------------------------------------------+
+# | PLUGIN_NAME 							| 		PLUGIN_STATUS 			|
+# +---------------------------------+--------------------------+
+# | thread_pool 							| ACTIVE 						|
+# | TP_THREAD_STATE 						| ACTIVE 						|
+# | TP_THREAD_GROUP_STATE 				| ACTIVE 						|
+# | TP_THREAD_GROUP_STATS 				| ACTIVE 						|
+# +---------------------------------+--------------------------+
+#
+# If the server loads the thread pool plugin successfully, it sets the thread_handling SYS_VAR to loaded-dynamically.
+#
+# If a plugin fails to initialize, check the server error log for diagnostic messages.
+#
+# The following pertains to THREAD POOL OPERATION:
+#
+# The thread pool consists of a number of thread groups, each of which manages a set of client connections.
+# As connections are established, the thread pool assigns them to thread groups in round-robin fashion.
+#
+# The number of thread groups is configurable using the thread_pool_size SYS_VAR.
+# The default number of groups is 16.
+#
+# The max number of threads per group is 4096 (or 4096 on systems where one thread is used interally)
+#
+# The thread pool separates connections and threads, so there is no fixed relationship between connections and the
+# threads that execute statements received from those connections.
+#
+# This differs from the default thread-handling model that associates one thread with one connection such that the
+# thread executes all statements from the connection.
+#
+# The thread pool tries to ensure a maximum of one thread executing in each group at any time, but sometimes permits more
+# threads to execute temporarily for best performance.
+#
+# The algorithm works in the following manner:
+#
+# 		) Each thread group has a listener thread that listens for incoming statements from the connections assigned to the group.
+#
+# 	 	  When a statement arrives, the thread group either begins executing it immediately or queues it for later execution:
+#
+# 				) Immediate execution occurs if the statement is the only one received and no statements are queued or currently executing.
+#
+# 				) Queueing occurs if the statement cannot begin executing immediately.
+#
+# 		) If immediate execution occurs, execution is performed by the listener thread.
+#
+# 		  (This means that temporarily no thread in the groups is listening.)
+# 			
+# 			If the statement finishes quickly, the executing thread returns to listening for statements.
+#
+# 			Otherwise, the thread pool considers the statement stalled and starts another thread as a listener thread
+# 			(creating it if necessary).
+#
+# 			To ensure that no thread group becomes blocked by stalled statements, the thread pool has a background thread
+# 			that regularly monitors thread group states.
+#
+# 			By using the listening thread to execute a statement that can begin immediately, there is no need to create 
+# 			an additional thread if the statement finishes quickly.
+#
+# 			This ensures the most efficient execution possible in the case of a lower number of concurrent threads.
+#
+# 			When the thread pool plugin starts, it creates one thread per group (the listener thread), plus the background thread.
+# 			Additional threads are created as necessary to execute statements.
+#
+# 		) The value of the thread_pool_stall_limit SYS_VAR determines the meaning of "finishes quickly" in the above points.
+#
+# 		  The default time before threads are considered stalled is 60ms but can be set to a maximum of 6s.
+#
+# 			This param is configurable to enable you to strike a balance appropiate for the server work load.
+#
+# 			Short wait values permited threads to start more quickly.
+#
+# 			Short values are also better for avoiding deadlock situations. Long wait time values are useful for workloads that
+# 			include long-running statements, to avoid starting too many new statements while the current one is executing.
+#
+# 		) The thread pool focuses on limiting the number of concurrent short-running statements.
+#
+# 			Before an executing statement reaches the stall time, it prevents other statements from beginning to execution.
+#
+# 			If the statement executes past the stall time, it is permitted to continue but no longer prevents other statements
+# 			from starting.
+#
+# 			In this way, the thread pool tries to ensure that in each thread group there is never more than one short-running statement,
+# 			although, there might be multiple long-running statements.
+#
+# 			It is undesirable to let long-running statements prevent other statements from executing because there is no limit on the amount
+# 			of waiting that might be necessary.
+#
+# 			For example, on a replication master, a thread that is sending binary log events to a slave effectively runs forever.
+#
+# 		) A statement becomes blocked if it encounters a disk I/O operation or a user level lock (row lock or table lock).
+#
+# 		  The block would cause the thread group to become unused, so there are callbacks to the thread pool to ensure that
+# 			the thread pool can immediately start a new thread in this group to execute another statement.
+#
+# 			When a blocked thread returns, the thread pool permits it to restart immediately.
+#
+# 		) There are two queues, a high prio queue and a low prio queue.
+#
+# 			The first statement in a transaction goes to the low-prio queue. 
+#
+# 			Any following statements for the transaction go to the high prio queue if the transaction is ongoing
+# 			(statements for it have begun executing), or to the low-priority queue otherwise.
+#
+# 			Queue assignment can be affected by enabling the thread_pool_high_priority_connection SYS_VAR,
+# 			which causes all queued statements for a session to go into the high prio queue.
+#
+# 			Statements for a nontransactional storage engine, or a transactional engine if autocommit is enabled,
+# 			are treated as low-prio statements because in this case each statement is a transaction.
+#
+# 			Thus, given a mix of statements for InnoDB and MyISAM tables, the thread pool prios those for InnoDB
+# 			over those for MyISAM unless autocommit is enabled.
+#
+# 			With autocommit enabled, all statements will be low prio.
+#
+# 		) When the thread group selects a queued statement for execution, it first looks in the high-priority queue, then in the
+# 		  low prio queue.
+#
+# 			If a statement is found, it is removed from its queue and begins to execute.
+#
+# 		) If a statement stays in the low prio queue for too long, the thread pool moves it to the high prio queue.
+#
+# 			The value of the thread_pool_prio_kickup_timer SYS_VAR controls the time before movement.
+#
+# 			For each thread group, a max of one statement per 10ms or 100 per second will be moved from the low prio queue
+# 			to the high prio queue.
+#
+# 		) The thread pool reuses the most active threads to obtain a much better use of CPU caches. This is a small adjustment that
+# 			has a great impact on performance.
+#
+# 		) While a thread executes a statement from a user connection, Performance Schema instrumentation accounts thread activity
+# 		  to the user connection.
+#
+# 			Otherwise, Performance Schema accounts actvitiy to the thread pool.
+#
+# Here are examples of conditions under which a thread group might have multiple threads started to execute statements:
+#
+# 		) One thread begins executing a statement, but runs long enough to be considered stalled.
+#
+# 		The thread group permits another thread to begin executing another statement even though the first thread is doing it's job.
+#
+# 		) One thread begins executing a statement, then becomes blocked and reports this back to the thread pool.
+#
+# 			The thread group permits another thread to begin executing another statement.
+#
+# 		) One thread begins executing a statement, becomes blocked, but does not report back that it is blocked because the
+# 		  block does not occur in code that has been instrumented with thread pool callbacks.
+#
+# 			In this case, teh thread appears to the thread group to be still running.
+#
+# 			If the block lasts long enough for the statement to be considered stalled, the group permits another thread to begin
+# 			executing another statement.
+#
+# The thread pool is designed to be scalable across an increasing number of connections. It is also designed to avoid
+# deadlocks that can arise from limiting the number of actively executing statements.
+#
+# It is important that threads that do not report back to the thread pool do not prevent other statements from executing
+# and thus causes the thread pool to become deadlocked.
+#
+# Examples of such statements are:
+#
+# 		) Long running statements. These would lead to all resources only used by a few statements, and they could prevent all others from accessing the server.
+#
+# 		) Binary log dump threads that read the binary log and sends it to slaves.
+#
+# 			This is a kind of long running "statement" (i.e, constantly) that runs for a very long time, and should not prevent other statements from executing.
+#
+# 		) Statements blocked on a row lock, table lock, sleep or any other blocking acvitiy that has not been reported back to the thread pool by MySQL
+# 			Server or a storage engine.
+#
+# In each case, to prevent deadlock, the statement is moved to the stalled category when it does not complete quickly,
+# so that the thread group can permit another statement to begin executing.
+#
+# With this design, when a thread executes or becomes blocked for an extended time, the thread pool moves the thread to the stalled category
+# and for the rest of the statements execution,, it does not prevent other statements from executing.
+#
+# The max number of threads that can occur is the sum of max_connections and thread_pool_size.
+#
+# This can happen in a situation where all connections are in execution mode and an extra thread is created per group
+# to listen for more statements.
+#
+# It can happen, albeit not very feasible.
+#
+# The following pertains to Thread Pool Tuning:
+#
+# This section provides guidelines on setting thread pool system variables for best performance, measured using a metric such as trans/sec.
+#
+# thread_pool_size is the most important parameter controlling thread pool performance.
+# It cna be set only at server startup.
+#
+# Our experience in testing the thread pool indicates the following:
+#
+# 	) If the primary storage engine is InnoDB, the optimal thread_pool_size setting is likely between 16 and 36, with the most common
+# 	  optimal values leaning towards 26 - 36. We have not seen any situation where the setting has been optiomal beyond 36.
+#
+# 	  There may be special cases where  avalue of smaller than 16 is optimal.
+#
+# 		For workloads such as DBT2 and Sysbench, the optimum for InnoDB seems to be usually around 36.
+#
+# 		For very write-intensive workloads, the optimal setting can sometimes be lower.
+#
+# 	) If the primary storage engine is MyISAM the thread_pool_Size setting should be fairly low.
+#
+# 		We tend to get optimal performance for values from 4 to 8.
+#
+# 		Higher values tend to have slightly negative but not dramatic impact on performance.
+#
+# Another SYS_VAR, thread_pool_stall_limit, is important for handling of blocked and long-running statements.
+#
+# If all calls that block the MySQL Server are reported to the thread pool, it would always know when execution
+# threads are blocked.
+#
+# However, this may not always be true. For example, blocks could occur in code that has not been instrumented with
+# thread pool callbacks.
+#
+# For such cases, the thread pool must be able to identify threads that appear to be blocked.
+#
+# This is done by means of a timeout, the length of which can be tuned using the thread_pool_stall_limit SYS_VAR.
+#
+# This parameter ensures that the server does not become completely blocked.
+#
+# The v alue of thread_pool_stall_limit has an upper limit of 6 seconds to prevent the risk of deadlock servers.
+#
+# thread_pool_stall_limit also enables the thread pool to handle long-running statements.
+#
+# If a long-running statement was permitted to block a thread group, all other connections assigned
+# to the group would be blocked and unable to start execution until the long-running statements were completed.
+#
+# In the worst case, this could take hours or even days.
+#
+# The value of thread_pool_stall_limit should be chosen such that statements that execute longer than its value are
+# considered stalled.
+#
+# Stalled statements generate a lot of extra overhead since they involve extra context switches and in some cases even
+# extra thread creations.
+#
+# On the other hand, setting the thread_pool_stall_limit param too high means that long-running statements will block
+# a number of short-running statements for longer than necessary.
+#
+# Short wait values permit threads to start more quickly.
+#
+# Short values are also better for avoiding deadlock situations. 
+#
+# Long wait values are useful for workloads that include long-running statements, to avoid starting
+# too many new statements while the current one executes.
+#
+# Suppose a server executes a workload where almost all statements complete within 100ms even when the server is loaded,
+# and the remaining statements take between 100ms and 2 hours fairly evenly spread.
+#
+# In this case, it would make sense to set thread_pool_stall_limit to 10 (meaning 100ms).
+# The default value of 60ms is okay for servers that primarily execute very simple statements.
+#
+# The thread_pool_stall_limit PARAM can be changed at runtime to enable you to strike a balance appropiate for the
+# server work load.
+#
+# Assuming that the tp_thread_group_stats table is enabled, you can use the following query to determine the fraction
+# of executed statements that stalled:
+#
+# SELECT SUM(STALLED_QUERIES_EXECUTED) / SUM(QUERIES_EXECUTED) FROM performance_schema.tp_thread_group_stats;
+#
+# This number should be as low as possible. To decrease the likelihood of statements stalling, increase the value of
+# thread_pool_stall_limit. 
+#
+# When a statement arrives, what is the max value time it can be delayed before it actually starts executing?
+#
+# Assume:
+#
+# ) htere are 200 statements queued in the low prio
+#
+# ) There are 10 statements queued in the high prio queue
+#
+# ) thread_pool_prio_kickup_timer is set to 10K (10 sec)
+#
+# ) thread_pool_stall_limit is set to 100 (1 sec)
+#
+# In the worst case, the 10 high prio statements present 10 tranactions that continue executing for a long time.
+#
+# Thus, worst case, no statements will be moved to high prio - because it's always awaiting an execution of a statement.
+#
+# After 10 seconds, the new statement is eligible to be moved to high prio.
+#
+# However, before it can move - all statements before it must be moved as well.
+#
+# This could take anotehr 2 sec because a max of 100 statements per sec are moved to high prio queue.
+#
+# Now when the statement reaches the high prio queue, there could potentionally be many long-running statements
+# ahead of it.
+#
+# In the worst case, everyone of those will become stalled and take 1 second each before the next statement is retrieved
+# from the high prio queue.
+#
+# Thus - in that scenario, it would take 222 seconds before the new statements starts executing.
+#
+# ----
+#
+# thread_kick_up = 10 seconds
+#
+# ----
+#
+# high prio queue: 
+#
+# 10 ----- 1 second stall ------->
 # 
+# low prio queue:
+#
+# 200 ----------->
+#
+# New statement:
+#
+# 1 --------------->
+#
+# 
+# low -> high = 100/sec MAX
+#
+# 200 low -> high = 200/100 sec (2 sec)
+#
+# KICK-UP TIME FROM LOW TO HIGH (10 sec)
+#
+# IF ALL STALL:
+#
+# 210 statements stall * STALL TIME (1 second, 210)
+#
+# 210 + 10 + 2
+#
+# Total of 222 seconds.
+#
+# ----
+#
+# The following pertains to The Rewriter Query Rewrite Plugin
+#
+# MySQL supports query rewrite plugins that can examine and possibly modify SQL statements received by the server before the
+# server executes them.
+#
+# MySQL distribs include a postparse query rewrite plugin named Rewriter and scripts for installing the plugin and its associated components.
+# These components work together to provide statement-rewriting capability:
+#
+# 		) A server-side plugin named Rewriter examines statements and may rewrite them, based on its in-memory cache of rewrite rules.
+#
+# 		) These statements are subject to rewriting:
+#
+# 			) >= 8.0.12 -> SELECT, INSERT, REPLACE, UPDATE and DELETE
+#
+# 			) < 8.0.12 -> SELECT
+#
+# 		  Standalone statements and prepared-statements are subject to rewriting. Statements occuring within view definitions or stored programs
+# 		  are not subject to rewriting.
+#
+# 		) The Rewriter plugin uses a database named query_rewrite containing a table named rewrite_rules.
+#
+# 			The table provides persistent storage for the rules that the plugin uses to decide whether to rewrite statements.
+#
+# 			Users communicate with the plugin by modifying the set of rules stoed in this table.
+#
+# 			The plugin communicates with users by setting the message column of table rows.
+#
+# 		) The query_rewrite DB contains a stored procedure named flush_rewrite_rules() that loads the contents of the rules table into the plugin.
+#
+# 		) A user defined function named load_rewrite_rules() is used by the flush_rewrite_rules() stored procedure.
+#
+# 		) The Rewriter plugin exposes SYS_VARs that enable plugin configuration and STATUS vars that provide runtime operational information.
+#
+# The following section describes how to install and use the Rewriter plugin.
+#
+# The following pertains to Installing or Uninstalling the Rewriter Query Rewrite Plugin
+#
+# NOTE:
+#
+# 		If installed, the Rewriter plugin involves some overhead even when disabled. To avoid this overhead, do not install the plugin lest you intend to use it.
+#
+# To install or uninstall the Rewriter query rewrite plugin, choose the appropriate script located in the share directory of your MysQL app:
+#
+# 		install_rewriter.sql : Choose this script to install the Rewriter plugin and its associated components.
+#
+# 		uninstall_rewriter.sql : Choose this script to uninstall the Rewriter plugin and its associated components.
+#
+# Run the chosen scripts as follows:
+#
+# 		mysql -u root -p < install_rewriter.sql
+# 		Enter PW (root PW here)
+#
+# The example here uses the install_rewriter.sql installation script.
+# 
+# To verify that it is installed and enabled, run this statement:
+#
+# 		SHOW GLOBAL VARIABLES LIKE 'rewriter_enabled';
+# 
+# 		+----------------------------------+
+# 		| Variable_name 		| Value 		  |
+# 		+--------------------+-------------+
+# 		| rewriter_enabled 	| ON 			  |
+# 		+--------------------+-------------+
+#
+# The following pertains to how to Use the Rewriter Query Rewrite Plugin:
+#
+# To enable or disable the plugin, enable or disable the rewriter_enabled SYS_VAR.
+#
+# By default, the Rewriter plugin is enabled when you install it.
+# To set the initial plugin state explicitly, you can set the variable at server startup.
+#
+# For example, to enable the plugin in an option file - use these lines:
+#
+# 		[mysqld]
+# 		rewriter_enabled=ON
+#
+# It is also possible to enable or disable the plugin at runtime:
+#
+# 		SET GLOBAL rewriter_enabled = ON;
+# 		SET GLOBAL rewriter_enabled = OFF;
+#
+# Assuming that the Rewriter plugin is enabled, it examines and possibly modifies each rewritable statement received by the server.
+#
+# The plugin determines whether to rewrite statements based on its in-memory cache of rewriting rules, which are loaded from the
+# rewrite_rules table in the query_rewrite DB.
+#
+# These statements are subject to rewriting:
+#
+# 		>= 8..0.12 : SELECT, INSERT, REPLACE, UPDATE and DELETE
+#
+# 		< 8.0..12 : SELECT
+#
+# Standalone statements and prepared statements are subject to rewriting.
+#
+# Statements occuring within view defs or stored programs are not subject to rewriting.
+#
+# ADDING REWRITE RULES
+#
+# To add rules for the Rewriter plugin, add rows to the rewrite_rules table, then invoke the flush_rewrite_rules() stored procedure
+# to load the rules from the table into the plugin.
+#
+# The following example creates a simple rule to match statements that select a single literal value:
+#
+# INSERT INTO query_rewrite.rewrite_rules (pattern, replacement)
+# VALUES('SELECT ?', 'SELECT ? + 1');
+#
+# The resulting table contents will look as follows:
+#
+# 		SELECT * FROM query_rewrite.rewrite_rules\G
+# 		****************************** 1. row ******************************
+# 									id: 1
+# 							pattern: SELECT ?
+# 					pattern_database: NULL
+# 				replacement: 		SELECT ? + 1
+# 				enabled: 			YES
+# 				MESSAGE: 			NULL
+# 				pattern_digest: 	NULL
+# 			normalized_pattern:  NULL
+#
+# The rule specifies a pattern template indicating which SELECT statements to match and a replacement template indicating how to
+# rewrite matching statements.
+#
+# However, adding rules to the rewrite_rules table is not sufficient to cause the Rewriter plugin to use the rule.
+# You must invoke the flush_rewrite_rules() to load the table contents into the plugin in-memory cache:
+#
+# 		CALL query_rewrite.flush_rewrite_rules();
+#
+# TIP: 
+# 		If your rewrite rules seem not to be working properly, make sure that you have reloaded the rules by calling the flush_rewrite_rules()
+#
+# When the plugin reads each rule from the rules table, it computes a normalized (statement digest) form from the pattern and a digest
+# hash value, and uses them to update the normalized_pattern and pattern_digest column:
+#
+# 		SELECT * FROM query_rewrite.rewrite_rules\G
+# 		************************** 1. row ****************************
+# 										id: 1
+# 								pattern: SELECT ?
+# 					pattern_database: NULL
+# 						replacement:  	SELECT ? + 1
+# 							enabled: 	YES
+# 								message: NULL
+# 					  pattern_digest: <digest>
+# 				 normalized_pattern: select ?
+#
+# If a rule cannot be loaded due to some error, calling flush_rewrite_rules() produces an error:
+#
+# 		CALL query_rewrite.flush_rewrite_rules();
+# 		ERROR 1644 (45000): Loading of some rule(s) failed.
+#
+# When this occurs, the plugin writes an error message to the message column of the rule row to communicate the problem.
+# Check the rewrite_rules table for rows with non-NULL message column values to see what problems exist.
+#
+# Patterns use the same syntax as prepared statements. Within a pattern template, ? chars act as param markes that match
+# data values.
+#
+# Param markers can be used only where data values should appear, not for SQL keywords, identifiers and so forth.
+# The ? characters should not be enclosed within quotation marks.
+#
+# Like the pattern, the replacement can contain ? chars. For a statement that matches a pattern template,
+# the plugin rewrites it, replacing the ? param marker in the replacement using data values matched by the
+# corresponding markers in the pattern.
+#
+# The result is a complete statement string.
+#
+# The plugin asks the server to parse it, and returns the results to the server as the representaiton of the rewritten statement.
+#
+# After adding and loading the rule, check whether rewriting occurs according to whether statements match the rule pattern:
+#
+# 		SELECT PI();
+# 		+----------------+
+# 		| PI() 			  |
+# 		+----------------+
+# 		| 3.141593 		  |
+# 		+----------------+
+# 		1 row in set (0.01 sec)
+#
+# 		SELECT 10;
+# 		+------------+
+# 		| 10 + 1 	 |
+# 		+------------+
+# 		| 			11  |
+# 		+------------+
+#
+# 		1 row in set, 1 warning (0.00 sec)
+#
+# No rewriting occurs for hte first, but does for the second.
+#
+# The second statement illustrates that when the Rewriter plugin rewrites a statement, it produces a 
+# warning message.
+#
+# To view the message, use SHOW WARNINGS:
+#
+# SHOW WARNINGS\G
+# ***************************** 1. row ********************************
+#
+# 		Level: Note
+# 		 Code: 1105
+# 	 Message: Query 'SELECT 10' rewritten to 'SELECT 10 + 1' by a query rewrite plugin
+#
+# A statement need not be rewritten to a statement of the same type.
+# The following example loads a rule that rewrites DELETE statements to UPDATE statements:
+#
+# 		INSERT INTO query_rewrite.rewrite_rules (pattern, replacement)
+# 		VALUES('DELETE FROM db1.t1 WHERE col = ?',
+# 				 'UPDATE db1.t1 SET col = NULL WHERE col = ?');
+# 		CALL query_rewrite.flush_rewrite_rules();
+#
+# To enable or disable an existing rule, modify its enabled column and reload the table into the plugin.
+# To disable rule 1:
+#
+# 		UPDATE query_rewrite.rewrite_rules SET enabled = 'NO' WHERE id = 1;
+# 		CALL query_rewrite.flush_rewrite_rules();
+#
+# This enables you to deactive a rule without removing it from a table.
+#
+# To re-enable rule 1:
+#
+# 		UPDATE query_rewrite.rewrite_rules SET enabled = 'YES' WHERE id = 1;
+# 		CALL query_rewrite.flush_rewrite_rules();
+#
+# The rewrite_rules table contains a pattern_database column that Rewriter uses for matching table names that are not 
+# qualified with a database name:
+#
+# 		) Qualified table names in statements match qualified names in the pattern if corresponding database and table names are identical
+#
+# 		) Unqualified table names in statements match unqualified names in the pattern only if the default database is the same as pattern_database
+# 		  and the table names are identical.
+#
+# Suppose that a table named appdb.users has a column named id and that application are expected to select rows from the
+# table using a query of one of these forms, when the secondary can be used only if appdb is the default db:
+#
+# SELECT * FROM users WHERE appdb.id = id_value;
+# SELECT * FROM users WHERE id = id_value; #can only be used if appdb is default DB
+#
+# Suppose also that the id column is renamed to user_id (perhaps the table must be modified to add another type of ID and it is
+# necessary to indicate more specifically what type of ID the id column represents).
+#
+# The change means that applications must refer to user_id rather than id in the WHERE clause.
+#
+# But if there are old applications that cannot be written to change the SELECT queries they generate, they will no longer
+# work properly.
+#
+# The Rewriter plugin can solve this problem.
+#
+# To match and rewrite statements whether or not they qualify the table name, add the following two rules and reload the rules table:
+#
+# 		INSERT INTO query_rewrite.rewrite_rules
+# 			(pattern, replacement) VALUES(
+# 			'SELECT * FROM appdb.users WHERE id = ?',
+# 			'SELECT * FROM appdb.users WHERE user_id = ?'
+# 			);
+# 		INSERT INTO query_rewrite.rewrite_rules
+# 			(pattern, replacement, pattern_database) VALUES(
+# 			'SELECT * FROM users WHERE id = ?',
+# 			'SELECT * FROM users WHERE user_id = ?',
+# 			'appdb'
+# 			);
+# 		CALL query_rewrite.flush_rewrite_rules();
+#
+# Rewriter uses the first rule to match statements that use the qualified table name.
+#
+# It uses the second to match statements that used the unqualified name, but only if the
+# default DB is appdb (the value in pattern_database)
+#
+# HOW STATEMENTS MATCHING WORKS
+#
+# The Rewriter plugin uses statement digests and digest hash values to match incoming statements against rewrite rules in stages.
+# The max_digest_length SYS_VAR determines the size of the buffer used for computing statement digests.
+#
+# Larger values enable computation of digests that distinguish longer statements.
+#
+# Smaller values use less memory but increase the likelihood of longer statements coliding with the same digest value.
+#
+# The plugin matches each statement to the rewrite rules as follows:
+#
+# 		1. Compute the statement digest hash value and compare it to the rule digest hash values.
+#
+# 			This is subject to false positives, but serves as a quick rejection test.
+#
+# 		2. If the statement digest hash value matches any pattern digest hash value, match the normalized (statement digest) form of the
+# 			statement to the normalized form of the matching rule patterns.
+#
+# 		3. If the normalized statement matches a rule, compare the literal values in the statement and the pattern .
+#
+# 			A ? char in the pattern matches any literal value in the statement.
+#
+# 			If the statement prepares a statement, ? in teh pattern also matches ? in the statement.
+#
+# 			Otherwise, corresponding literals must be the same.
+#
+# If multiple rules match a statement, it is nondeterminsitic which one the plugin uses to rewrite the statement.
+#
+# If a pattern contains more markers than the replacement, the plugin discards excess data values.
+#
+# If a pattern contains fewer markers than the replacement, it is an error.
+#
+# The plugin notices this when the rules table is loaded, writes an error message to the message column of the rule row to communicate
+# the problem, and sets the Rewriter_reload_error status variable to ON. 			 
+#
+# REWRITING PREPARED STATEMENTS
+#
+# Prepared statements are rewritten at parse time (that is, when they are prepared), not when they are executed later.
+#
+# Prepared statements differ from nonprepared statements in that they may contain ? chars as param markers.
+# To match a ? in a prepared statement, a Rewriter pattern must contain ? in the same location.
+#
+# Suppose that a rewrite rule has this pattern:
+#
+# 		SELECT ?, 3
+#
+# The following table showcases several prepared SELECT statements and whether the rule pattern matches them.
+#
+# 		PREPARED STATEMENT 						WHETHER PATTERN MATCHES STATEMENT
+#
+# 		PREPARE s AS 'SELECT 3,3' 				Yes
+# 		PREPARE s AS 'SELECT ?,3' 				Yes
+# 		PREPARE s AS 'SELECT 3, ?' 			No
+# 		PREPARE s AS 'SELECT ?, ?' 			No -> Won't go through, as prepared statement must have ? in the same placement as Statement, i.e ?,3 is invalid
+#
+# REWRITER PLUGIN OPERATIONAL INFORMATION
+#
+# The Rewriter plugin makes information available about its operation by means of several status variables:
+#
+# 		SHOW GLOBAL STATUS LIKE 'Rewriter%';
+#
+# 		+---------------------------------------------+
+# 		| Variable_name 							| Value 	 |
+# 		+-----------------------------------+---------+
+# 		| Rewriter_number_loaded_rules 		| 1 		 |
+# 		| Rewriter_number_reloads 				| 5 		 |
+# 		| Rewriter_number_rewritten_queries | 1		 |
+# 		| Rewriter_reload_error 				| ON 		 |
+# 		+-----------------------------------+---------+
+#
+# When you load the rules table by calling the flush_rewrite_rules() stored procedure, if an error occurs for some rule,
+# the CALL statement produces an error, and the plugin sets the Rewriter_reload_error status variable to ON:
+#
+# 		CALL query_rewrite.flush_rewrite_rules();
+# 		ERROR 1644 (45000): Loading of some rule(s) failed.
+#
+# 		SHOW GLOBAL STATUS LIKE 'Rewriter_reload_error';
+# 		+--------------------------------+-------+
+# 		| Variable_name 						| Value |
+# 		+--------------------------------+-------+
+# 		| Rewriter_reload_error 			| ON 	  |
+# 		+--------------------------------+-------+
+#
+# In this case, check the rewrite_rules table for rows with non-NULL message column values to see what problems exist.
+#
+# Rewriter Plugin Use of Character Sets
+#
+# When the rewrite_rules table is loaded into the Rewriter plugin, the plugin interprets statements using the
+# current global value of the character_set_client SYS_VAR.
+#
+# If the global character_set_client value is changed subsequently, the rules must be reloaded.
+#
+# A client must have a session character_set_client value identical to what the global value was when the rules table
+# was loaded or rule matching will not work for that client.
+#
+# The following pertains to REWRITER QUERY REWRITE PLUGIN REFERENCE
+#
+# The following discussion serves as a reference to these components associated with the Rewriter query rewrite plugin:
+#
+# 		) The Rewriter rules table in the query_rewrite database
+#
+# 		) Rewriter procedures and functions
+#
+# 		) Rewriter system and status variables
+#
+# Rewriter Query Rewrite Plugin Rules Table
+#
+# The rewrite_rules table in the query_rewrite DB provides a persistent storage for the rules that the Rewriter plugin uses
+# to decide whether to rewrite statements.
+#
+# Users communicate with the plugin by modifying the set of rules stored in this table. The plugin communicates information to users
+# by setting the table's message column.
+#
+# 		NOTE:
+#
+# 			The rules table is loaded into the plugin by the flush_rewrite_rules stored procedure.
+#
+# 			Unless the procedure has been called following the most recent table modification,
+# 			the table contents do not necessarily correspond to the set of rules the plugin is using.
+#
+# The rewrite_rules table has these columns:
+#
+# 		) id
+#
+# 			The rule ID. This column is the table primary key. You can use the ID to uniquely identify any rule.
+#
+# 		) pattern
+#
+# 			The template that indicates the pattern for statements that the rule matches.
+# 			Use ? to represent param markers that match data values.
+#
+# 		) pattern_database
+#
+# 			The database used to match unqualified table names in statements.
+#
+# 			Qualified table names in statements match qualified names in the pattern if corresponding database and table names are identical.
+#
+# 			Unqualified table names in statements match unqualified names in the pattern only if the default database is the same as 
+# 			pattern_database and the table names are identical.
+#
+# 		) replacement
+#
+# 			The template that indicates how to rewrite statements matching the pattern column value.
+#
+# 			Use ? to represent param markers that match data values.
+#
+# 			In rewritten statements, the plugin replaces ? param markers in replacement using data values matched by
+# 			the corresponding markers in pattern.
+#
+# 		) enabled
+#
+# 			Whether the rule is enabled. Load operations (performed by invoking the flush_rewrite_rules() stored procedure) load the rule
+# 			from the table into the Rewriter in-memory cache only if this column is YES.
+#
+# 			This column makes it possible to deactivate a rule without removing it.
+# 			Set the column value to something other than YES and reload the table into the plugin.
+#
+# 		) message
+#
+# 			The plugin uses this column for communicating with users.
+#
+# 			If no error occurs when the rules table is loaded into memory, the plugin sets the message column to NULL.
+# 
+# 			A non-NULL value indicates an error and the column contents are the error message.
+# 			Errors can occur under these circumstances:
+#
+# 				) Either the pattern or the replacement is an incorrect SQL statement that produces syntax errors.
+#
+# 				) The replacement contains more ? params markers than the pattern.
+#
+# 			If a load error occurs, the plugin also sets the Rewriter_reload_error STATUS_VAR to ON.
+#
+# 		) pattern_digest
+#
+# 			This column is used for debugging and diagnostics.
+#
+# 			If the column exists when the rules table is loaded into memory, the plugin updates
+# 			it with the pattern digest.
+#
+# 			This column may be useful if you are trying to determine why some statement fails to be rewritten.
+#
+# 		) normalized_pattern
+#
+# 			This column is used for debugging and diagnostics. 
+#
+# 			If the column exists when the rules table is loaded into memory, the plugin updates it with the normalized
+# 			form of the pattern.
+#
+# 			This column may be useful if you are trying to determine why some statement fails to be rewritten.
+#
+# REWRITER QUERY REWRITE PLUGIN PROCEDURES AND FUNCTIONS
+#
+# Rewriter plugin operation uses a stored procedure that loads the rules table into its in-memory cache, and a helper
+# user-defined function (UDF).
+#
+# Under normal operation, users invoke only the stored procedure.
+#
+# The UDF is intended to be invoked by the stored procedure, not directly by users.
+#
+# 		) flush_rewrite_rules()
+#
+# 			This stored procedure uses the load_rewrite_rules() UDF to load the contents of the rewrite_rules table
+# 			into the Rewriter in-memory cache.
+#
+# 			Calling flush_rewrite_rules() implies COMMIT.
+#
+# 			Invoke this procedure after you modify the rules table to cause the plugin to update its cache from the
+# 			new table contents.
+#
+# 			If any errors occur, the plugin sets the message column for the appropriate rule rows in the table and
+# 			sets the Rewriter_reload_error status variable to ON.
+#
+# 		) load_rewrite_rules()
+#
+# 			This UDF is a helper routine used by the flush_rewrite_rules() stored procedure.
+#
+# REWRITER QUERY REWRITE PLUGIN SYS_VARs
+#
+# The Rewriter query rewrite plugins support the following SYS_VARs.
+# These variables are available only if the plugin is installed.
+#
+# 		) rewriter_enabled
+#
+# 			SYS_VAR 					rewriter_enabled
+# 			Scope: 					Global
+# 			Dynamic: 					Yes
+# 			SET_VAR Hint applies: 	 No
+# 			Type: 					Boolean
+# 			Default: 				 	 ON
+#
+# 			Whether the Rewriter query rewrite plugin is enabled.
+#
+# 		) rewriter_verbose
+#
+# 			SYS_VAR 					rewriter_verbose
+# 			Scope: 					Global
+# 			Dynamic: 				   Yes
+# 			SET_VAR Hint: 				No
+# 			Type: 						INteger
+#
+# 			For internal use.
+#
+# REWRITER QUERY REWRITE PLUGIN STATUS VARS
+#
+# The Rewriter query rewrite plugin supports the following status vars.
+#
+# These variables are available only if the plugin is installed.
+#
+# 			) Rewriter_number_loaded_rules
+#
+# 				THe number of rewrite plugin rewrite rules successfully loaded from the rewrite_rules table into memory for use by the Rewriter plugin.
+#
+# 			) Rewriter_number_reloads
+#
+# 				The number of times the rewrite_rules table has been loaded into the in-memory cache used by the Rewriter plugin
+#
+# 			) Rewriter_number_rewritten_queries
+#
+# 				The number of queries rewritten by the Rewriter query rewrite plugin since it was loaded.
+#
+# 			) Rewriter_reload_error
+#
+# 				Whether an error occurred the most recent time that the rewrite_rules table was loaded into the in-memory
+# 				cache used by the Rewriter plugin.
+#
+# 				If the value is OFF, no error occured.
+#
+# 				If the value is ON, an error occured.
+#
+# 				Check the messages column of the rewriter_rules table for error messages.
+#
+# VERSION TOKENS
+#
+# MySQL includes Version Tokens, a feature that enables creation of and synchronization around server tokens that applications
+# can use to prevent accessing incorrect or out-of-date Data.
+#
+# The Version Tokens interface has these characteristics::
+#
+# 		) Version tokens are pairs consisting of a name that servers as a key or identifier, plus a value
+#
+# 		) Version tokens can be locked. An application can use token locks to indicate to other cooperating applications that tokens are in used and
+# 			should not be modified.
+#
+# 		) Version token lists are established per server; for example, to specify the server assignment or operational state.
+#
+# 			In addition, an application that communicates with a server can register its own list of tokens that indicate the state
+# 			it requires the server to be in.
+#
+# 			An SQL statement sent by the application to a server not in the required state produces an error.
+#
+# 			This is a signal to the application that it should seek a different server in the required state to receive
+# 			the SQL statement.
+#
+# The following section describes the components of Version Tokens, discuss how to install and use them, and provides refernce.
+#
+# VERSION TOKEN COMPONENTS
+#
+# Version Tokens is based on a plugin library that implements these components:
+#
+# 		) A server-side plugin named version_tokens holds the list of version tokens associated with the server and subscribes to
+# 		  notifications for statement execution events.
+#
+# 		  The version_tokens plugin uses the audit plugin API to monitor incoming statements from clients and matches each client's
+# 			session-specific version token list against the server version token list.
+#
+# 			If there is a match, the plugin lets the statement through and the server continues to process it.
+#
+# 			Otherwise, the plugin returns an error to the client and the statement fails.
+#
+# 		) A set of user-defined functions (UDFs) provides an SQL-level API for manipulating and inspecting the list of server version
+# 		  tokens maintained by the plugin.
+#
+# 			The VERSION_TOKEN_ADMIN or SUPER privs is required to call any of the Version Token UDFs.
+#
+# 		) When the version_tokens plugin loads, it defines the VERSION_TOKEN_ADMIN dynamic privilege.
+#
+# 			This priv can be granted to users of the UDFs.
+#
+# 		) A SYS_VAR enables clients to specify the list of version tokens that registers the required server state.
+#
+# 			If the server has a different state when a client sends a statement, the client receives an error.
+#
+# INSTALLING OR UNINSTALLING VERSION TOKENS
+#
+# NOTE:
+#
+# 		If installed, Version Tokens involves some overhead. To avoid this, do not install lest you plan to use them.
+#
+# This section describes how to install or uninstall Version Tokens, which is implemented in a plugin library file containing
+# a plugin and user-defined functions (UDFs).
+#
+# To be usable by the server, the plugin library file must be located in the MySQL plugin dir (the dir named by the plugin_dir SYS_VAR)
+# If necessary, configure the plugin dir location by setting the value of plugin_dir at server startup.
+#
+# The plugin library file base name is version_tokens. The file name suffix differs per platform (for example, .so for Unix
+# and Unix-like systems. .dll for Windows)
+#
+# To install the Version Token plugin and UDFs, use the INSTALL_PLUGIN and CREATE_FUNCTION statements (adjust the .so suffix for your platform, if needed):
+#
+# 		INSTALL PLUGIN version_tokens SONAME 'version_token.so';
+# 		CREATE FUNCTION version_tokens_set RETURNS STRING
+# 			SONAME 'version_token.so';
+# 		CREATE FUNCTION version_tokens_show RETURNS STRING
+# 			SONAME 'version_token.so';
+#
+#  	CREATE FUNCTION version_tokens_edit RETURNS STRING
+# 			SONAME 'version_token.so';
+# 		CREATE FUNCTION version_tokens_delete RETURNS STRING
+# 			SONAME 'version_token.so';
+#
+# 		CREATE FUNCTION version_tokens_lock_shared RETURNS INT
+# 			SONAME 'version_token.so';
+# 		CREATE FUNCTION version_tokens_lock_exclusive RETURNS INT
+# 			SONAME 'version_token.so';
+#
+# 		CREATE FUNCTION version_tokens_unlock RETURNS INT
+# 			SONAME 'version_token.so';
+#
+# You must install the UDFs to manage the server's version token list, but you must also install the plugin ebcause the UDFs will
+# not work correctly without it.
+#
+# If the plugin and UDFs are used on a master replication server, install them on all slave servers as well to avoid replication problems.
+#
+# Once installed as just described, the plugin and UDFs remain installed until uninstalled.
+# To remove them, use the UNINSTALL_PLUGIN and DROP_FUNCTION statements:
+#
+# 		UNINSTALL PLUGIN version_tokens;
+# 		DROP FUNCTION version_tokens_set;
+# 		DROP FUNCTION version_tokens_show;
+# 		DROP FUNCTION version_tokens_edit;
+#
+# 		DROP FUNCTION version_tokens_delete;
+# 		DROP FUNCTION version_tokens_lock_shared;
+# 		DROP FUNCTION version_tokens_lock_exclusive;
+# 		DROP FUNCTION version_tokens_unlock;
+#
+# USING VERSION TOKENS
+#
+# Before using Version Tokens, install it according to the previous section.
+#
+# A scenario in which Version Tokens can be useful is a system that accesses a collection of MySQL servers but needs
+# to manage them for load balancing purposes by monitoring them and adjusting server assignments according to load changes.
+#
+# Such a system comprises these components:
+#
+# 		) The collection of MySQL servers to be managed
+#
+# 		) An administrative or management application that communicates with the servers and organizes them into high-availability groups.
+# 			Groups serve different purposes, and servers within each group may have different assignments.
+#
+# 			Assignment of a server within a certain group can change at any time.
+#
+# 		) Client applications that access the servers to retrieve and update data, choosing servers according to the purposes assigned them.
+# 			For example, a client should not send an update to a read-only server.
+#
+# Version Tokens permit server access to be managed according to assignment without requiring clients to repeatedly query the servers about
+# their assignments:
+#
+# 		) The management application performs server assignments and establishes version tokens on each server to reflect its assignment.
+# 			The application caches this information to provide a central access point to it.
+#
+# 			If at some point the management application needs to change a server assignment (for example, to change it from permitting writes to
+# 			read only), it changes the server's version token list and updates its cache.
+#
+# 		) To improve performance, client applications obtain cache information from the management application, enabling them to avoid
+# 			having to retrieve information about server assignments for each statement.
+#
+# 			Based on the type of statements it will issue (for example, reads versus writes), a client selects an appropiate server and connects to it.
+#
+# 		) In addition, the client sends to the server its own client-specific version tokens to register the assignment it requires of the server.
+# 			For each statement sent by the client to the server, the server compares its own token list with the client token list.
+#
+# 			If the server token list contains all tokens present in the client token list with the same values, there is a match and the server
+# 			executes the statement.
+#
+# 			ON the other hand, perhaps the management application has changed the server assignment and its version token list.
+#
+# 			IN this case, teh new server assignment may now be incompatible with the client requirements.
+#
+# 			A token mismatch between the server and client token list occurs and the server returns an error in reply to the
+# 			statement.
+#
+# 			This is an indication to the client ot refresh its version token information from the management application cache,
+# 			and to select a new server to communicate with.
+#
+# The client-side logic for detecting version token errors and selecting a new server can be implemented in different ways:
+#
+#  		) The client can handle all version token registration, mismatch detection and connection switching itself.
+#
+# 			) The logic for those actions can be implemented in a connector that manages connections between clients and MySQL servers.
+# 				Such a connector might handle mismatch error detection and statemnet resending itself, or it might pass the error to the
+# 				application and leave it to the application to resent the statement.
+#
+# The following example illustrates the preceding discussion in concrete form.
+#
+# When Version Tokens initialize on a given server, the server's version token list is empty.
+# Token list maintenance is performed by calling user-defined functions (UDFs).
+#
+# The VERSION_TOKEN_ADMIN or SUPER privs is required to call any of the Version Token UDFs, so token list
+# modification is expected to be done by management or administrative application that has that priv.
+#
+# Suppose that a management app communicates with a set of services that are queried by clients to access employee and product DBs
+# (named emp and prod, respectively)
+#
+# All servers are permitted to process data retrieveal statements, but only some of them are permitted to make DB updates.
+#
+# To handle this on a DB specific basis, the management application establishes a list of version tokens on each server.
+#
+# In the token list for a given server, token names represent database names and token values are read or write
+# depending on wether the database must be used in read-only fashion or whether it can take reads and wrties.
+#
+# Client applications register a list of version tokens they require the server to match by setting a SYS_VAR.
+# Variable settings occurs on a client-specific basis, so different clients can register different requirements.
+#
+# By default, the client token list is empty, which matches any server token list.
+# When a client sets its token list to a nonempty value, matching may succeed or fail, depending on the server version token list.
+#
+# To define the version token list for a server, the management application calls the version_tokens_set() UDF.
+# (There are also UDFs for modifying and displaying the token list, later)
+#
+# For example, the app might send these statements to a group of three servers:
+#
+# SERVER 1:
+#
+# SELECT version_tokens_set('emp=read;prod=read');
+# +--------------------------------------------+
+# | version_tokens_set('emp=read;prod=read')   |
+# +´-------------------------------------------+
+# | 2 version tokens set. 							  |
+# +--------------------------------------------+
+#
+# SERVER 2:
+#
+# SELECT version_tokens_set('emp=write;prod=read');
+# +---------------------------------------------+
+# | version_tokens_set('emp=write;prod=read') 	|
+# +---------------------------------------------+
+# | 2 version tokens set. 								|
+# +---------------------------------------------+
+#
+# SERVER 3:
+#
+# SELECT version_tokens_set('emp=read;prod=write');
+# +---------------------------------------------+
+# | version_tokens_set('emp=read;prod=write') 	|
+# +---------------------------------------------+
+# | 2 version tokens set. 								|
+# +---------------------------------------------+
+#
+# The token list in each case is specified as a semicolon-separated list of <name=value> pairs.
+# The resulting token list values result in these server assignments:
+#
+# 		) Any server accepts reads for either DB
+#
+# 		) Only server 2 accepts updates for the emp DB
+#
+# 		) Only server 3 accepts updates for the prod database
+#
+# In addition to assigning each server a version token list, the management application also maintains a cache that
+# reflects the server assignments.
+#
+# Before communicating with hte servers, a client application contacts the management application and retrieves information
+# about server assignments.
+#
+# Then the client selects a server based on those assignments. Suppose that a client wants to perform both reads and writes
+# on the emp database.
+#
+# Based on the preceding assignments, only server 2 qualifies.
+#
+# The client connects to server 2 and registers it server requirements there by setting its version_tokens_session SYS_VAR:
+#
+# 		SET @@SESSION.version_tokens_session = 'emp=write';
+#
+# For subsequent statements sent by the client to server 2, the server compares its own version token list to the client list
+# to check whether they match.
+#
+# IF so, statements execute normally:
+#
+# 		UPDATE emp.employee SET salary = salary * 1.1 WHERE id = 4981;
+# 		Query OK, 1 row affected (0.07)
+# 		Rows matched: 1 Changed: 1 Warnings: 0
+#
+# 		SELECT last_name, first_name FROM emp.employee WHERE id = 4981;
+# 		+-----------------+-------------------+
+# 		| last_name 		| First_name 		  |
+#  	+-----------------+-------------------+
+# 		| Smith 				| Abe 				  |
+# 		+-----------------+-------------------+
+# 		1 row in set (0.01 sec)
+# 	
+# Discrepencies between the server and client version token lists can occur in two ways:
+#
+# 		) A token name in the version_tokens_session value is not present in the server token list.
+# 			In this case, an ER_VTOKEN_PLUGIN_TOKEN_NOT_FOUND error occurs.
+#
+# 		) A token value in the version_tokens_session value differs from the value of the corresponding token in the 
+# 			server token list. In this case, an ER_VTOKEN_PLUGIN_TOKEN_MISMATCH error occurs.
+#
+# As long as the assignment of server 2 does not change, the client continues to use it for reads and wrties.
+# But suppose that hte management application wants to change server assignments so that writes for the emp db must be
+# sent to server 1 instead of server 2.
+#
+# To do so, it uses version_tokens_edit() to modify the emp token vlaue on the two servers (and update its cache of server assignments):
+#
+# Server 1:
+#
+# 		SELECT version_tokens_edit('emp=write');
+# 		+-----------------------------------------+
+# 		| version_tokens_edit('emp=write') 			|
+# 		+-----------------------------------------+
+# 		| 1 version tokens updated. 					|
+# 		+-----------------------------------------+
+#
+# Server 2:
+#
+# 		SELECT version_tokens_edit('emp=read');
+# 		+-----------------------------------------+
+# 		| version_tokens_edit('emp=read') 			|
+# 		+-----------------------------------------+
+# 		| 1 version tokens updated. 					|
+# 		+-----------------------------------------+
+#
+# version_tokens_edit() modifies the named tokens in the server token list and leaves other tokens unchanged.
+#
+# The next time the client sends a statement to server 2, its own token list no longer matches the server token list
+# and an error occurs:
+#
+# UPDATE emp.employee SET salary = salary * 1.1 WHERE id = 4982;
+# ERROR 3136 (42000): Version token mismatch for emp. Correct value read
+#
+# In this case, the client should contact the management application to obtain updated information about server assignments,
+# select a new server, and send the failed statement to the new server.
+#
+# NOTE:
+#
+# 		Each client must cooperate with Version Tokens by sending only statements in accordance with the token list that it registers
+# 		with a given server.
+#
+# 		For example, if a client registers a token list of 'emp=read', there is nothing in Version Tokens to prevent the client
+# 		from sending updates for the emp db.
+#
+# 		The client itself must refrain from doing so.
+#
+# For each statement received from a client, the server implicitly uses locking, as follows:
+#
+# 		) Take a shared lock for each token named in the client token list (that is, in the version_tokens_session value)
+#
+# 		) Perform the comparison between the server and client token lists
+#
+# 		) Execute the statement or produce an error depending on the comparison result.
+#
+# 		) Release the locks
+#
+# The server uses shared locks so that comparisons for multiple sessions can occur without blocking, while preventing
+# changes to the tokens for any session that attempts to acquire an exclusive lock before it manipulates tokens of the
+# same names in the server tokens list.
+#
+# THe preceding example uses only a few of the user-defined values in the Version Tokens plugin library, but there are others.
+# One set of UDFs permits the server's list of version tokens to be manipulated and inspected.
+#
+# Another set of UDF's permits version tokens to be locked and unlocked.
+#
+# These UDFs permit the server's list of version tokens to be created, changed, removed and inspected:
+#
+# 		) version_tokens_set() completely replaces the current list and assigns a new list.
+#
+# 			The argument is a semicolon-separated list of <name=value> pairs.
+#
+# 		) version_tokens_edit() enables partial modifications to the current list.
+#
+# 			It can add new tokens or change the values of existing tokens.
+#
+# 			The argument is a semicolon-separated list of <name=value> pairs.
+#
+# 		) version_tokens_delete() deletes tokens from the current list. The argument is a semicolon separated list of token names.
+#
+# 		) version_tokens_show() displays the current token list. It takes no argument.
+#
+# Each of those functions, if successful, returns a binary string indiating what action occurred.
+#
+# The following example establishes the server token list, modifies it by adding a new token, deletes some tokens,
+# and displays the resulting token list:
+#
+# 		SELECT version_tokens_set('tok1=a;tok2=b;');
+# 		+-------------------------------------------+
+# 		| version_tokens_set('tok1=a;tok2=b') 		  |
+# 		+-------------------------------------------+
+# 		| 2 version tokens set. 						  |
+# 		+-------------------------------------------+
+#
+# 		SELECT version_tokens_edit('tok3=c');
+# 		+-------------------------------------------+
+# 		| version_tokens_edit('tok3=c') 				  |
+# 		+-------------------------------------------+
+# 		| 1 version token updated. 					  |
+# 		+-------------------------------------------+
+#
+# 		SELECT version_tokens_delete('tok2;tok1');
+# 		+-------------------------------------------+
+# 		| version_tokens_delete('tok2;tok1') 		  |
+# 		+-------------------------------------------+
+# 		| 2 version tokens deleted. 					  |
+# 		+-------------------------------------------+
+#
+# 		SELECT version_tokens_show();
+# 		+-----------------------------+
+# 		| version_tokens_show() 		|
+# 		+-----------------------------+
+# 		| tok3=c; 							|
+# 		+-----------------------------+
+#
+# Warnings occur if a token list is malformed:
+#
+# 		SELECT version_tokens_set('tok1=a; =c');
+# 		+---------------------------------------+
+# 		| version_tokens_set('tok1=a; =c') 		 |
+# 		+---------------------------------------+
+# 		| 1 version tokens set. 					 |
+# 		+---------------------------------------+
+#
+# 		1 row in set, 1 warning (0.00 sec)
+#
+# 		SHOW WARNINGS\G
+# 		******************************* 1. row *******************************
+# 			Level: Warning
+# 			Code:  42000
+# 		Message:  Invalid version token pair encountered. The list provided is only partially updated.
+# 		1 row in set (0.00 sec)
+#
+# AS mentioned previously, version tokens are defined using a semicolon-separated list of <name=value> pairs.
+# Consider this invocation of version_tokens_set();
+#
+# 		SELECT version_tokens_set('tok1=b;;; tok2= b = b ; tok1 = 1\'2 3"4')
+# 		+-------------------------------------------------------------------+
+# 		| version_tokens_set('tok1=b;;; tok2= a = b ; tok1 = 1\'2 3"4') 	  |
+# 		+-------------------------------------------------------------------+
+# 		| 3 version tokens set. 														  |
+# 		+-------------------------------------------------------------------+
+#
+# Version Tokens interprets the argument as follows:
+#
+# 		) Whitespace around names and values is ignored. Whitespace within names and values is permitted.
+# 			(For version_tokens_delete(), which takes a list of names without values, whitespace around names is ignored)
+#
+# 		) There is no quoting mechanism
+#
+# 		) Order of tokens is not significant except that if a token list contains multiple instances of a given token name, the last 
+# 			value takes precedence over earlier values.
+#
+# Given those rules, the preceding version_tokens_set() call results in a token list with two tokens:
+#
+# 		tok1 has the value 1'2 3"4 and tok2 has the value a = b.
+#
+# 		To verify this, just call version_tokens_show():
+#
+# 		SELECT version_tokens_show();
+# 		+------------------------------+
+# 		| version_tokens_show() 		 |
+# 		+------------------------------+
+# 		| tok2=a = b;tok1=1'2 3"4; 	 |
+# 		+------------------------------+
+#
+# If the token list contains two tokens, why did version_tokens_set() return the value 3 version tokens set?
+#
+# Because tok1 was assigned twice.
+#
+# The Version Tokens token-manipulation UDFs place these constraints on token names and values:
+#
+# 		) Token names cannot contain = or ; characters and have a max length of 64 chars.
+#
+# 		) Token values cannot contain ; chars. Length of values is constrained by the value of the max_allowed_packet SYS_VAR.
+#
+# 		) Version Tokens treats token names and values as binary strings, so comparisons are case-sensitive.
+#
+# Version Tokens also include a set of UDFs enabling tokens to be locked and unlocked:
+#
+# 		) version_tokens_lock_exclusive() acquires exclusive version token locks. It takes a list of one or more lock names and a timeout value.
+#
+# 		) version_tokens_lock_shared() acquires shared version token locks. It takes a list of one or more lock names and a timeout value.
+#
+# 		) version_tokens_unlock() release version token locks (exclusive and shared). No args.
+#
+# Each locking function returns nonzero for success. Otherwise, an error occurs:
+#
+# 		SELECT version_tokens_lock_shared('lock1', 'lock2', 0);
+# 		+-----------------------------------------------------+
+# 		| version_tokens_lock_shared('lock1', 'lock2', 0) 		|
+# 		+-----------------------------------------------------+
+# 		| 																	1  |
+# 		+-----------------------------------------------------+
+#
+# SELECT version_tokens_lock_shared(NULL, 0);
+# ERROR 3131 (42000): Incorrect locking service lock name '(null)'.
+#
+# Locking using Version Tokens locking function is advisory, applications must agree to cooperate.
+#
+# It is possible to lock nonexisting token names. This does not create the tokens.
+#
+# NOTE:
+#
+# 		Version tokens locking functions are based on the locking service, described later.
+# 		And thus must have the same semantics for shared and exclusive locks.
+# 		(Version Tokens uses the locking service routines built into the server, not the locking
+# 		service UDF interface, so those UDFs need not be installed to use Version Tokens).
+#
+# 		Locks acquired by Version Tokens use a locking service namespace of version_token_locks.
+# 		Locking service locks can be monitored using the Performance Schema, so this is also true
+# 		for Version Tokens Locks.
+#
+# For the Version Tokens locking functions, token name arguments are used exactly as specified.
+#
+# Surrounding whitespace is not ignored and = and ; chars are permitted.
+#
+# This is because the Version Tokens simply passes the token names to be locked as is to the locking service.
+#
+# VERSION TOKENS REFERENCE
+#
+# VERSION TOKENS FUNCTIONS
+#
+# The Version Tokens plugin library includes several user-defined functions.
+#
+# One set of UDF's permits the server's list of version tokens to be manipulated and inspected.
+# Another set of UDFs permits version tokens to be locked and unlocked.
+#
+# The VERSION_TOKEN_ADMIN or SUPER privilege is required to invoke any Version Tokens UDF.
+#
+# The following UDFs permit the server's list of version tokens to be created, changed, removed and inspected.
+# Interpretation of <name_list> and <token_list> arguments (including whitespace handling) occurs as described.
+#
+# 		) version_tokens_delete(<name_list>)
+#
+# 			Delete tokens from the server's list of version tokens using the <name_list> argument and returns a binary
+# 			string that indicates the outcome of the operation.
+#
+# 			<name_list> is a semicolon-separated list of version token names to delete.
+#
+# 			SELECT version_tokens_delete('tok1;tok3');
+# 			+------------------------------------------+
+# 			| version_tokens_delete('tok1;tok3') 		 |
+# 			+------------------------------------------+
+# 			| 2 version tokens deleted. 					 |
+## 		+------------------------------------------+
+#
+# 			An argument of NULL is treated as an empty string, which has no effect on the token list.
+#
+# 			version_tokens_delete() deletes the tokens named in its argument, if they exist.
+# 			(It is not an error to delete nonexisting tokens).
+#
+# 			To clear the token list entirely without knowing which tokens are in the list, pass NULL or a string
+# 			containing no tokens to version_tokens_set();
+#
+# 					SELECT version_tokens_set(NULL);
+# 					+-----------------------------------+
+# 					| version_tokens_set(NULL) 			|
+# 					+-----------------------------------+
+# 					| Version tokens list cleared. 		|
+# 					+-----------------------------------+
+#
+# 					SELECT version_tokens_set('');
+# 					+-----------------------------------+
+# 					| version_tokens_set('') 				|
+# 					+-----------------------------------+
+# 					| Version tokens list cleared. 		|
+# 					+-----------------------------------+
+#
+# 		) version_tokens_edit(<token_list>)
+#
+# 			Modifies the server's list of version tokens using the <token_list> arugment and returns a binary string that indicates
+## 		the outcome of the operation.
+#
+# 			<token_list> is a semicolon-separated list of <name=value> pairs specifying the name of each token to be defined
+# 			and its value.
+#
+# 			If a token exists, its value is updated with the given value.
+#
+# 			If a token does not exist, it is created with the given value. If the argument is NULL or a string containing no tokens,
+# 			the token list remains unchanged.
+#
+# 					SELECT version_tokens_set('tok1=value;tok2=value2');
+# 					+--------------------------------------------------+
+# 					| version_tokens_set('tok1=value1;tok2=value2') 	|
+# 					+--------------------------------------------------+
+# 					| 2 version tokens set. 									|
+# 					+--------------------------------------------------+
+#
+# 					SELECT version_tokens_edit('tok2=new_value2;tok3=new_value3');
+# 					+-------------------------------------------------------+
+# 					| version_tokens_edit('tok2=new_value;tok3=new_value3') |
+# 					+-------------------------------------------------------+
+# 					| 2 version tokens updated. 									  |
+# 					+-------------------------------------------------------+
+#
+# 		) version_tokens_set(<token_list>)
+#
+# 			Replaces the server's list of version tokens with the tokens defined in the <token_list> argument and returns a binary
+# 			string that indicates the outcome of the operation.
+#
+# 			<token_list> is a semicolon-separated list of <name=value> pairs specifying name of each token to be defined and its value.
+#  		If the argument is NULL or a string containing no tokens, the token list is cleared.
+#
+# 					SELECT version_tokens_set('tok1=value;tok2=value2');
+# 					+--------------------------------------------------------+
+# 					| version_tokens_set('tok1=value1;tok2=value2') 			|
+# 					+--------------------------------------------------------+
+# 					| 2 version tokens set. 											|
+# 					+--------------------------------------------------------+
+#
+# 		) version_tokens_show()
+#
+# 			Returns the server's list of versions tokens as a binary string containing a semicolon-separated list of <name=value> pairs.
+#
+# 					SELECT version_tokens_show();
+# 					+-------------------------------------+
+# 					| version_tokens_show() 				  |
+# 					+-------------------------------------+
+# 					| tok2=value2;tok1=value1; 			  |
+# 					+-------------------------------------+
+#
+# The following UDFs permit version tokens to be locked and unlocked:
+#
+# 		) version_tokens_lock_exclusive(<token_name[, <token_name>] ..., <timeout>)
+#
+# 			Acquires exclusive locks on one or more version tokens, specified by name as strings, timing out with an error if the locks
+#  		are not acquired within the given timeout:
+#
+# 					SELECT version_tokens_lock_exclusive('lock1', 'lock2', 10);
+# 					+---------------------------------------------------------+
+# 					| version_tokens_lock_exclusive('lock1', 'lock2', 10) 	 |
+# 					+---------------------------------------------------------+
+# 					| 																	1 		 |
+# 					+---------------------------------------------------------+
+#
+# 		) version_tokens_lock_shared(<token_name>[, <token name>] ..., <timeout>)
+#
+# 			Acquires shared locks on one or more version tokens, specified by name as strings, timing out 
+# 			with an error if the locks are not acquired within the given timeout value.
+#
+# 					SELECT version_tokens_lock_shared('lock1', 'lock2', 10);
+# 					+----------------------------------------------------------+
+# 					| version_tokens_lock_shared('lock1', 'lock2', 10) 		  |
+# 					+----------------------------------------------------------+
+# 					| 																		1 	  |
+# 					+----------------------------------------------------------+
+# 
+# 		) version_tokens_unlock()
+#
+# 			Releases all locks hat were acquired within the current session using version_tokens_lock_exclusive() and version_tokens_lock_shared()
+#
+# 					SELECT version_tokens_unlock();
+# 					+-------------------------------+
+# 					| version_tokens_unlock() 		  |
+# 					+-------------------------------+
+# 					| 									1 	  |
+# 					+-------------------------------+
+#
+# 
+# The locking functions share these characeteristics:
+#
+# 		) The return value is nonzero for success. Otherwise, an error occurs.
+#
+# 		) Token names are strings.
+#
+# 		) In contrast to arugment handling for the UDFs that manipulate the server tokens list, whitespace surrounding token
+# 			name arguments is not ignored and = and ; chars are permitted.
+#
+# 		) it is possible to lock a nonexisting token name. Does not create the token.
+#
+# 		) Timeout values are nonnegative integer representing teh time in seconds to wait to acquire locks before timing out
+# 			with an error.
+#
+# 			If the timeout is 0, there is no waiting and the function produces an error if locks cannot be acquired instantly.
+#
+# 		) Version Tokens locking functions are based on the locking service described later.
+#
+# VERSION TOKENS SYS_VARs
+#
+# Version tokens support the following SYS_VARs. These VARs are unavailable unless the Version Tokens plugin is installed.
+#
+# SYS_VARs:
+#
+# 			) version_tokens_session
+#
+# 				PROPERTY 				VALUE
+# 				cmd line: 				--version-tokens-session=value
+# 				Sys_Var: 				version_tokens_session
+# 				Scope: 					Global, Session
+# 				Dynamic: 				Yes
+# 				SET_VAR Hint: 			No
+# 				Type: 					String
+# 				Default: 				NULL
+#
+# 				The session value of this variable specifies the client version token list and indicates the tokens that hte client
+# 				session requires the server version token list to have.
+#
+# 				If the version_tokens_session variable is NULL (the default), or has an empty value, any server version token list matches.
+# 				(In effect, an empty value disables matching requirements)
+#
+# 				If the version_tokens_session variable has a nonempty value, any mismatch between its value and the server version token list results
+# 				in an error for any statement the session sends to the server. A mismatch occurs under these conditions:
+#
+# 					) A token name in the version_tokens_session value is not present in the server token list. In this case, an ER_VTOKEN_PLUGIN_TOKEN_NOT_FOUND
+# 						error occurs.
+#
+# 					) A token value in the version_tokens_session value differs from the value of the corresponding token in the server token list.
+# 						In this case, an ER_VTOKEN_PLUGIN_TOKEN_MISMATCH error occurs.
+#
+# 				It is not a mismatch for the server version token list to include a token not named in the version_tokens_session value.
+#
+# 				Suppose that a management application has set the server token list as follows:
+#
+# 					SELECT version_tokens_set('tok1=a;tok2=b;tok3=c');
+#  				+------------------------------------------------+
+# 					| version_tokens_set('tok1=a;tok2=b;tok3=c') 	 |
+# 					+------------------------------------------------+
+# 					| 3 version tokens set 									 |
+# 					+------------------------------------------------+
+#
+# 				A client registers the tokens it requires the server to match by setting its version_tokens_session value.
+#
+# 				Then, for each subsequent statement sent by the client, the server checks its token list against the client 
+# 				version_tokens_session value and produces an error if there is a mismatch:
+#
+# 					SET @@SESSION.version_tokens_session = 'tok1=a;tok2=b';
+# 					SELECT 1;
+# 					+----+
+# 					| 1  |
+# 					+----+
+#  				| 1  |
+# 					+----+
+#
+# 					SET @@SESSION.version_tokens_session = 'tok1=b';
+# 					SELECT 1;
+# 					ERROR 3136 (42000): Version token mismatch for tok1. Correct value a
+#
+# 				The first SELECT succeeds because the client tokens tok1 and tok2 are present in the server token list and
+# 				each token has the same value in the server list.
+#
+# 				The second SELECT fails because, although tok1 is present in the server token list, it has a different
+# 				value than specified by the client.
+#
+# 				At this point, any statement sent by the client fails, unless the server token list changes such that it matches again.
+# 				Suppose that the management application changes the server token list as follows:
+#
+# 					SELECT version_tokens_edit('tok1=b');
+# 					+-------------------------------------+
+# 					| version_tokens_edit('tok1=b') 		  |
+# 					+-------------------------------------+
+# 					| 1 version tokens updated. 			  |
+# 					+-------------------------------------+
+# 		
+# 					SELECT version_tokens_show();
+# 					+---------------------------+
+# 					| version_tokens_show() 	 |
+# 					+---------------------------+
+# 					| tok3=c;tok1=b;tok2=b; 	 |
+# 					+---------------------------+
+#
+# 				Now the client version_tokens_session value matchhes the server token list and the client can once again successfully execute statements:
+#
+# 					SELECT 1;
+#  	 			+---+
+# 					| 1 |
+# 					+---+
+# 					| 1 |
+# 					+---+
+#			
+# 			
+# 			) version_tokens_session_number
+#
+# 				PROPERTY 					VALUE
+# 				cmd line: 					--version-tokens-session-number=N
+# 				Sys_Var: 					version_tokens_session_number
+# 				Scope: 						Global, Session
+# 				Dynamic: 					No
+# 				SET_VAR Hint: 				No
+# 				Type: 						Integer
+# 				Default: 					0
+#
+# 				Internal use.
+#
+# MYSQL SERVER USER-DEFINED FUNCTIONS
+#
+# MySQL Server enables user-defined functions (UDFs) to be created and loaded into the server to extend server capabilities.
+# Server capabilities can be implemented in whole or in part using UDFs.
+#
+# In addition, you can write your own UDFs.
+# The following showcases how to install and uninstall UDFs, and how to determine at runtime which UDFs are installed and obtain info about them.
+#
+# INSTALLING AND UNINSTALLING USER-DEFINED FUNCTIONS
+#
+# User-defined functions (UDFs) must be loaded into the server before they can be used.
+# MySQL supports UDF loading at runtime.
+#
+# To load a UDF, use the CREATE_FUNCTION statement. For example:
+#
+# 		CREATE FUNCTION metaphon RETURNS STRING SONAME 'udf_example.so';
+#
+# The UDF file base name depends on your platform. Common suffixes are .so for Unix and Unix-based systems., .dll for Windows.
+#
+# While a UDF is loaded, information about it is available from the Performance Schema user_defined_functions table.
+#
+# The statement also registers the UDF in the mysql.func SYSTEM table to cause the server to load it on subsequent 
+# restarts.
+#
+# For this reason, CREATE_FUNCTION requires the INSERT priv for the mysql db.
+#
+# To remove a UDF, use the DROP_FUNCTION statement. For example:
+#
+# 		DROP FUNCTION metaphon;
+#
+# DROP_FUNCTION unloads the UDF and removes it from the mysql.func system table.
+# For this reason, DROP_FUNCTION statements require the DELETE priv for the mysql db.
+#
+# With the UDF No longer registered in the table, the server does not load the UDF automatically for subsequent restarts.
+#
+# You cannot use CREATE_FUNCTION to reinstall a function that has previously been installed.
+# To reinstall a function, first remove it with DROP_FUNCTION, then install it again with CREATE_FUNCTION.
+#
+# You would need to do this, for example, if you ugprade to  a new version of MySQL that provides an updated implementation
+# of the function, so you recompile a new version of a function that you have written.
+#
+# Otherwise, the Server uses the old version.
+#
+# If the server is started with the --skip-grant-tables option, it does not consult the mysql.func table and does not
+# load the UDFs listed there.
+#
+# OBTAINING USER-DEFINED FUNCTION INFORMATION
+#
+# The Performance Schema user_defined_functions table contains information about the currently loaded user-defined functions:
+#
+# 		SELECT * FROM performance_schema.user_defined_functions;
+#
+# RUNNING MULTIPLE MYSQL INSTANCES ON ONE MACHINE
+#
+# https://dev.mysql.com/doc/refman/8.0/en/multiple-servers.html
+#
+#
+#
+#
+#
 # https://dev.mysql.com/doc/refman/8.0/en/thread-pool-installation.html 		 								
 #
 
