@@ -27467,6 +27467,1328 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # SECURITY
 #
+# When thinking about security within a MySQL installation, you should consider a wide range of possible topics and how they
+# affect the security of your MySQL server and related apps:
+#
+# 		) General factors that affect security. These include choosing good PWs, not granting unecessary privs, ensuring application
+# 			security by preventing SQL injections and data corruption, etc.
+#
+# 		) Security of the installation itself. The data files, log files and all the application files of your installation should be
+# 			protected to ensure that they are not readable or writable by unauthorized parties.
+#
+# 		) Access control and security within the database system itself, including the users and database granted with access to the DBs,
+# 			views and stored programs in use within the DB.
+#
+# 		) The features offered by security-related plugins.
+#
+# 		) Network security of MySQL and your system. The security is related to the grants for individual users, but you may also
+# 			wish to restrict MySQL so that it is available only locally on the MySQL server host or a limited set of other hosts.
+#
+# 		) Ensure that you have adequate and appropiate backups of your DB files, configuration and log files.
+# 			Also, be sure that you have a recovery solution in place and test that you are able to successfully
+# 			recover the info from your backups.
+#
+# GENERAL SECURITY ISSUES
+#
+# Security Guidelines
+#
+# In discussing security, it is necessary to consider fully protecting the entire server host (not just the MySQL server) against all types
+# of applicable attacks: eavesdropping, alerting, playback and denial of service.
+#
+# MySQL uses security based on Access Control Lists (ACLs) for all connections, queries, and other operations that users can attempt to perform.
+# There is also support for SSL-encrypted connections between MySQL clients and servers.
+#
+# WHen running MySQL, follow these guidelines:
+#
+# 		) Do not ever give anyone (except MySQL root accounts) access to the user table in the mysql system DB. Critical.
+#
+# 		) Keep an eye on privs. Use the GRANT and REVOKE statements to control access to MySQL. Do not grant more than necessary, never
+# 			grant privs to all hosts.
+#
+# 				) Try mysql -u root. If you are able to connect successfully without being asked for a PW, anyone can connect to your MySQL
+# 					as Root.
+#
+# 				) Use the SHOW_GRANTS statement to check which accounts have access to what. Then use the REVOKE statement to remove those privs that
+# 					are not necessary.
+#
+# 		) Do not store cleartext PWs in your DB. If your computer becomes compromised, that's an issue.
+#
+# 			Use SHA2() or some other one-way hashing function and store the hash value.
+#
+# 		  To prevent PW recovery using rainbow tables, do not use these functions on a plain PW. Use something to be as as a salt,
+# 			and go by the form of:
+#
+# 				hash(hash(password)+salt) 
+#
+# 		) Do not choose Pws from a Dictionary. Special programs exist to break PWs.
+#
+# 			Normal considerations of PW consolidation goes here.
+#
+# 		) Get a firewall. Put the MySQL behind a firewall or in a demilitarized zone (DMZ)
+#
+# 			) Try to scan your ports from the internet using a tool such as nmap.
+#
+# 				MySQL uses port 3306 by default.
+#
+# 				Should not be accessible by untrusted hosts. 
+#
+# 				Can be checked with: telnet <server_host> 3306 #Should refuse connection and give scrambles back.
+#
+# 		) Applications that access MySQL should not trust any data entered by users and should be written using proper defensive
+# 			programming techniques.
+#
+# 		) Do not transmit unencrypted data over the Internet. 
+#
+# 			Use SSL or SSH. MySQL supports internal SSL connections. Another technique is to use SSH port-forwarding to
+# 			create an encrypted (and compressed) tunnel for the communication.
+#
+# 		) learn to use the tcpdump and strings utilities. In most cases, you can check whether MySQL data streams are unencrypted by issuing
+# 			a cmd like:
+#
+# 			tcpdump -l -i eth0 -w - src or dst port 3306 | strings
+#
+# 			Works under linux, should work under others with small modifications.
+#
+# 			Warning: If you do not see cleartext data, this does not mean that the info actually is encrypted. 
+#
+# 			If compression is in use on the connection (MYSQL_OPT_COMPRESS) you will not see plain text but the data is not encrypted.
+#
+# KEEPING PWS SECURE
+#
+# PWs occur in several contexts within MySQL.
+#
+# The following section pertains to guidelines that enable end users and admins to keep their PWs secure and avoid exposing them.
+# In addition, the validate_password plugin can be used to enforce a policy on an acceptable PW.
+#
+# END-USER GUIDELINES FOR PW SECURITY
+#
+# When you run a client program to connect to the MySQL server, it is inadvisable to specify your PW in a way that exposes it
+# to discovery by other users.
+#
+# The methods you can use to specify your PW when you run client programs are listed - along with an assesment of the risks
+# of each method.
+#
+# In short, the safest methods are to have the client program prompt for the password or to specify the PW in a properly protected
+# option file.
+#
+# 		) Use the mysql_config_editor utility, which enables you to store authentication credentials in an encrypted login path named
+# 			.mylogin.cnf 
+#
+# 			The file can be read later by MySQL client programs to obtain authentication credentials for connecting to MySQL Server.
+#
+# 		) Use a -p<your_pw> or --password=<your_pass> option on the cmd line. For example:
+#
+# 			mysql -u francis -pfrank <db_name> #Do not write PWs on cmd prompt
+#
+# 			WARNING:
+#
+# 				This is insecure. On some systems, your PW becomes visible to System status programs such as ps that may be invoked by
+# 				other users to display cmd lines.
+#
+# 				MySQL clients typically overwrite the cmd-line PW argument with 0's during their initialization sequence.
+#
+# 				However, there is a brief interval during which the value is visible.
+#
+# 				also, on some systems this overwritin strat is ineffective and the PW remains visible to ps. (SystemV Unix systems and perhas others are subject
+# 				to this problem)
+#
+# 			If your operating environment is set up to display your current cmd in the title bar of your terminal window, the PW remains visible
+# 			as long as the cmd is running, even if the cmd has scrolled out of view in the window content area.
+#
+# 		) Use the -p or --password option on the cmd line with no PW value specified. In this case, the client program solicits the PW interactively:
+#
+# 			mysql -u francis -p <db_name>
+# 			Enter PW: 
+#
+# 			Use a options file instead.
+#
+# 			it is more secure to enter your PW like this than to specify it on the cmd line because it is not visible to other users.
+# 			However, this method of entering a PW is suitable only for programs that you run interactively.
+#
+# 			If you want to invoke a client from a script that runs noninteractively, there is no opportunity to enter the PW
+# 			from the keyboard.
+#
+# 			On some systems, you may even find that the first line of your script is read and interpreted (incorrectly) as your PW.
+#
+# 		) Store your PW in an option file. For example, on Unix, you can list your PW in the [client] section of the .my.cnf file in your home dir:
+#
+# 				[client]
+#	 			password=your_pass
+#
+# 			To keep the PW safe, the file should not be accessible to anyone but yourself.
+#
+# 			To ensure this, set the file masking to 400 or 600, for example:
+#
+# 				chmod 600 .my.cnf
+#
+# 			To name from the cmd line a specific option file containing the PW, use the --defaults-file=<file_name> option,
+# 			where file_name is the full path name to the file.
+#
+# 			For example:
+#
+# 				mysql --defaults-file=/home/francis/mysql-opts
+#
+# 		) Store your PW in the MYSQL_PWD env variable.
+#
+# 			This method of specifying your MySQL PW must be considered extremely insecure and dshould not be used.
+#
+# 			Some versions of pw include an option to display the ENV vars of the running process.
+# 			On some systems, if you set MYSQL_PWD, your PW is exposed to any other user who runs ps.
+#
+# 			Even on systems without such a version of ps, it is unwise to assume that it's safe, as in, being non able to be inspected.
+#
+# On Unix, the mysql client writes a record of executed statements to a history file.
+# By default, this file is named .mysql_history and is created in your home dir.
+#
+# PWs can be written as plain text in SQL statements such as CREATE_USER and ALTER_USER, so if you use these statements they are
+# logged in the history file.
+#
+# TO keep this file safe, use a restrictive access mode, teh same way as described earlier for the .my.cnf file
+#
+# If your command interpreter is configured to maintain a history, any file in which the commands are saved will contain
+# MySQL pws entered on the cmd line.
+#
+# For example, bash uses ~/.bash_history. Any such file should have a restrictive access mode.
+#
+# ADMINISTRATION GUIDELINES FOR PW SECURITY
+#
+# Database administrators should use the following guidelines to keep PWs secure.
+#
+# MySQL stores PWs for user accounts in the mysql.user table. Access to this table should never be granted to any non-admins.
+#
+# Account PWs can be expired so that users must reset them.
+#
+# The validate_password plugin can be used to enforce a policy on acceptable PWs.
+#
+# A user who has access to modify the plugin dir (the value of the plugin_dir SYS_VAR) or the my.cnf file that specifies
+# the plugin dir location can replace plugins and modify the capabilities provided by plugins, including authentication plugins.
+#
+# Files such as log files to which PWs might be written should be protected.
+#
+# PASSWORDS AND LOGGING
+#
+# Passwords can be written as plain text in SQL statements such as CREATE_USER, GRANT and SET_PASSWORD.
+# If such statements are logged by the MySQL server as written, PWs in them become visible to anyone with access
+# to the logs.
+#
+# Statement logging avoids writing Pws in cleartext for hte following statements:
+#
+# 		CREATE USER ... IDENTIFIED BY ... 
+# 		ALTER USER ... IDENTIFIED BY ...
+# 		SET PASSWORD ...
+# 		SLAVE START ... PASSWORD = ...
+# 		CREATE SERVER ... OPTIONS(... PASSWORD ...)
+# 		ALTER SERVER ... OPTIONS(... PASSWORD ...)
+#
+# Passwords in those statements are rewritten to not appear literally in statement text written to the general query log,
+# slow log and binary log.
+#
+# Rewriting does not apply to other statements.
+#
+# In particular, INSERT or UPDATE statements for the mysql.user table that refer to literal PWs are logged as is,
+# so you should avoid such statements. (Direct modification of grant tables is discouraged, anyway)
+#
+# For the general query log, password rewriting can be suppressed by starting the server with the --log-raw option.
+# For security reasons, this option is not recommended for production use.
+#
+# For diagnostic purposes, it may be useful to see the exact text of statements as received by the server.
+#
+# By default, contents of audit log files produced by tthe audit log plugin are not encrypted and may contain
+# sensitive information, such as the text of SQL statements.
+#
+# For security reasons, audit log files should be written to a directory accessible only to the MySQL server and to
+# users with a legit reason to view the log.
+#
+# Statements received by the server may be rewritten if a query rewrite plugin is installed, in this case - the --log-raw
+# option affects statements logging as follows:
+#
+# 		) without --log-raw, the server logs the statement returned by the query rewrite plugin. This may differ from the statement as received.
+#
+# 		) With --log-raw, the server logs the original statement as received.
+#
+# An implication of password rewriting is that statements that cannot be parsed (due, for example, to sytnax errors) are not written
+# to the general query log because they cannot be known to be PW free.
+#
+# Use cases that require logging of all statements including those with errors should use the --log-raw option, bearing in mind that
+# this also bypasses password rewriting.
+#
+# Password rewriting occurs only when plain text PWs are expected.
+# For statements with syntax that expect a PW hash value, no rewriting occurs.
+#
+# if a plain text PW is supplied errorneously for such syntax, the pw is logged as given, without rewriting.
+#
+# To guard log files against unwarranted exposure, locate them in a directory that restricts access to the server
+# and the database administrator.
+#
+# If the server logs to tables in the mysql database, grant access to those tables only to the DB admin.
+#
+# Replication salves store the PW for the replication master in the master info repostiory, which by default is a table
+# in the mysql db named slave_master_info.
+#
+# The use of a file in the data dir for the master info repository is now deprecated.
+# But still posible.
+#
+# Ensure that hte master info repository can be accseed only by the DB admin.
+#
+# An alternative to storing the PW in the master info repository is to use the START_SLAVE
+# statement to specify credentials for connecting to the master.
+#
+# Use a restricted access mode to protect DB backups that include log tables or log files containing PWs.
+#
+# MAKING MYSQL SECURE AGAINST ATTACKERS
+#
+# When you connect to a MySQL server, you should use a PW. The PW is not transmitted in clear text over the connection.
+#
+# ALl other info is transferred as text, and can be read by anyone who is able to watch the connection.
+#
+# If the connection between the client and the server goes through an untrusted network, and you are
+# concerned about this, you can use the compressed protocol to make traffic much more difficult to decipher.
+#
+# You can also use MySQL's internal SSL support to make the connection even more secure.
+#
+# Alternative, use SSH to get an encrypted TCP/IP conn between a MySQL server and a MySQL client.
+#
+# To make a MySQL system secure, you should strongly consider the following suggestions:
+#
+# 		) Require all MySQL accounts to have a PW. A client program does not necessarily know the identity of the person running it.
+#
+# 			It is common for client/server applications that the user can specify any user name to the client program.
+#
+# 			For example, anyone can use the mysql program to connect as any other person by simply invoking it as
+# 			mysql -u <other_user> <db_name> if other_user has no PW.
+#
+# 			If all accounts have a PW, connecting using another user's acc becomes much more difficult.
+#
+# 		) Make sure that the onl Unix user acc with read or write privs in teh DB dirs is the acc used for running mysqld.
+#
+# 		) Never run the MySQL server as the Unix root user.
+#
+# 			This is dangerous,because any user with the FILE priv is able to cause the server to create files as root
+# 			(For example ~root/.bashrc).
+#
+# 			To prevent this, mysqld refuses to run as root unless that is specified explicitly using the --user=root option.
+#
+# 			Mysqld can (and should) be run as an ordinary, unprived user instead.
+#
+# 			You can create a separate Unix acc named mysql to amek everything even more secure.
+#
+# 			Use this acc only for administrating MySQL.
+#
+# 			To start mysqld as a different Unix user, add a user option that specifies the user name in the 
+# 			[mysqld] group of the my.cnf option file where you specify server options.
+#
+# 			For example:
+#
+# 				[mysqld]
+# 				user=mysql
+#
+# 			This causes hte server to start as the designated user whether oyu start it manually or by using mysqld_safe or mysql.server
+#
+# 			Running mysqld as Unix user other than root does not mean you need to  change the root user name in teh user table.
+# 			User names for MySQL accs have nothing to do with user names for Unix accs.
+#
+# 		) Do not grant the FILE priv to nonadmin users. Any user that has this priv can write a file anywhere in the file system with the
+# 			privs of teh mysqld daemon.
+#
+# 			this includes teh server's data dir containing the files that implement the priv tables.
+#
+# 			To make FILE priv ops a bit safer, files generated with SELECT_..._INTO_OUTFILE do not overwrite existing files and are writable
+# 			by everyone.
+#
+# 			The FILE priv may also be used to read any file that is world-readable or accesible to the unix user
+# 			that hte server runs as.
+#
+# 			With this priv, you can read any file into the DB tables. This could be abused, by using LOAD_DATA to load /etc/passwd into a table,
+# 			which then can be displayed with SELECT.
+#
+# 			To limit the location in which files can be read and written, set the secure_file_priv System to a specific dir.
+#
+# 		) Do not grant the PROCESS or SUPER priv to nonadmins.
+#
+# 			The output of mysqladmin processlist and SHOW_PROCESSLIST shows the text of any stratements currently being
+# 			executed, so any user who is permitted to see the server process list might be able to see statements
+# 			issued by other users.
+#
+# 			mysqld reseves an extra connection for users who have the CONNECTION_ADMIN or SUPER Priv, so that a MySQL root
+# 			can log in and check server activity even if all normal connections are in use.
+#
+# 			The SUPER priv can be used to terminate client connections, change server operation by changing the value of SYS_VARs,
+# 			and control replication servers.
+#
+# 		) Do not permit the use of symlinks to tables. (This capability can be disabled with the --skip-symbolic-links option).
+#
+# 			This is especially important if you run mysqld as root, because anyone that has write access to the server
+# 			data dir then could delete any file in teh system
+#
+# 		) Stored programs and views should be written using the security guidelines seen later
+#
+# 		) If you do not trust your DNS, you should use IP addresses rather than host names in teh grant tables.
+#
+# 			IN any case, you should be very careful about creating grant tables entires using host name values that
+# 			contain wildcards.
+#
+# 		) If you want to restrict the number of connections permitted to a single account, you can do so by setting the max_user_connections
+# 			variable in mysqld.
+#
+# 			The CREATE_USER and ALTER_USER statements also support resource control options for limiting the extent of server use
+# 			permitted to an account.
+#
+# 		) If the plugin dir is writable by the server, it may be possible for a user to write executable code to a file in the 
+# 			dir using SELECT_..._INTO_DUMPFILE
+#
+# 			This can be prevented by making plugin_dir read only to the server or by setting --secure-file-priv to a dir where SELECT
+# 			writes can be made safely.
+#
+# SECURITY-RELATED MYSQLD OPTIONS AND VARIABLES
+#
+# The following table showcases the mysqld options and system variables that affect security.
+#
+# 				Name 					Cmd 	Option Sys_Var  Status_var Var_SCope Dynamic
+# allow-suspicious-udfs 		yes 	yes	 
+# automatic_sp_privileges 						 Yes 						Global 	 Yes
+# chroot 							yes   yes 
+# des-key-file 					yes 	yes 
+# local_infile 									 yes 						Global 	 Yes
+# old_passwords 									 yes 						Both 		 Yes
+#
+# safe-user-create 				yes   Yes 
+# secure-auth 						yes   yes 								Global 	  Yes
+# - Variable: secure_auth  					 Yes 						Global 	  Yes
+# secure-file-priv 				Yes 	Yes 								Global     No
+# - Variable: secure_file_priv 				 Yes 						Global 	  No
+#
+# skip-grant-tables 				Yes 	Yes 								
+# skip-name-resolve 				Yes 	Yes 								Global 		No
+# - Variable: skip_name_resolve 				 Yes 						Global 	  No
+# skip-networking 				Yes 	Yes 								Global 	  No
+# - Variable: skip_networking 				 Yes 						Global 	  No
+# skip-show-database 			Yes 	Yes 								Global 	  No
+# - Variable: skip_show_database 			 Yes 						Global 	  No
+#
+# HOW TO RUN MYSQL AS A NORMAL USER
+#
+# On Windows, you can run the server as a Windows service using a normal user acc.
+#
+# On Linux, for installations performed using a MySQL repository or RPM packages, teh MySQL
+# server mysqld should be started by the local mysql OS user.
+#
+# Starting by another OS user is not supported by the init script that are included as part of the
+# MySQL repos.
+#
+# On Unix (or Linux for installations performed using tar.gz packages), teh MySQL server mysqld can be
+# started and run by any user.
+#
+# However, you should avoid running the server as the Unix root user for security reasons.
+#
+# To change mysqld to run as a normal unprived Unix user <user_name>, you must do:
+#
+# 		1. Stop the server if it is running (use mysqladmin shutdown)
+#
+# 		2. Change the DB dirs and files so that <user_name> has privs to read and write files in them
+# 			(you might need to do this as the Unix root user):
+#
+# 				chown -R <user_name> /path/to/mysql/datadir
+#
+# 			If you do not do this, teh server will not be able to access DBs or tables when it runs as <user_name>
+#
+# 			If dirs or files within teh MySQL data dir are symbolic links, chown -R might not follow symbolic links for you.
+# 			If it does not, you will also need to follow those links and change the dirs and files they point to.
+#
+# 		3. Start the server as user <user_name>. ANother alternative is to start mysqld as the Unix root user and use
+# 			the --user=<user_name> option.
+#
+# 			mysqld starts up, then switches to run as the Unix user <user_name> before accepting any connections.
+#
+# 		4. To start the server as the given user automatically at system startup time, specify the user name by adding
+# 			a user option to the [mysqld] group of the /etc/my.cnf option file or the my.cnf option file in the server's
+# 			data dir.
+#
+# 			For example:
+#
+# 				[mysqld]
+# 				user=user_name
+#
+# If your Unix machine itself is not secured, you should assign PWs to the MySQL root account in the grant tables.
+#
+# Otherwise, any user with a login account on that machine can run the mysql client with a --user=root option
+# and perform any operation.
+#
+# (It is a good idea to assign PWs to MySQL accs in any case, but especially so when other login accs exist
+# on the server host)
+#
+# SECURITY ISSUES WITH LOAD DATA LOCAL
+#
+# The LOAD_DATA statement can load a file located on the server host, or if the LOCAL keyword is specified, on the client host.
+#
+# There are two potentional security issues with the LOCAL version of LOAD_DATA:
+#
+# 		) The transfer of the file from client host to the server host is initiated by the MySQL server. 
+#
+# 			In theory,a patched server could be built that would tell the client program to transfer a file of the server's
+# 			choosing rather than the file named by the client in the LOAD_DATA statement.
+#
+# 			Such a server could access any file of the client host to which the user has read acces.
+#
+# 			(A patched server could in fact reply with a file-transfer request to any statement, not just LOAD_DATA_LOCAL,
+# 			so a more fundamental issue is that clients should not connect to untrusted servers.)
+#
+# 		) In a Web environment where the clients are connecting from a Web server, a user could LOAD_DATA_LOCAL to read
+# 			any files that the Web server process has read access to (assuming that a user could run any statement against
+# 			the SQL server).
+#
+# 			In this environment, the client with respect to the MySQL server actually is the Web server, not a remote
+# 			program being run by users who connect to the Web server.
+#
+# To avoid LOAD_DATA issues, clients should avoid using LOCAL.
+#
+# To avoid connecting to untrusted servers, clients can establish a secure connection and verify the server
+# identity by connecting using the --ssl-mode=VERIFY_IDENTITY option and the appropiate CA certificate.
+#
+# To enable admin and applications to manage the local data loading capability, LOCAL configuration works like this:
+#
+# 		) On teh server side:
+#
+# 			) The local_infile SYS_VAR controls server-side LOCAL capability.
+# 				Depending on the local_infile setting, teh server refuses or permits local data loading by clients
+# 				that have LOCAL enabled on the client side.
+#
+# 				By default, local_infile is disabled.
+#
+# 			) To explicitly cause the server to refuse or permit LOAD_DATA_LOCAL statements (regardless of how client programs
+# 				and libraries are configured at build time or runtime), start mysqld with local_infile disabled or enabled,
+# 				respectively.
+#
+# 				local_infile can also be set at runtime.
+#
+# 		) On the client side:
+#
+# 			) The ENABLED_LOCAL_INFILE CMake option controls the compiled-in default LOCAL capability for the MySQL client lib.
+# 				Cliens that make no explicit arrangements therefore have LOCAL capability disabled or enabled according to
+# 				the ENABLED_LOCAL_INFILE setting specified at MySQL build time.
+#
+# 				By default, the client lib in MySQL binary distribs is compiled with ENABLED_LOCAL_INFILE disabled.
+# 				If you compile MySQL from source, configure it with ENABLED_LOCAL_INFILE disabled or enabled based on
+# 				whether clients clients that make no explicit arrangements should have LOCAL capability disabled or enabled, resp..
+#
+# 			) Client programs that use the C API can control load data loading explicitly by invoking mysql_options() to disable or 
+# 				enable the MYSQL_OPT_LOCAL_INFILE option.
+#
+# 			) For the Mysql client, local data loading is disabled by default. To disable or enable it explicitly, use the
+# 				--local-infile=0 or --local-infile[=1] option.
+#
+# 			) For the mysqlimport client, local data loading is disabled by default. To disable, or enable it explicitly,
+# 				use the --local=0 or --local[=1] option.
+#
+# 			) If you use LOAD_DATA_LOCAL in Perl scripts or other programs that read the [client] group from option files,
+# 				you can add an local-infile option setting to that group.
+#
+# 				To prevent problems for programs that do not understand this option, specify it using the loose- prefix:
+#
+# 					[client]
+# 					loose-local-infile=0
+# 			
+# 				or:
+#
+# 					[client]
+# 					loose-local-infile=1
+#
+# 			) In all cases, successful use of a LOCAL load by a client requires that hte server eprmits it.
+#
+# If LOCAL capability is disabled, on either server or clietn side, a client that attempts to issue a LOAD_DATA_LOCAL statement
+# receives the following error message:
+#
+# 		ERROR 1148: The used command is not allowed with this MySQL verison
+#
+# CLIENT PROGRAMMING SECURITY GUIDELINES
+#
+# Applications that access MySQL should not trust any data entered by users, who can try to trick your code by entering special or escaped
+# char sequences in Web forms, URLs or whathever app you have built.
+#
+# Be sure that your application remains secure if a user enters something like ; DROP DATABASE mysql;
+# This is an extreme example, but large security leaks and data loss might occur as a result of hackers using similar techniques,
+# if you do not prepare for them.
+#
+# A common mistake is to protect only string data values. 
+#
+# Rmember to check numeric data as well. If an application generates a query such as SELECT * FROM table WHERE
+# ID=234 when a user enters the value 234, the user can enter the value 234 OR 1=1 to cause the aplication to generate the
+# query SELECT * FROM table WHERE ID=234 OR 1=1
+#
+# as a result, the server retrieves every row in the table.
+#
+# This exposes every row, and causes excessive server load.
+# The simplest way to protect from this type of attack is to use a single quotation mark
+# around the numeric constants:
+#
+# SELECT * FROM table WHERE ID='234'
+#
+# If the user enters extra info, it all becomes part of the string.
+#
+# In a numeric context, MySQL automatically converts that string to a number and strip any trailining nonnumeric chars from it.
+#
+# Sometiems people think that if a DB contains only publicly available data, it need not be protected.
+# This is wrong.
+#
+# Even if it is permissible to display any row in the DB, you should still protect against denial of service attacks
+# (for example, those that are based on the technique in the preceding paragraph that cause the server to waste resources)
+#
+# otherwise, your server becomes unresponsive.
+#
+# Checklist:
+#
+# 		) Enable strict SQL mode to tell the server to be more restrictive of what data values it accepts.
+#
+# 		) Try to enter single and double quotation marks (' and ") in all of your Web forms. If you get any kind of MySQL error, investigate
+# 			the problem.
+#
+# 		) Try to modify dynamic URLs by adding %22("),%23(#) and %27(') to them.
+#
+# 		) Try to modify data types in dynamic URLs from numeric to char types using the chars shown in the previous example.
+# 			Your application should be safe against these and similar attacks.
+#
+# 		) Try to enter characters, spaces and special symbols rather than numbers in numeric fields.
+#
+# 			Your application should remove thhem before passing them to MySQL or else generate an error.
+#
+# 			Passing unchecked values to MySQL is very dangerous.
+#
+# 		) Check the size of data before passing it to MySQL.
+#
+#		) Have your application connect to the DB using a user name different from the one you use for the admin purposes.
+# 			Do not give your application any access privs they do not need.
+#
+# Many application programming interfaces provide a means of escaping special characters in data values.
+#
+# Properly used, this prevents application users from entering values that cause teh application to
+# generate statements that have different effect than you intended:
+#
+# 		) MySQL C API: Use the mysql_real_escape_string_quote() API call
+#
+# 		) MySQL++: Use the escape and quote modeifiers for query streams
+#
+# 		) PHP: use either the mysqli or pdo_mysql extensions, and not hte older ext/mysql extension.
+# 				The preferred APIs support the improved MySQL authentication protocol and PWs, as well as 
+# 				prepared statements with placeholders.
+#
+# 				If the older ext/mysql extension must be used, then for escaping use the mysql_real_escape_string_quote()
+# 				function and not mysql_escape_string() or addslashes() because only mysql_real_escape_string_quote() is
+# 				character set-aware: the other functions can be "bypassed" when using (invalid) multibyte char sets.
+#
+# 		) Perl DBI: Use placeholders or the quote() method
+#
+# 		) Ruby DBI: Use placeholders or teh quote() method
+#
+# 		) Java JDBC: Use a PreparedStatement object and placeholders.
+#
+# etc.
+#
+# THE MYSQL ACCESS PRIVILEGE SYSTEM:
+#
+# The primary function of the MySQL privlege system is to authenticate a user who connects from a given host and to associate
+# that user with privs on a database such as SELECT, INSERT, UPDATE, and DELETE.
+#
+# Additionally, functionality includes the ability to have anonymous users and to grant privs for MySQL-specific functions
+# such as LOAD_DATA_INFILE and administrative operations.
+#
+# There are some things that you cannot do with the MySQL privilege system:
+#
+# 		) You cannot explicitly specify that a given user should be denied access.
+# 			That is, you cannot explicity match a user and then refuse the connection.
+#
+# 		) You cannot specify that a user has privileges to create or drop tables in a database but not to create or drop the DB itself.
+#
+# 		) A PW applies globally to an account. You cannot associate a Pw with a specific object such as a database, table or routine.
+#
+# The user interface to the MySQL priv system consists of SQL statements such as CREATE_USER, GRANT and REVOKE.
+#
+# Internally, the server stores privs information in the grant tables of the mysql system database (that is, in the database named mysql).
+# The MySQL server reads teh content of these tables into memory when it starts and base access-control decisions on the in-memory copies
+# of the grant tables.
+#
+# The MySQL priv system ensures that all users may perform only the operations permitted to them.
+# As a user, when you connect to a MySQL server, your identity is determined by the host from which you connect and
+# the user name you specify.
+#
+# When you issue requests after connecting, the system grants privileges according to your identity and what you want to do.
+#
+# MySQL Considers both your host name and user name in idetifying you because there is no reason to assume that a given
+# user name belongs to the same person on all hosts.
+#
+# For example, the user Joe who connects from office.example.com need not be the same per as joe who connects from home.example.com
+#
+# Mysql handles this by enabling you to distinguish users on different hosts that happen to have the same name:
+#
+# 		you can grant one set of privs for connections by joe from office.example.com and a different
+# 		set of privs for connections by joe from home.example.com
+#
+# 		To see what privs a given account has, use the SHOW_GRANTS statement, for example:
+#
+# 				SHOW GRANTS FOR 'joe'@'office.example.com';
+# 				SHOW GRANTS FOR 'joe'@'home.example.com'; 			
+# 
+# MySQL access control involves two stages when you run a client program that connect to the server:
+#
+# 		Stage 1: The server accepts or rejects the connection based on your identity and whether you can verify your
+# 					identity by supplying the correct PW.
+#
+# 		Stage 2: Assuming that you can connect, the server checks each statement you issue to determine whether you ahve sufficient
+# 					privs to eprform it.
+#
+# 					For example, if you try to select rows from a table in a DB or dopr a table from the DB, the server verifies that
+# 					you ahve the SELECT privs for the table or the DROP priv for the database.
+#
+# 					For a more detailed walkthrough of each stage, covered later.
+#
+# 					If your privleges are changed (either by yourself or someone else), while you are connected, those changes
+# 					do not necesasrily take effect immediately for the next statement that you issue.
+#
+# PRIVILEGES PROVIDED BY MYSQL
+#
+# THe privileges granted to a MySQL account determine which operations the account can perform.
+#
+# MySQL privileges differ in the contexts in which they apply and at different levels of operation:
+#
+# 		) Administrative privs enable users to manage operation of the MySQL server. These privs are global because they
+# 			are not specific to a particular DB.
+#
+# 		) Database Privs apply to a DB and to all objects within it. These privs can be granted for specific DBs, or globally so
+# 			that they apply to all dbs.
+#
+# 		) Privs for db objects such as tables, indexes, views and stored routines can be granted for specific objects within a
+# 			database, for all objects of a given type within a database (for example, all tables in a database) or globally
+# 			for all objects of a given type in all DBs.
+#
+# Privileges also differ in terms of whether they are static (built in to the server) or dynamic (defined at runtime).
+# Whether a priv is static or dynamic affects its availability to be granted to user accounts and roles.
+#
+# Information about account privs is stored in the grant tables in the mysql SYSTEM_DB.
+# Covered more later.
+#
+# The MYSQL server reads teh contents of the grant tables into memory when it starts, and reloads
+# them under the circumstances indicated later.
+#
+# The server bases access-control decisions on the in-memory copies of the grant tables.
+#
+# Important:
+#
+# 		Some MySQL releases introduce changes to the grant tables to add new privs or features.
+# 		To make sure that you can take advantage of any new capabilities, update your grant
+# 		tables to the current structure whenever you upgrade MySQL.
+#
+# The following sections summarize the available privs, provide more detailed desc of each priv, and offer usage guidelines.
+#
+# ) Summary of Available Privs
+#
+# ) Static Priv Desc
+#
+# ) Dynamic Priv Desc
+#
+# ) Priv-Granting guidelines
+#
+# SUMMARY OF AVAILABLE PRIVILEGES
+#
+# The following tables show the static privilege names used in GRANT and REVOKE statements, along with the COLUMN name associated
+# with each priv in the grant tables and the context in which the priv applies.
+#
+# PERMISSIBLE STATIC PRIVS for GRANT and REVOKE
+#
+# Privilege 					Grant Table Column 				Context
+# ALL_[PRIVILEGES] 			Synonym for "all privileges" 	Server Administration
+# ALTER 							Alter_priv 							Tables
+# ALTER_ROUTINE 				Alter_routine_priv 				Stored routines
+# CREATE 						Create_priv 						Database, tables or Indexes
+#
+# CREATE_ROLE 					Create_role_priv 					Server administration
+# CREATE_ROUTINE 				Create_routine_priv 				Stored routines
+# CREATE_TABLESPACE 			Create_tablespace_priv 			Server administration
+# CREATE_TEMPORARY_TABLES 	Create_tmp_table_priv 			Tables
+#
+# CREATE_USER 					Create_user_priv 					Server administration
+# CREATE_VIEW 					Create_view_priv 					Views
+# DELETE 						Delete_priv 						Tables
+# DROP 							Drop_priv 							Databases, tables or views
+#
+# DROP_ROLE 					Drop_role_priv 					Server administration
+# EVENT 							Event_priv 							Databases
+# EXECUTE 						Execute_priv 						Stored routines
+# FILE 							File_priv 							File access on server host
+# GRANT_OPTION 				Grant_priv 							Databases, tables or stored routines
+# INDEX 							Index_priv 							Tables
+# INSERT 						Insert_priv 						Tables or Columns
+#
+# LOCK_TABLES 					Lock_tables_priv 					Databases
+# PROCESS 						Process_priv 						Server Administration
+# PROXY 							proxies_priv table 				Server administration
+# REFERENCES 					References_priv 					Databases or Tables
+# RELOAD 						Reload_priv 						Server administration
+# REPLICATION_CLIENT 		Repl_cient_priv 					Server administration
+#
+# REPLICATION_SLAVE 			Repl_slave_priv 					Server administration
+# SELECT 						Select_priv 						Tables or columns
+# SHOW_DATABASES 				Show_db_priv 						Server administration
+# SHOW_VIEW 					Show_view_priv 					Views
+# SHUTDOWN 						Shutdown_priv 						Server admin
+# SUPER 							Super_priv 							Server admin
+# TRIGGER 						Trigger_priv 						Tables
+# UPDATE 						Update_priv 						Tables or columns
+# USAGE 							Synonym for "no privs" 			Server administration
+#
+# The following table shows the dynamic privlege names used in GRANT and REVOKE statements,
+# along with the context in which the privilege applies.
+#
+# TABLE 6.3 PERMISSIBLE DYNAMIC PRIVILEGES for GRANT and REVOKE
+#
+# 			Privilege 				Context
+#
+# AUDIT_ADMIN 				 	Audit log administration
+# BACKUP_ADMIN 				Backup administration
+# BINLOG_ADMIN 				Backup and Replication Admin
+# CONNECTION_ADMIN 			Server administration
+#
+# ENCRYPTION_KEY_ADMIN 			Server administration
+# FIREWALL_ADMIN 					Firewall Administration
+# FIREWALL_USER 					Firewall administration
+# GROUP_REPLICATION_ADMIN 		Replication Administration
+# PERSIST_RO_VARIABLES_ADMIN 	Server administration
+#
+# REPLICATION_SLAVE_ADMIN 		Replication administration
+# RESOURCE_GROUP_ADMIN 			Resource group administration
+# RESOURCE_GROUP_USER 			Resource group administration
+# ROLE_ADMIN 						Server administration
+# 
+# SESSION_VARIABLES_ADMIN 		Server administration
+# SET_USER_ID 						Server administration
+# SYSTEM_VARIABLES_ADMIN 		Server administration
+# VERSION_TOKEN_ADMIN 			Server administration
+# XA_RECOVER_ADMIN 				Server administration
+#
+# STATIC PRIVILEGE DESCRIPTIONS
+#
+# Static privs are built in to the server, in contrast to dynamic privs, which are defined at runtime.
+# The following list describes each static priv available in MySQL.
+#
+# particular SQL statements might have more specific priv requirements than indicated here.
+# If so, the description for the statement in question provides the details.
+#
+# 		) ALL, ALL_PRIVILEGES
+#
+# 				These privilege specifiers are shorthand for "all privileges available at a given privilege leve"
+# 				(except GRANT_OPTION).
+#
+# 				For example, granting ALL at the global or table level grants all global privs or all table-level privs, respectively.
+#
+# 		) ALTER
+#
+# 				Enables use of the ALTER_TABLE statement to change the structure of tables.
+#
+# 				ALTER_TABLE also requires the CREATE and INSERT privileges.
+# 				Renaming a table requires ALTER and DROP on the old table, CREATE and INSERT on the new table.
+#
+# 		) ALTER_ROUTINE
+#
+# 				Enables use of statements that alter or drop stored routines (stored procedures and functions)
+#
+# 		) CREATE
+#
+# 				Enables use of statements that create new databases and tables
+#
+# 		) CREATE_ROLE
+#
+# 				Enables use of the CREATE_ROLE statement. (The CREATE_USER priv also enables use of the CREATE_ROLE statement)
+#
+# 		) CREATE_ROUTINE
+#
+# 				Enables use of statements that create stored routines (stored procedures and functions)
+#
+# 		) CREATE_TABLESPACE
+#
+# 				Enables use of statements that create, alter or drop tablespaces and log file groups.
+#
+# 		) CREATE_TEMPORARY_TABLES
+#
+# 				Enables the creation of temporary tables using the CREATE_TEMPORARY_TABLE statement.
+#
+# 				After a session has created a temporary table, the server performs no further privilege checks on the table.
+#
+# 				The creating session can perform any operation on the table, such as DROP_TABLE, INSERT, UPDATE or SELECT.
+#
+# 		) CREATE_USER
+#
+# 				Enables use of the ALTER_USER, CREATE_ROLE, CREATE_USER, DROP_ROLE, DROP_USER, RENAME_USER and REVOKE_ALL_PRIVILEGES statements.
+#
+# 		) CREATE_VIEW
+#
+# 				Enables use of the CREATE_VIEW statement.
+#
+# 		) DELETE
+#
+# 				Enables rows to be deleted from tables in a database.
+#
+# 		) DROP
+#
+# 				Enables use of statements that drop (remove) existing databases, tables and views.
+#
+# 				The DROP privilege is required to use the ALTER TABLE ... DROP PARTITION statement
+# 				on a partitioned table.
+#
+# 				The DROP privilege is also required for TRUNCATE_TABLE
+#
+# 		) DROP_ROLE
+#
+# 				Enables use of the DROP_ROLE statement. (The CREATE_USER priv also enables use of the DROP_ROLE statement)
+#
+# 		) EVENT
+#
+# 				Enables use of statements that create, alter, drop or display events for the Event Scheduler.
+#
+# 		) EXECUTE
+#
+# 				Enables use of statements that execute stored routines (stored procedures and functions)
+#
+# 		) FILE
+#
+# 				Affects the following operations and server behaviors:
+#
+# 					) Enables reading and writing files on the server host using the LOAD_DATA_INFILE and SELECT_..._INTO_OUTFILE 
+# 						statements and the LOAD_FILE() function.
+#
+# 						A user who has the FILE privilege can read any file on the server host that is either world-readable
+# 						or readable by the MySQL server.
+#
+# 						(This implies that the user can read any file in any DB dir, because the server can access any of those files)
+#
+# 					) Enables creating new files in any directory where the MySQL server has write access.
+# 						This includes the server's data dir containing the files that implement the privilege tables.
+#
+# 					) Enables use of the DATA DIRECTORY or INDEX DIRECTORY table option for the CREATE_TABLE statement.
+#
+# 				As a security measure, the server does not overwrite existing files.
+#
+# 				To limit the location in which files can be read and written, set the secure_file_priv SYS_VAR to a specific dir.
+#
+# 		) GRANT_OPTION
+#
+# 				Enables you to grant to or revoke from other users those privileges that you yourself possess.
+#
+# 		) INDEX
+#
+# 				Enables use of statements that create or drop (remove) indexes. INDEX applies to existing tables.
+#
+# 				If you have the CREATE privilege for a table, you can include Index definitions in the CREATE_TABLE statement.
+#
+# 		) INSERT
+#
+# 				Enables rows to be inserted into tables in a database. INSERT is also required for the ANALYZE_TABLE, OPTIMIZE_TABLE,
+# 				and REPAIR_TABLE table-maintenance statements.
+#
+# 		) LOCK_TABLES
+#
+# 				Enables use of explicit LOCK_TABLES statements to lock tables for which you have the SELECT privilege.
+#
+# 				This includes use of write locks, which prevents other sessions from reading the locked table.
+#
+# 		) PROCESS
+#
+# 				Enables display of information about the threads executing within the server (that is, information about the
+# 				statements being executed by sessions).
+#
+# 				The privilege enables use of SHOW_PROCESSLIST or mysqladmin processlist to see threads belonging to other accounts;
+# 				you can always see your own threads.
+#
+# 				The PROCESS privilege also enables use of SHOW_ENGINE.
+#
+# 		) PROXY
+#
+# 				Enables one user to impersonate or become known as another user.
+#
+# 		) REFERENCES
+#
+# 				Creation of foreign key constraint requires the REFERENCES privilege for the parent table.
+#
+# 		) RELOAD
+#
+# 				Enables use of the FLUSH statement. 
+# 				It also enables mysqladmin commands that are equivalent to FLUSH operations:
+#
+# 				flush-hosts, flush-logs, flush-privileges, flush-status, flush-tables, flush-threads, refresh and reload.
+#
+# 				The reload command tells the server to reload the grant tables into memory.
+#
+# 				flush-privileges is a synonym for real. The refresh command closes and reopens the log files and flushes all
+# 				tables.
+#
+# 				The other flush-xxx commands perform functions similar to refresh, but are more specific and may be preferable
+# 				in some instances.
+#
+# 				For example, if you want to flush just the log files, flush-logs is a better choice than refresh.
+#
+# 		) REPLICATION_CLIENT
+#
+# 				Enables use of the SHOW_MASTER_STATUS, SHOW_SLAVE_STATUS and SHOW_BINARY_LOGS statements.
+#
+# 				Grant this privilege to accounts that are used by slave servers to connect to the current server
+# 				as their master.
+#
+# 		) REPLICATION_SLAVE
+#
+# 				Enables the account to request updates that have been made to databases on the master server.
+#
+# 				Grants this privilege to accounts that are used by slave servers to connect to the current server as their master.
+#
+# 		) SELECT
+#
+# 				Enables rows to be selected from tables in a database. SELECT statements require the SELECT privilege only if
+# 				they actually access tables.
+#
+# 				Some SELECT statements do not access tables and can be executed without permission for any database.
+#
+# 				For example, you can use SELECT as a simple calculator to evaluate expresisons that make no reference to tables:
+#
+# 					SELECT 1+1;
+# 					SELECT PI()*2;
+#
+# 				The SELECT privilege is also needed for other statements that read column values.
+#
+# 				For example, SELECT is needed for columns referenced on the right hand side of <col_name>=<expr> assignment
+# 				in UPDATE statements or for columns named in the WHERE clause of DELETE or UPDATE statements.
+#
+# 				The SELECT privilege is needed for tables or views used with EXPLAIN, including any underlying
+# 				tables in view definitions.
+#
+# 		) SHOW_DATABASES
+#
+# 				Enables the account to see database names by issuing the SHOW DATABASE statement.
+#
+# 				Accounts that do not have this privlege see only databases for which they have some privs, and cannot use
+# 				the statement at all if hte server was started with the --skip-show-database option.
+#
+# 				(Any global priv is considered a priv for all database)
+#
+# 		) SHOW_VIEW
+#
+# 				Enables use of the SHOW_CREATE_VIEW satement. This priv is also needed for views used with EXPLAIN.
+#
+# 		) SHUTDOWN
+#
+# 				Enables use of the SHUTDOWN and RESTART statements, the mysqladmin shutdown command and the mysql_shutdown() C API function.
+#
+# 		) SUPER
+#
+# 				SUPER is a powerful qnd far-reaching privilege and should not be granted lightly.
+#
+# 				If an account needs to perform only a subset of SUPER operations, it may be possible to achieve the desired
+# 				privlege set by instead granting one or more dynamic privs, each of which confers more limited capacities.
+#
+# 				NOTE: SUPER is deprecated.
+#
+# 				SUPER affects the following operations and server behaviors:
+#
+# 					) Enables system variable changes at runtime:
+#
+# 							) Enables server configuration changes to global system variables with SET_GLOBAL and SET_PERSIST.
+#
+# 								The corresponding dynamic priv is SYSTEM_VARIABLES_ADMIN
+#
+# 							) Enables setting restricted session system variables that require a special privilege.
+#
+# 								The corresponding dynamic priv is SESSION_VARIABLES_ADMIN
+#
+# 					) Enables changes to global transaction characteristics
+#
+# 						The corresponding dynamic priv is SYSTEM_VARIABLES_ADMIN
+#
+# 					) Enables the account to start and stop replication, including Group replication.
+#
+# 						The corresponding dynamic privlege is REPLICATION_SLAVE_ADMIN for regular replication, GROUP_REPLICATION_ADMIN for Group Replication.
+#
+# 					) Enables use of the CHANGE_MASTER_TO and CHANGE_REPLICATION_FILTER statements.
+#
+# 						The corresponding dynamic privlege is REPLICATION_SLAVE_ADMIN.
+#
+# 					) Enables binary log control by means of the PURGE_BINARY_LOGS and BINLOG statements.
+#
+# 						The corresponding dynamic priv is BINLOG_ADMIN.
+#
+# 					) Enables setting the effective authorization ID when executing a view or stored program.
+#
+# 						A user with this privlege can specify any account in the DEFINER attribute of a view or stored program.
+#
+# 						The corresponding dynamic privilege is SET_USER_ID.
+#
+# 					) Enables use of the CREATE_SERVER, ALTER_SERVER and DROP_SERVER statements.
+#
+# 					) Enables use of the mysqladmin debug command.
+#
+# 					) Enables InnoDB encryption key rotation.
+#
+# 						The corresponding dynamic privilege is ENCRYPTION_KEY_ADMIN
+#
+# 					) Enables execution of Version Tokens user-defined functions.
+#
+# 						The corresponding dynamic priv is VERSION_TOKEN_ADMIN.
+#
+# 					) Enables nonempty <graphml> element content in the result from the ROLES_GRAPHML() function.
+#
+# 						The corresponding dynamic priv is ROLE_ADMIN
+#
+# 					) Enables control over client connections not permitted to non-SUPER accounts:
+#
+# 						) Enables use of the KILL statement or mysqladmin kill command to kill threads belonging to other accounts.
+# 							(An account can always kill its own threads)
+#
+# 						) The server does not execute init_connect SYS_VARs content when SUPER client connects.
+#
+# 						) The server accepts one connection from SUPER client even if the connection limit configured by the max_connections SYS_VAR is reached.
+#
+# 						) A server in offline mode (offline_mode enabled) does not terminate SUPER client connections at the next client request,
+# 							and accepts new connections from SUPER clients.
+#
+# 						) Updates can be performed even when the read_only SYS_VAR is enabled. This applies to explicit table updates, and to use of account-management
+# 							statements such as GRANT and REVOKE that update tables implicitly.
+#
+# 					The corresponding dynamic priv for the preceding connection-control operations is CONNECTION_ADMIN.
+#
+# 				The may also need the SUPER priv to create or alter stored functions if binary logging is enabled.
+#
+# 		) TRIGGER
+#
+# 			Enables trigger operations. You must have this privilege for a table to create, drop, execute or display triggers for that table.
+#
+# 			When a trigger is activated (by a user who has privs to execute INSERT, UPDATE or DELETE statements for the table associated with the
+# 			trigger), trigger execution requires that the user who defined the trigger still have the TRIGGER priv for the table.
+#
+# 		) UPDATE
+#
+# 			Enables rows to be updated in tables in a DB.
+#
+# 		) USAGE
+#
+# 			This privlege specifier stands for "no privs". It is used at the global level with GRANT to specify clauses such as WITH GRANT OPTION without
+# 			naming specific account privs in the priv list.
+#
+# 			SHOW_GRANTS displays USAGE to indicate that an account has no privileges at a priv level.
+#
+# DYNAMIC PRIVILEGE DESCRIPTIONS
+#
+# Dynamic privileges are defined at runtime, in contrast to static privileges, which are built in to the server.
+# The following list describes each dynamic privilege available in MySQL.
+#
+# Most dynamic privileges are defined at server startup. Others are defined by a particular server component or plugin,
+# as indicated in the privilege descriptions.
+#
+# In such cases, the privilege is unavailable unless the component or plugin that defines it is enabled.
+#
+# Particular SQL statements might have more specific privilege requirements than indicated here.
+# If so, the description for the statement in question provides the details.
+#
+# 		) AUDIT_ADMIN
+#
+# 			Enables audit log configuration. This privilege is defined by the audit_log plugin.
+#
+# 		) BACKUP_ADMIN
+#
+# 			Enables execution of the LOCK_INSTANCE_FOR_BACKUP statement and access to the Performance Schema Log_status table.
+#
+# 			The BACKUP_ADMIN privilege is automatically granted to users with the RELOAD privilege when performing an in-place
+# 			upgrade to MySQL 8.0 from an earlier version.
+#
+# 		) BINLOG_ADMIN
+#
+# 			Enables binary log control by means of the PURGE_BINARY_LOGS and BINLOG statements.
+#
+# 		) CONNECTION_ADMIN
+#
+# 			Enables use of the KILL statement or mysqladmin kill command to kill threads belonging to other accounts.
+# 			(An account can always kill its own threads).
+#
+# 			Enables setting SYS_VAR related to client connections, or circumventing restrictions related to client connections.
+# 			CONNECTION_ADMIN applies to the effects of these SYS_VARs:
+#
+# 				) Init_connect: The server does not execute init_connect SYS_VAR content when CONNECTION_ADMIN clients connect.
+#
+# 				) max_connections: The server accepts one connection from a CONNECTION_ADMIN client even if the connection limit 
+# 											configured by the max_connections SYS_VAR is reached.
+#
+# 				) offline_mode: A server in offline mode (offline mode enabled) does not terminate CONNECTION_ADMIN client connections
+# 										at the next client request, and accepts new connections from CONNECTION_ADMIN clients.
+#
+# 				) read_only: Updates can be performed even when the read_only SYS_VAR is enabled.
+#
+# 									This applies to explicit table updates, and to use of account-management statements such as GRANT and REVOKE
+# 									that update tables implicitly.
+#
+# 		) ENCRYPTION_KEY_ADMIN
+#
+# 			Enables InnoDB encryption key rotation.
+#
+# 		) FIREWALL_ADMIN
+#
+# 			Enables a user to administer firewall rules for any user.
+# 			This privilege is defined by the MYSQL_FIREWALL plugin.
+#
+# 		) FIREWALL_USER
+#
+# 			Enables users to update their own firewall rules.
+# 			This privilege is defined by the MYSQL_FIREWALL plugin.
+#
+# 		) GROUP_REPLICATION_ADMIN
+#
+# 			Enables the account to start and stop GROUP REPLICATION. Grant this privilege to accounts that are used by slave servers to connect to the current server as their master.
+#
+# 		) PERSIST_RO_VARIABLES_ADMIN
+#
+# 			For users who also have SYSTEM_VARIABLES_ADMIN, PERSIST_RO_VARIABLES_ADMIN enables use of SET_PERSIST_ONLY to persist global system variables
+# 			to the mysqld-auto.cnf option file in the data dir.
+#
+# 			This statement is similar to SET_PERSIST but does not modify the runtime global SYS_VAR rule.
+#
+# 			This makes SET_PERSIST_ONLY suitable for configuring read-only SYS_VARS that can be set only at server startup.
+#
+# 		) REPLICATION_SLAVE_ADMIN
+#
+# 			Enables the account to connect to the master server, start and stop replication, and use the CHANGE_MASTER_TO and
+# 			CHANGE_REPLICATION_FILTER statements.
+#
+# 			Grant this priv to accounts that are used by slave servers to connect to the current server as their master.
+#
+# 			This priv does not apply to Group Replication; use GROUP_REPLICATION_ADMIN for that.
+#
+# 		) RESOURCE_GROUP_ADMIN
+#
+# 			Enables resource group management: Creating, Altering, and dropping resource groups; and assignment of threads and statements
+# 			to resource groups.
+#
+# 			A user with this privilege can perform any operation relating to resource groups.
+#
+# 		) RESOURCE_GROUP_USER
+#
+# 			Enables assigning threads and statements to resource groups. A user with this priv can use the SET_RESOURCE_GROUP statement 
+# 			and the RESOURCE_GROUP optimizer hint.
+#
+# 		) ROLE_ADMIN
+#
+# 			Enables use of the WITH ADMIN OPTION clause of the GRANT statement.
+#
+# 			Enables nonempty <graphml> element content in the result from the ROLES_GRAPHML() function.
+#
+# 		) SERVICE_CONNECTION_ADMIN
+#
+# 			Enables connections to the network interface that permits only administrative connections.
+#
+# 		) SESSION_VARIABLES_ADMIN
+#
+# 			For most SYS_VARs, setting the session value requires no special privileges and can be done by any user to affect
+# 			the current session.
+#
+# 			For some system variables, setting the session value can have effects outside the current session and thus is a restricted
+# 			operation.
+#
+# 			For these, the SESSION_VARIABLES_ADMIN privilege enables the user to set the session value.
+#
+# 			If a system variable is restricted and requires a special privilege to set the session value, the variable desc. indicates that
+# 			restriction.
+#
+# 			Examples include - binlog_format, sql_log_bin and sql_log_off.
+#
+# 			SESSION_VARIABLES_ADMIN was added in MySQL 8.0.14.
+#
+# 			Prior to this, restricted session SYSTEM_VARIABLES can be set only by users who have the
+# 			SYSTEM_VARIABLES_ADMIN or SUPER priv.
+#
+# 			The SESSION_VARIABLES_ADMIN priv is a subset of the SYSTEM_VARIABLES_ADMIN and SUPER privs.
+#
+# 			A user who has either of those privs is also permitted to set restricted session variables and
+# 			effectively has SESSION_VARIABLES_ADMIN by implication and need not be granted SESSION_VARIABLES_ADMIN explicitly. 			
+#
+# 		) SET_USER_ID
+#
+# 			Enables setting the effective authorization ID when executing a view or stored program.
+#
+# 			A user with this priv can specify any account in the DEFINER attribute of a view or stored program.
+#
+# 		) SYSTEM_VARIABLES_ADMIN
+#
+# 			Affects the following operations and server behaviors:
+#
+# 				) Enables system variable changes at runtime:
+#
+# 					) Enables server configuration changes to global system variables with SET_GLOBAL and SET_PERSIST.
+#
+# 					) Enables server configuration changes to global system variables with SET_PERSIST_ONLY, if the user also has PERSIST_RO_VARIABLES_ADMIN.
+#
+# 					) Enables setting restricted session system variables that require a special privilege.
+# 						In effect, SYSTEM_VARIABLES_ADMIN implies SESSION_VARIABLES_ADMIN without explicitly granting SESSION_VARIABLES_ADMIN.
+#
+# 				) Enables changes to global transaction characteristics.
+#
+# 		) VERSION_TOKEN_ADMIN
+#
+# 			Enables execution of Version Tokens user-defined functions. This privilege is defined by the version_tokens plugin.
+#
+# 		) XA_RECOVER_ADMIN
+#
+# 			Enables execution of the XA_RECOVER statement.
+#
+# 			Prior to MySQL 8.0, any user could execute the XA_RECOVER statement to discover the XID values for oustanding prepared XA transactions,
+# 			possibly leading to commit or rollback of an XA transaction by a user other than the one who started it.
+#
+# 			In MySQL 8.0, XA_RECOVER is permitted only to users who have the XA_RECOVER_ADMIN privilege, which is expected to be granted
+# 			only to administrative users who have need for it.
+#
+# 			This might be case, for example, for administrators of an XA application if it has crashed and it is necessary to find outstanding
+# 			transactions started by the application so they can be rolled back.
+#
+# 			This privilege requirement prevents users from discovering the XID values for oustanding prepared XA transactions other than their own.
+# 			It does not affect normal commit or rollback of an XA transaction because the user who started it knows its XID.
+#
+# PRIVILEGE-GRANTING GUIDELINES
+#
+# It is a good idea to grant to an account only those privileges that it needs.
+# You should exercise particular caution in granting the FILE and administrative privileges:
+#
+# 		) FILE can be abused to read into a database table any files that hte MySQL server can read on the server host.
+# 			This includes all world-readable files and files in the server's data directory.
+#
+# 			The table can then be accessed using SELECT to transfer its contents to the client host.
+#
+# 		) GRANT_OPTION enables users to give their privileges to other users. Two users that have different privileges and with the GRANT_OPTION privilege
+# 			are able to combine privileges.
+#
+# 		) ALTER may be used to subvert the privilege system by renaming tables.
+#
+# 		) SHUTDOWN can be abused to deny service to other users entirely by terminating the server.
+#
+# 		) PROCESS can be used to view the plain text of currently executing statements, including statements that set or change PWs.
+#
+# 		) SUPER can be used to terminate other sessions or change how the server operates.
+#
+# 		) Privileges granted for the mysql system databse itself can eb used to change Passwords and otehr access privilege information:
+#
+# 			) Passwords are stored encrypted, so a malicious user cannot simply read them to know the plain text password.
+#
+# 				However, a user with write access to the mysql.user table authentication_string column can change an account password,
+# 				and the connect to the MySQL server using that account.
+#
+# 			) INSERT or UPDATE granted for the mysql system database enable a user to add privileges or modify existing privileges, respectively.
+#
+# 			) DROP for the mysql system database enables a user to remote privilege tables, or even the database itself.
+#
+# An example of creating a concatenated table of different privileges and system variables in terms of privileges:
+#
+# SELECT password, host, user,
+# CONCAT(Select_priv, Lock_tables_priv) AS selock,
+# CONCAT(Insert_priv, Update_priv, Delete_priv, Create_priv, Drop_priv) AS modif,
+# CONCAT(Grant_priv, References_priv, Index_priv, Alter_priv) AS meta,
+# CONCAT(Create_tmp_table_priv, Create_view_priv, Show_view_priv) AS views, #Some of these names might be off in terms of updated privilege sectionings
+# etc...
+# FROM USER ORDER BY user, host;
+#
+# STATIC VERSUS DYNAMIC PRIVILEGES
+#
+# 
+#
+#
+#
 # https://dev.mysql.com/doc/refman/8.0/en/security.html
 #
 # 
