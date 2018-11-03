@@ -28785,11 +28785,542 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # STATIC VERSUS DYNAMIC PRIVILEGES
 #
+# MySQL supports static and dynamic privileges:
+#
+# 		) Static privs are built into the server. They are always available to be granted to user accounts and cannot be unregistered.
+# 
+# 		) Dynamic privs can be registered and unregistered at runtime. This affects their availability: A dynamic priv that has not been registered cannot be granted.
+#
+# For example, the SELECT and INSERT privileges are static and always available, whereas a dynamic privilege becomes available
+# only if the server component that implements it has been enabled.
+#
+# The remainder of this section describes how dynamic privs work in MySQL. The discussion uses the term "components" but it applies equally to plugins.
+#
+# 		NOTE: 
+#
+# 			Server admins should be aware of which server components define dynamic privs.
+# 			For MySQL distribs, documentation of components that define dynamic privs describe those privs.
+#
+# 			Third-party components may also define dynamic privs; an admin should understand those privs and not install
+# 			components that might conflict or compromise server operations.
+#
+# 			For example, one component conflicts with another if both define a priv with the same name.
+# 			Component devs can reduce the likelihood of this occurence by choosing priv names having a prefix based on the component name.
+#
+# The server maintains the set of registered dynamic privs internally in memory. Unregistration occurs at server shutdown.
+#
+# Normally, a server component that defines dynamic privs registers them when it is installed, during its initialization sequence.
+# When uninstalled, a server component does not unregister its registered dynamic privs.
+#
+# (This is current practice, not a requirement. That is, components could - but do not - unregister at any time privs they register)
+#
+# No warning or error occurs for attempts to register an already registered dynamic priv.
+# Consider the following sequence of statements:
+#
+# 		INSTALL COMPONENT 'my_component';
+# 		UNINSTALL COMPONENT 'my_component';
+# 		INSTALL COMPONENT 'my_component';
+#
+# The first INSTALL_COMPONENT registers any privs defined by the server component my_component.
+#
+# But the UNINSTALL COMPONENT does not unregister them.
+#
+# For the second INSTALL_COMPONENT statement, the component privs it registers are found to be
+# already registered, but no warnings or errors occur.
+#
+# Dynamic privs apply only at the global level.
+#
+# The server stores information about current assignments of dynamic privs to user accounts in the
+# mysql.global_grants system table:
+#
+# 		) The server automatically registers privs named in global_grants during server startup (unless the --skip-grant-tables option is given)
+#
+# 		) The GRANT and REVOKE statements modify the contents of global_grants
+#
+# 		) Dynamic privs assignments listed in global_grants are persistent. They are not removed at server shutdown.
+#
+# Example : The following statement grants to user u1 the privileges required to control replication (including Group Replication) on a slave server,
+# and to modify system variables:
+#
+# 		GRANT REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN ON *.* TO 'u1'@'localhost';
+#
+# Granted dynamic privs appear in the output from the SHOW GRANTS statement and the INFORMATION_SCHEMA USER_PRIVILEGES table.
+#
+# For GRANT and REVOKE at the global level, any named privileges not recognized as static are checked against the current
+# set of registered dynamic privs and granted if found.
+#
+# Otheriwse, an error occurs to indicate an unknown privilege identifier.
+#
+# For GRANT and REVOKE the meaning of ALL [PRIVS] at the global level includes all static global privs, as well as all currently
+# registered dynamic privs:
+#
+# 		) GRANT ALL at the global level grants all static global privs and all currently registered dynamic privs.
+# 			A dynamic priv registered subsequent to execution of the GRANT statement is not granted retroactively to any account.
+#
+# 		) REVOKE ALL at the global level revokes all granted static global privs and all granted dynamic privs.
+#
+# The FLUSH_PRIVILEGES statement reads the global_grants table for dynamic priv assignment and registers any unregistered privs found there.
+#
+# MIGRATING ACCOUNTS FROM SUPER TO DYNAMIC PRIVS
+#
+# In MySQL 8.0, many operations that previously required the SUPER priv are also associated with a dynamic priv of more limited scope.
+#
+# Each such operation can be permitted to an account by granting the associated dynamic priv rather than SUPER.
+#
+# This change improves security by enabling DBAs to avoid granting SUPER and tailor user privs more closely to the operations
+# permitted.
+#
+# SUPER is deprecated, will be removed.
+#
+# When removal of SUPER occurs, operations that formerly required SUPER will fail unless accounts granted SUPER are migrated
+# to the appropriate dynamic privs.
+#
+# Use the following instructions to accomplish that goal so that accounts are ready prior to SUPER removal:
+#
+# 		1. Execute this query to identify accounts that are granted SUPER:
+#
+# 				SELECT GRANTEE FROM INFORMATION_SCHEMA.USER_PRIVILEGES WHERE PRIVILEGE_TYPE = 'SUPER';
+#
+# 		2. For each account identified by the preceding query, determine the operations for which it needs SUPER.
+#
+# 			Then grant the dynamic privs corresponding to those operations, and revoke SUPER.
+#
+# 			For example, if 'u1'@'localhost' requires SUPER for binary log purging and SYS_VAR modification, these statements
+# 			make the required changes to the account:
+#
+# 				GRANT BINLOG_ADMIN, SYSTEM_VARIABLES_ADMIN ON *.* TO 'u1'@'localhost';
+# 				REVOKE SUPER ON *.* FROM 'u1'@'localhost';
+#
+# 			After said modifications the query in point 1. should return empty in terms of Querying the INFORMATION_SCHEMA.
+#
+# GRANT TABLES
+#
+# The mysql System database includes several grant tables that contain information about user accounts and the
+# privs held by them.
+#
+# This section describes those tables.
+#
+# To manipulate the contents of grant tables, modify them indirectly by using account-management statements such as
+# CREATE_USER, GRANT and REVOKE to set up accounts and control the privileges available to each one.
+#
+# The discussion here describes the underlying structure of the grant tables and how the server uses their
+# contents when interacting with clients.
+#
+# NOTE:
+#
+# 		Direct modification of grant tables using statements such as INSERT, UPDATE or DELETE is didscouraged and done at your own risk.
+# 		The server is free to ignore rows that become malformed as a result of such modifications.
+#
+# 		For any operation that modifies a grant table, the server checks whether the table has the expected structure and produces an
+# 		error if not.
+#
+# 		mysql_upgrade must be run to update the tables to the expected structure.
+#
+# These mysql database tables contain grant information:
+#
+# 		) user: User accounts, global privs and other non-priv columns
+#
+# 		) global_grants: Assignments of dynamic global privileges to users
+#
+# 		) db: Database-level privileges
+#
+# 		) tables_priv: Table-level privs
+#
+# 		) columns_priv: Column-level privs
+#
+# 		) procs_priv: Stored procedure and function privs
+#
+# 		) proxies_priv: Proxy-user privs
+#
+# 		) default_roles: Default user roles
+#
+# 		) role_edges: Edges for role subgraphs
+#
+# 		) password_history: Password changes
+#
+# In MySQL 8.0, grant tables use the InnoDB storage engine and are transactional.
+# Before MySQL 8.0, grant tables used the MyISAM storage engine and were nontransactional.
+#
+# This change of grant tables storage engine enables an accompanying change to the behavior of account-management statements 
+# such as CREATE_USER or GRANT.
+#
+# Previously, an account-management statement that named multiple users could succeed for some users and fail for others.
+#
+# Now, each statement is transactional and either succeeds for all named users or rolls back and has no effect if any
+# error occurs.
+#
+# Each grant table contains scope columns and privilege columns:
+#
+# 		) Scope columns determine the scope of each row in the tables; taht is, the context in which the row applies.
+#
+# 			For example, a user table row with Host and User values of 'h1.example.net' and 'bob' applies to authenticating
+# 			connections made to the server from the host h1.example.net by a client that specifies a user name of bob.
+#
+# 			Similarly, a db table row with Host, User and Db column values of 'h1.example.net', 'bob' and 'reports' applies
+# 			when bob connects from the host h1.example.net to access the reports database.
+#
+# 			The tables_priv and columns_priv tables contain scope columns indicating tables or table/column combinations
+# 			to which each row applies.
+#
+# 			The procs_priv scope columns indicate the stored routine to which each row applies.
+#
+# 		) Privilege columns indicate which priv a table row grants; that is, which operations it permits to be performed.
+#
+# 			The server combines the information in the various grant tables to form a complete description of a user's privs.
+#
+# 			Rules described later.
+#
+# The server uses the grant tables in the following manner:
+#
+# 		) The user table scope columns determine whether to reject or permit incoming connections.
+#
+# 			For permitted connections, any privileges granted in the user table indicate the user's global privs.
+# 			Any privileges granted in this table apply to all databases on the server.
+#
+# 				CAUTION: 
+#
+# 					Because any global privilege is considered a privilege for all databases, any global privilege enables a user to 
+# 					see all database names with SHOW_DATABASES or by examining the SCHEMA table of INFORMATION_SCHEMA.
+#
+# 		) The global_grants table lists current assignments of dynamic privileges to user accounts.
+#
+# 		) The db table scope columns determine which users can access which databases from which hosts.
+# 			The privilege columns determine the permitted operations.
+#
+# 			A privilege granted at the database level applies to the database and to all objects in teh database,
+# 			such as tables and stored programs.
+#
+# 		) The tables_priv and columns_priv tables are similar to the db table, but are more fine-grained:
+# 			They apply at the table and column levels rather than at the database level.
+#
+# 			A privilege granted at the table level applies to the table and to all its columns.
+# 			A privilege granted at the column level applies only to a specific column.
+#
+# 		) The procs_priv table applies to stored routines (stored procedures and functions).
+# 			A privilege granted at the routine level applies only to a single procedure or function.
+#
+# 		) The proxies_priv table indicates which users can act as proxies for other users and whether a user
+# 			can grant the PROXY privilege to other users.
+#
+# 		) The default_roles and role_edges tables contain information about role releationships.
+#
+# 		) The password_history table retains previously chosen passwords to enable restrictions on password reuse.
+#
+# The server uses the user and db tables in the mysql database at both the first and second stages of access control.
+# The columns in the user and db tables are shown as follows::
+#
+# TABLE NAME 					user 									db
+#
+# Scope COlumns 				Host 									Host
+# 									User 									Db
+# 																			User
+#
+# Privilege columns 			Select_priv 						Select_priv
+# 									Insert_priv 						Insert_priv
+# 									Update_priv 						Update_priv
+# 									Delete_priv 						Delete_priv
+#
+# 									Index_priv 							Index_priv
+# 									Alter_priv 							Alter_priv
+# 									Create_priv 						Create_priv
+# 									Drop_priv 							Drop_priv
+# 									Grant_priv 							Grant_priv
+# 									Create_view_priv 					Create_view_priv
+#
+# 									Show_view_priv 					Show_view_priv
+# 									Create_routine_priv 				Create_routine_priv
+# 									Alter_routine_priv 				Alter_routine_priv
+# 									Execute_priv 						Execute_priv
+# 									Trigger_priv 						Trigger_priv
+#
+# 									Event_priv 							Event_priv
+# 									Create_tmp_table_priv 			Create_tmp_table_priv
+# 									Lock_tables_priv 					Lock_tables_priv
+# 									References_priv 					References_priv
+#
+# 									Reload_priv
+# 									Shutdown_priv
+# 									Process_priv
+# 									File_priv
+# 									Show_db_priv
+# 									Super_priv
+# 									Repl_slave_priv
+#
+# 									Repl_client_priv
+# 									Create_user_priv
+# 									Create_tablespace_priv
+# 									Create_role_priv
+# 									Drop_role_priv
+#
+# Security columns 			ssl_type
+# 									ssl_cipher
+# 									x509_issuer
+# 									x509_subject
+# 									plugin
+# 									authentication_string
+# 									password_expired
+#
+# 									password_last_changed
+# 									password_lifetime
+# 									account_locked
+# 									Password_reuse_history
+# 									Password_reuse_time
+# 									Password_require_current
+# 
+# Resource control columns max_questions
+# 									max_updates
+# 									max_connections
+# 									max_user_connections
+#
+# The user table plugin and authentication_string columns store authentication plugin and credential information.
+#
+# The server uses the plugin named in the plugin column of an account row to authenticate connection attempts for the account.
+#
+# The plugin column must be nonempty. At startup, and at runtime when FLUSH_PRIVILEGES is executed, the server checks user table rows.
+# For any row with an empty plugin column, the server writes a warning to the error log of this form:
+#
+# [Warning] User entry 'user_name'@'host_name' has an empty plugin value.
+# The user will be ignored and no one can login with this user anymore.
+#
+# The password_expired column permits DBAs to expire account PWs and require users to reset their password.
+# The default password_expired value is 'N', but can be set to 'Y' with the ALTER_USER statement.
+#
+# After an account's password has been expired, all operations performed by the account in subsequent connections
+# to the server result in an error until the user issues an ALTER_USER statement to establish a new account pw.
+#
+# It is possible after PW expiration to "reset" a PW by setting it to its current value.
+# As a matter of good policy, it is preferable to choose a different PW.
+#
+# DBAs can enforce non-reuse by establishing an appropiate password-reuse policy.
+#
+# password_last_changed is a TIMESTAMP column indicating when the password was last changed.
+#
+# The value is non-NULL only for accounts that use a MySQL built-in authentication plugin (mysql_native_password,
+# 	sha256_password or caching_sha2_password)
+#
+# The value is NULL for other accounts, such as those authenticated using an external authentication system.
+#
+# Password_last_changed is updated by the CREATE_USER, ALTER_USER and SET_PASSWORD statements, and by GRANT
+# statements that create an account or change an account PW.
+#
+# password_lifetime indicates the account password lifetime, in days. 
+#
+# If the password is past its lifetime (assessed using the password_last_changed column), the server considers
+# the password expired when clients connect using the account.
+#
+# A value of N greater than zero means that het PW must be changed every N days.
+# A value of 0 disables automatic PW expiration.
+#
+# if the value is NULL (default), the global expiration policy applies, as defined by the default_password_lifetime
+# SYS_VARs.
+#
+# account_locked indicates whether the haccount is locked.
+#
+# Password_reuse_history is the value of the PASSWORD_HISTORY option for the account, or NULL for the default history.
+#
+# Password_reuse_time is the value of the PASSWORD_REUSE_INTERVAL option for the account, or NULL for the default interval.
+#
+# Password_require_current (available as of MySQL 8.0.13), corresponds to the value of the PASSWORD REQUIRE option for
+# the account.
+#
+# PASSWORD_REQUIRE_CURRENT value 		CORRESPONDING PASSWORD REQUIRE OPTION
+#
+# 'Y' 											PASSWORD REQUIRE CURRENT
+#
+# 'N' 											PASSWORD REQUIRE CURRENT OPTIONAL
+#
+# NULL 											PASSWORD REQUIRE CURRENT DEFAULT
+#
+# During the second stage of access control, the server performs request verification to ensure that each
+# client has sufficient privs for each request that it issues.
+#
+# In addition to the user and db grant tables, teh server may also consult the tables_priv and columns_priv tables
+# for requests that involve tables.
+#
+# The latter tables provide finer privilege control at the table and column levels.
+# They have the columns shown in the following table.
+#
+# 
+# Table Name 				TABLES_PRIV 				COLUMNS_PRIV
+#
+# Scope COlumns 			Host 							Host
+# 								Db 							Db
+# 								User 							User
+# 								Table_name 					Table_name
+# 																Column_name
+# Privilege columns 		Table_priv 					Column_priv
+# 								Column_priv
+# Other columns 			Timestamp 					Timestamp
+# 								Grantor
+#
+# The Timestamp and Grantor columns are set to the current timestamp and the CURRENT_USER value, respectively, but are otherwise
+# unused.
+#
+# For verification of requests that involve stored routines, the server may consult the procs_priv table, which has the
+# columns shown as follows:
+#
+# 		procs_priv TABLE COLUMNS
+#
+# 			Table Name 					procs_priv
+#
+# Scope columns 						Host
+# 											Db
+# 											User
+# 											Routine_name
+# 											Routine_type
+#
+# Privlege columns 					Proc_priv
+# Other columns 						Timestamp
+# 											Grantor
+#
+# The Routine_type column is an ENUM column with values of 'FUNCTION' or 'PROCEDURE' to indicate the type of
+# routine the row refers to.
+#
+# This column enables privileges to be granted separately for a function and a procedure with the same name.
+#
+# The Timestamp and Grantor columns are unused.
+#
+# The proxies_priv table records information about proxy accounts. It has these columns:
+#
+# 		) Host, User: The proxy account; that is, the account that has the PROXY privilege for the proxied account.
+#
+# 		) Proxied_host, Proxied_user: The proxied account
+#
+# 		) Grantor, Timestamp: Unused.
+#
+# 		) With_grant: Whether the proxy account can grant the proxy privlege to other accounts.
+#
+# For an account to be able to grant the PROXY privs to otehr accounts, it must have a row in the proxies_priv table
+# with With_grant set to 1 and Proxied_host and Proxied_user set to indicate the account or accounts for which
+# the priv can be granted.
+#
+# For example, the 'root'@'localhost' account created during MySQL installation has a row in the proxies_priv table that
+# enables granting the PROXY privs for ''@'', that is, for all users and all hosts.
+#
+# This enables root to set up proxy users, as well as to delegate to other accounts the authority to set up proxy users.
+#
+# The global_grants table lists current assignments of dynamic privileges to user accounts.
+# These privileges are global.
+#
+# The table has these columns:
+#
+# 		) USER, HOST: The user name and host name of the account to which the priv is granted.
+#
+# 		) PRIV: The priv name
+#
+# 		) WITH_GRANT_OPTION: Whether the account can grant the privlege to other accounts.
+#
+# The default_roles table lists default user roles. It has these columns:
+#
+# 		) HOST, USER: The account or role to which the default role applies.
+#
+# 		) DEFAULT_ROLE_HOST, DEFAULT_ROLE_USER: The default role.
+#
+# The role_edges table lists edges for role subgraphs. It has these columns:
+#
+# 		) FROM_HOST, FROM_USER: The account that is granted a role.
+#
+# 		) TO_HOST, TO_USER: The role that is granted to the account.
+#
+# 		) WITH_ADMIN_OPTION: Whether the account can grant the role to and revoke it from other accounts by using WITH ADMIN OPTION.
+#
+# The password_history table contains information about password changes.
+# It has these columns:
+#
+# 		Host, User: The account for which the password change occurred.
+#
+# 		Password_timestamp: The time when the password change occurred.
+#
+# 		Password: The new password hash value.
+#
+# The password_history table accumulates a sufficient number of nonempty PWs per account to enable MySQL to perform
+# checks against both the acc PW history length and reuse interval.
+#
+# Automatic pruning of entries that are outside both limits occurs when password-change attempts occur.
+#
+# NOTE:
+#
+# 		The empty password does not count in the password history and is subject to reuse at any time.
+#
+# If an account is renamed, its entries are renamed to match. If an account is dropped or its authentication plugin is changed,
+# its entries are removed.
+#
+# Scope columns in the grant tables contain strings. The default value for each is the empty string.
+# The following table shows the number of characters permitted in each column.
+#
+# GRANT TABLE SCOPE COLUMN LENGTHS
+#
+# Column Name 					Maximum Permitted Characters
+#
+# Host, Proxied_host 		60
+# User, Proxied_user 		32
+# Db 								64
+# Table_name 					64
+# Column_name 					64
+# Routine_name 				64
+#
+# For access-checking purposes, comparisons of User, Proxied_user, authentication_string, Db and Table_name values are case-sensitive.
+#
+# Comparisons of Host, Proxied_host, Column_name and Routine_name values are not case-sensitive.
+#
+# The user and db tables list each priv in a separate column taht is declared as ENUM('N','Y') DEFAULT 'N'.
+# In other words, each privilege can be disabled or eanbled, with the default being disabled.
+#
+# The tables_priv, columns_priv and procs_priv tables declare the priv column as SET columns.
+# Vlaues in these columns can contain any combination of the priv controlled by the table.
+#
+# Only those privs listed in the column value are enabled.
+#
+# Set-type priv column values
+#
+# 	TABLE NAME 			COLUMN NAME 				POSSIBLE SET ELEMENTS
+#
+# tables_priv 			Table_priv 				'Select', 'Insert', 'Update', 'Delete', 'Create',
+# 														'Drop', 'Grant', 'References', 'Index', 'Alter',
+# 														'Create View', 'Show view', 'Trigger'
+#
+# tables_priv 			Column_priv 			'Select', 'Insert', 'Update', 'References'
+# 
+# columns_priv 		Column_priv 			'Select', 'Insert', 'Update', 'References'
+#
+# procs_priv 			Proc_priv 				'Execute', 'Alter Routine', 'Grant'
+#
+# Only the user table specifies admin privs, such as RELOAD and SHUTDOWN.
+#
+# Admin operations are operations on the server itself and are not database-specific, so there is no reason
+# to list these privs in the other grant tables.
+#
+# Consequently, the server need consult only the user table to determine whether a user can perform
+# an administrative operation.
+#
+# The FILE priv also is specified only in the user table.
+#
+# It is not an administrative priv as such, but a user's ability to read or write files on the server host
+# is independent of the DB being accesed.
+#
+# The server reads the contents of the grant tables into memory when it starts.
+# You can tell it to reload the tables by issuing a FLUSH_PRIVILEGES statement or executing a mysqladmin flush-privileges or mysqladmin reload command.
+#
+# Changes to teh grant tables take effect as indicated.
+#
+# When you modify an account, it is a good idea to verify that your changes have the intended effect.
+# To check the privs for a given account, use the SHOW_GRANTS statement.
+#
+# For example, to determine the privs that are granted to an account with user name and host name values of bob and pc84.example.com,
+# use this statement:
+#
+# 		SHOW GRANTS FOR 'bob'@'pc84.example.com';
+#
+# To display nonpriv properties of an account, use SHOW_CREATE_USER:
+#
+# 		SHOW CREATE USER 'bob'@'pc84.example.com';
+#
+# SPECIFYING ACCOUNT NAMES
+#
+# https://dev.mysql.com/doc/refman/8.0/en/account-names.html
 # 
 #
 #
 #
-# https://dev.mysql.com/doc/refman/8.0/en/security.html
-#
-# 
+# https://dev.mysql.com/doc/refman/8.0/en/static-dynamic-privileges.html
 #
