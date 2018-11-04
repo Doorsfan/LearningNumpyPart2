@@ -30941,7 +30941,395 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # PASSWORD MANAGEMENT
 #
-#  
+# MySQL supports these PW management capabilities:
 #
+# 	) PW expiration, to require PWs to be changed periodically.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/password-management.html
+# 	) PW reuse restrictions, to prevent old PWs from being chosen again
+#
+# 	) PW verification, to require that PW changes also specify the current PW to be replaced.
+#
+# 	) PW strength assesment, to require strong PWs.
+#
+# The following sections these capabilities, except PW strength assesment, which is implemented using the validate_password plugin
+# and is described later.
+#
+# IMPORTANT:
+#
+# 		MySQL implements PW management capabilities using tables in the mysql System database.
+#
+# 		If you upgrade MySQL from an earlier version, your system tables might not be up to date.
+# 		In that case, the server writes messages similar to these to the error log during the startup process:
+#
+# 			[ERROR] Column count of mysql.user is wrong. Expected 49, found 47.
+# 			The table is probably corrupted.
+# 			[Warning] ACL table mysql.password_history missing.
+# 			Some operations may fail.
+#
+# 		To correct the issue, run mysql_upgrade and restart the server. Until this is done, password changes are not possible.
+#
+# Note:
+#
+# 		The password-management capabilities described here apply only to accounts that store credentials internally in the 
+# 		mysql.user system table (mysql_native_password, sha256_password or caching_sha2_password)
+#
+# 		For accounts that use plugins that perform authentication against an external credential system, PW management must be
+# 		handled externally against that system as well.
+#
+# PASSWORD EXPIRATION POLICY
+#
+# MySQL enables database admins to expire account passwords manually, and to establish a policy for automatic PW expiration.
+#
+# Expiration policy can be established globally, and individual accounts can be set to either defer to the global policy
+# or override the global policy with specific per-account behavior.  
+#
+# To expire an account password manually, use the ALTER_USER statement:
+#
+# 		ALTER USER 'jeffrey'@'localhost' PASSWORD EXPIRE;
+#
+# This operation marks the PW expired in the corresponding mysql.user table row.
+#
+# Password expiration according to policy is automatic and is based on password age, which for a given
+# account is assessed from the date and time of its most recent password change.
+#
+# The mysql.user table indicates for each account when its password was last changed, and the server
+# automatically treats the pw as expired at client connection time if its age is greater than its
+# permitted lifetime.
+#
+# This works with no explicit manual PW expiration.
+#
+# To establish automatic pw-expiration policy globally, use the default_password_lifetime system variable.
+# Its default value is 0, which disables automatic password expiration.
+#
+# If the value of default_password_lifetime is a positive integer N, it indicates the permitted password
+# lifetime, such that passwords must be changed every N days.
+#
+# Examples:
+#
+# 		) To establish a global policy that PWs have a lifetime of approx 6 months, start the server with these lines
+# 			in a server my.cnf file:
+#
+# 				[mysqld]
+# 				default_password_lifetime=180
+#
+# 		) To establish a global policy such that PWs never expire, set default_password_lifetime to 0:
+#
+# 				[mysqld]
+# 				default_password_lifetime=0
+#
+# 		) default_password_lifetime can also be set and persisted at runtime:
+#
+# 				SET PERSIST default_password_lifetime = 180;
+# 				SET PERSIST default_password_lifetime = 0;
+#
+# 			SET_PERSIST sets the value for the running MySQL instance.
+#
+# 			It also saves the value to be used for subsequent server restarts. More later on that.
+#
+# 			To change a value for the running MySQL instance without saving it for subsequent restarts, just use GLOBAL instead of PERSIST.
+#
+# The global password-expiration policy applies to all accounts that have not been set to override it.
+#
+# To establish policy for individual accounts, use the PASSWORD EXPIRE option of the CREATE_USER and ALTER_USER statements.
+#
+# Example account-specific statements:
+#
+# 		) Require the password to be changed every 90 days:
+#
+# 			CREATE USER 'jeffrey'@'localhost' PASSWORD EXPIRE INTERVAL 90 DAY;
+# 			ALTER USER 'jeffrey'@'localhost' PASSWORD EXPIRE INTERVAL 90 DAY;
+#
+# 			This expiration option overrides the global policy for all accounts named by the statement.
+#
+# 		) Disable password expiration:
+#
+# 			CREATE USER 'jeffrey'@'localhost' PASSWORD EXPIRE NEVER;
+# 			ALTER USER 'jeffrey'@'localhost' PASSWORD EXPIRE NEVER;
+#
+# 			This expiration option overrides the global policy for all accounts named by the statement.
+#
+# 		) Defer to the global expiration policy for all accounts named by the statement:
+#
+# 			CREATE USER 'jeffrey'@'localhost' PASSWORD EXPIRE DEFAULT;
+# 			ALTER USER 'jeffrey'@'localhost' PASSWORD EXPIRE DEFAULT;
+#
+# When a client successfully connects, the server determines whether the account password has expired:
+#
+# 		) The server checks whether the password has been manually expired.
+#
+# 		) Otherwise, the server checks whether the password age is greater than its permitted lifetime according to the
+# 			automatic password expiration policy.
+#
+# 			If so, the server considers the password expired.
+#
+# If the password is expired (whether manually or automatically), the server either disconnects the client or restricts the
+# operations permitted to it.
+#
+# Operations performed by a restricted client result in an error until the user establishes a new account password:
+#
+# 		SELECT 1;
+# 		ERROR 1820 (HY000): You must reset your password using ALTER USER statement before executing this statement.
+#
+# 		ALTER USER USER() IDENTIFIED BY 'password';
+# 		Query OK, 0 rows affected (0.01 sec)
+#
+# 		SELECT 1;
+# 		+---+
+# 		| 1 |
+# 		+---+
+# 		| 1 |
+# 		+---+
+# 		1 row in set (0.00 sec)
+#
+# After the client resets the password, the server restores normal access for the session, as well as for
+# subsequent connections that use the account.
+#
+# It is also possible for an administrative user to reset the account password, but any existing restricted sessions
+# for that account remain restricted.
+#
+# A client using the account must disconnect and reconnect before statements can be executed successfully.
+#
+# NOTE:
+#
+# 		It is possible to "reset" a password by setting it to its current value. As a matter of good policy, it is preferable to choose a different PW.
+# 		DBAs can enforce non-reuse by establishing an appropiate password-reuse policy.
+#
+# PASSWORD REUSE POLICY
+#
+# MySQL enables restrictions to be placed on reuse of previous passwords.
+# Reuse restrictions can be established based on number of password changes, time elapsed or
+# both.
+#
+# Reuse policy can be established globally, and individual accounts can be set to either defer to the global
+# policy or override the global policy with specific per-account behavior.
+#
+# The password history for an account consists of passwords it has been assigned in the past.
+# MySQL can restrict new passwords from being chosen from this history:
+#
+# 		) If an account is restricted on the basis of number of password changes, a new password cannot be chosen from a specific number of
+# 			the most recent passwords.
+#
+# 			For example, if the minimum number of password changes is set to 3, a new password cannot be the same as any of the most recent 3 PWs.
+#
+# 		) If an account is restricted based on time elapsed, a new PW cannot be chosen from PWs in the history that are newer than a specified
+# 			number of days.
+#
+# 			For example, if the PW reuse interval is set to 60, a new PW must not be among those previously chosen within the last 60 days.
+#
+# 			NOTE: The empty password does not count in the password history and is subject to reuse at any time.
+#
+# To establish password-reuse policy globally, use the password_history and password_reuse_interval SYS_VARs.
+#
+# Examples:
+#
+# 		) To prohibit reusing any of the last 6 passwords or passwords newer than 365 days, put these lines in the server my.cnf file:
+#
+# 			[mysqld]
+# 			password_history=6
+# 			password_reuse_interval=365
+#
+# 		) To set and persist the variables at runtime, use statements like this:
+#
+# 			SET PERSIST password_history = 6;
+# 			SET PERSIST password_reuse_interval = 365;
+#
+# SET_PERSIST sets the value for the running MySQL instance. It also saves the value to be used for subsequent server restarts.
+# More on that later.
+#
+# To change a value for the running MySQL instance without saving it for subsequent restarts, use the GLOBAL keyword rather than PERSIST.
+#
+# The global password-reuse policy applies to all accounts that have not been set to override it.
+#
+# To establish policy for individual accounts, use the PASSWORD HISTORY and PASSWORD REUSE INTERVAL options
+# of the CREATE_USER and ALTER_USER statements. More on that later.
+#
+# Example account-specific statements:
+#
+# 		) Require a minimum of 5 password changes before permitting reuse:
+#
+# 			CREATE USER 'jeffrey'@'localhost' PASSWORD HISTORY 5;
+# 			ALTER USER 'jeffrey'@'localhost' PASSWORD HISTORY 5;
+#
+# 			This history-length option overrides the global policy for all accounts named by the statemnet.
+#
+# 		) Require a minimum of 365 days elapsed before permitting reuse:
+#
+# 			CREATE USER 'jeffrey'@'localhost' PASSWORD REUSE INTERVAL 365 DAY;
+# 			ALTER USER 'jeffrey'@'localhost' PASSWORD REUSE INTERVAL 365 DAY;
+#
+# 			This time-elapsed option overrides the global policy for all accounts named by the statement.
+#
+# 		) To combine both types of reuse restrictions, use PASSWORD HISTORY and PASSWORD REUSE INTERVAL together:
+#
+# 			CREATE USER 'jeffrey'@'localhost'
+# 				PASSWORD HISTORY 5
+# 				PASSWORD REUSE INTERVAL 365 DAY;
+# 
+# 			ALTER USER 'jeffrey'@'localhost'
+# 				PASSWORD HISTORY 5
+# 				PASSWORD REUSE INTERVAL 365 DAY;
+#
+# 			These options override both global policy reuse restrictions for all accounts named by the statement.
+#
+# 		) Defer to the global policy for both types of reuse restrictions:
+#
+# 			CREATE USER 'jeffrey'@'localhost'
+# 				PASSWORD HISTORY DEFAULT
+# 				PASSWORD REUSE INTERVAL DEFAULT;
+# 			ALTER USER 'jeffrey'@'localhost'
+# 				PASSWORD HISTORY DEFAULT
+# 				PASSWORD REUSE INTERVAL DEFAULT;
+#
+# PASSWORD VERIFICATION-REQUIRED POLICY
+#
+# As of MySQL 8.0.13, it is possible to require that attempts to change an account PW be verified by specifying the current
+# PW to be replaced.
+#
+# This enables DBAs to prevent users from changing a password without proving that they know the current PW.
+#
+# Such changes could otherwise occur, for example, if one user walks away from a terminal session temporarily without logging out,
+# and someone uses the session to change the original user's MySQL PW.
+#
+# This can cause things like:
+#
+# ) The original user becoming unable to access MySQL, until PW reset by a admin
+#
+# ) Until the PW reset occurs, the malicious user can access MySQL with the benign user's changed credentials.
+#
+# PW-verification policy can be established globally, and individual accounts can be set to either defer to the global policy
+# or override the global policy with specific per-account behavior.
+#
+# For each account, its mysql.user row indicates whether there is an account-specific setting requiring verification of
+# the current PW for PW change attempts.
+#
+# The setting is established by the PASSWORD REQUIRE option of the CREATE_USER and ALTER_USER statements:
+#
+# 		) If the account setting is PASSWORD REQUIRE CURRENT, PW changes must specify the current PW.
+#
+# 		) If the account setting is PASSWORD REQUIRE CURRENT OPTIONAL, password changes may but need not specify the current PW
+#
+# 		) If the account setting is PASSWORD REQUIRE CURRENT DEFAULT, the password_require_current SYSTEM_VARIABLE determines the verification-required policy
+# 			for the account:
+#
+# 				) If password_require_current is enabled, password changes must specify the current password.
+#
+# 				) If password_require_current is disabled, password changes may but need not specify the current PW.
+#
+# IN other words, if the account setting is not PASSWORD REQUIRE CURRENT DEFAULT, the account setting takes precedence over the
+# global policy established by the password_require_current SYS_VAR.
+#
+# Otherwise, the account defers to the password_require_current setting.
+#
+# By default, PW verification is optional: password_require_current is disabled and accounts created with no PASSWORD REQUIRE
+# option default to PASSWORD REQUIRE CURRENT DEFAULT.
+#
+# The following table shows how per-account settings interact with password_require_current SYS_VAR values to
+# determine account password verification-required policy.
+#
+# PER-ACCOUNT SETTING 				password_require_current SYS_VAR 		Password Changes Require Current PW?
+#
+# PASSWORD REQUIRE CURRENT 		OFF 												Yes
+#
+# PASSWORD REQUIRE CURRENT 		ON 												Yes
+#
+# PASSWORD REQUIRE CURRENT OPT.	OFF 												No
+#
+# PASSWORD REQUIRE CURRENT OPT. 	ON 												No
+#
+# PASSWORD REQUIRE CURRENT DEF. 	OFF 												No
+#
+# PASSWORD REQUIRE CURRENT DEF. 	ON 												Yes
+#
+# Note:
+#
+# 		Privleged users can change any account password without specifying the current password, regardless of the verification-required
+# 		policy.
+#
+# 		A privileged user is one who has the global CREATE_USER privlege or the UPDATE privilege for the mysql system database.
+#
+# To establish PW-verification policy globally, use the password_require_current SYS_VAR.
+#
+# Its default value is OFF, so it is not required that account password changes specify the current password.
+#
+# Examples:
+#
+# 	) To establish a global policy that PW changes must specify the current PW, start the server with these lines in the server my.cnf file:
+#
+# 		[mysqld]
+# 		password_require_current=ON
+#
+# 	) To set and persist password_require_current at runtime, use a statement such as one of these:
+#
+# 		SET PERSIST password_require_current = ON;
+# 		SET PERSIST password_require_current = OFF;
+#
+# SET_PERSIST sets the value for the running MySQL instance.
+#
+# It also saves the value to be used for subsequent server restarts. More on that later.
+#
+# To change a value for the running MySQL instance without saving it for subsequent restarts, use the GLOBAL keyword rather than PERSIST.
+#
+# The global PW verification-required policy applies to all accounts that have not been set to override it.
+# To establish policy for individual accounts, use the PASSWORD REQUIRE options of the CREATE_USER and ALTER_USER statements. More on this later.
+#
+# Example account-specific statements:
+#
+# 		) Require that password changes specify the current password:
+#
+# 			CREATE USER 'jeffrey'@'localhost' PASSWORD REQUIRE CURRENT;
+# 			ALTER USER 'jeffrey'@'localhost' PASSWORD REQUIRE CURRENT;
+#
+# 			This verification option overrides the global policy for all accounts named by the statemnt.
+#
+# 		) Do not require that password changes specify the current password (the current PW may but need not be given):
+#
+# 			CREATE USER 'jeffrey'@'localhost' PASSWORD REQUIRE CURRENT OPTIONAL;
+# 			ALTER USER 'jeffrey'@'localhost' PASSWORD REQUIRE CURRENT OPTIONAL;
+#
+# 			This verification option overrides the global policy for all accounts named by the statement.
+#
+# 		) Defer to the global PW verification-required policy for all accounts named by the statement:
+#
+# 			CREATE USER 'jeffrey'@'localhost' PASSWORD REQUIRE CURRENT DEFAULT;
+# 			ALTER USER 'jeffrey'@'localhost' PASSWORD REQUIRE CURRENT DEFAULT;
+#
+# Verification of the current password comes into play when a user changes a password using the ALTER_USER or SET_PASSWORD statement.
+# The examples use ALTER_USER, which is preferred óver SET_PASSWORD, but the principles described here are the same for both statements.
+#
+# In PW-change statements, a REPLACE clause specifies the current password to be replaced.
+# Examples:
+#
+# 	) Change the current user's password:
+#
+# 			ALTER USER USER() IDENTIFIED BY 'auth_string' REPLACE 'current_auth_string';
+#
+# 	) Change a named user's password:
+#
+# 			ALTER USER 'jeffrey'@'localhost' IDENTIFIED BY 'auth_string' REPLACE 'current_auth_string';
+#
+# 	) Change a named user's auth plugin and PW:
+#
+# 			ALTER USER 'jeffrey'@'localhost' IDENTIFIED WITH caching_sha2_password BY 'auth_string' REPLACE 'current_auth_string';
+#
+# The REPLACE clause works like this:
+#
+# 	) REPLACE must be given if PW changes for the account are required to specify the current password, as verification that the user attempting to make
+# 		the change actually knows the current password.
+#
+# 	) REPLACE is optional if PW changes for the account may but need not specify the current PW.
+#
+# 	) If REPLACE is specified, it must specify the correct current password, or an error occurs. This is true even if REPLACE is optional.
+#
+# 	) REPLACE can be specified only when changing the account password for the current user. (This means that in the examples just shown, the statements
+# 		that explicitly name the account for jeffrey fail unless the current user is jeffrey).
+#
+# 		This is true even if the change is attempted for another user by a privileged user.
+#
+# 		However, if you have the privs for it, you can do such a change without REPLACE.
+#
+# 	) REPLACE is omitted from the binary log to avoid writing cleartext PWs to it.
+#
+# SERVER HANDLING OF EXPIRED PWs
+#
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/expired-password-handling.html
