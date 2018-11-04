@@ -29317,10 +29317,1631 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # SPECIFYING ACCOUNT NAMES
 #
-# https://dev.mysql.com/doc/refman/8.0/en/account-names.html
+# MySQL account names consists of a user name and a host name.
+# This enables creation of accounts for users with the same name who can connect from different hosts.
+#
+# This section describes how to write account names, including special values and wildcard rules.
+#
+# MySQL role names are similar to account names, with some differences.
+#
+# In SQL statements such as CREATE_USER, GRANT, and SET_PASSWORD account names follow these rules:
+#
+# 		) Account name syntax is 'user_name'@'host_name'
+#
+# 		) An account name consisting only of a user name is equivalent to 'user_name'@'%'.
+#  	  For example, 'me' is equivalent to 'me'@'%'
+#
+# 		) The user name and host name need not be quoted if they are legal as unquoted identifiers.
+# 			Quotes are necessary to specify a user_name string containing special chars (such as space or -)
+#
+# 			or a host_name string containing special characters or wildchar characters (such as . or %); for example,
+# 			'test-user'@'%.com'
+#
+# 		) Quote user names and host names as identifiers or as strings, using either backticks (`), single quotation marks ('),
+# 			or double quotation marks (")
+#
+# 			For string-quoting and identifier-quoting guidelines, see later.
+#
+# 		) The user name and host name parts, if quoted, must be quoted separately.
+#
+# 			That is, write 'me'@'localhost', not 'me@localhost'; the latter is equivalent to 'me@localhost'@'%'
+#
+# 		) A reference to the CURRENT_USER or CURRENT_USER() function is equivalent to specifying the current client's user name
+# 			and host name literally.
+#
+# MySQL stores account names in grant tables in the mysql system database using separate columns for the user name and host name parts:
+#
+# 		) The user table contains one row for each account. The User and Host columns store the user name and host name.
+#
+# 			This table also indicates which global privileges the account has.
+#
+# 		) Other grant tables indicate privileges an account has for databases and objects within databases.
+#
+# 			These tables have User and Host columns to store the account name.
+# 			Each row in these tables associates with the account in the user table that has the same User and Host  values.
+#
+# 		) For access-checking purposes, comparisons of User values are case-sensitive. Comparisons of Host values are not case sensiive.
+#
+# For additional detail about grant table structure, see earlier.
+#
+# User names and host names have certain special values or wildcard conventions, as described:
+#
+# The user name part of an account name is either a nonblank value that literally matches the user name for incoming connection attempts,
+# or a blank value (empty string) that matches any user name.
+#
+# An account with a blank user name is an anonymous user. To specify an anon user in SQL statements, use a quoted empty user name part,
+# such as ''@'localhost'
+#
+# The host name part of an account name can take many forms, and wildcards are permitted:
+#
+# 		) A host value can be a host name or an IP address (IPv4 or IPv6).
+#
+# 			The name 'localhost' indicates the local host. The IP address '127.0.0.1' indicates teh IPv4 loopback interface.
+# 			The IP address '::1' is the IPv6 loopback interface.
+#
+# 		) The % and _ wildcard characters are permitted in host name or IP address values.
+#
+# 			These have the same meaning as for pattern-matching operations performed with the LIKE operator.
+#
+# 			For example, a host value of '%' matches any host name, whereas a value of '%.mysql.com' matches
+# 			any host in the mysql.com domain.
+#
+# 			'198.51.100.%' matches any host in the 198.51.100 class C network.
+#
+# 			Because IP wildcard values are permitted in host values (for example '198.51.100.%' to match every host on a subset),
+# 			someone could try to exploit this capability by naming a host 198.51.100.somewhere.com
+#
+# 			To foil such attempts, MySQL does not perform matching on host names that start with digits and a dot.
+# 			For example, if a host is named 1.2.example.com, its name never matches the host part of account names.
+#
+# 			An IP wildcard value can match only IP addresses, not host names.
+#
+# 		) For a host value specified as an IPv4 address, a netmask can be given to indicate how many address bits to use for the
+# 			network number.
+#
+# 			Netmask notation cannot be used for IPv6 addresses.
+#
+# 			The syntax is host_ip/netmask. For example:
+#
+# 				CREATE USER 'david'@'198.51.100.0/255.255.255.0';
+#
+# 			This enables david to connect from any client host having an IP address client_ip for which the following condition is true:
+#
+# 				client_ip & netmask = host_ip
+#
+# 			That is, for the CREATE_USER statement just shown:
+#
+# 				client_ip & 255.255.255.0 = 198.51.100.0
+#
+# 			IP addresses that satisfy this condition range from 198.51.100.0 to 198.51.100.255
+#
+# 			A netmask typically begins with bits set to 1, followed by bits set to 0. Examples:
+#
+# 				) 198.0.0.0/255.0.0.0: Any host on the 198 class A network
+#
+# 				) 198.51.100.0/255.255.0.0: Any host on the 198.51 class B network
+#
+# 				) 198.51.100.0/255.255.255.0: Any host on the 198.51.100 class C network
+#
+# 				) 198.51.100.1: Only the host with this specific IP address
+#
+# The server performs matching of host values in account names against the client host using the value returned
+# by the system DNS resolver for the client host name or IP address.
+#
+# Except in the case that the account host value is specified using netmask notation, the server performs this comparison
+# as a string match, even for an account host value given as an IP address.
+#
+# This means that you should specify account host values in the same format used by DNS.
+# Here are examples of problems to watch out for:
+#
+# 		) Suppose that a host on the local network has a fully qualified name of host1.example.com
+# 			If DNS returns name lookups for this host as host1.example.com, use that name in account host values.
+#
+# 			If DNS returns just host1, use host1 instead.
+#
+# 		) If the DNS returns the IP address for a given host as 198.51.100.2, that will match an account host value of 198.51.100.2
+# 			but not 198.051.100.2
+#
+# 			Similarly, it will match a pattern of 198.51.100.% but not 198.051.100.%
+#
+# To avoid problems like these, it is advisable to check the format in which your DNS returns host names and addresses.
+# Use values in the same format in MySQL account names.
+#
+# SPECIFYING ROLE NAMES
+#
+# MySQL role names refer to roles, which are named collections of privs.
+# For role usage example, see later.
+#
+# Role names have syntax and semantics similar to account names (later).
+# Role names differ from account names in these respects:
+#
+# 		) The user part of role names cannot be blank. Thus, there is no "anon role" analogous to the concept of "anon user".
+#
+# 		) As for an account name, omitting the host part of a role name results in a host part of '%'.
+# 			But unlike '%' in an account name, a host part of '%' in a role name has no wildcard props.
+#
+# 			For example, for a name 'me'@'%' used as a role name, teh host part '%', the host part ('%'), is just a ltieral value - not a wildcard.
+#
+# 		) Netmask notation in the host part of a role name has no significance.
+#
+# 		) An account name is permitted to be CURRENT_USER() in several contexts. A role name is not.
+#
+# It is possible for a row in the mysql.user system table to serve as both an account and a role.
+#
+# In this case, any special user or host name matching properties do not apply in contexts for which
+# the name is used as a role name.
+#
+# For example, you cannot execute the following statement with the expectation that it will set the current
+# session roles using all roles that have a user part of myrole and any host name:
+#
+# 		SET ROLE 'myrole'@'%';
+#
+# Instead, the statement sets the active role for the session to the role with exactly the name 'myrole'@'%'
+#
+# For this reason, role names are often specified using only the user name part and letting the host name part implicitly
+# be '%'.
+#
+# Specifying a role with a non '%' host part can be useful if you intend to create a name that works as both a role and a user account
+# that is permitted to connect from the given host. 
+#
+# ACCESS CONTROL, STAGE 1: CONNECTION VERIFICATION
+#
+# When you attempt to connect to a MySQL server, the server accepts or rejects the connection based on these conditions:
+#
+# 		) Your identity and whether you can verify your identity by supplying the correct PW
+#
+# 		) Whether your account is locked or unlocked.
+#
+# The server checks credentials first, then account locking state. A failure fo either step causes the server to deny access to
+# you completely.
+#
+# Otherwise, the server accepts the connection and then enters Stage 2 and waits for requests.
+#
+# Credential checking is performed using the three user table scope columns (Host, User and authentication_string).
+# Locking state is recorded in the user table account_locked column.
+#
+# The server accepts the connection only if the Host and User columns in some User table row match the client host
+# and user name, the client supplies the PW specified in that row, and the account_locked value is 'N'.
+#
+# The rules for permissible Host and User value are given later.
+#
+# Account locking can be changed with the ALTER_USER statement.
+#
+# Your identity is based on two pieces of information:
+#
+# 		) The client host from which you connect.
+#
+# 		) Your MySQL user name
+#
+# If the User column value is nonblank, the user name in an incoming connection must match exactly.
+# If the User value is blank, it matches any user name.
+#
+# If the user table row that matches an incoming connection has a blank user name, the user is considered to be anon without a name,
+# not a user with the name that the client actually specified.
+#
+# This means that a blank user name is used for all further access checking for the duration of the connection (Stage 2).
+#
+# The authentication_string column can be blank. This is not a wildcard and does not mean that any PW matches.
+#
+# It means that the user must connect without specifying a PW. If the server authenticates a client using a plugin,
+# the authentication method that the plugin implements may or may not use the PW in the authentication_string column.
+#
+# In this case, it is possible that an external PW is also used to authenticate to the MySQL server.
+#
+# Nonblank authentication_string values in the user table represent encrypted PWs.
+# MySQL does not store PWs in cleartext form for anyone to see.
+#
+# Rather, the PW supplied by a user who is attempting to connect is encrypted (using the PW hashing method implemented by the
+# account authentication plugin).
+#
+# The encrypted PW then is used during the connection process when checking whether the PW is correct.
+# This is done without the encrypted PW ever traveling over the connection.
+#
+# From MySQL's PoV, the encrypted PW is the real pw, so you should never give anyone access to it.
+#
+# In particular, do not give nonadmin users read access to tables in the mysql system db.
+#
+# The following table shows various combinations of User and Host values in teh User table apply to incoming connections.
+#
+# User Value  Host Value  		Permissible Connections
+#
+# 'fred' 	'h1.example.net' 	fred, connecting from h1.example.net
+#
+# '' 			'h1.example.net' 	Any user, connecting from h1.example.net
+#
+# 'fred' 	'%' 					fred, from any host
+#
+# '' 			'%' 					Any user, connecting from any host
+#
+# 'fred'  	'%.example.net' 	fred, any host in the example.net domain
+#
+# 'fred' 	'x.example.%' 		fred, from any x.example.<extension>, where <extension> is wildcarded
+#
+# 'fred' 	'198.51.100.177' 	fred, connecting from the host with IP address 198.51.100.177
+#
+# 'fred' 	'198.51.100.%' 	fred, from any host in the 198.51.100 class C subnet
+#
+# 'fred'		'198.51.100.0/255.255.255.0' - Same as previous
+#
+# It is possible for the client host name and user name of an incoming connection to match more than one row in the user table.
+# The preceding set of examples demonstrates this: Several of the entries shown match a connection from h1.example.net by fred.
+#
+# When multiple matches are possible, the server must determine which of them to use.
+# It resolves this issue as follows:
+#
+# 		) Whenever the server reads the user table into memory, it sorts the rows.
+#
+# 		) When a client attempts to connect, the server looks through the rows in sorted order.
+#
+# 		) The server uses the first row that matches the client host name and user name.
+#
+# The server uses sorting rules that order rows with the most specific Host values first.
+# Literal host names and IP addresses are the most specific.
+#
+# (The specificity of a literal IP address is not affected by whether it has a netmask, so,
+# 198.51.100.13 and 198.51.100.0/255.255.255.0 are considered equally specific)
+#
+# The pattern '%' means "any host" and is least specific.
+#
+# The empty string '' also means "any host" but sorts after '%'.
+#
+# Rows with the same Host value are ordered with the most-specific User values first
+# (a blank User value means "any user" and is least specific).
+#
+# For rows with equally-specific Host and User values, the order is nondeterministic.
+#
+# To see how this works, suppose that the user table looks like this:
+#
+# 		+------------------+----------+-
+# 		| Host 				 | User 		| ...
+# 		+------------------+----------+-
+# 		| % 					 | root 		| ...
+# 		| % 					 | jeffrey 	| ...
+# 		| localhost 		 | root 	 	| ...
+# 		| localhost 		 | 			| ...
+# 		+------------------+----------+-
+#
+# When the reads the table into memory, it sorts the rows using the rules just described.
+# The result after sorting looks like this:
+#
+# 		+------------------+----------+-
+# 		| Host 				 | User 		| ...
+# 		+------------------+----------+-
+# 		| localhost 		 | root 		| ...
+# 		| localhost 		 | 			| ...
+# 		| % 					 | jeffrey 	| ...
+# 		| % 					 | root 		| ...
+# 		+------------------+----------+-
+#
+# When a client attempts to connect, the server looks through the sorted rows and uses the first match found.
+#
+# For a connection from localhost by jeffrey, two of the rows from the table match: the one with Host and User values of
+# 'localhost' and '', and the one with values of '%' and 'jeffrey'.
+#
+# The 'localhost' row appears first in sorted order, so that is the one the server uses.
+#
+# Here is another example. Suppose that the user table looks like this:
+#
+# +----------------------------------+------------+-
+# | Host 									 | User 		  | ...
+# +----------------------------------+------------+-
+# | % 										 | jeffrey 	  | ...
+# | h1.example.net 						 | 			  | ...
+# +----------------------------------+------------+-
+#
+# The sorted table looks like this:
+#
+# +----------------------------------+------------+-
+# | Host 									 | User 		  | ...
+# +----------------------------------+------------+-
+# | h1.example.net 						 | 			  | ...
+# | % 										 | jeffrey 	  | ...
+# +----------------------------------+------------+-
+#
+# A connection by jeffrey from h1.example.net is matched by the first row, whereas a connection by jeffrey from any host is
+# matched by the second.
+#
+# Note:
+#
+# 		It is a common misconception to think that, for a given user name, all rows that explicitly name that user are used
+# 		first when the server attempts to find a match for the connection.
+#
+# 		This is not true.
+#
+# 		The preceding example illustrates this, where a connection from h1.example.net by jeffrey is first matched
+# 		not by the row containing 'jeffrey' as the User column value, but by the row with no user name.
+# 		
+# 		As a result, jeffrey is authenticated as an anon user, even though he specified a user name when connecting.
+#
+# If you are able to connect to the server, but your privileges are not what you expect, you probably are being
+# authenticated as some other account.
+#
+# To find out what account you were authenticated as, use the CURRENT_USER() function.
+#
+# It returns a value in <user_name>@<host_name> format that indicates the User and Host values from the matching
+# user table row.
+#
+# Suppose that jeffrey connects and issues the following query:
+#
+# 		SELECT CURRENT_USER();
+# 		+-----------------------+
+# 		| CURRENT_USER() 			|
+# 		+-----------------------+
+# 		| @localhost 			   |
+# 		+-----------------------+
+#
+# The result shown here indicates that the matching user table row had a blank User column value.
+# In other words, the server is treating jeffrey as a anon user.
+#
+# Another way to diagnose authentication problems is to print out the user table and sort it by hand
+# to see where the first match is being made.
+#
+# ACCESS CONTROL, STAGE 2: REQUEST VERIFICATION
+#
+# After you establish a connection, the server enters Stage 2 of access control.
+#
+# For each request that you issue through that connection, the server determines what operation you want to perform,
+# then checks whether you have sufficient privs to do so.
+#
+# This is where the privilege column in the grant tables come into play.
+# These privileges can come from any of the user, db, tables_priv, columns_priv or procs_priv tables.
 # 
+# The user table grants privileges that are assigned to you on a global basis and that apply no matter what
+# the default database is.
+#
+# For example, if the user table grants you the DELETE privilege, you can delete rows from any table in any database
+# on the server host.
+#
+# It is wise to grant privileges in the user table only to people who need them, such as database admins.
+#
+# For other users, you should leave all privileges in the user table set to 'N' and grant privileges at more specific
+# levels only.
+#
+# You can grant privileges for particular databases, tables, columns or routines.
+#
+# The db table grants database-specific privileges. Values in the scope columns of this table can take the following forms:
+#
+# 		) A blank User value matches the anon user. A nonblank value matches literally; there are no wildcards in user names.
+#
+# 		) The wildcard characters % and _ can be used in the Host and Db columns.
+#
+# 			These have the same meaning as for pattern-matching operatons performed with the LIKE operator..
+# 			If you want to use either character literally when granting privileges, you must escape it with a backslash.
+#
+# 			For example, to include the underscore character (_) as part of a database name, specify it as \_ in the GRANT statement.
+#
+# 		) A '%' or blank Host value means "any host".
+#
+# 		) A '%' or blank Db value means 'any db'.
+#
+# The server reads the db table into memory and sorts it at the same time that it reads the user table.
+# The server sorts the db table based on the Host, Db and User scope columns.
+#
+# As with the user table, sorting puts the most-specific values first and least-specific values last, and when
+# the server looks for matching rows, it uses the first match that it finds.
+#
+# The tables_priv, columns_priv and procs_priv tables grant table-specific, column-specific and routine-specific privs.
+#
+# Values in the scope columns of these tables can take the following forms:
+#
+# 		) The wildcard characters % and _ can be used in the Host column. 
+# 			These have the same meaning as for pattern-matching operations performed with the LIKE operator.
+#
+# 		) A '%' or blank Host value means "any host".
+#
+# 		) The Db, Table_name, Column_name, and Routine_name columns cannot contain wildcards or be blank.
+#
+# The server sorts the tables_priv, columns_priv and procs_priv tables based on the Host, Db and User columns.
+# This is similar to db table sorting, but simpler because only the Host column can contain wildcards.
+#
+# The server uses the sorted tables to verify each request that it receives.
+#
+# For requests that require administrative such as SHUTDOWN or RELOAD, the server checks
+# only the user table row because that is the only table that specifies admin privs. 
+#
+# The server grants access if the row permits the requested operation and denies access otherwise.
+#
+# For example, if you want to execute mysqladmin shutdown but your user table row does not grant the
+# SHUTDOWN priv to you, the server denies access without even checking the db table. 
+#
+# (It contains no shutdown_priv column, so there is no need to do so)
+#
+# For database-related requests (INSERT, UPDATE and so on), teh server fist checks the user's global privs by looking in the
+# user table row.
+#
+# If the row permits the requested operation, access is granted.
+#
+# If the global priv in the user table are insufficient, the server determines the user's db-specific privs by checking
+# the db table:
+#
+# 		The server looks in the db table for a match on the Host, Db and User columns.
+# 		The Host and User columns are matched to the connecting user's host name and MySQL user name.
+#
+# 		The Db column is matched to the database that the user wants to access.
+#
+# 		If there is no row for the Host and User, access is denied.
+#
+# After determining the db-specific privs granted by the db table rows, the server adds them to the global privs
+# granted by the user table.
+#
+# If the result permits the requested operation, access is granted.
+#
+# Otherwise, teh server successively checks the user's table and column privs in the tables_priv and columns_priv tables,
+# adds those to the user's priv and permits or denies access based on the result.
+#
+# For stored-routine operations, the server uses the procs_priv table rather than tables_priv and columns_priv.
+#
+# Expressed in boolean terms, the preceding desc. of how a user's privs are calculated may be summarized as:
+#
+# 		global privileges
+# 		OR (database privs AND host privs)
+# 		OR table privs
+# 		OR column privs
+# 		OR routine privs
+#
+# It may not be apparent why, if the global user row privs are initially found to be insufficient for the requested operation,
+# the server adds those privs to the database, table and column privs later.
+#
+# The reason is that a request might require more than one type of privilege.
+# For example, if you execute an INSERT_INTO_..._SELECT statement, you need both the INSERT and SELECT privs.
+#
+# Your privs might be such that the user table row grants one priv and the db table row grants the other.
+#
+# In this case, you have the necessary privs to perform the request, but the server cannot tell that from either
+# table by itself; the privs granted by the rows in both tables must be combined.
+#
+# WHEN PRIVILEGE CHANGES TAKE EFFECT
+#
+# When mysqld starts, it reads all grant tables contents into memory. The in-memory tables become effective for access control at that point.
+#
+# If you modify the grant tables indirectly using account-management statements such as GRANT, REVOKE, SET_PASSWORD or RENAME_USER, the server
+# notices these changes and loads the grant tables into memory again immediately.
+#
+# If you modify the grant tables directly using statements such as INSERT, UPDATE or DELETE, your changes have no effect on priv checking
+# until you either restart the server or tell it to reload the tables.
+#
+# If you change the grant tables directly but forget to reload them, your change have no effect until you restart the server.
+# This may leave you wondering why your changes seem to make no difference.
+#
+# To tell teh server to reload the grant tables, perform a flush-priv operation. This can be done by issuing a FLUSH_PRIVILEGES statement
+# or by executing a mysqladmin flush-privileges or mysqladmin reload command.
+#
+# A grant table reload affects privs for each existing client connection as follows:
+#
+# 		) Table and column privilege changes take effect with the client's next request.
+#
+# 		) Database privs changes take effect the next time the client executes a USE <db_name> statment.
+#
+# 			NOTE: Client applications mayy cache the database name: thus, this effect may not be visible to them without actually changing to a different database.
+#
+# 		) Global privileges and passwords are unaffected for a connected client. These changes take effect only for subsequent connections.
+#
+# If the server is started with the --skip-grant-tables option, it does not read the grant tables or implement any access control.
+#
+# Anyone can connect and do anything, which is insecure.
+#
+# To cause a server thus started to read the tables and enable access checking, flush the privileges.
+#
+# TROUBLESHOOTING PROBLEMS CONNECTING TO MYSQL
+#
+# If you encounter problems when you try to connect to the MySQL server, the following items describe some courses
+# of action you can take to correct the problem.
+#
+# 		) Make sure that the server is running. If it is not, clients cannot connect to it.
+#
+# 			For example, if an attempt to connect to the servers fails with a message such as one of those following,
+# 			one cause might be that the server is not running:
+#
+# 				mysql
+# 				ERROR 2003: Can't connect to MySQL server on 'host_name' (111)
+# 				mysql
+# 				ERROR 2002: Can't connect to local MySQL server through socket
+# 				'/tmp/mysql.sock' (111)
+#
+# 		) It might be that the server is running, but you are trying to connect using a TCP/IP port, named pipe, or Unix socket
+# 			file different from the one on which the server is listening.
+#
+# 			To correct this when you invoke a client program, specify a --port option to indicate the proper port number or a 
+# 			--socket option to indicate the proper named pipe or Unix socket file.
+#
+# 			To find out where the socket file is, you can use this command:
+#
+# 				netstat -ln | grep mysql
+#
+# 		) Make sure that the server has not been configured to ignore network connections or (if you are attempting to connect
+# 			remotely) that it has not been configured to listen only locally on its network interfaces.
+#
+# 			If the server was started with --skip-networking, it will not accept TPC/IP connections at all.
+#
+# 			If the server was started with --bind-address=127.0.0.1, it will listen for TCP/IP connections only locally
+# 			on the loopback interface and will not accept remote connections.
+#
+# 		) Check to make sure that there is no firewall blocking access to MySQL. Your firewall may be configured on the basis
+# 			of the application being executed, or the port number used by MySQL for communication (3306 by default).
+#
+# 			Under Linux or Unix, check your IP tables (or similar) configuration to ensure that the port has not been
+# 			blocked.
+#
+# 			under Windows, applications such as ZoneAlarm or Windows Firewall may need to be configured not to block the MySQL port.
+#
+# 		) The grant table must be properly set up so that the server can use them for access control.
+#
+# 			For some distrib types (such as binary on Windows or RPM distribs on Linux), the installation process initializes the MySQL
+# 			data dir, including the mysql system db containing the grant tables.
+#
+# 			For distribs that do not do this, you must initialize the data dir manually.
+#
+# 			To determine whether you need to initialize the grant tables, look for a mysql dir under the data dir.
+# 			(The data dir normally is named data or var and is located under your MySQL installation dir).
+#
+# 			Make sure that you have a file named user.MYD in the mysql database directory.
+#
+# 			If not, initialize the data directory. After doing so and starting the server, you should be able to connect to the server.
+#
+# 		) After a fresh installation, if you log on to the server as root without using a password, you might get the following error message.
+#
+# 			mysql -u root
+#			ERROR 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)
+#
+# 			It means a root PW has already been assigned during installation and it has to be supplied.
+#
+# 			More on resetting etc., later.
+#
+# 		) If you have updated an existing MySQL installaiton to a newer version, did you run the mysql_upgrade script?
+#
+# 			If not, do so.
+#
+# 			The structure of the grant tables changes ocassionaly when new capabilties are added, so after an upgrade you should
+# 			always make sure that your tables have the current structure.
+#
+# 		) If a client program receives the following error message when it tries to connect, it means that hte server expects
+# 			passwords in a newer format than the client is capable of generating:
+#
+# 				mysql
+# 				Client does not support authentication protocol requested
+# 				by server; consider upgrading MySQL client
+#
+# 		) Remmber that client programs use connection parameters specified in option files or environment variables.
+#
+# 			If a client program seems to be sending incorrect default connection params when you have not specified them on teh cmd line,
+# 			check any applicable option file and ENV variables.
+#
+# 			For example, if you get Access denied when you run a client without any options, make sure that you have not specified an
+# 			old password in any of your option files.
+#
+# 			You can suppress the use of option files by a client program by invoking it with the --no-defaults option.
+# 			For example:
+#
+# 				mysqladmin --no-defaults -u root version
+#
+# 		) If you get the following error, it means that you are using an incorrect root pw:
+#
+# 			mysqladmin -u root -pxxx ver
+# 			Access denied for user 'root'@'localhost' (using password: YES)
+#
+# 			If the preceding error occurs when you have not specified a PW, it means that you have an incorrect PW listed in some option file.
+# 			Try the --no-defaults option as described in the previous item.
+#
+# 		) localhost is a synonym for your local host name, and is also the default host to which clients try to connect if you specify no host explicitly.
+#
+# 			You can use a --host=127.0.0.1 option to name the server host explicitly.
+#
+# 			This will make TCP/IP connection to the local mysqld server.
+#
+# 			You can also use TCP/IP by specifying a --host option that uses the actual host name of the local host.
+# 			In this case, the host name must be specified in a user table row on the server host, even though you are
+# 			running the client program on the same host as the server.
+#
+# 		) The Access denied error message tells you who you are trying to log in as, the client host from which you are
+# 			trying to connect, and whether you were using a password.
+#
+# 			Normally, you should have one row in tthe user table that exactly matches the host name and user name that
+# 			were given in the error message.
+#
+# 			For example, if you get an error message that contains using password: NO, it means that you tried to log in without a PW.
+#
+# 		) If you get an Access denied error when trying to connect to the db with mysql -u <user_name>, you may have a problem with the
+# 			user table.
+#
+# 			Check this by executing mysql -u root mysql and issuing this SQL statement:
+#
+# 				SELECT * FROM user;
+#
+# 			The result should include a row with the Host and User columns matching your client's host name and your MySQL user name.
+#
+# 		) if the following error occurs when you try to connect from a host other than the one on which the MySQL server is running,
+# 			it means that there is no row in the user table with a Host value that matches the client host:
+#
+# 				Host ... is not allowed to connect to this MySQL Server
+#
+# 			You can fix this by setting up an account for the combination of client host name and user name that you are using when trying to connect.
+#
+# 			If you do not know the IP address or host name of the machine from which you are connecting, you should put a row with '%' as the Host column
+# 			value in the user table.
+#
+# 			After trying to connect from the client machine, use a SELECT USER() query to see how you really did connect.
+#
+# 			Then change the '%' in the user table row to the actual host name that shows up in the log.
+#
+# 			Otherwise, your system is left insecure because it permits any host for the given user name.
+#
+# 			On Linux, another reason that this error might occur is that you are using a binary MySQL version that is compiled with
+# 			a different version of the glibc library than the one you are using.
+#
+# 			In this case, you should either upgrade your OS system or glibc, or download a source distrib of MySQL version and compile
+# 			it yourself.
+#
+# 			A source RPM is normally trivial to compile and install, so this is not a big problem.
+#
+# 		) If you specify a host name when trying to connect, but get an error message where the host name is not shown or is an IP address,
+# 			it means that the mySQL server got an error when trying to resolve the IP address of the client host to a name:
+#
+# 				mysqladmin -u root -pxxx -h some_hostname ver
+# 				Access denied for user 'root'@'' (Using password: YES')
+#
+# 			If you try to connect as root and get hte following error, it means that you do not have a row in the user table with a User column value
+# 			of 'root' and that mysqld cannot reoslve the host name for your client:
+#
+# 				Access denied for user ''@'unknown'
+#
+# 			These errors indicate a DNS problem. To fix it, execute mysqladmin flush-hosts to reset the internal DNS host cache.
+#
+# 			Some solutions are:
+#
+# 			 )	Determine what is wrong with your DNs and fix it
+# 
+#  		 ) Specify IP addresses rather than host names in the MySQL grant tables
+#
+# 			 ) Put an entry for the client machine name in /etc/hosts on Unix or \windows\hosts on Windows
+#
+# 			 ) start mysqld with the --skip-name-resolve option
+#
+# 			 ) start mysqld with the --skip-host-cache option
+#
+# 			 ) On Unix, if you are running the server and the client on teh same machine, connect to localhost.
+# 				For connections to localhost, MySQL programs attempt to connect to the local server by using a 
+# 				Unix socket file, unless there are connection params specified to ensure that hte client makes a 
+# 				TCP/IP connection.
+#
+# 			 ) On WIndows,if you are running the server and the client on teh same machine and the server supports named pipe connections,
+# 				connect to the host name (period). Connections to . use a pipe rather than TCP/IP
+#
+# 		) if mysql -u root works but mysql -h your_hostname -u root results in Access denied (where your_hostname is the actual host name of the local host),
+# 				you may not have the correct name for your host in the user table.
+#
+# 			A common problem here is that the Host value in teh user table row specifies an unqualified host name, but your systems name resolution
+# 			routines return a fully qualified domain name (or vice versa).
+#
+# 			For example, if you have a row with host 'pluto' in the user table, but your DNS tells MySQL that your host name is 'pluto.example.com'
+# 			the row won't work.
+#
+# 			Try adding a row to the user table that contains the IP address of your host as the Host column value. (alternatively, you could add a row to the
+# 			user table with a Host value that contains a wildcard; for example, 'pluto.%'.
+#
+# 			However, use of Host values ending with % is insecure and not recommended.)
+#
+# 		) If mysql -u <user_name> works but mysql -u <user_name> <some_db> does not, you have not granted access to the given user for the database named
+# 			<some_db>.
+#
+# 		) if mysql -u <user_name> works when executed on teh server host, but mysql -h <host_name> -u <user_name> does not work when executed on a remote client,
+# 			you have not enabled access to the server for the given user name from the remote host.
+#
+# 		) If you cannot figure out why you get Access denied, remove from the user table all rows that have Host values containing wildcards (rows that contain '%' or '_'
+# 			characters)
+#
+# 			a very common error is to insert a new row with Host='%' and User='some_user', thinking that this enables you to specify localhost to connect
+# 			from the same machine.
+#
+# 			The reason that this does not work is that hte default privs include a row with Host='localhost' and User=''.
+#
+# 			Because that row has a Host value 'localhost' that is more specific than '%', it is used in preference to the new row when connecting
+# 			from localhost.			
+#
+# 			The correct procedure is to insert a second row with Host='localhost' and User='some_user', or to delete the row with Host='localhost' and User=''.
+# 			After deleting the row, remember to issue a FLUSH PRIVILEGES statement to reload the grant tables.
+#
+# 		) If you are able to connect to the MySQL server, but get an Access denied message whenever you issue a SELECT_..._INTO_OUTFILE or LOAD_DATA_INFILE
+# 			statement, your row in the user table does not have the FILE priv enabled.
+#
+# 		) If you change the grant tables directly (for example, by using INSERT, UPDATE or DELETE statements) and your changes seem to be ignored,
+# 			remember that you must execute a FLUSH_PRIVILEGES statement or a mysqladmin flush-privileges command to cause the server to reload
+# 			the privilege tables.
+#
+# 			Otherwise, your changes have no effect until the enxt time the server is restarted.
+#
+# 			Remember that after you change the root PW with an UPDATE statement, you will not need to specify the new PW until after
+# 			you flush the privs, because the server will not know you've changed the PW yet.
+#
+# 		) If your privs seem to have changed in the middle of a session, it may be that a MySQL admin has changed them.
+#
+# 			Reloading the grant table affects new client connections, but it also affects existing connections as indicated since before.
+#
+# 		) If you have access problems with a Perl, PHP, Python or ODBC program, try to connect to the server with mysql -u user_name db_name
+# 			or mysql -u user_name -p<your_pw_here> <db_name>
+#
+# 			If you are able to connect using the mysql client, the problem lies with your program, not with the access privs.
+#
+# 			(There is no space between -p and the PW. You can also use the --password=<your_pass> syntax to specify the PW)
+#
+# 			if you use the -p or --password option with no PW value, MySQL prompts you for the PW.
+#
+# 		) For testing purposes, start hte mysqld server with the --skip-grant-tables option.
+#
+# 			Then you can change the MySQL grant tables and use the SHOW_GRANTS statement to check whether your modifications
+# 			have the desired effect.
+#
+# 			When you are satisfied with your changes, execute mysqladmin flush-privileges to tell the mysqld server to load
+# 			the privs again.
+#
+# 			This enables you to begin using the new grant table contents without stopping and restarting the server.
+#
+# 		) If everything else fails, start the mysqld server with a debugging option (for example, --debug=d,general,query)
+#
+# 		This prints host and user information about attempted connections, as well as information about each command issued.
+#
+# 		) If you have any other problems with the MySQL grant table and feel you must post the problem to the mailing list, always provide a dump of the
+# 			MySQL grant tables.
+#
+# 			You can dump the tables with the mysqldump mysql command.
+#
+# 			To file a bug report, see earlier.
+#
+# 			In some cases, you may need to restart mysqld with --skip-grant-tables to run mysqldump.
+#
+# MYSQL USER ACCOUNT MANAGEMENT
+#
+# This section describes how to set up accounts for clients of your MySQL server. It discusses the following topics:
+#
+# 		) The meaning of account names and PWs as used in MySQL and how that compares to names and PWs used by your OS
+#
+# 		) How to set up new accounts and remove existing accounts
+#
+# 		) How to use roles, which are named collections of privs
+#
+# 		) How to change PWs
+#
+# 		) Guidelines for using PWs securly
+#
+# USER NAMES AND PASSWORDS
+#
+# MySQL stores accounts in the user table of the mysql system database.
+#
+# An account is defined in terms of a user name and the client host or hosts from which the user can connect to the server.
+#
+# The account may also have a PW. MySQL supports authentication plugins, so it is possible that an account authenticates using
+# some external authentication method.
+#
+# There are several distinctions between the way user names and PWs are used by MySQL and your OS:
+#
+# 		) USer names, as used by MySQL for authentication purposes, have nothing to do with user names (login names) as used by Your OS.
+#
+# 			On Unix, most mySQL clients by default try to log in using the current Unix user name as the MySQL user name, but that's only for convenience.
+#
+# 			The default can be overridden easily, because client programs permit any user name to be specified with a -u or --user option:
+#
+# 			This means that anyone can attempt to connect to the server using any user name, so you cannot make a DB secure in any way unless all MySQL
+# 			accounts have passwords.
+#
+# 			Anyone who specifies a user name for an account that has no password is able to connect succesfully to the server.
+#
+# 		) MySQL user names can eb up to 32 chars long. OS users may be of a different max length. For example, Unix user names typically are 
+# 			limited to 8 chars.
+#
+# 			WARNING:
+#
+# 				The limit on MySQL user name length is hardcoded in MySQL servers and clients, and trying to circumvent it by modifying the defs of teh table
+# 				in teh mysql db does not work.
+#
+# 				You should never alter the structure of tables in the mysql db in any manner whatsoever except means of the procedure that is
+# 				described in upgrading.
+#
+# 				Attempting ot redefine MySQL's System tables in any other fashion results in undefined (and unsupported) behavior.
+#
+# 				The server is free to ignore rows that become malformed as a result of such modifications.
+#
+# 		) To authenticate client connections for accounts that use MySQL native authentication (implemented by the mysql_native_password authentication plugin),
+# 			the server uses passwords stored in the user table.
+#
+# 			These passwords are distinct from passwords for logging in to your OS.
+#
+# 			There is no necessary connection between the "external" PW you use to log in to a Windows or Unix machine and the PW you use to access the MysQL server
+# 			on that machine.
+#
+# 			If the server authenticates a client using some other plugin, the authentication method that the plugin implements may or may not use a PW stored in the user
+# 			table. IN this case, it is possible that an external PW is also used to authenticate to the MySQL server.
+#
+# 		) Password stored in the user table are encrypted using plugin-specific algorithms.
+#
+# 		) If the user name and PW contain only ASCII chars, it is possible to connect ot hte server regardless of character setting.
+#
+# 			To connet when the user name or PW contain non-ascii chars, the client should call the mysql_options() C API function with the
+# 			MYSQL_SET_CHARSET_NAME option and appropaite charatet set name as arguments.
+#
+# 			This casues authentication to take place using the specified character set:
+#
+# 			Otehrwise, authentication will fail unless the server default character set is the same as the encoding in teh authentication defaults.
+#
+# 			Standard MySQL client programs support a --default-character-set option that causes mysql_options to be called as just described.
+# 			iN addition, the character set autodetection is supported as described later.
+#
+# 			For programs that use a connector that is not based on the C API, the connector may provide an equivalent ot mysql_options() that can be used instead.
+#
+# 			The preceding notes do not apply to ucs2, utf16 and utf32, which are not permitted as client char sets.
+#
+# The MySQL installation process populates the grant tables with an initial root account,  as described earlier.
+#
+# Thereafter, you normally set up, modify and remove MYSQL accounts using statements such as CREATE_USER, DROP_USER, GRANT, and REVOKE.
+#
+# To connect to a MySQL server with a command-line script client, specify user name and password options as necessary for the account that you want to use:
+#
+# 		mysql --user=finley --password db_name
+#
+# If you prefer short options, the command looks like this:
+#
+# 		mysql -u finley -p db_name
+#
+# If you omit the PW value following the --password or -p option on the command line (as just shown),
+# the client prompts for one.
+#
+# Alternatively, the password can be specified on the cmd line:
+#
+# 		mysql --user=finley --password=password db_name
+# 		mysql -u finley -ppassword db_name
+#
+# If you use the -p option, there must be no space between -p and the PW that follows.
+#
+# Specifying a PW on the cmd line should be considered insecure.
+#
+# Use an option file or a login path file instead for the PW decalration.
+#
+# ADDING USER ACCOUNTS
+#
+# To create MySQL accounts, use the account-management statements intended for creating accounts and establishing their privs, such as
+# CREATE_USER and GRANT.
+#
+# These statements cause the server to make appropiate modifications to the underlying grant tables.
+#
+# NOTE:
+#
+# 		Direct modification of grant tables using statements such as INSERT, UPDATE or DELETE is discouraged and done at your own risk.
+#
+# 		The server is free to ignore rows that become malform as a result of such modifications.
+#
+# 		For any operation that modifies a grant table, the server checks whether the table has the expected structure and produces an
+# 		error if not. 
+#
+# 		mysql_upgrade must be run to update the tables to the expected structure.
+#
+# Another option for creating accounts is to use the GUI tool MySQL workbench.
+#
+# The following showcases how to use the mysql client program to set up new accounts.
+#
+# These examples assume that privileges have been set up according to the defualts described earlier.
+#
+# This means that to make changes, you must connect to the MySQL server as the MySQL root user, which has the CREATE_USER privs.
+#
+# First, use the mysql program to connect to the server as the MySQL root user:
+#
+# 		mysql --user=root mysql
+#
+# If you have assigned a password to the root account, you must also supply a -password or -p option.
+#
+# After connecting to the server as root, you can add new accounts. The following example uses CREATE_USER and GRANT statements to set up
+# four accounts:
+#
+# 		CREATE USER 'finley'@'localhost' IDENTIFIED BY 'password';
+# 		GRANT ALL PRIVLEGES ON *.* TO 'finley'@'localhost'
+# 			-> 	WITH GRANT OPTION;
+# 		CREATE USER 'finley'@'%' IDENTIFIED BY 'password';
+# 		GRANT ALL PRIVILEGES ON *.* TO 'finley'@'%'
+# 			-> 	WITH GRANT OPTION;
+# 		CREATE USER 'admin'@'localhost' IDENTIFIED BY 'password';
+# 		GRANT RELOAD PROCESS ON *.* TO 'admin'@'localhost';
+# 		CREATE USER 'dummy'@'localhost';
+#
+# The accounts created by said statements have the following properties:
+#
+# 		) Two accounts have a user name of finley. Both are superusers accounts that have full privileges to do anything.
+#
+# 			The 'finley'@'localhost' account can be used only when connecting from the local host. 
+#
+# 			The 'finley'@'%' account uses the '%' wildcard for the host part, so it can be used to connect from any host.
+#
+# 			The 'finley'@'localhost' account is necessary if there is an anon user for localhost. Without the 'finley'@'localhost',
+# 			that anon user acc takes precedence when finley connects from the local host and finley is treated as an anon.
+#
+# 			The reason for this is that the anon user has more specific Host oclumn (see previous section), than the 'finley'@'%' acc
+# 			and thus comes earlier in the user table sort order. 
+#
+# 		) The 'admin'@'localhost' account can be used only by admin to connect from the local host.
+#
+# 			It is granted the RELOAD and PROCESS administrative privs. 
+#
+# 			These privs enable the admin user to execute the mysqladmin reload, mysqladmin refresh, and mysqladmin flush-xxx commands, as well as
+# 			mysqladmin processlist.
+#
+# 			No privs are granted for accessing any DBs. You could add such privs using the GRANT statements.
+#
+# 		) The 'dummy'@'localhost' account has no PW (which is insecure and not recommended). This account can be used only to connect
+# 			from the localhost.
+#
+# 			No rpvis are granted. It is assumed you will grant specific privs to the acc using GRANT statements.
+#
+# To see the privileges for an account, use SHOW_GRANT:
+#
+# 		SHOW GRANTS FOR 'admin'@'localhost';
+# 		+-----------------------------------------------------+
+# 		| Grants for admin@localhost 			 						|
+# 		+-----------------------------------------------------+
+# 		| GRANT RELOAD, PROCESS ON *.* TO 'admin'@'localhost' |
+# 		+-----------------------------------------------------+
+#
+# To see nonprivlege properties for an account, use SHOW_CREATE_USER:
+#
+# 		SHOW CREATE USER 'admin'@'localhost'\G
+# 		*************************** 1. row ************************
+# 		CREATE USER for admin@localhost: CREATE USER 'admin'@'localhost'
+# 		IDENTIFIED WITH 'mysql_native_password'
+# 		AS '*<numbers/letters>'
+# 		REQUIRE NONE PASSWORD EXPIRE DEFAULT ACCOUNT UNLOCK
+#
+# The next example create three accounts and grant them access to specific DBs.
+# Each of them has a user name of custom and password of password:
+#
+# CREATE USER 'custom'@'localhost' IDENTIFIED BY 'password';
+# GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP
+# 		-> 		ON bankaccount.*
+# 		-> 		TO 'custom'@'localhost';
+#
+# CREATE USER 'custom'@'host47.example.com' IDENTIFIED BY 'password';
+# GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP
+# 		-> 		ON expenses.*
+# 		-> 		TO 'custom'@'host47.example.com';
+#
+# CREATE USER 'custom'@'%.example.com' IDENTIFIED BY 'password';
+# GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP
+# 		-> 		ON customer.*
+# 		-> 		TO 'custom'@'%.example.com';
+#
+# The three accounts cna be used as follows:
+#
+# 		) The first account can access the bankaccount database, but only from the local host.
+#
+# 		) The second account can access the expenses database, but only from the host47.example.com
+#
+# 		) The third account can access the customer database, from any host in the example.com domain.
+#
+# 			This account has access from all machines in the domain due to use of the % widlcard character in the host part of the account name.
+#
+# REMOVING USER ACCOUNTS
+#
+# To remove an account, use the DROP_USER statement, which is described later in greater detail:
+#
+# 	 DROP USER 'jeffrey'@'localhost';
+#
+# USING ROLES
+#
+# A MySQL role is a named collection of privileges. Like user accounts, roles can have privileges granted to and revoked from them.
+#
+# A user account can be granted roles, which grants to the account the privileges associated with each role.
+#
+# This enables assignment of sets of privileges to accounts and provides a convenient alternative to granting individual privileges,
+# both for conceptualizing desired privilege assignments and implementing them.
+#
+# The following list summarizes role-management capabilities provided by MySQL:
+#
+# 		) CREATE_ROLE and DROP_ROLE enable roles to be created and removed.
+#
+# 		) GRANT and REVOKE enable privilege assignment and revocation for user accounts and roles.
+#
+# 		) SHOW_GRANTS displays privilege and role assignments for user accounts and roles.
+#
+# 		) SET_DEFAULT_ROLE specifies which account roles are active by default.
+#
+# 		) SET_ROLE changes the active roles within the current session.
+#
+# 		) The CURRENT_ROLE() function displays the active roles within the current session.
+#
+# 		) The mandatory_roles and activate_all_roles_on_login SYS_VAR enables defining mandatory roles and automatic activation
+# 			of granted roles when users log in to the server.
+#
+# For descriptiosn of individual role-manipulation statements, see later.
+#
+# The following discussion provides examples of role usage.
+#
+# Unless otherwise specified, SQL statements shown should be executed using a MySQl acc with admin privileges, such as the root account.
+#
+# CREATING ROLES AND GRANTING PRIVILEGES TO THEM
+#
+# Consider this scenario:
+#
+# 		) An application uses a database named app_db
+#
+# 		) Associated with the application, there can be accounts for developers who create and maintain the application, and for users who interact with it.
+#
+# 		) Developers need full access to the database. Some users need only read access, others need read/write access.
+#
+# To avoid granting privileges individually to possibly many user accounts, create roles as names for the required privilege sets.
+# This makes it easy to grant the required privileges to user accounts, by granting them appropiate roles.
+#
+# To create hte roles, use CREATE_ROLE:
+#
+# 		CREATE ROLE 'app_developer', 'app_read', 'app_write';
+#
+# Role names are much like USER ACCS and consists of a user part and a host part in 'user_name'@'host_name' format.
+#
+# The host part, if omitted, defaults to '%'.
+#
+# The user and host parts can be unquoted unless they contain special characters such as - or %.
+#
+# Unlike account names, the user part of role names cannot be blank.
+#
+# To assign privileges to the roles, execute GRANT using the same sytnax as for assigning privileges to user accounts:
+#
+# 	GRANT ALL ON app_db.* TO 'app_developer';
+# 	GRANT SELECT ON app_db.* TO 'app_read';
+# 	GRANT INSERT, UPDATE, DELETE ON app_db.* TO 'app_write';
+#
+# Now suppose that intially you require one developer account, two user accounts that need read-only access, and one user account
+# that needs read/write access.
+#
+# Use CREATE_USER to create the accounts:
+#
+# 	CREATE USER 'dev1'@'localhost' IDENTIFIED BY 'dev1pass';
+# 	CREATE USER 'read_user1'@'localhost' IDENTIFIED BY 'read_user1pass';
+# 	CREATE USER 'read_user2'@'localhost' IDENTIFIED BY 'read_user2pass';
+# 	CREATE USER 'rw_user1'@'localhost' IDENTIFIED BY 'rw_user1pass';
+#
+# To assign each user its required privileges, you could use GRANT statements of the same form as just shown, but that requires
+# enumerating individuals privileges for each user.
+#
+# Instead, use an alternative GRANT syntax that permits granting roles rather than privileges:
+#
+# 	GRANT 'app_developer' TO 'dev1'@'localhost';
+# 	GRANT 'app_read' TO 'read_user1'@'localhost', 'read_user2'@'localhost';
+# 	GRANT 'app_read', 'app_write' TO 'rw_user1'@'localhost';
+#
+# The GRANT statement for the rw_user1 account grans the read and write roles, which combine to provide the required read and write privileges.
+#
+# The GRANT syntax for granting roles to an account differs from the Syntax for granting privileges:
+#
+# 		There is an ON clause to assign privileges, whereas there is no ON clause to assign roles.
+#
+# 		Because the syntaxes are distinct, you cannot mix assigning privileges and roles in the same statement.
+# 		(It is permitted to assign both privilegs and roles to an account, but you must use separate GRANT statements,
+# 			each with syntax appropiate to what is to be granted)
+#
+# DEFINE MANDATORY ROLES
+#
+# It is possible to specify roles as mandatory by naming them in the value of the mandatory_roles SYS_VAR.
+# The server treats a mandatory role as granted to all users, so that it need not be granted explicitly to any account.
+#
+# To specify mandatory roles at server startup, define mandatory_roles in your server my.cnf file:
+#
+# 		[mysqld]
+# 		mandatory_roles='role1,rol2@localhost,r3@%.example.com'
+#
+# To set and persist mandatory_roles at runtime, use a statement like this:
+#
+# 		SET PERSIST mandatory_roles = 'role1,role2@localhost, r3@%.example.com';
+#
+# SET_PERSIST sets the value for the running MySQL instance. It also saves the value to be used for subsequent server restarts.
+#
+# To change a value for the running MySQL instance without saving it for subsequent restarts, use the GLOBAL keyword rather than PERSIST.
+#
+# Setting mandatory_roles requires the ROLE_ADMIN privilege, in addition to the SYSTEM_VARIABLES_ADMIN or SUPER privilege normall required
+# to set a global system variable.
+#
+# Mandatory roles, like explicitly granted roles, do not take effect until activated. 
+#
+# At login time, role activation occurs for all granted roles if the activate_all_roles_on_login system variable is enabled,
+# or only for roles that are set as default roles otherwise.
+#
+# At runtime, SET_ROLE activates roles.
+#
+# Roles named in the value of mandatory_roles cannot be revoked with REVOKE or dropped with DROP_ROLE or DROP_USER.
+#
+# If a role named in mandatory_roles is not present in the mysql.user system table, the role is not granted to users.
+#
+# When the server attempts role activaiton for a user, it does not treat the nonexistent role as mandatory and writes
+# a warning ot the error log.
+#
+# If the role is created later and thus becomes valid, FLUSH_PRIVILEGES may be necessary to cause the server to treat it
+# as mandatory.
+#
+# SHOW_GRANTS displays mandatory roles according to the rules described later.
+#
+# CHECKING ROLE PRIVS
+#
+# To verify the privs assigned to an account, use SHOW_GRANTS. For example:
+#
+# 		SHOW GRANTS FOR 'dev1'@'localhost';
+# 		+--------------------------------------------------+
+# 		| Grants for dev1localhost 								|
+# 		+--------------------------------------------------+
+# 		| GRANT USAGE ON *.* TO `dev1`@`localhost`			|
+# 		| GRANT `app_developer`@`%` TO `dev1`@`localhost` 	|
+# 		+--------------------------------------------------+
+#
+# However, that shows each granted role without "expanding" it to the privileges the role represents.
+# TO show role privileges as well, add a USING clause naming the granted roles for which to display privileges:
+#
+# 		SHOW GRANTS FOR 'dev1'@'localhost' USING 'app_developer';
+# 		+-----------------------------------------------------------+
+# 		| Grants for dev1@localhost 											|
+# 		+-----------------------------------------------------------+
+# 		| GRANT USAGE ON *.* TO `dev1`@`localhost` 		            |
+# 		| GRANT ALL PRIVILEGES ON `app_db`.* TO `dev1`@`localhost` 	|
+# 		| GRANT `app_developer`@`%` TO `dev1`@`localhost` 			   |
+# 		+-----------------------------------------------------------+
+#
+# Verify each other type of user similarly:
+#
+# 		SHOW GRANTS FOR 'dev1'@'localhost' USING 'app_developer';
+# 		+------------------------------------------------------------+
+# 		| Grants for read_user1@localhost 									 |
+# 		+------------------------------------------------------------+
+# 		| GRANT USAGE ON *.* TO `read_user1`@`localhost` 				 |
+# 		| GRANT SELECT ON `app_db`.* TO `read_user1`@`localhost`	 	 |
+# 		| GRANT `app_read`@`%` TO `read_user1`@`localhost` 			 |
+# 		+------------------------------------------------------------+
+#
+# 		SHOW GRANTS FOR 'rw_user1'@'localhost' USING 'app_read', 'app_write';
+# 		+------------------------------------------------------------------------------+
+# 		| Grants for rw_user1@localhost 										 						 |
+# 		+------------------------------------------------------------------------------+
+# 		| GRANT USAGE ON *.* TO `rw_user1`@`localhost` 					  						 |
+# 		| GRANT SELECT, INSERT, UPDATE, DELETE ON `app_db`.* TO `rw_user1`@`localhost` |
+# 		| GRANT `app_read`@`%`, `app_write`@`%` TO `rw_user1`@`localhost` 				 |
+# 		+------------------------------------------------------------------------------+
+#
+# SHOW_GRANTS displays mandatory roles according to the rules described later.
+#
+# ACTIVATING ROLES
+#
+# Roles granted to a user account can be active or inactive within account sessions. 
+# If a granted role is active within a session, its privileges apply; otherwise, they do not.
+#  
+# To determine which roles are active within the current session, use the CURRENT_ROLE() function.
+#
+# By default, granting a role to an account or naming it in the mandatory_role SYS_VAR value does not automatically
+# cause the role to become active within account sessions.
+#
+# For example, because thus far in the preceding discussion no rw_user1 roles have been activated, if you connect to
+# the server as rw_user1 and invoke the CURRENT_ROLE() function, the result is NONE(no active roles):
+#
+# SELECT CURRENT_ROLE();
+# +------------------------+
+# | CURRENT_ROLE() 			|
+# +------------------------+
+# | NONE 					   |
+# +------------------------+
+#
+# To specify which roles should become active each time a user connects to the server and authenticates, use SET_DEFAULT_ROLE.
+# To set the default to all assigned roles for each account created earlier, use this statement:
+#
+# 		SET DEFAULT ROLE ALL TO 'dev1'@'localhost', 'read_user1'@'localhost', 'read_user2'@'localhost', 'rw_user1'@'localhost';
+#
+# Now if you connect as rw_user1, the initial value of CURRENT_ROLE() reflects the new default role assignments:
+#
+# SELECT CURRENT_ROLE();
+# +-------------------------------+
+# | CURRENT_ROLE() 			 		 |
+# +-------------------------------+
+# | `app_read`@`%`,`app_write`@`%`|
+# +-------------------------------+
+#
+# To cause all explicitly granted and mandatory roles to be automatically activated when users connect to the server,
+# enable the activate_all_roles_on_login SYS_VAR.
+#
+# By default, automatic role activation is disabled.
+#
+# Within a session, a user can execute SET_ROLE to change the set of active roles. For example, for rw_user1:
+#
+# 	SET ROLE NONE; SELECT CURRENT_ROLE();
+# +---------------------+
+# | CURRENT_ROLE() 		|
+# +---------------------+
+# | NONE 					|
+# +---------------------+
+#
+#  SET ROLE ALL EXCEPT 'app_write'; SELECT CURRENT_ROLE();
+# +---------------------+
+# | CURRENT_ROLE() 		|
+# +---------------------+
+# | `app_read`@`%` 		|
+# +---------------------+
+#
+# SET ROLE DEFAULT; SELECT CURRENT_ROLE();
+# +-------------------------------+
+# | CURRENT_ROLE() 					 |
+# +-------------------------------+
+# | `app_read`@`%`,`app_write`@`%`|
+# +-------------------------------+
+#
+# The first SET_ROLE statement deactives all roles.
+# The second makes rw_user1 effectively read only.
+#
+# The third restores the defualt roles.
+#
+# The effective user for stored program and view objects is subject to the DEFINER and SQL SECURITY attributes, which
+# whether execution occurs in invoker or definer context (covered later):
+#
+# 		) Stored program and view objects that execute in invoker context execute with the active roles within the current session.
+#
+# 		) Stored program and view objects that execute in definer context execute with the default roles of the user named in their DEFINER attribute.
+#
+# 			If activate_all_roles_on_login is enabled, such objects execute with all roles granted to the DEFINER user, including mandatory roles.
+# 
+# 			For stored programs, if execution should occur with roles different from the default, the program body should execute SET_ROLE to activate the required roles.
+# 
+# REVOKING ROLES OR ROLE PRIVILEGES
+#
+# Just as roles can be granted to an account, they can be revoked from an account:
+#
+# 		REVOKE role FROM user;
+#
+# Roles named in the mandatory_roles SYS_VAR value cannot be revoked.
+#
+# REVOKE can also be applied to a role to modify the privileges granted to it.
+# This affects not only the role itself, but any account granted that role.
+#
+# Suppose that you want to temporarily make all application users read only.
+#
+# To do this, use REVOKE to revoke the modification privileges from the app_write role:
+#
+# 		REVOKE INSERT, UPDATE, DELETE ON app_db.* FROM 'app_write';
+#
+# As it happens,that leaves the role with no privleges at all, as can be seen using SHOW_GRANTS (which demonstrates that this statement can be used with roles, not just users):
+#
+# 		SHOW GRANTS FOR 'app_write';
+# 		+--------------------------------------+
+# 		| Grants for app_write@% 			  		|
+# 		+--------------------------------------+
+# 		| GRANT USAGE ON *.* TO `app_write`@`%`|
+# 		+--------------------------------------+
+#
+# Because revoking privileges from a role affects the privileges for any user who is assigned the modified role, rw_user1 now has no table modification
+# privileges (INSERT, UPDATE and DELETE are no longer present):
+#
+# 		SHOW GRANTS FOR 'rw_user1'@'localhost' USING 'app_read', 'app_write';
+# 		+-------------------------------------------------------------------+
+# 		| Grants for rw_user1@localhost 												  |
+# 		+-------------------------------------------------------------------+
+# 		| GRANT USAGE ON *.* TO `rw_user1`@`localhost` 							  |
+# 		| GRANT SELECT ON `app_db`.* TO `rw_user1`@`localhost`				  |
+# 		| GRANT `app_read`@`%`,`app_write`@`%` TO `rw_user1`@`localhost` 	  |
+# 		+-------------------------------------------------------------------+
+#
+# In effect, the rw_user1 read/write user has become a read-only user. 
+#
+# This also occurs for any other accounts that are granted the app_write role, illustrating how use of roles makes it unecessary to modify privileges for individual accounts.
+#
+# To restore modification privileges to the role, simply re-grant them:
+#
+# 		GRANT INSERT, UPDATE, DELETE ON app_db.* TO 'app_write';
+#
+# Now rw_user1 again has modification privs, as do any other accounts granted the app_write role.
+#
+# REMOVING ROLES
+#
+# To remove roles, use DROP_ROLE:
+#
+# 		DROP ROLE 'app_read', 'app_write';
+#
+# Dropping a role revokes it from every account to which it was granted.
+#
+# Roles named in the mandatory_roles system variable cannot be dropped.
+#
+# USER AND ROLE INTERCHANGEABILITY
+#
+# As has been hinted at earlier for SHOW_GRANTS, which displays grants for user accounts or roles, accounts and roles can be used
+# interchangably.
+#
+# You can treat a user account like a role and grant that account to another user or a role.
+#
+# The effect is to grant the account's privileges and roles to the other user or role.
+#
+# This set of statements demonstrates that you can grant a user to a user, a role to a user, a user to a role, or a role to a role:
+#
+# 		CREATE USER 'u1';
+# 		CREATE ROLE 'r1';
+#
+# 		GRANT SELECT ON db1.* TO 'u1';
+# 		GRANT SELECT ON db2.* TO 'r1';
+#
+# 		CREATE USER 'u2';
+# 		CREATE ROLE 'r2';
+# 
+# 		GRANT 'u1', 'r1' TO 'u2';
+# 		GRANT 'u1', 'r1' TO 'r2';
+#
+# The result in each case is to grant to the grantee object the privileges associated with the granted object.
+#
+# After executing those statements, each of u2 and r2 have been granted privs from a user (u1) and a role (r1):
 #
 #
+# 		SHOW GRANTS FOR 'u2' USING 'u1', 'r1';
+# 		+------------------------------------+
+# 		| Grants for u2@% 						 |
+# 		+------------------------------------+
+# 		| GRANT USAGE ON *.* TO `u2`@`%` 	 |
+# 		| GRANT SELECT ON `db1`.* TO `u2`@`%`|
+# 		| GRANT SELECT ON `db2`.* TO `u2`@`%`|
+# 		| GRANT `u1`@`%`,`r1`@`%` TO `u2`@`%`|
+# 		+------------------------------------+
 #
-# https://dev.mysql.com/doc/refman/8.0/en/static-dynamic-privileges.html
+# 		SHOW GRANTS FOR 'r2' USING 'u1', 'r1';
+# 		+------------------------------------+
+# 		| Grants for r2@% 						 |
+# 		+------------------------------------+
+# 		| GRANT USAGE ON *.* TO `r2`@`%` 	 |
+# 		| GRANT SELECT ON `db1`.* TO `r2`@`%`|
+# 		| GRANT SELECT ON `db2`.* TO `r2`@`%`|
+# 		| GRANT `u1`@`%`,`r1`@`%` TO `r2`@`%`|
+# 		+------------------------------------+
 #
+# The preceding example is llustrative only, but interchangability of user accounts and roles has practical application;
+# such as in the following situation:
+#
+# 	Suppose that a legacy application development project began before the advent of roles in MySQL, so all user accounts
+#  associated with the project are granted privileges directly (rather than granted privileges by virtue of being granted roles).
+#
+#  One of these accounts is a dev account taht was originally granted privs as follows:
+#
+# 		CREATE USER 'old_app_dev'@'localhost' IDENTIFIED BY 'old_app_devpass';
+# 		GRANT ALL ON old_app.* TO 'old_app_dev'@'localhost';
+#
+# If this developer leaves the project, it becomes nesesecary to assign the privileges to anotehr user, or perhaps multiple users
+# if devleopment activities have expanded.
+#
+# Here are some ways to deal with the issue:
+#
+# 		) Without using roles : Change the account PW so the original dev cannot use it, and have a new dev use it instead:
+#
+# 				ALTER USER 'old_app_dev'@'localhost' IDENTIFIED BY 'new_password';
+#
+# 		) Using roles: Lock the acc to prevent anyone from using it to connect to the server:
+#
+# 				ALTER USER 'old_app_dev'@'localhost' ACCOUNT LOCK;
+#
+# 			Then treat the account as a role. For each dev new to the project, create a new account and grant it to the original dev acc:
+#
+# 				CREATE USER 'new_app_dev1'@'localhost' IDENTIFIED BY 'new_password';
+# 				GRANT 'old_app_dev'@'localhost' TO 'new_app_dev1'@'localhost';
+#
+# 			The effect is to assign the original dev acc privs to the new account.
+#
+# RESERVED USER ACCOUNTS
+#
+# One part of the MySQL installation process is data directory initializaiton.
+#
+# During data dir initialization, MySQL creates user accounts that should be considered reserved:
+#
+# 		) 'root'@'localhost': Used for administrative purposes. This account has all privileges and can perform any operation.
+#
+# 			Strictly speaking, this acc name is not reserved, in the sense that some installations rename the root account to something
+# 			else to avoid exposing a highly privleged account with a well-known name.
+#
+# 		) 'mysql.sys'@'localhost': Used as the DEFINER for sys schema objects. Use of the mysql.sys account avoids problems that occur
+# 			if a DBA renames or removes the root account.
+#
+# 			THis account is locked so that it cannot be used for client applications.
+#
+# 		) 'mysql.session'@'localhost': Used internally by plugins to access the server. This account is locked so that it cannot be used for client connections.
+#
+# 		) 'mysql.infoschema'@'localhost': Used as the DEFINER for INFORMATION_SCHEMA views. Use of the mysql.infoschema account avoids problems that occur if a DBA 
+# 			renames or removes the root account.
+#
+# 			This account is locked so that it cannot be used for client connections.
+#
+# SETTING ACCOUNT RESOURCE LIMITS
+#
+# One means of restricting client use of MySQL server resources is to set the global max_user_connections SYS_VAR to a > 0 value.
+#
+# This limits the number of simultaneous connections that can be made by any given account, but places no limits on what a client
+# can do once connected.
+#
+# In addition, setting max_user_connections does not enable management of individual accounts.
+#
+# Both types of control are of interest to MySQL admins.
+#
+# To address such concerns, MYSQL permits limits for individual accounts on use of these server resources:
+#
+# 		) The number of queries an account can issue per hour
+#
+# 		) The number of updates an account can issue per hour
+#
+# 		) The number of times an account can connect to the server per hour
+#
+# 		) The number of simultaneous connections to the server by an account
+#
+# Any statement that a client can issue counts against the query limit. Only statements that modify databases or tables count against the update limit.
+#
+# An "account" in this context corresponds to a row in the mysql.user table.
+#
+# That is, a connection is assessed against the User and Host values in the user table row that applies to the connection.
+#
+# For example, an account 'usera'@'%.example.com' corresponds to a row in the user table that has User and Host values of usera and
+# %.example.com to permit usera to connect from any host in teh example.com domain.
+#
+# In this case, the server applies resource limits in this row collectively to all connections by usera from any host in the 
+# example.com domain because all such connections use the same account.
+#
+# Before MySQL 5.0, an "account" was assessed against the actual host from which a user connects.
+# The older method of accounting may be selected by starting the server with the --old-style-user-limits option.
+#
+# In this case, if usera connects simultaneously from host1.example.com and host2.example.com, the server applies the
+# account resource limits separately to each connection.
+#
+# If usera connects again from host1.example.com, the server applies the limits for that connection together with the
+# existing connection from that host.
+#
+# To establish resource limits for an account at account-creation time, use the CREATE_USER statement.
+#
+# To modify the limits for an existing account, use ALTER_USER.
+#
+# Provide a WITH clause that names each resource to be limited.
+#
+# The default value for each limit is zero (limitless).
+#
+# For example, to create a new account that can access the customer database, but only in a limited fashion, issue these statements:
+#
+# 		CREATE USER 'francis'@'localhost' IDENTIFIED BY 'frank'
+# 				-> 	WITH MAX_QUERIES_PER_HOUR 20
+# 				-> 		  MAX_UPDATES_PER_HOUR 10
+# 				-> 		  MAX_CONNECTIONS_PER_HOUR 5
+# 				-> 		  MAX_USER_CONNECTIONS 2;
+#
+# The limit types need not all be named in the WITH clause, but those named can be present in any order.
+#
+# The value for each per-hour limit should be an integer representing a count per hour.
+#
+# For MAX_USER_CONNECTIONS, the limit is an integer representing the maximum number of simultaneous connections
+# by the account.
+#
+# If this limit is set to zero, the global max_user_connections SYS_VAR determines the number of simultaneous connections.
+# If max_user_connections is also 0, there is no limit for the account.
+#
+# To modify limits for an existing account, use an ALTER_USER statement.
+#
+# The following statement changes the query limit for francis to 100:
+#
+# 		ALTER USER 'francis'@'localhost' WITH MAX_QUERIES_PER_HOUR 100;
+#
+# The statement modifies only the limit value specified and leaves the account otehrwise unchagned.
+#
+# To remove a limit, set its value to zero. For example, to remove the limit on how many times per hour franis can connect,
+# set:
+#
+# ALTER USER 'francis'@'localhost' WITH MAX_CONNECTIONS_PER_HOUR 0;
+#
+# As mentioned previously, the simultaneous-connection limit for an account is determined from the MAX_USER_CONNECTIONS limit and the
+# max_user_connections SYS_VAR.
+#
+# Suppose that the global max_user_connections value is 10 and three accounts have individual resource limits specified as follows:
+#
+# 		ALTER USER 'user1'@'localhost' WITH MAX_USER_CONNECTIONS 0;
+# 		ALTER USER 'user2'@'localhost' WITH MAX_USER_CONNECTIONS 5;
+# 		ALTER USER 'user3'@'localhost' WITH MAX_USER_CONNECTIONS 20;
+#
+# user1 has a connection limit of 10 (the global max_user_connections value) because it has a MAX_USER_CONNECTIONS limit of 0 (i.e, falls back to Global).
+# user2 and user3 has 5 and 20, respectively. (Defined value > 0, higher precedence than Global).
+#
+# The server stores resource limits for an account in the user table row corresponding to the account.
+#
+# The max_questions, max_updates and max_connections columns store the per-hour limits, and the max_user_connections column stores
+# the MAX_USER_CONNECTIONS limit.
+#
+# Resource-use counting takes place when any account has a nonzero limit placed on its use of any of the resources.
+#
+# As the server runs, it counts the number of times each account uses resources.
+# If an account reaches its limit on number of connections within the last hour, the server
+# rejects further connections for the account until that hour is up.
+#
+# SImilarly, if the account reaches its limit on the number of queries or updates, the server
+# rejects further queries or updates until the hour is up.
+#
+# In all such cases, the server issues appropriate error messages.
+#
+# Resource counting occurs per account, not per client.
+#
+# For example, if your account has a query limit of 50, you cannot increase your limit to 100 by making two
+# simultaneous client connections to the serer.
+#
+# Queries issued on both connections are counted together.
+#
+# The current per-hour resource-use counts can be reset globally for all accounts, or individually for a given account:
+#
+# 		) To reset the current count to zero for all accounts, issue a FLUSH_USER_RESOURCES statement.
+#
+# 			The counts also can be reset by reloading the grant tables (for example, with a FLUSH_PRIVLEGES statement or a mysqladmin reload command)
+#
+# 		) The counts for an individual account can be reset to zero by setting any of its limits again. Specify a limit value equal to the value currently assigned ot the account.
+#
+# Per-hour counter resets do not affect the MAX_USER_CONNECTIONS limit.
+#
+# All counts begin at 0 when the server starts. Counts do not carry over through server restarts.
+#
+# For the MAX_USER_CONNECTIONS limit, an edge case can occur if the account currently has open the maximum number of connections
+# permitted to it:
+#
+# A disconnect followed quickly by a connect can result in an error (ER_TOO_MANY_USER_CONNECTIONS or ER_USER_LIMIT_REACHED) if the server has not fully processed
+# the disconnect by the time the connect occurs.
+#
+# When the server finishes disconnect processing, another connection will once more be permitted.
+#
+# ASSIGNING ACCOUNT PASSWORDS
+#
+# Required credentials for clients that connect to the MySQL server can include a password. This section describes how ot assign PWs for MySQL accs.
+#
+# MySQL stores credentials in the user table in the mysql system database.
+
+# Operations that assign or modify passwords are permitted only to users with the CREATE_USER privilege, or,
+# alternatively, privileges for the mysql databse (INSERT privilege to create new accounts, UPDATE privilege to modify existing accounts).
+#
+# If the read_only SYS_VAR is enabled, use of account-modification statements such as CREATE_USER or ALTER_USER additionally requires the
+# CONNECTION_ADMIN or SUPER privilege.
+#
+# The discussion here summarizes syntax only for the most common PW assignments. More covered later.
+#
+# MySQL uses plugins to perform client authentication; more later.
+#
+# IN password-assigning statements, the authentication plugin associated with an account performs any hashing required of a cleartext
+# PW specified.
+#
+# This enables MySQL to obfuscate PWs prior to storing them in the mysql.user table.
+#
+# For the statements described here, MySQL automatically hashes the PWs specified.
+#
+# there are also 	syntaxes for CREATE_USER and ALTER_USER that permit hashed values to be specified literally.
+# 
+# To assign a PW when you create a new account, use CREATE_USER and include an IDENTIFIED BY clause:
+#
+# 		CREATE USER 'jeffrey'@'localhost' IDENTIFIED BY 'password';
+#
+# CREATE_USER also supports syntax for specifying the account authentication plugin.
+#
+# To assign or change a password for an existing account, 	use the ALTER_USER statement with an IDENTIFIED BY clause:
+#
+# 		ALTER USER 'jeffrey'@'localhost' IDENTIFIED BY 'password';
+#
+# If you are not connected as an anon user, you can change your own PW without naming your own account literally:
+#
+# 		ALTER USER() IDENTIFIED BY 'password';
+#
+# To change an account PW from the cmd line, use the mysqladmin command:
+# 
+# 		mysqladmin -u <user_name> -h <host_name> password "password"
+#
+# The account for which this command sets the PW is the one with a mysql.user table row that matches <user_name> in the User column
+# and the client host from which you connect in teh Host column.
+#
+# WARNING:
+#
+# 		Setting a PW using mysqladmin should be considered insecure. 
+#
+# 		ON some systems, your PW becomes visible to System Status programs, such as ps that may be invoked by other users to display
+# 		cmd lines.
+#
+# 		MySQL clients tpyically overwrite the cmd line PW argument with 00's during their initialization sequence.
+#
+# 		However, there is still a brief interval during which the value is visible.
+#
+# 		Also, on some systems this overwriting strategy is ineffective and the PW remains visible to ps.
+# 		(SystemV Unix systems and perhaps otehrs are subject to this problem).
+#
+# IF you are using MySQL Replication, be aware that - currently - a a PW used by a replication slave as part of a CHANGE_MASTER_TO statement,
+# is effectively limited to 32 chars in len.
+#
+# If the pw is longer, any excess chars are truncated.
+#
+# This is not due to any limit imposed by the MySQL Server generally, but rather is an issue specific to MySQL Replication.
+# (Bug #43439)
+#
+# PASSWORD MANAGEMENT
+#
+#  
+#
+#
+# https://dev.mysql.com/doc/refman/8.0/en/password-management.html
