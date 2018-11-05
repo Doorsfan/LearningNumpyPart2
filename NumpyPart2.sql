@@ -31331,5 +31331,1777 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # SERVER HANDLING OF EXPIRED PWs
 #
+# MySQL provides password-expiration capability, which enables database administration to require that users reset their password.
+# Passwords can be expired manually, and on the basis of a policy for automatic expiration.
+#
+# For each connection that uses an account with an expired password, the server either disconnects the client or restricts the client
+# to "sandbox mode", in which the server permits to the client only those operations necessary to reset the expired password.
+#
+# Which action is taken by the server depends on both client and server settings, as discussed later.
+#
+# If the server disconnects the client, it returns an ER_MUST_CHANGE_PASSWORD_LOGIN error:
+#
+# 	mysql -u myuser -p
+# 	Password: ********
+# 	ERROR 1862 (HY000): Your password has expired. to log in you must change it using a client that supports expired PWs.
+#
+# If the server restricts the client to sandbox mode, these operations are permitted within the client session:
+#
+# 		) The client can reset the account password with ALTER_USER or SET_PASSWORD.
+# 			After the password has been reset, the server restores normal access for the session, as well as for subsequent connections that use the account.
+#
+# 			It is possible to "reset" a password by setting it to its current value.
+# 			As a matter of good policy, it is preferable to chose a different password.
+#
+# 			DBAs can enforce non-reuse by establishing an appropriate PW reuse policy.
+#
+# 		) The client can use SET statements.
+#
+# For any operation not permitted within the session, the server returns an ER_MUST_CHANGE_PASSWORD error:
+#
+# 		USE performance_schema;
+# 		ERROR 1820 (HY000): You must reset your PW using ALTER USER statement before executing this statement.
+#
+# 		SELECT 1;
+# 		ERROR 1820 (HY000): You must reset your password using ALTER USER statement before executing this statement.
+#
+# That is what normally happens for interactive invocations of the mysql client because by default such invocations are put in sandbox mode.
+# To clear the error and resume normal functioning, select a new PW.
+#
+# For noninteractive invocations of the mysql client (for example, in batch mode) - the server normally disconnects the client if the PW is expired.
+#
+# To permit noninteractive mysql invocations to stay connected so that the PW can be changed (using the statements just described) - add the --connect-expired-password
+# option to the mysql command.
+#
+# As mentioned previously, whether the server disconnects an expired-password client or restricts it to sandbox mode depends on a combination
+# of client and server settings.
+#
+# The following discussion describes the relevant settings and how they interact.
+#
+# the discussion applies only for accounts with expired PWs. If a client connects using a nonexpired PW, the server handles the client normally.
 # 
+# On the client side, a given client indicates whether it can handle sandbox mode for expired passwords.
+# For clients that use the C client library, there are two ways to do this:
+#
+# 		) Pass the MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS flag to mysql_options() prior to connecting:
+#
+# 			arg = 1;
+# 			result = mysql_options(mysql, MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS, &arg);
+#
+# 			The mysql client enables MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS if invoked interactively or the --connect-expired-password option is given.
+#
+# 		) Pass the CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS flag to mysql_real_connect() at connection time:
+#
+# 			mysql = mysql_real_connect(mysql, host, user, password, db, port, unix_socket, CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS);
+#
+# Other MySQL Connectors have their own conventions for indicating readiness to handle sandbox mode.
+#
+# See respective documentation for respective connector.
+#
+# On the server side, if a client indicates that it can handle expired passwords, the server puts it in sandbox mode.
+#
+# If a client does not indicate that it can handle expired passwords (or use an older version of the client library that cannot so indicate)
+# The server action depends on the value of the disconnect_on_expired_password SYS_VAR:
+#
+# 		) If disconnect_on_expired_password is enabled (the default), the server disconnects the client with an ER_MUST_CHANGE_PASSWORD_LOGIN error.
+#
+# 		) If disconnect_on_expired_password is disabled, the server puts the client in sandbox mode.
+#
+# PLUGGABLE AUTHENTICATION
+#
+# When a client connects to the MySQL server, the server uses the user name provided by the client and the client host to select
+# the appropriate account row from the mysql.user system table.
+#
+# The server then authenticates the client, determining from the account row which authentication plugin applies to the client:
+#
+# 		) If the server cannot find the plugin, an error occurs and the connection attempt is rejected.
+#
+# 		) Otherwise, the server invokes that plugin to authenticate the user, and the plugin returns a status to the server indicating
+# 			whether the user provided the correct password and is permitted to connect.
+#
+# Pluggable authentication enables these important capabilities:
+#
+# 		) Choice of authentication methods. Pluggable authentication makes it easy for DBAs to choose and change the authentication method
+# 			using for individual MySQL accounts.
+# 
+# 		) External authentication. Pluggable authentication makes it possible for clients to connect to the MySQL server with credentials appropriate
+# 			for authentication methods that store credentials elsewhere than in the mysql.user system table.
+#
+# 			For example, plugins can be created to use external authentication methods such as PAM, Windows login IDs, LDAP or Kerberos.
+#
+# 		) Proxy users: If a user is permitted to connect, an authentication plugin can return to the server a user name different from the name of the
+# 			connecting user, to indicate that the connecting user is a proxy for another user (the proxied user).
+#
+# 			While the connection lasts, the proxy user is treated, for purposes of access control, as having the privileges of the proxied user.
+#
+# 			In effect, one user impersonates another.
+#
+# 			NOTE:
+#
+# 				If you start the server with the --skip-grant-tables option, authentication plugins are not used even if loaded because the server performs
+# 				no client authentication and permits any client to connect.
+#
+# 				Because this is insecure, if the server is started with the --skip-grant-tables option, it enables --skip-networking automatically to prevent
+# 				remote connections.
+#
+# AVAILABLE AUTHENTICATION PLUGINS
+#
+# MySQL 8.0 provides these authentication plugins:
+#
+# 		) A plugin that performs native authentication. That is , authentication based on the PW hashing method in use from before the introduction of
+# 			pluggable authentication in MySQL.
+#
+# 			The mysql_native_password plugin implements authentication based on this native password hashing method.
+#
+# 		) Plugins that perform authentication using SHA-256 password hashing.
+#
+# 			This is stronger encryption than available with native authentication.
+#
+# 		) A client-side plugin that sends the password to the server without hasing or encryption. This plugin is used in conjunction with
+# 			server-side plugins that require access to the password exactly as provided by the client user.
+#
+# 		) A plugin thaht performs external authentication using PAM (Pluggable Authentication Modules), enabling MySQL Server to use PAM to authenticate
+# 			MySQL users..
+#
+# 			This plugin supports proxy users as well.
+#
+# 		) A plugin that performs external authentication on Windows, enabling MySQL server to use native Windows services to authenticate client connections.
+# 		 	USers who have logged in to Windows can connect from MySQL client programs to the server based on the information in their environment without
+# 			specifying an additional PW.
+#
+# 			This plugin supports proxy users as well.
+#
+# 		) Plugins that perform authentication using LDAP (Lightweight Directory Access Protocol) to authenticate MySQL users by accessing directory services
+# 			such as X.500
+#
+# 			These plugins support proxy users as well.
+#
+# 		) A plugin that prevents all client connections to any account that uses it. Use cases for this plugin include proxied accounts that should never permit
+# 			direct login but are accessed only  through proxy accounts and accounts that must be able to execute stored programs and views with elevated privileges
+# 			without exposing those privileges to ordinary users.
+#
+# 		) A plugin that authenticates clients that connect from the local host through the Unix socket file.
+#
+# 		) A test plugin that  checks account credentials and logs success or failure to the server error log. This plugin is intended for testing
+# 			and development purposes - as an example of how to write an authentication plugin, covered later.
+#
+# NOTE:
+#
+# 		For information about current restrictions on the use of pluggable authentication, include which connectors support which plugins.
+#
+# 		Third-party connector developers should read that section to determine the extent to which a connector can take advantage of pluggable
+# 		authentication capabilities and what steps to take to become more compliant.
+#
+# If you are interested in writing own authentication plugins, more later.
+#
+# AUTHENTICATION PLUGIN USAGE
+#
+# This section provides general instructions for installing and using authentication plugins.
+# For instructions specific to a given plugin, see the section later.
+#
+# In general, pluggable authentication uses a pair of corresponding plugins on the server and client sides, so you use a given authentication method
+# like this:
+#
+# 		) If necessary, install the plugin library or libraries containing the appropiriate plugins.
+#
+# 			On the server host, install the library containing the server-side plugin, so that the server can use it to authenticate
+# 			client connections.
+#
+# 			SImilarly, on each client host, install the library containing the client-side plugin for use by client programs.
+#
+# 			Authentication plugins that are built in need not be installed.
+#
+# 		) For each MySQL account that you create, specify the appropriate server-side plugin to use for authentication. If the account
+# 			is to use the default authentication plugin, the account-creation statement need not specify the plugin explicitly.
+#
+# 			The default_authentication_plugin SYS_VAR configures the default authentication plugin.
+#
+# 		) When a client connects, the server-side plugin tells the client program which client-side plugin to use for authentication.
+#
+# In the case that an account uses an authentication method that is the default for both the server and the client program, the server
+# need not communicate to the client which client-side plugin to use, and a round trip in client/server negotiation can be avoided.
+#
+# For standard MySQL clients such as mysql and mysqladmin, the --default-auth=plugin_name option can be specified on the command line
+# as a hint about which client-side plugin the program can expect to use, although the server will override this if the server-side plugin
+# associated with the user account requires a different client-side plugin.
+#
+# If the client program does not find the client-side plugin library file, specify a --plugin-dir=dir_name option to indicate the plugin
+# library directory location.
+#
+# AUTHENTICATION PLUGIN CLIENT/SERVER COMPATIBILITY
+#
+# Pluggable authentication enables flexibility in the choice of authentication method for MySQL accounts, but in some cases client connections
+# cannot be established due to authentication plugin incompatibility between the client and server..
+#
+# The general compatibility principle for a successful connection to a given account on a given server is that the client and 
+# server both must support the autheitcation method required by the account.
+#
+# Because authentication methods are implemented by authentication plugins, the client and server both must support the authentication
+# plugin required by the account.
+#
+# Authentication plugin incompatibilities can arise in various ways. Examples:
+#
+# 		) Connect using a MySQL 5.7 client from 5.7.22 or lower to a MysQL 8.0 server account that authenticates with caching_sha2_password.
+#
+# 			This fails because the 5.7 client does not recognize the plugin, which was introduced in 8.0
+#
+# 			(This issue was addressed in MySQL 5.7 as of 5.7.23, when caching_sha2_password client-side support was added to the MySQL client library
+# 			and client programs).
+#
+# 		) Connect using a MySQL 5.5 client to a MySQL 5.6 client server acc that authenticates with sha256_password.
+#
+# 			This fails because the 5.5. does not recognize the plugin, whic was introduced in MySQL 5.6
+#
+# 		) connect using a MySQL 5.7 client  from a community distrib to a MySQL 5.7 >Enterprise server account that authenticates using one of the
+# 			Enterprise-only LDAP authentication plugins. This fails because the community client does not have access to said plugin.
+#
+# In general, these compatibility issues do not arise when connections are made between a client and server from the same MySQL distrib.
+# When connections are made between a client and server from different MySQL series, issues can arise.
+#
+# these issues are inherent in the development process when MysQL introduces new authentication plugins or removes old ones.
+# To minimize the potentional for incompatibilities, regularly update the server, clients and connectors on a timely basis.
+#
+# AUTHENTICATION PLUGIN CONNECTOR-WRITING CONSIDERATIONS
+#
+# Various implementations of the MySQL client/server protocol exist. The libmysqlclient C API client library is one implementation.
+#
+# Some MySQL connectors (typically those not written in C) provide their own implementation. However, not all protocol implementations
+# handle plugin authentication in the same way.
+#
+# This section describes an authentication issue that protocl implementors should take into account.
+#
+# In the client/Server protocol, the server tells connecting clients which authentication plugin it considers the default.
+#
+# If the protocol implementation used by the client tries to load the default plugin and that plugin does not exist on the client side,
+# the load ops fails.
+#
+# this is an unnecessary failure if the default is not the plugin actually required by the account to which the client is trying to connect. 
+#
+# If a client/server protocol implementation does not have its own notion of default authentication plugin and always tried to load the default
+# plugin specified by the server, it will fail with an error if that plugin is not available.
+#
+# To avoid this problem, the protocol implementation used by the client should have its own default plugin and should use it as its first choice,
+# (or, alternatively, fall back to this default in case of failrue to load the default plugin specified by the server). Example:
+#
+# 		) In MysQL 5.7, libmysqlclient uses as its default choice either mysql_native_password or the plugin specified through the MYSQL_DEFAULT_AUTH option
+# 			for mysql_options()
+#
+# 		) When a 5.7 client tries to connect to a 8.0 server, the server specifies caching_sha2_password as its default authentication plugin, but the client
+# 		still sends credential details per either mysql_native_password or whatever is specified through MYSQL_DEFAULT_AUTH
+#
+# 		) The only time the client loads the plugin specified by the server is for a change-plugin request,, but in that case it can be any plugin
+# 			depending on the user account.
+#
+# 			IN this case, the client must try to load the plugin, and if that plugin is N/A - an error is not optional.
+#
+# PROXY USERS
+#
+# The MySQL server authenticates client connections using authentication plugins. The plugin that authenticates a given connection may request that
+# 	the connecting (external) user be treated as a different user for privilege-checking purposes.
+#
+# This enables the external user to be a proxy for the second user; that is, to assume the privileges of teh second user:
+#
+# 		) The external user is a "proxy user" (a user who can impersonate or become known as another user)
+#
+# 		) The second user is a "proxied user" (a user whose identity and privs can be assumed by a proxy user)
+#
+# This section describes how the proxy user capabilitiy works. For general information about auth plugins, see earlier.
+#
+# FOr more info about seeing how to write a plugin that supports authentication of proxy users, see later.
+#
+# NOTE:
+#
+# 		AS an alternative to the use of proxy users, role support may provide a suitable way to map users onto specific sets
+# 		of named privileges.
+#
+# REQUIREMENTS FOR PROXY USER SUPPORT
+#
+# For proxying to occur for a given authentication plugin, these conditions must be satisfied:
+#
+# 		) Proxying must be supported, either by the plugin itself, or by the MySQL server on behalf of the plugin.
+# 			In teh latter case, server support may need to be enabled explicitly.
+#
+# 		) The proxy user account must be set up to be authenticated by the plugin. Use the CREATE_USER statement to associate
+# 			an account with an authentication plugin, or ALTER_USER to change its plugin.
+#
+# 		) The proxied user account must be created and granted the privileges to be assumed by the proxy user. Use the CREATE_USER and GRANT statements for this.
+#
+# 		) The proxy user account must have the PROXY privilege for hte proxied account. Use the GRANT statemnet for this.
+#
+#		) For a client connecting to the proxy account to be treated as a proxy user, the authentication plugin must return a user name different
+#			from the client user name - to indicate the user name of the proxied account that defines the privileges to be assumed by the proxy user.
+#
+# 			Alternatively, for plugins that are provided proxy mapping by the server, the proxied user is determined from the PROXY privilege held by the proxy user.
+#
+# The proxy mechanism permits mapping only the client user name to the proxied user name.
+#
+# THere is no provision for mapping host names. When a connecting client matches a proxy account, the server attempts to find a match
+# for a proxied account using the user name returned by the authentication plugin and teh host name of the proxy account.
+#
+# Consider the following account definitions:
+#
+# 		-- create proxy account
+# 		CREATE USER 'employee_ext'@'localhost' IDENTIFIED WITH my_auth_plugin AS 'my_auth_string';
+#
+# 		--  create proxied account and grant its privileges
+# 		CREATE USER 'employee'@'localhost' IDENTIFIED BY 'employee_pass';
+# 		GRANT ALL ON employees.* TO 'employee'@'localhost';
+#
+# 		-- grant PROXY privilege to proxy account for proxied account
+# 		GRANT PROXY ON 'employee'@'localhost' TO 'employee_ext'@'localhost';
+#
+# When a client connects as employee_ext from the local host, MySQL uses the plugin named my_auth_plugin to perform
+# authentication.
+#
+# SUppose that my_auth_plugin returns a user name of employee to the server, based on the content of 'my_auth_string' and perhaps
+# by consulting some external authentication system.
+#
+# The name employee differs from employee_ext, so returning employee serves as a request to the server to treat the employee_ext client,
+# for purposes of privilege checking, as the employee local user.
+#
+# In this case, employee_ext is the proxy user and employee is the proxied user.
+#
+# The server verifies that proxy authentication for employee is possible for the employee_ext user by checking whether employee_ext
+# (the proxy user) has the PROXY privilege for employee (the proxied user).
+#
+# If this privilege has not been granted, an error occurs. Otherwise, employee_ext assumes the privileges of employee.
+# The server checks statements executed during the client session by employee_ext against the privileges granted to employee.
+#
+# IN this case, employee_ext can access tables in the employee database.
+#
+# WHen proxying occurs, the USER() and CURRENT_USER() functions can be used to see the difference between the connecting user 
+# (the proxy user) and the account whose privileges apply during the current session (the proxied user).
+#
+# For the example just described, those functions return these values:
+#
+# 		SELECT USER(), CURRENT_USER();
+# 		+------------------------+--------------------+
+# 		| USER() 					 | CURRENT_USER() 	 |
+# 		+------------------------+--------------------+
+# 		| employee_ext@localhost | employee@localhost |
+# 		+------------------------+--------------------+
+#
+# In the CREATE_USER statement that creates the proxy user account, the IDENTIFIED WITH clause that names the authenticatiojn
+# plugin is optionally followed by an AS 'auth_string' clause specifying a string that hte server passes to the plugin when the
+# user connects.
+#
+# If present, the string provides information that helps the plugin determine how to map the external client user name to a proxied user name.
+# It is up to each plugin whether it requires the AS clause.
+#
+# If so, the format of the authentication string depends on how the plugin intends to use it.
+# Consult the documentation for a given plugin for information about the authentication string values it accepts.
+#
+# GRANTING THE PROXY PRIVLEGE
+#
+# The PROXY privilege is needed to enable an external user to connect as and have the privileges of another user..
+# To grant this privilege, use the GRANT statement.
+#
+# For example:
+#
+# 		GRANT PROXY ON 'proxied_user' TO 'proxy_user';
+#
+# THe statement creates a row in the mysql.proxies_priv grant table.
+#
+# At connection time, proxy_user must represent a valid externally authenticated MysQL user, and proxied_user must represent
+# a valid locally authenticated user.
+#
+# Otheriwse, the connection attempt fails.
+#
+# The corresponding REVOKE syntax is:
+#
+# 		REVOKE PROXY ON 'proxied_user' FROM 'proxy_user';
+#
+# MySQL GRANT and REVOKE syntax extensions wokr as usual. For example:
+#
+# 		GRANT PROXY ON 'a' TO 'b', 'c', 'd';
+#		GRANT PROXY ON 'a' TO 'd' WITH GRANT OPTION;
+# 		GRANT PROXY ON 'a' TO ''@'';
+# 		REVOKE PROXY ON 'a' FROM 'b', 'c', 'd';
+#
+# The PROXY privilege can be granted in these cases:
+#
+# 		) By a user that has GRANT PROXY ... WITH GRANT OPTION for proxied_user.
+#
+# 		) By proxied_user for itself: The value of USER() must exactly match CURRENT_USER() and proxied_user, for both the user name and host name parts
+#			of the account name.
+#
+# The initial root account created during MySQL installation has the PROXY_..._WITH_GRANT_OPTION privileges for ''@'', that is, for all users and all hosts.
+# This enables root to set up proxy users, as well as to delegate to other accoutns the authority to set up proxy users.
+#
+# FOr example, root can do this:
+#
+# 		CREATE USER 'admin'@'localhost' IDENTIFIED BY 'test';
+# 		GRANT PROXY ON ''@'' TO 'admin'@'localhost' WITH GRANT OPTION;
+#
+# Those statements create an admin user that can manage all GRANT PROXY mappings. For example, admin can do this:
+#
+# 		GRANT PROXY ON sally TO joe;
+#
+# DEFAULT PROXY USERS
+#
+# To specify that some or all users should connect using a given authentication plugin, create a "blank" MySQL acc (''@''), associate it
+# with that plugin, and let hte plugin reutrn the real authenticated user name (if different from the blank user).
+#
+# For example, suppose that there exists a plugin named ldap_auth that implements LDAP authentication and maps connecting
+# users unto either a developer or manager account.
+#
+# To set up proxying of users unto these accounts, use the following statements:
+#
+# 		-- create default proxy account
+# 		CREATE USER ''@'' IDENTIFIED WITH ldap_auth AS '0=Oracle, OU=MySQL';
+#
+# 		-- create proxied accounts
+# 		CREATE USER 'developer'@'localhost' IDENTIFIED BY 'developer_pass';
+# 		CREATE USER 'manager'@'localhost' IDENTIFIED BY 'manager_pass';
+#
+# 		-- grant PROXY privileges to default proxy acount for proxied accounts
+# 		GRANT PROXY ON 'manager'@'localhost' TO ''@'';
+# 		GRANT PROXY ON 'developer'@'localhost' TO ''@'';
+#
+# Now assume that a client connects as follows:
+#
+# 		mysql --user=myuser --password
+# 		Enter PW: *****
+#
+# The server will not find myuser defined as a MySQL user. But because there is a blank user account (''@'') that matches
+# the client user name and host name, the server authenticates the client against that account.
+#
+# The server invokes the ldap_auth authentication plugin and passes myuser and myuser_pass to it as the user name and user PW.
+#
+# If the ldap_auth plugin finds in the LDAP directory that myuser_pass is not the  correct password for myuser, authentication
+# fails and the server rejects the connection.
+#
+# If the PW is correct and ldap_auth finds that myuser is a developer, it returns the user name developer to the MySQL server, rather than
+# myuser.
+#
+# Returning a user name different from the client user name of myuser signals to the server that it hsould treat myuser as a proxy.
+# THe server verifies that ''@'' can authenticate as developer (because that account has the PROXY privilege to do so), and accepts the connection.
+#
+# The session proceeds with myuser having the privileges of developer, the proxied user.
+#
+# (These privileges should be set up by the DBA using GRANT stratements, not shown).
+#
+# The USER() and CURRENT_USER() functions return these values:
+#
+# SELECT USER(), CURRENT_USER();
+# +---------------------+-----------------+
+# | USER() 			   | CURRENT_USER() 	   |
+# +------------------+--------------------+
+# | myuser@localhost | developer@localhost|
+# +------------------+--------------------+
+#
+# If the plugin instead finds in the LDAP directory that myuser is a manager, it returns manager as the user name and session proceeds
+# with myuser having the privileges of manager.
+#
+# SELECT USER(), CURRENT_USER();
+# +------------------+------------------+
+# | USER() 			   | CURRENT_USER() 	 |
+# +------------------+------------------+
+# | myuser@localhost | manager@localhost|
+# +------------------+------------------+
+#
+# For simplicity, external authentication cannot be multilevel: Neither the credentials for developer nor those for manager are taken into account
+# in the preceding example.
+#
+# However, they are still used if a client tries to connect and authenticate directly as the developer or manager account, which is why
+# those accounts should be assigned PWs.
+#
+# DEFAULT PROXY USER AND ANON USER CONFLICTS
+#
+# If you intend to create a default proxy user, check for other existing "match any user" accounts that take precedence over the default proxy
+# user because they can prevent that user from working as intended.
+#
+# In the preceding discussion, the default proxy user account has '' in the host part, which matches any host. 
+#
+# If oyu set up a default proxy user, take care to also check whether nonproxy accounts exist with the same user part and '%' in the host part,
+# because '%' is wildcard matching, but has precedence over '' because it's more specific.
+#
+#
+# Suppose that a MySQL installation includes these two accounts:
+#
+# 		-- create default proxy account
+# 		CREATE USER ''@'' IDENTIFIED WITH some_plugin AS 'some_auth_string';
+# 		-- create anonymous account
+# 		CREATE USER ''@'%' IDENTIFIED BY 'some_password';
+#
+# The first account (''@'') is intended as the default proxy user, used to authenticate connections for users who do not otherwise match a 
+# more-specific account.
+#
+# THe second account (''@'%') is a anonymous user acc, which might have bene created for example, to enable users without their own acc to connect anonymously.
+#
+# Both accounts have the same user part (''), which matches any user.
+# And each account has a host part that matches any host.
+#
+# Nevertheless, there is a prio in account matching for connection attempts because the matching rule sort a host of '%' ahead of ''.
+# For accoutns that do not match any more-specific account, the server attempts to authenticate them against ''@'%' (anon), rather than ''@'' (default proxy).
+#
+# The result is that the default proxy acc is never used.
+#
+# To avoid this, use one of the following strategies:
+#
+# 		) Remove the anon account so that it does not conflict with the default proxy user.
+# 			This might be a good idea anyway, if  you want to associate every connection with a named user.
+#
+# 		) Use a more-specific default proxy user that matches ahead of the anon user. For example, to permit only localhost proxy connections, use ''@'localhost':
+#
+# 			CREATE USER ''@'localhost' IDENTIFIED WITH some_plugin AS 'some_auth_string';
+#
+# 			In addition, modify any GRANT PROXY statements to name ''@'localhost' rather than ''@'' as the proxy user.
+#
+# 			This prevents anon users from localhost, as they will be funneled to the proxy instead.
+#
+# 		) Create multiple proxy users, one for local connections and one for "everything else" (remote).
+# 			This can be useful particularly when local users should have different privileges from remote users.
+#
+# 			Create the proxy users:
+#
+# 				-- create proxy user for local connections
+# 				CREATE USER ''@'localhost' IDENTIFIED WITH some_plugin AS 'some_auth_string';
+# 				-- create proxy user for remote connections
+# 				CREATE USER ''@'%' IDENTIFIED WITH some_plugin AS 'some_auth_string';
+#
+# 			Create the proxied users:
+#
+# 				-- create proxied user for local connections
+# 				CREATE USER 'developer'@'localhost' IDENTIFIED BY 'some_password';
+# 				-- create proxied user for remote connections
+# 				CREATE USER 'developer'@'%' IDENTIFIED BY 'some_password';
+#
+# 			Grant the proxy privilege to each proxy user for the corresponding proxied user:
+#
+# 				GRANT PROXY ON 'developer'@'localhost' TO ''@'localhost';
+# 				GRANT PROXY ON 'developer'@'%' TO ''@'%';
+#
+# 			Finally, grant appropiate privs to the local and remote proxied users (not shown)
+#
+# 			Assume that the some_plugin/'some_auth_string' combination causes some_plugin to map the client user name
+# 			to developer.
+#
+# 			Local connections match the ''@'localhost' proxy user, which maps to the 'developer'@'localhost' proxied user.
+# 			Remote connections match the ''@'%' proxy user, which maps to the 'developer'@'%' proxied user.
+#
+# SERVER SUPPORT FOR PROXY USER MAPPING
+#
+# 	Some authentication plugins implement proxy user mapping for themselves (for example, the PAM and Windows authentication plugins).
+# 	Other authentication plugins do not support proxy users by default.
+#
+# 	Of these, some can request that hte MySQL server itself map proxy users according to granted proxy privileges:
+#
+# 		mysql_native_password, sha256_password.
+#
+# 	If the check_proxy_users SYS_VAR is enabled, the server performs proxy user mapping for any authentication plugins that make such a request:
+#
+# 		) By default, check_proxy_users is disabled, so the server performs no proxy user mapping even for authentication plugins that request server support for proxy users.
+#
+# 		) If check_proxy_users is enabled, it may also be necessary to enable plugin-specific SYS_VAR to take advantage of server proxy user mapping support:
+#
+# 			) For the mysql_native_password plugin, enable mysql_native_password_proxy_users.
+#
+# 			) For the sha256_password plugin, enable sha256_password_proxy_users
+#
+# Proxy user mapping performed by the server is subject to these restrictions:
+#
+# 		) The server will not proxy to or from an anon user, even if the associated PROXY privilege is granted.
+#
+# 		) When a single account has been granted proxy privileges for more than one proxied account, server proxy user mapping is nondeterministic.
+# 			Therefore, granting to a single account proxy privileges for multiple proxy accounts is discouraged.
+#
+# PROXY USER SYSTEM VARIABLES
+#
+# Two system variables help trace the proxy login process:
+#
+# 		) proxy_user: THis value is NULL if proxying is not used. Otherwise, it indicates the proxy user account.
+# 							For example, if a client authenticates through the ''@'' proxy account, this variable is set as follows:
+#
+# 								SELECT @@proxy_user;
+# 								+---------------------------+
+# 								| @@proxy_user 				 |
+# 								+---------------------------+
+# 								| ''@'' 							 |
+# 								+---------------------------+
+#
+# 		) external_user: Sometimes the authentication plugin may use an external user to authenticate to the MySQL server.
+#
+# 								For example, when using Windows native authentication, a plugin that authenticates using the Windows API does not need the
+# 								login ID passed to it.
+# 
+# 								However, it still uses Windows user ID to authenticate.
+# 								The plugin may return this external user ID (or the first 512 UTF-8 bytes of it)
+# 								to the server using the external_user read-only session variable.
+#
+# 								If the plugin does not set this variable, its value is NULL.
+#
+# USER ACCOUNT LOCKING
+#
+# MySQL supports locking and unlocking user accounts using the ACCOUNT LOCK and ACCOUNT UNLOCK clause for the CREATE_USER and ALTER_USER statements:
+#
+# 		) When used with CREATE_USER, these clauses specify the initial locking state for a new account.
+#
+# 			IN the absence of either clause, the account is created in an unlocked state.
+#
+# 		) WHen used with ALTER_USER, these clauses specify the new locking state for an existing account.
+#
+# 			In the absence of either clause, the account locking state remains unchanged.
+#
+# Account locking state is recorded in the account_locked column of the mysql.user table.
+# The output from SHOW_CREATE_USER indicates whether an account is locked or unlocked.
+#
+# If a client attempts to connect to a locked account, the attempt fails. 
+#
+# THe server increments the Locked_connects status variable that indicates the number 
+# of attempts to connect to a locked account, returns an ER_ACCOUNT_HAS_BEEN_LOCKED error, and writes am essage to the error log:
+#
+# 		Access denied for user 'user_name'@'host_name'
+# 		Account is locked.
+#
+# Locking an account does not affect being able to connect using a proxy user that assumes the identity of the locked account.
+# It also does not affect the ability to execute stored programs or views that have a DEFINER clause naming the locked account.
+#
+# That is, teh ability to use a proxied account or stored programs or views is not affected by locking the account.
+#
+# The account-locking capability depends on the presence of the account_locked column in the mysql.user table.
+# For upgrades to MysQL 5.7 and later from older versions, run mysql_upgrade to ensure that this column exists.
+#
+# For nonupgraded installations that have no account_locked column, the server treats all accounts as unlocked,
+# and using the ACCOUNT LOCK or ACCOUNT UNLOCK clause produces an error.
+#
+# SQL-BASED MYSQL ACCOUNT ACTIVITY AUDITING
+#
+# Applications can use the following guidelines to perform SQL-based auditing that ites database activity
+# to MySQL accounts.
+#
+# MySQL accounts correspond to rows in the mysql.user table. WHen a client connects successfully, the server
+# authenticates the client to a particular row in this table.
+#
+# The User and Host column vlaues in this row uniquely identify the account and correspond to the 'user_name'@'host_name'
+# format in which account names are written in SQL statements.
+#
+# The account used to authenticate a client determines which privileges the client has.
+# Normally, the CURRENT_USER() function can be invoked to determien which account this is for the client user.
+#
+# Its value is constructed from the User and Host columns of the user table row for the account.
+#
+# However, there are circumstances under which the CURRENT_USER() value corresponds not to the client user but to
+# a different account.
+#
+# this occurs in contexts when privilege checking is not based on the client's account:
+#
+# 		) Stored routines (procedures and functions) defined with the SQL SECURITY DEFINER characteristic
+#
+# 		) Vies defined with the SQL SECURITY DEFINER characteristic
+#
+# 		) Triggers and events
+#
+# In those contexts, privlege checking is odne against the DEFINER account and CURRENT_USER() refers to that account
+# for the client who invoked the stored routine or view or who caused the trigger to activate.
+#
+# To determine the invoking user, you can call the USER() function, which returns a value indicating the  actual
+# user name provided by the client and the host from which the client connected.
+#
+# However, this value does not necessarily correspond directly to an account in the user table, because 	the USER()
+# value never contains wildcards, whereas account values (as returned by the CURRENT_USER()) may contain user name
+# and host name Wildcards.
+#
+# For example, a blank user name matches any user, so an account of ''@'localhost' enables clients to connect as anon users
+# from the local host with any user name.
+#
+# In this case, if a client as user1 from the local host, USER() and CURRENT_USER() return different values:
+#
+# SELECT USER(), CURRENT_USER();
+# +------------------------------------+
+# | USER() 				| CURRENT_USER() 	|
+# +------------------+-----------------+
+# | user1@localhost 	| @localhost 		|
+# +------------------+-----------------+
+#
+# The host name part of an account can contain wildcards, too.
+#
+# If the host name contains '%' or '_' pattern chars or uses netmask notation, the account can be used for
+# clients connecting from multiple hosts and the current_USER() value will not indicate which one.
+#
+# For example, the account 'user2'@'%.example.com' can be used by user2 to connect from any host inb the example.com domain.
+# If user2 connects from remote.example.com, USER() and CURRENT_USER() return sdifferent values:
+#
+# SELET USER(), CURRENT_USER();
+# +----------------------------+----------------------+
+# | USER() 							| CURRENT_USER() 			|
+# +---------------------------+-----------------------+
+# | user@remote.example.com 	| user2@%.example.com 	|
+# +---------------------------+-----------------------+
+# 
+# If an application must invoke USER() for user auditing (for example, if it does auditing from within triggers) but must also
+# be able to associate the USER() value with an account in the user table, it is necessary to avoid accounts that contain wildcards
+# in the User and Host column.
+#
+# Specifically, do not permit User to be empty (which creates an anonymous-user account), and do not permit pattern characters
+# or netmask notation in Host values.
+#
+# All accounts must have a nonempty User  value and literal Host value.
+#
+# WIth respect to the previous examples, the ''@'localhost' and 'user2'@'%.example.com' accounts should be changed not to use wildcards:
+#
+# RENAME USER ''@'localhost' TO 'user1'@'localhost';
+# RENAME USER 'user2'@'%.example.com' TO 'user2'@'remote.example.com';
+#
+# If user2 must be able to ocnnect from several hosts in the example.com domain, there should be a separate account for each host.
+#
+# To extract the user name or host name part from a CURRENT_USER() or USER() value, use the SUBSTRING_INDEX() function:
+#
+# SELECT SUBSTRING_INDEX(CURRENT_USER(), '@',1);
+# +-------------------------------------------------+
+# | SUBSTRING_INDEX(CURRENT_USER(), '@', 1) 			 |
+# +-------------------------------------------------+
+# | user1 														 |
+# +-------------------------------------------------+
+#
+# SELECT SUBSTRING_INDEX(CURRENT_USER(), '@', -1);
+# +-------------------------------------------------+
+# | SUBSTRING_INDEX(CURRENT_USER(), '@', -1) 		 |
+# +-------------------------------------------------+
+# | localhost 													 |
+# +-------------------------------------------------+
+#
+# USING ENCRYPTED CONNECTIONS
+#
+# With an unencrypted connection between the MySQL client and the server, someone with access to the network could watch
+# all your traffic and inspect the data being sent or received between client and server.
+#
+# When you msut move information over a network in a secure fahsion, an unencrypted connection is unacceptable.
+# To make ay kind of data unreadable, use encryption.
+#
+# Encryption algorithms must include security elements to resist many kinds of known attacks such as changing the order of encrypted messages
+# or replaying data twice.
+#
+# MySQL supports encrypted connections between clients and the server using the TLS (Transport Layer Security) protocol.
+#
+# TLS is sometimes referred to as SSL (Secure SOcket Layer), but MySQL doesn ot actually use the SSL protocol for encrypted connections
+# because it's encryption is weak.
+#
+# TLS uses encryption algorithms to ensure htat data received over a public network can be trusted.
+#
+# It has mechanisms to detect data change, loss or replay. TLS also incorporates algorithms that provide identity verification
+# using the X.509 standard
+#
+# X.509 makes it possible to identify someone on the Internet. IN basic terms, there should be some entity called a "Certificate Authority" (or CA) that assigns
+# electronic certificates to anyone who needs them.
+#
+# Certificates rely on asymmetric encryption algorithms that have two encryption keys (public and secret).
+# A ceritifcate owner  can present the certificate to naother party as proof of identity.
+#
+# A certificate consists of its owner's public key. Any data encrypted using this public key can be decrypeted using only the corresponding
+# secret key, which is held by the owner of the cert.
+#
+# MySQL can be compiled for encrypted-connection support using OPenSSL or wolfSSL. More on that later.
+#
+# By default, MySQL propgrams attempts to connect using encryption if the server supports encrypted connections, falling back to
+# an unencrypted connection if an encrypted connection cannot be established.
+#
+# MySQL performs encryption on a per-connection basis, and use of encryption for a given user can be optional or mandatory.
+# This enables you to choose an encrypted or unencrypted connection according to the reuqirements of individual applications.
+#
+# For more info on how to requrie users to use encrypted connections, see the discussion of the REQUIRE clause of the CREATE_USER statement
+# (more on that later).
+#
+# See also the desc. of the require_secure_transport System variable.
+#
+# ENcrypted connections can be used between master and slave replication servers, more on that later.
+#
+# For more info about using encrypted connections from the MySQL C API, more on that later.
+#
+# It is also possible to connect using encryption from within an SSH connection to the MySQL server host.
+#
+# CONFIGURING MYSQL TO USE ENCRYPTED CONNECTIONS
+#
+# Several options are avilable to indicate whether to use encrypted connections, and to specify the appropriate certificate and key files.
+# This section provides general guideance about configuring the server and clients for encrypted connections:#
+# 
+# SERVER-SIDE CONFIGURATION FOR ENCRYPTED CONNECTIONS
+#
+# On the server side, the --ssl option specifies that the server permits but does not require encrypted connections.
+# This option is enabled by default.
+#
+# These options on the server side identify the certificate and key files the server uses when permitting clients to establish
+# encrypted connections:
+#
+# 		) --ssl-ca: The path name to the Ceritifcate Authority (CA) cert file (--ssl-capath is similar but specifies the path name of a directory of CA certificate files)
+#
+# 		) --ssl-cert: tHe path name of hte server public key certificate file. This can be sent to the client nad authenticated against the CA ceritifcate that it has.
+#
+# 		) --ssl-key: The path name of the server private key file.
+#
+# For example to enable the server for encrypted connections, start it with these lines in the my.cnf file, changing the ifle names as necessary:
+#
+# 		[mysqld]
+# 		ssl-ca=ca.pem
+# 		ssl-cert=server-cert.pem
+# 		ssl-key=server-key.pem
+#
+# Each option names a file in PEM format. If oyu need to create the reuqired certificate and key files, see more later.
+#
+# Alternatively, if you have a MySQL source distrib, you can test your setup using the demonstration certificate and key files in tis
+# mysql-test/std_data dir.
+#
+# MySQL servers compiled using OpenSSL can generate missing certificate and key files automatically at startup.
+#
+# THe server performs certificate and key file autodiscovery. If --ssl is enabled (possibly along with --ssl-cipher) and other --ssl-xxx options are not given
+# to configure encrypted connections explicitly, the server attemtps to enable support for encrypted connections automatically at startup:
+#
+# 		) If the server discovers valid certificate and key files named ca.pem, server-cert.pem, and server-key.pem in the data dir, it enables support for
+# 			encrypted connections by clients. (The files need not have been generated automatically, what matters is that they have the indicated names and are valid).
+#
+# 		) If the server does not find valid certificate and key files in the data directory, it continues executing but without support for encrypted connections.
+#
+# If the server automatically enables support for encrypted connections, it writes a note to the error log.
+# If the server discovers that hte CA certificate is self-signed, it writes a 	warning to hte error log .(Teh certificate if self-signed if created automatically by the server,
+# or manually using mysql_ssl_rsa_setup).
+#
+# The server uses the names of any automatically discovered and used certificate and key files to set the corresponding system variable (ssl_ca, ssl_cert, ssl_key)
+#
+# For further control over whether clients must connect using encryption, use the require_secure_transport system variable.
+# To specify permitted encrypted protocols explicitly, use the tls_verison system variable.
+#
+# CLIENT-SIDE CONFIGURATION FOR ENCRYPTED CONNECTIONS
+#
+# By default, MySQL client programs attempt to establish an encrypted connection if the server supports encrypted connections, with further control
+# available through the -ssl-mode option:
+#
+# 		) In the absence of an --ssl-mode option, clients attempt to connect using encryption, falling back to an unencrypted connection if an encrypted
+# 			connection cannot be established.
+#
+# 			THis is also the behavior with an explicit --ssl-mode=PREFFERED option.
+#
+# 		) With --ssl-mode=REQUIRED, clients requrie an encrypted connection and fail ifo ne cannto be stablished.
+#
+# 		) with --ssl-mode=DISABLED, client use an unencrypted connection.
+#
+# 		) With --ssl-mode=VERIFY_CA or --ssl-mode=VERIFY_IDENTITY, clients require an encrypted connection, and also perform verification
+# 			against the server CA certificate and (with VERIFY_IDENTITY) against the server host name in its certificate.
+#
+# The following options on the client side identify the certificate and key files clients use when establishing encrypted connections to the server.
+# They are similar to the options used on the server side, but --ssl-cert and --ssl-key identify the client public and privat key:
+#
+# 		) --ssl-ca: The path name of the Certificate Authority (CA) certificate file. This option, if used, must specify the same ceritifcate used by the server.
+# 						(the --ssl-capath is similar but specifies the path name of a  DIrectory of CA certificate files).
+#
+# 		) --ssl-cert: The path name of the client public key certificate file.
+#
+# 		) --ssl-key: THe path name of the client private key file.
+#
+# For additional security relative to that provided bny the default encryption, clients can supply a CA certificate matching the one used by the
+# server and enable host name identity verification.
+#
+# IN this way, teh servr and client place their trust in the same CA certificate and client verifies that the host to which it connected
+# is the one intended:
+#
+# 		) To specify the CA certificate, use --ssl-ca (or --ssl-capath), and specify --ssl-mode=VERIFY_CA
+#
+# 		) To enable host name identity verification as well, use --ssl-mode=VERIFY_IDENTITY rather than --ssl-mode=VERIFY_CA
+#
+# 		NOTE:
+#
+# 			Host name identity verification does not work with self-signed certificates created automatically by the server, or manually using 
+# 			mysql_ssl_rsa_setup.
+#
+# 			Such self-signed certificates do not contain the server name as the Common Name value.
+#
+# Depending on the encryption requirements of the MySQL account used by a client, the client may be required to specify certain
+# options to connect using encryption to a MYSQL server that supports encrypted connections.
+#
+# Suppose that you weant to connect using an account that has no special encryption requirements or was created using a CREATE_USER
+# statement that includes the REQUIRE SSL option.
+#
+# Assuming that the server supports encrypted connections, a client can connect using encryption with no --ssl-mode option or
+# with an explicit --ssl-mode=PREFFERED option:
+#
+# 		mysql
+#
+# OR
+#
+# 		mysql --ssl-mode=PREFERRED
+#
+# For an account with REQUIRE SSL, the connection attempt fails if an encrypted connection cannot be established.
+#
+# FOr an account with no special encryption requirements, the attempt falls back to an unencrypted connection if an 
+# encrypted connection cannot be established.
+#
+# To prevent fallback and fail if an encrypted connection cannot be obtained, connect like this:
+#
+# 		mysql --ssl-mode=REQUIRED
+#
+# If the account has no more stringent security requirements, other options must be specified to establish an encrypted connection:
+#
+# 		) For accounts with REQUIRE X509, clients must specify at least --ssl-cert and --ssl-key. In addition, --ssl-ca (or --ssl-capath)
+# 			is recommended so that hte public certificate provided by the server can be verified.
+#
+# 			For example:
+#
+# 			mysql --ssl-ca=ca.pem \
+# 					--ssl-cert=client-cert.pem \
+# 					--ssl-key=client-key.pem 
+#
+# 		) For accounts that have REQUIRE ISSUER or REQUIRE SUBJECT, the option requirements are the same as for REQUIRE X509, but the certificate
+# 			must match the issue or subject, respectively, specified in the account definition.
+#
+# FOr additional informaton about the REQUIRE clause, more later.
+#
+# To prevent use of encryption and override other -ssl-xxx options, invoke the client  program with --ssl-mode=DISABLED
+#
+# 		mysql --ssl-mode=DISABLED
+#
+# To specify 	permitted encryption protocls explicitly, use the --tls-version option, more later.
+#
+# To determine whether the current connection with the server user encryption, check the vlaue of the Ssl_cipher status variable.
+# If the value is empty, the connection is not encrypted.
+#
+# Otherwise, the connection is encrypted and the value indicates the encryption ciher. For example:
+#
+# 	SHOW SESSION STATUS LIKE 'Ssl_cipher';
+# +---------------------------------------------+
+# | Variable_name  | Value 							|
+# +----------------+----------------------------+
+# | Ssl_cipher 	 | DHE-RSA-AES128-GCM-SHA256  |
+# +----------------+----------------------------+
+#
+# For the mysql client, an alternative is to use the STATUS or \s command and check the SSL line:
+#
+# 		\s
+# 		... 
+# 		SSL: Not in use
+# 		... 
+#
+# OR
+#
+# \s
+# ...
+# SSL: Cipher in use is DHE-RSA-AES128-GCM-SHA256
+# ...
+# 
+# COMMAND OPTIONS FOR ENCRYPTED CONNECTIONS
+#
+# This section describes options that specify whether to use encrypted connections, the names of certificate and key files,
+# and other params related to encrypted-connection support.
+#
+# These options can be given on the command line or in an option file.
+#
+# For examples of suggested use and how to check whether a connection is encrypted, more later.
+#
+# For info about using encrypted connections from the MySQL C API, more later.
+#
+# ENCRYPTED-CONNECTION OPTION SUMMARY
+#
+# 		FORMAT 					DESCRIPTION 												INTRODUCED
+#
+# --skip-ssl 		Do not use encrypted connection
+#
+# --ssl 				Enable encrypted connection
+#
+# --ssl-ca 			File that contains list of trusted SSL Certificate Authorities
+#
+# --ssl-capath 	Directory that contains trusted SSL Certificate Authority certificate files
+#
+# --ssl-crl 		File that contains certificate revocation lists
+#
+# --ssl-crlpath 	Directory that contains certificate revocation list files
+#
+# --ssl-fips-mode Whether to enable FIPS mode on the client side 				8.0.11
+#
+# --ssl-key 		File that contains X.509 key
+#
+# --ssl-mode 		Security state of connection to server
+#
+# --tls-version 	Protocols permitted for encrypted connections
+#
+# 	) --ssl
+#
+# 			NOTE: The client side --ssl option is removed in MySQL 8.0. For Cient programs, use --ssl-mode instead.
+#
+# 		On the server side, the --ssl option specifies that hte server permits but does not require encrypted connections.
+#
+# 		The option is enabled on the server side by default. --ssl is implied by other --ssl-xxx options, as indicated in the desc for those options.
+#
+# 		The --ssl option in negated form indicates that encryption should not be used and overrides other --ssl-xxx options.
+# 		SPecify the options as --ssl=0 or a synonym (--skip-ssl, --disable-ssl)
+#
+# 		TO specify additional parameters for encrypted connections, use at least --ssl-cert and --ssl-key on the server side and
+# 		--ssl-ca on the client side.
+#
+# 		Read earlier sections for that. That section also describes server capabilities for certificate and key file autogeneration and autodiscovery.
+#
+# ) --ssl-ca=<file_name>
+#
+# 		The path name of the Certificate Authority (CA) certificate file in PEM format. On the server side, this option implies --ssl.
+#
+# 		To tell the client not to authenticate the server certificate when establishing an encrypted connection to the server,
+# 		specify neither --ssl-ca nor --ssl-capath.
+#
+# 		THe server still verifies the client according to any applicable requirements established for the client account, and sitll
+# 		uses any --ssl-ca or --ssl-capath option values specified on the server side.
+#
+# ) --ssl-capath=dir_name
+#
+ #		THe path name of hte directory that contains trusted SSL ceritifcate authority (CA) certificate files in PEM format: On the server side,
+ # 		this option implies --ssl.
+ #
+ # 	To tell the client not to authenticate the server certificate when establishing an encrypted connection to the server,
+ # 	specify neither --ssl-ca nor --ssl-capath.
+ #
+ # 	The server sitll verifies the client according to any applicable requirements established for the client account,
+ # 	and it sitll uses any --ssl-ca or --ssl-capath option values specified on the server side.
+ #
+ # 	MySQL distribs compiled using OpenSSL support the --ssl-capath option (see later).
+ #
+ # 	Distribs compiled using wolfSSL do not because wolfSSL does not look in any directory and do not followed chained certificate trees.
+ # 	wolfSSL requries that all components of the CA certificate tree be contained within a single CA certificate tree and that each
+ # 	certificate in the file has a unique SubjectName vlaue.
+ #
+ # 	To work around this wolfSSL limitation, concatenate the individual certificate files comprising the certificate tree into
+ # 	a new file and specify that file as the  value of the --ssl-ca option.
+ #
+ # ) --ssl-cert=file_name
+ #
+ # 	The path name of the SSL public key certificate file in PEM format. 
+ #
+# 		ON the client side, this is the client public key. On teh server side, this is the server pubic key certificate.
+#
+# 		On the server side, this option implies --ssl.
+#
+# 	--ssl-cipher=cipher_list
+#
+# 		The list of permitted ciphers for connection encryption. If no cipher in the list is supported, encrypted connections will not work.
+#
+# 		ON the server side, this option implies --ssl.
+#
+# 		For greatest portability, cipher_list should be a list of one or more cipher names, separated by colons.
+# 		Example:
+#
+# 			--ssl-cipher=AES128-SHA
+# 			--ssl-cipher=DHE-RSA-AES128-GCM-SHA256:AES128-SHA
+#
+# 		OpenSSL supports a more flexible syntax for specifying ciphers, as described in the OpenSSL documentation.
+#
+# 		wolfSSL does not, so attempts to use that extended syntax fail for a MySQL distrib compiled using wolfSSL.
+#
+# 		For info about which encryption ciphers MySQL supports, more on that later.
+#
+# ) --ssl-crl=file_name
+#
+# 		The path name of the file certificate revocation lists in PEM format.
+#
+# 		On the server side, this option implies --ssl.
+#
+# 		If neither --ssl-crl nor --ssl-crlpath  is given, no CRL checks are performed, even if the CA path contains certificate revocation lists.
+#
+# 		MySQL distribs compiled using OpenSSL support the --ssl-crl option.
+# 		Distribs compiled using wolfSSL do not because revocation lists do not work with wolfSSL.
+#
+# )--ssl-crlpath=dir_name
+#
+# 		The path name of the directory that contains certificate revocation list files in PEM format.
+#
+# 		On the server side, this option implies --ssl.
+#
+# 		If neither --ssl-crl nor --ssl-crlpath is given, no CRL checks are performed, even if the CA path contains certificate revocation lists.
+#
+# 		MySQL distribs compiled using OpenSSL suport the --ssl-crlpath.
+# 		distribs compiled using wolfSSL do not because revocation lists do not work with wolfSSL.
+#
+# ) --ssl-fips-mode={OFF|ON|STRICT}
+#
+# 		Controls whether to enable FIPS mode on the client side. 
+#
+# 		The --ssl-fips-mode option differs from other --ssl-xxx options in that it is not used
+# 		to establish encrypted connections, but rahter to affect which cryptographic operations are permitted.
+#
+# 		These --ssl-fips-mode vlaues are permitted:
+##
+# 			) OFF -> disalbes FIPS mode.
+#
+# 			) ON -> Enable FIPS mode.
+#
+# 			) STRICT -> Enable "strict" FIPS mode.
+#
+# 				NOTE:
+#
+# 					If the OpenSSL FIPS Object Module is not available, the only permitted value for --ssl-fips-mode is OFF.
+# 					In this case, setting --ssl-fips-mode to ON or STRICT causes the client to produce a warning at startup and to operate in non-FIPS mode.
+#
+# )  --ssl-key=file_name
+#
+# 		The path name of hte SSL private key in PEM format. On the client side, this is the client private key.
+# 		ON the server side, this is the server private key.
+#
+# 		On the server side, this option implies --ssl.
+#
+# 		If the key file is protected by a passphrase, the program prompts the user for the passphrase.
+# 		The password must be given interactively; it cannot be stored in a file.
+#
+# 		If hte passphrase is incorrect, the program continues as if it could not read the key.
+#
+# 		For better security - use a certificate with an RSA key size of at least 2048 bits.
+#
+# ) --ssl-mode=mode
+#
+# 		This option is available only for client programs, not hte server.
+#
+# 		It specifies the security state of the connection to the server.
+# 		These option values are permitted:
+#
+# 			) PREFERRED - Establishes an encrypted connection if the server supports encrypted connections, falling back to an unencrypted connection
+# 								if an encrypted connection cannot be established.
+#
+# 								This is the default if --ssl-mode is not specified.#
+# 
+# 								Encrypted connections over Unix sockets are disabled by default, so PREFERRED does not establish an encrypted connection.
+# 								To enforce encryption on Unix socket connections, use REQUIRED or above.
+#
+# 			) REQUIRED - Establish an encrypted connection if the server supports encrypted connections. The connection attempts fail if an encrypted
+# 								connection cannot be established.
+#
+# 			) VERIFY_CA: Like REQUIRED, but additionally verify the server Certificate Authority (CA) certificate againstr the configured CA certificates.
+# 							The connection attempt fails if no valid matching CA certificates are found.
+#
+# 			) VERIFY_IDENTITY: Like VERIFY_CA, but additionally perform host name identity verification by checking the host name the client uses
+# 										for connecting to the server against the identity in the certificate that hte server sends to the client:
+#
+# 										) As of MySQL 8.0.12, if the client uses OpenSSL 1.0.2 or higher, the client checks whether the host name that it uses
+# 											for connecting matches either the Subject Alternative Name value or the Common Name value in the server certificate.
+#
+# 										) Otherwise, the client checks whether the host name that it uses for connecting matches the Common Name value in the server certificate.
+#
+# 									The connection fails if there is a mismatch. For encrypted connections, this option helps prevent man-in-the-middle attacks.
+#
+# 										NOTE:
+#
+# 											Host name identity verification does not work with self-signed certificates created automatically by the server,
+#												or manually using mysql_ssl_rsa_setup.
+#
+# 											Such self-signed certificates do not contain the server name as the Common Name Value.
+#
+# 			) DISABLED: Establish an unencrypted connection.
+#
+# 			The --ssl-mode option interacts with CA certificate options as follows:
+#
+# 				) If --ssl-mode is not explicitly set otherwise, use of --ssl-ca or --ssl-capath implies --ssl-mode=VERIFY_CA
+#
+# 				) For --ssl-mode values of VERIFY_CA or VERIFY_IDENTITY, --ssl-ca or --ssl-capath is also required, to supply a CA certificate
+#					that matches the one used by the server.
+#
+# 				) An explicit --ssl-mode option with a value other than VERIFY_CA or VERIFY_IDENTITY, together with an explicit --ssl-ca or --ssl-capath option,
+# 					produces a warning that no verification of the server certificate will be done, despite a CA certificate option being specified.
+#
+# To require use of encrypted connections by a MySQL account, use CREATE_USER to create the account with a REQUIRE SSL clause, or use ALTER_USER
+# for an existing account to add a REQUIRE SSL clause.
+#
+# Connection attempts by a client that uses the account will be rejected unless MySQL supports encrypted connections and an encrypted connection
+# can be established.
+#
+# The REQUIRE clause permits other encryption-related options, which can be used to enforce security requirements stricter than REQUIRE SSL.
+#
+# For additional details about which command options may or must be specified by clients that connect using accounts configured using the various
+# REQUIRE options, see more later on CREATE USER syntax.
+#
+# ) --tls-version=protocol_list
+#
+# 	For client programs, the protocols permitted by the client for encrypted connections.
+#
+# 	The value is a comma-separated list containing one or more protocol names.
+#
+#  For example:
+#
+# 		mysql --tls-version="TLSv1.1,TLSv1.2"
+#
+# For protocols that can be named for this option depend on the SSL library used to compile MySQL.
+#
+# On the server side, use the tls_version system variable instead.
+#
+# CREATING SSL AND RSA CERTIFICATES AND KEYS
+#
+# The following discussion describes how ot create the files required for SSL and RSA support in MysQL.
+# File creation can be performed using facilities provided by MySQL itself, or by invoking the openssl command directly.
+#
+# SSL certificate and key files enable MySQL to support sencrypted connections using SSL.
+#
+# RSA key files enable MySQL to support secure password exchange over unencrypted connections for accounts authenticated 
+# by the sha256_password or caching_sha2_password plugin.
+#
+# CREATING SSL AND RSA CERTIFICATES AND KEYS USING MYSQL
+#
+# MySQL provides these ways to create the SSL certificate and key files and RSA key-pair files required to support
+# encrypted connections using SSL and secure password exchange over RSA over unenecrypted connections,, if those files are missing:
+#
+# 		) The server can autogenerate these files at startup, for MySQL distribs compiled using OpenSSL
+#
+# 		) Users can invoke the mysql_ssl_rsa_setup utility manually.
+#
+# 		) For some distribution types, such as RPM packages, mysql_ssl_rsa_setup, invocation occurs during data directory initialization.
+# 			In this case, the MySQL distrib need not have been compiled using OpenSSL as long as the openssl command is available.
+#
+# 			IMPORTANT:
+#
+# 				Server autogeneration and mysql_ssl_rsa_setup help lower the barrier to using SSL by making it easier to generate
+# 				the required files.
+#
+# 				However, certificates generated by these methods are self-signed, which may not be very secure.
+#
+# 				After you gain experience using such files, consider obtaining certificate/key material from a registered
+# 				certificate authority.
+#
+# AUTOMATIC SSL AND RSA FILE GENERATION
+#
+# For MySQL distributions compiled using OpenSSL, the MySQL server has the capability of automatically generating missing SSL
+# and RSA files at startup.
+#
+# The auto_generate_certs, sha256_password_auto_generate_rsa_keys, and caching_sha2_password_auto_generate_rsa_keys System Variable
+# contain automatic generation of these files.
+#
+# Both variables are enabled by default.
+#
+# They can be enabled at startup and inspected but not set at runtime.
+#
+# At startup, the server automatically generates server-side and client-side SSL certificate and key files in the data direcotry if the
+# auto_generate_certs System Variable is enabled, no SSL options other than --ssl are specified, and the server-side SSL files
+# are missing from the data directory.
+#
+# These files enable encrypted client connections using SSL.
+#
+# 	1. The server checks the data directory for SSL files with hte following names:
+#
+# 			ca.pem
+# 			server-cert.pem
+# 			server-key.pem
+#
+# 	2. If any of those files are present, the server creates no SSL files.
+# 		Otherwise, it creates them, plus some additional files:
+#
+# 			ca.pem 				Self-signed CA certificate
+# 			ca-key.pem 			CA private key
+#
+# 			server-cert.pem 	Server certificate
+# 			server-key.pem 	Server private key
+#
+# 			client-cert.pem 	Client certificate
+# 			client-key.pem 	Client private key	
+#
+# 	3. If the server autogenerates SSL files, it uses the names of the ca.pem, server-cert.pem and server-key.pem files to set
+# 		the corresponding system variables (ssl_ca, ssl_cert, ssl_key)
+#
+# At startup, the server automatically generates RSA private/public key-pair files in the data directory if all of these conditions are true:
+#
+# The sha256_password_auto_generate_rsa_keys or caching_sha2_password_auto_generate_rsa_keys system variable is enabled;
+#
+# No RSA options are specified;
+#
+# The RSA files are missing from the data directory.
+#
+# These key-pair files enable secure password exchange using RSA over unencrypted connections for accounts authenticated
+# by the sha256_password or caching_sha2_password plugin.
+#
+# 1. The server checks the data directory for RSA files with the following names:
+#
+# 			private_key.pem 		Private member of private/public key pair
+# 			public_key.pem 		Public member of private/public key pair
+#
+# 2. If any of these files are present, the server creates no RSA files. Otherwise, it creates them.
+#
+# 3. If the server autogenerates the RSA files, it uses their names to set the corresponding system variables
+# 		(sha256_password_private_key_path and sha256_password_public_key_path, caching_sha2_password_private_key_path and
+# 		caching_sha2_password_public_key_path)
+#
+# MANUAL SSL AND RSA FILE GENERATION USING MYSQL_SSL_RSA_SETUP
+#
+# MySQL distribs include a mysql_ssl_rsa_setup utility that can be invoked manually to generate SSL and RSA files.
+#
+# This utility is included with all MySQL distributions (whether compiled using OpenSSL or wolfSSL), but it does reuqire
+# that the openssl command be available.
+#
+# SSL AND RSA FILE CHARACHTERISTICS
+#
+# SSL and RSA files created automatically by the server or by invoking mysql_ssl_rsa_setup have these characteristics:
+#
+# 		) SSL and RSA keys have the size of 2048 bits.
+#
+# 		) The SSL CA certificate is self signed.
+#
+# 		) The SSL server and client certificates are signed with the CA certificate and key, using the sha256WithRSAEncryption signature algorithm.
+#
+# 		) SSL certs use these common names (CN) values, with the appropriate certificate type (CA, Server,Client):
+#
+# 			ca.pem: 				MySQL_Server_suffix_Auto_Generated_CA_Certificate
+# 			server-cert.pm: 	MySQL_Server_suffix_Auto_Generated_Server_Certificate
+# 			client-cert.pm: 	MySQL_Server_suffix_Auto_Generated_Client_Certificate
+#
+# 			The suffix value is based on the MySQL version number.
+#
+# 			For files generated by mysql_ssl_rsa_setup, the suffix can be specified explicitly using the --suffix option.
+#
+# 			For files generated by the server, if the resulting CN values exceed 64 characters, the _suffix portion of the name is omitted.
+#
+# 		) SSL files have blank values for Country (C), State of Province (ST), Organization (O), Organization Unit Name (OU) and email address.
+#
+# 		) SSL files created by the server or by mysql_ssl_rsa_setup are valid for ten years from the time of generation.
+#
+# 		) RSA files do not expire.
+#
+# 		) SSL files have different serial numbers for each certificate/key pair (1 for CA, 2 for Server, 3 for Client)
+#
+# 		) Files created automatically by the server are owned by the account that runs the server.
+#
+# 			Files created using mysql_ssl_rsa_setup are owned by the user who invoked that program.
+#
+# 			This can be changed on systems that support the chown() system call if the program is invoked by root and --uid option is given
+# 			to specify the user who should own the files.
+#
+# 		) On Unix and Unix-like systems, the file access mode is 644 for certificate files (that is, world readable), and 600 for key files (only accessible by the acc that runs the server)
+#
+# To see the contents of an SSL certificate (for example, to check the range of dates over which it is valid), invoke openssl directly:
+#
+# 		openssl x509 -text -in ca.pem
+# 		openssl x509 -text -in server-cert.pem
+# 		openssl x509 -text -in client-cert.pem
+#
+# It is also possible to check SSL certificate expiration information using this SQL statement:
+#
+# 		SHOW STATUS LIKE 'Ssl_server_not%';
+# 		+----------------------+-------------------------+
+# 		| Variable_name 		  | Value   	 			    |
+# 		+----------------------+-------------------------+
+# 		| Ssl_server_not_after | Apr 28 14:16:39 2027 GMT|
+# 		| Ssl_server_not_before| May 	1 14:16:39 2017 GMT|
+# 		+----------------------+-------------------------+
+# 
+# CREATING SSL CERTIFICATES AND KEYS USING OPENSSL
+#
+# This section describes how ot use openssl command to set up SSL certificate and key files for use by MySQL servers and clients.
+# The first example shows a simplified procedure such as you might use from the command line.
+#
+# The second shows a script that contains more detail.
+#
+# The first two examples are intended for use on Unix and both use the openssl command that is part of OpenSSL.
+# The third example describes how to set up SSL files on Windows.
+#
+# NOTE:
+# 		There are easier alternatives to generating the files required for SSL than the procedure described here: Let the server autogenerate them or
+# 		use the mysql_ssl_rsa_setup program.
+#
+# IMPORTANT:
+#
+# 		Whatever method you use to generate the certificate and key files, the Common Name value used for the server and client certificates/keys must each
+# 		differ from the Common Name value used for the CA certificate.
+#
+# 		Otherwise, the certificate and key files will not work for servers compiled using OpenSSL.
+# 		A typical error in this case is:
+#
+# 			ERROR 2026 (HY000): SSL connection error:
+# 			error: 00000000001:lib(0):func(0):reason(1)
+#
+# EXAMPLE 1: CREATING SSL FILES FROM THE COMMAND LINE ON UNIX
+#
+# 	The following examples show a set of commands to create MySQL and client certificates and key files.
+# 	You will need to respond to several prompts by the openssl commands.
+#
+# 	To generate test files, you can press Enter to all prompts.
+# 	To generate files for production use, you should provide nonempty responses.
+#
+# 	# Create clean environment
+# 	rm -rf newcerts
+# 	mkdir newcerts && cd newcerts
+#
+# 	# Create CA certificate
+# 	openssl genrsa 2048 > ca-key.pem
+#	openssl req -new -x509 -nodes -days 3600 \
+# 				-key ca-key.pem -out ca.pem
+#
+# 	# Create server certificate, remove passphrase, and sign it
+# 	# server-cert.pem = public key, server-key.pem = private key
+# 	openssl req -newkey rsa:2048 -days 3600 \
+# 				-nodes -keyout server-key.pem -out server-req.pem
+# 	openssl rsa -in server-key.pem -out server-key.pem
+# 	openssl x509 -req -in server-req.pem -days 3600 \
+# 				-CA ca.pem -CAkey ca-key.pem -set_serial 01 -out server-cert.pem
+#
+# # Create client certificate, remove passphrase, and sign it
+# # client-cert.pem = public key, client-key.pem = private key
+# openssl req -newkey rsa:2048 -days 3600 \
+# 			-nodes -keyout client-key.pem -out client-req.pem
+#
+# openssl rsa -in client-key.pem -out client-req.pem
+# openssl x509 -req -in client-req.pem -days 3600 \
+# 			 -CA ca.pem -CAkey ca-key.pem -set_serial 01 -out client-cert.pem
+#
+# After generating the certificates, verify them:
+#
+# 		openssl verify -CAfile ca.pem server-cert.pem client-cert.pem
+#
+# You should see a response like this:
+#
+# 	server-cert.pem: OK
+# 	client-cert.pem: OK
+#
+# To see the contents of a certificate (for example, ,to check the range of dates over which a certificate is valid), invoke openssl like this:
+# 	
+# 	openssl x509 -text -in ca.pem
+# 	openssl x509 -text -in server-cert.pem
+# 	openssl x509 -text -in client-cert.pem
+#
+# Now you have a set of files that can be used as follows:
+#
+# 	) ca.pem: Use this as the argument to --ssl-ca on the server and client sides. (The CA certificate, if used, must be the same on both sides.)
+#
+# 	) server-cert.pem, server-key.pem: Use these as the arguments to --ssl-cert and --ssl-key on the server side.
+#
+# 	) client-cert.pem, client-key.pem: Use these as the arguments to --ssl-cert and --ssl-key on the client side.
+#
+#
+# EXAMPLE 2: CREATING SSL FILES USING A SCRIPT ON UNIX
+#
+#
+# Here is an example script that shows how to set up SSL certificate and key files for MySQL.
+# After executing the script, use the files for SSL connections as described earlier.
+#
+# DIR=`pwd`/openssl
+# PRIV=$DIR/private
+#
+# mkdir $DIR $PRIV $DIR/newcerts
+# cp /usr/share/ssl/openssl.cnf $DIR
+# replace ./demoCA $dir -- $DIR/openssl.cnf
+#
+# # Create necessary files: $database, $serial and $new_certs_dir
+# # directory (optional)
+#
+# touch $DIR/index.txt
+# echo "01" > $DIR/serial
+#
+# #
+# # Generation of Certificate Authority (CA)
+# #
+# 
+# openssl req -new -x509 -keyout $PRIV/cakey.pem -out $DIR/ca.pem \
+# 		-days 3600 -config $DIR/openssl.cnf
+#
+# Sample out:
+# Using configuration from /home/mont/openssl/openssl.cnf
+# Generating a 1024 bit RSA private key
+# .....................+++++++++
+# ...............+++++++++++
+# writing new private key to '/home/monty/openssl/private/cakey.pem'
+# Enter PEM pass phrase:
+# Verifying password - Enter PEM pass phrase:
+# --------
+# You are about to be asked to enter information that will be incorporate into your certificate request.
+# What you are about to enter is what is called a Distinguished Name or a DN.
+#
+# There are quite a few fields but you can leave some blank.
+# For some fields there will be a default value.
+# If you enter '.'; the field will be left blank.
+# ---------
+#
+# Country Name (2 letter code) [AU]:FI
+# State or Province Name (full name) [Some-State]:.
+# Locality Name (eg, city) []:
+# Organization Name (eg, company) [Internet Widgits Pty Ltd]:MySQL AB
+# Organizational Unit Name (eg, section) []:
+# Common Name (eg, YOUR name) []:MySQL admin
+# Email Address []:
+#
+# Create server request and key
+#
+# openssl req -new -keyout $DIR/server-key.pem -out \
+# 		$DIR/server-req.pem -days 3600 -config $DIR/openssl.cnf
+#
+# Sample output:
+# REPEAT OF LAST CHUNK
+#
+# Remove the passphrase from the key
+#
+# openssl rsa -in $DIR/server-key.pem -out $DIR/server-key.pem
+#
+# Sign server cert
+#
+# openssl ca -cert $DIR/ca.pem -policy policy_anything \
+# 		-out $DIR/server-cert.pem -config $DIR/openssl.cnf \
+# 		-infiles $DIR/server-req.pem
+#
+# Sample output:
+# Using configuration from /home/monty/openssl/openssl.cnf
+# Enter PEM pass phrase:
+# Check that the request matches the signature
+# Signature ok
+# The Subjects Distinguished Name is as follows
+# countryName 							:PRINTABLE:'FI'
+# organizationName 	 				:PRINTABLE:'MySQL AB'
+# commonName 							:PRINTABLE:'MySQL admin'
+# Certificate is to be certified until Sep 13 14:22:46 2003 GMT
+# (365 days)
+#  Sign the certificate? [y/n]:y
+#
+# 1 out of 1 certificate requests certified, commit? [y/n]y
+# Write out database with 1 new entries
+# Data Base Updated
+#
+# Create client request and key
+#
+# openssl req -new -keyout $DIR/client-key.pem -out \
+# 		$DIR/client-req.pem -days 3600 -config $DIR/openssl.cnf
+#
+# Repeat chunk
+#
+# Remove the passphrase from the key
+#
+# openssl rsa -in $DIR/client-key.pem -out $DIR/client-key.pem
+#
+# Sign client cert
+#
+# openssl ca -cert $DIR/ca.pem -policy policy_anything \
+# 		-out $DIR/client-cert.pem -config $DIR/openssl.cnf \
+# 		-infiles $DIR/client-req.pem
+#
+# Repeat
+#
+# Create a my.cnf file that you can use to testr the certificates
+#
+# cat <<EOF > $DIR/my.cnf
+# [client]
+# ssl-ca=$DIR/ca.pem
+# ssl-cert=$DIR/client-cert.pem
+# ssl-key=$DIR/client-key.pem
+# [mysqld]
+# ssl-ca=$DIR/ca.pem
+# ssl-cert=$DIR/server-cert.pem
+# ssl-key=$DIR/server-key.pem
+# EOF
+#
+#
+# CREATING RSA KEYS USING OPENSSL
+#
+# This section describes how to use the openssl command to set up the RSA key files that enable MySQL to support secure
+# PW exchange over unenecrypted connectiosn for accounts authenticated by the sha256_password and caching_sha2_password plugins.
+#
+# NOTE:
+#
+# 		There are easier alternatives to generating the files required for RSA than the procedure described here:
+# 		Let the server autogenerate them or use the mysql_ssl_rsa_setup.
+#
+# To create hte RSA private and public key-pair files, run these commands while logged into the system account used to run the MySQL
+# server so the files will be owned by that account:
+#
+# 		openssl genrsa -out private_key.pem 2048
+# 		openssl rsa -in private_key.pem -pubout -out public_key.pem
+#
+# Those commands create 2,048 bit-keys. To create stronger keys, use a larger value.
+#
+# Then set the access modifiers for the key files.
+# THe private key should be readable only by the server, whereas the public key can be freely distributed
+# to client users:
+#
+# chmod 400 privte_key.pem
+# chmod 444 public_key.pem
+#
+# OPENSSL VERSUS WOLFSSL
+#
+# MySQL can be compiled using OpenSSL or wolfSSL, both of which enable encrypted connections based on the openSSL API:
+#
+# 		) MysQL enterprise edition binary distribs are compiled using OpenSSL. It is not possible to use wolfSSL with MYSQL enterprise edition
+#
+# 		) mySQL community edition binary distribs are ocmpiled using openSSL
+#
+# 		) MySQL community edition source distribs can be compiled using either OpenSSL or wolfSSL.
+#
+# OpenSSL and wolfSSL offer the same basic functionality, but MySQL distribs compiled using OpenSSL have additional features.
+#
+# 		) OpenSSL supports a wider range of encryption ciphers from which to choose for the --ssl-cipher option.
+# 			OpenSSL supports the --ssl-capath, --ssl-crl and --ssl-crlpath options.
+#
+# 		) Accounts that authenticate using the sha256_password plugin can use RSA key files for secure PW exchanges over unencrypted connections.
+#
+# 			Accounts that authenticate using caching_sha2_password plugin can use RSA key pair-based PW exchange regardless
+# 			of whether MysQL was compiled using OpenSSL or wolfSSL.
+#
+# 		) The server can automatically generate missing SSL and RSA certificate and key files at startup.
+#
+# 		) OpenSSL supports more encryption modes for the AES_ENCRYPT() and AES_DECRYPT() functions. MOre later on that.
+##
+# Certain OpenSSL-related System and Status variables are present only if MysQL was compiled using OpenSSL.
+#
+# These are:
+#
+# ) auto_generate_certs
+#
+# ) caching_sha2_password_auto_generate_rsa_keys
+#
+# ) sha256_password_auto_generate_rsa_keys
+#
+# ) sha256_password_private_key_path
+#
+# ) sha256_password_public_key_path
+#
+# ) Rsa_public_key
+#
+# To determine whether a server was compiled using openSSL, test the existence of any of those variables.
+#
+# For example, this statement returns a row if OpenSSL was used and an empty result if wolfSSL was used:
+#
+# SHOW STATUS LIKE 'Rsa_public_key';
+#
+# Building MySQL with Support for Encrypted Connections
+#
+# To use encrypted connections between the MySQL server and client programs, your system must support either OpenSSL or wolfSSL:
+#
+# 		) MySQL enterprise edition binary distribs are compiled using OPenSSL. It is not possible to use wolfSSL with MysQL enterprise edition.
+#
+# 		) MySQL community edition binary distribs are compiled using OpenSSL.
+#
+# 		) mySQL community edition source distrib can be compiled using either OpenSSL or wolfSSL.
+#
+# IF you compile MySQL from a source distrib, CMake configures the distribs to use OpenSSL by default.
+#
+# To compile using OpenSSL, use this procedure:
+#
+# 	1. Ensure that OPenSSL 1.0.1 or higher is installed. IF the installed OPenSSL is lower than 1.0.1, CMake produces an error
+# 		at MySQL config time.
+#
+# 	2. The WITH_SSL CMake option determines which SSL library to use for compiling MySQL.
+#
+# 		The default is -DWITH_SSL=system which uses OpenSSL.
+#
+# 		To make this explicit, specify that option on the CMake cmd line.
+# 		For example:
+#
+# 		cmake . -DWITH_SSL=system
+#
+# 		That command configures the distrib to use the installed OpenSSL lib.
+#
+# 		Alternatively, to explicitly specify the path name to the OpenSSL installation, use the 
+#  	following syntax:
+#
+# 		This can be useful if you have multiple versions of OpenSSL installed, ot prevent CMake from choosing the wrong one:
+#
+# 			cmake . -DWITH_SSL=path_name
+#
+# 	3. Compile and install the dstrib
+#
+# To compile using wolfSSL, download the wolfSSL distrib and apply a small patch.
+# For instructions, see the extra/README_wolfssl.txt file.
+#
+# To check whether a mysqld server supports encrypted connections, examine the value of the have_ssl SYS_VAR:
+#
+# 	SHOW VARIABLES LIKE 'have_ssl';
+# 	+---------------------------------+
+# 	| Variable_name 		| 	Value 	 |
+# 	+--------------------+------------+
+# 	| have_ssl 				| YES 		 |
+# 	+--------------------+------------+
+#
+# If the value is YES, the server supports encrypted connections. If the value is DISABLED, the server is capable of supporting
+# encrypted connections - but was not started with the appropriate --ssl-xxx options to eanble encrypted connections to be used.
+#
+# ENCRYPTED CONNECTION PROTOCOLS AND CIPHERS
+#
+# To determine which encryption protocol and cipher are in use for an encrypted connection, use the following statemnts to check
+# the vlaues of the Ssl_version and Ssl_cipher status variables:
+#
+# 	SHOW SESSION STATUS LIKE 'Ssl_version';
+# 	+------------------------------------+
+# 	| Variable_name 		| Value 			 |
+# 	+--------------------+---------------+
+# 	| Ssl_version 			| TLSv1 			 |
+# 	+--------------------+---------------+
+#
+# SHOW SESSION STATUS LIKE 'Ssl_cipher';
+# +---------------------------------------+
+# | Variable_name 		| Value 				|
+# +---------------------+-----------------+
+# | Ssl_cipher | DHE-RSA-AES128-GCM-SHA256|
+# +------------+--------------------------+
+#
+# If the connection is not encrypted, both variables have an empty value.
+#
+# MySQL supports encrypted connections using the TLSv1, TLSv1.1 and TLSv1.2 protocols.
+#
+# The value of the tls_version system variable determines which protocols the server is permitted to use from those that are available.
+# The tls_version value is a comma-separated list containing one or more of these protocols (not case-sensetive):
+#
+# TLSv1, TlSv1.1, TLSv1.2
+#
+# By default, this variable lists all protocols supported by the SSL library used to compile MySQL.
+# To determine the value of tls_version at runtime, use this statement:
+#
+# SHOW GLOBAL VARIABLES LIKE 'tls_version';
+# +------------------------------------------+
+# | Variable_name 		| 	Value 				|
+# +---------------------+--------------------+
+# | tls_version 	| TLSv1, TLSv1.1, TLSv1.2  |
+# +---------------------+--------------------+
+#
+# To change the value of tls_version, set it at server startup.
+#
+# For example, to prohibit connections that use the less secure TLSv1 protocol use these lines at the server
+# my.cnf file:
+#
+# 	[mysqld]
+# 	tls_version=TLSv1.1,TLSv1.2
+#
+# To be even more restrictive and only permit TLSv1.2 connections, use tls_version like this:
+#
+# 	[mysqld]
+# 	tls_version=TLSv1.2
+#
+# For client programs, the --tls-version option enables specifying the TLS protocols permitted per client invocation.
+#
+# The value format is the same as for tls_version.
+#
+# by default, MySQL attempts to use the highest TLS protocol verison avaialable, depending on which SSL library was used
+# to compile the server and client, which key size is used and whether the server or client are restricted from using
+# some protocols; for example, by means of tls_version/--tls-version
+#
+# ) TLSv1.2 is used if possible
+#
+# ) TLSv1.2 does not work with all ciphers that have a key size of 512 bits or less. To use this protocol with such a key, use --ssl-cipher to 
+# 		specify the cipher name explicit:
+#
+# 			AES128-SHA
+# 			AES128-SHA256
+# 			AES256-SHA
+# 			AES256-SHA256
+# 			CAMELLIA128-SHA
+# 			CAMELLIA256-SHA
+# 			DES-CBC3-SHA
+# 			DHE-RSA-AES256-SHA
+# 			RC4-MD5
+# 			RC4-SHA
+# 			SEED-SHA
+#
+# ) For better security, use a certificate with an RSA key size of at least 2048 bits.
+#
+# If the server and client protocol capabilities have no protocol in common, the server terminates the connection request.
+#
+# FOr example, if the server is configured with tls_version=TLSv1.1, TLSv1.2 - connection attempts will fail for clients invoked
+# with --tls-version=TLSv1, and for older clients that do not support the --tls-version option and implicitly support only TLSv1.
+#
+# MySQL permits specifying a list of protocols to support.
+#
+# This list is passed directly down to the underlying SSL library and is ultimately up to that library what protocols it
+# actually enables from the supplied list.
+#
+# Please refer to the MySQL source code and SSL_CTX_new documentation for information about how the SSL library handles this.
+#
+# For openSSL, see the SSL_CTX_new documentation.
+#
+# To determine which ciphers a given server supports, use the following statements to check the value of the Ssl_cipher_list status variable:
+#
+# 		SHOW SESSION STATUS LIKE 'Ssl_cipher_list';
+#
+# Order of ciphers passed by MySQL to the SSL library is significant.
+# More secure ciphers are mentioned first in the list, and the first cipher supported by the provided certificate is selected.
+#
+# MySQL passes this cipher list to the SSL library:
+#
+# 
+# 
+#
+#
+#
+#
+#
+#
+#
 # https://dev.mysql.com/doc/refman/8.0/en/expired-password-handling.html
