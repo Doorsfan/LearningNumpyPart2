@@ -33095,8 +33095,250 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # MySQL passes this cipher list to the SSL library:
 #
+# ECDHE-ECDSA-AES128-GCM-SHA256
+# ECDHE-ECDSA-AES256-GCM-SHA384
+# ECDHE-RSA-AES128-GCM-SHA256
+# etc.
+#
+# //This list is long and largely uninteresting.
+#
+# These cipher restrictions are in place:
+#
+# 		) The following ciphers are permanently restricted:
+#
+# 			!DHE-DSS-DES-CBC3-SHA
+# 			!DHE-RSA-DES-CBC3-SHA
+# 			!ECDH-RSA-DES-CBC3-SHA
+# 			!ECDH-ECDSA-DES-CBC3-SHA
+# 			!ECDHE-RSA-DES-CBC3-SHA
+# 			!ECDHE-ECDSA-DES-CBC3-SHA
+#
+# 		) The following categories of ciphers are permanently restricted:
+#
+# 			!aNULL
+# 			!eNULL
+# 			!EXPORT
+# 			!LOW
+# 			!MD5
+# 			!DES
+# 			!RC2
+# 			!RC4
+# 			!PSK
+# 			!SSLv3
+#
+# IF the server is started using a compatible certificate that uses any of the preceding restricted ciphers or cipher categories,
+# the server starts with support for encrypted connections disabled.
+#
+# CONNECTING TO MYSQL REMOTELY FROM WINDOWS WITH SSH
+#
+# This section describes how to get an encrypted connection to a remote MySQL server with SSH.
 # 
-# 
+# 1. Install an SSH client on your Windows machine. For a comparison of SSH clients, see places.
+#
+# 2. Start your Windows SSH client. Set Host_name = yourmysqlserver_URL_OR_IP.
+# 	
+# 		Set userid=your_userid to log in to your server.
+#
+# 		This userid value might not be the same as the user name of your MySQL account.
+#
+# 3. Set up port forwarding. Either do a remote forward (set Local_port: 3306, remote_host: yourmysqlservername_or_ip, remote_port: 3306) or a local
+# 		forward (Set port: 3306,host: localhost, remote port: 3306)
+#
+# 4. save
+#
+# 5. Log in with the SSH
+#
+# 6. Start some ODBC app.
+#
+# 7. Create a new file in Windows and link to MySQL using the ODBC driver the same way you normally do.
+# Except type in localhost for the MySQL host server, not yourmysqlservername
+#
+# At this point, you should have an ODBC connection to MySQL, encrypted using SSH.
+#
+#
+# SECURITY COMPONENTS AND PLUGINS
+#
+# MySQL includes several components and plugins that implement security features:
+#
+# 		) Plugins for authenticating attempts by clients to connect to MySQL server.
+#
+# 			Plugins are avialable for several authentication protocols.
+#
+# 		) A PW validation component for implementing PW strength policies and assessing their strength of potetional PWs.
+#
+# 		) Keyring plugins that provide secure storage for sensitive information.
+#
+# The following pertain to MysQL Enterprise only:
+#
+# 		) MySQL Enterprise also has MySQL Enterprise Audit, implemented using a server plugin - uses the open MySQL audit API
+# 			to enable standard, policy-based monitoring and logging of connection and query activity executed on specific MySQL servers.
+#
+# 			Designed to meet the Oracle audit specification, MySQl Enterprise Audit provides an otu of teh box, easy to use Auditing and compliance
+# 			solution for applications that are governed by both internal and external regulation guidelines.
+#
+# 		)  MysQL Enterprise firewall, an application-level firewall that enables DB admins to permit or deny SQL statements execution based
+# 			on matching against whitelists of accepted statement patterns.
+#
+# 			This helps harden MySQL servers against attacks such as Injections or attempts to exploit applications by using them outside
+# 			of their legitimate query workload characteristics.
+#
+# 		) MySQL Enterprise Data Masking and De-identification, imeplement as a plugin library containing a plugin and a set of user-defined
+#			functions.
+#
+# 			Data masking hides senseitive information by replacing rela values with substitutes.
+#
+# 			Enables obfuscation, generation of formatted random data and data replacement or substitution.
+#
+# AUTHENTICATION PLUGINS
+#
+# The following seciton describes pluggable authentication methods available in MysQL and the plugins that implement these methods.
+#
+# The default plugin is indicated by the value of the default_authentication_plugin system variable.
+#
+# NATIVE PLUGGABLE AUTHENTICATION
+#
+# MySQL includes a mysql_native_password plugin that implements native authentication;
+# That is, authentication based on the PW hashing method in use from before the introduction of pluggable authentication.
+#
+# The following table shows the plugin names on the server and client sides.
+#
+# PLUGIN AND LIBRARY NAMES OR NATIVE PW AUTHENTICATION
+#
+# plugin or file 			Name
+#
+# Server-side plugin 	mysql_native_password
+#
+# Client-side plugin 	mysql_native_password
+#
+# Library file 			None (plugins are built in)
+#
+# INSTALLING NATIVE PLUGGABLE AUTHENTICATION
+#
+# THe mysql_native_password plugin exists in server and client form:
+#
+# ) THe server-side plugin is built into the server, need not be loaded explicitly and cannot be disabled by unloading it.
+#
+# ) The client side plugin is built into the libmysqlclient client library and is available to any program linked against libmysqlclient.
+#
+# USING NATIVE PLUGGABLE AUTHENTICATION
+#
+# MySQL client programs use mysql_native_password by default.
+#
+# The --default-auth option can be used as a hint about which client-side plugin the program can expect
+# to use:
+#
+# mysql --default-auth=mysql_native_password
+#
+# SHA-256 PLUGGABLE AUTHENTICATION
+#
+# MySQL provides two authentication plugins that implement SHA-256 hashing for user account PWs:
+#
+# 	) sha256_passwords: Implements basic SHA-256 authentication
+#
+# 	) caching_sha2_password: Implements SHA-256 authentication (like sha256_password), but uses caching on the server side for better performance 
+# 		and has additional features for wider applicability.
+#
+# THis section is for the original noncaching SHA-2 authentication plugin.
+#
+# IMPORTANT:
+#
+# 		IN MySQL 8.0, caching_sha2_password is the default authentication plugin rather than mysql_native_password.
+#
+# 		For information about the implications of this change for server ops and compability of the server with clients 
+# 		and connectors, see caching_sha2_password as the Preferred Authentication PLugin
+#
+# IMPORTANT:
+#
+# 		To connect to the server using a account that authenticates with the sha256_password plugin, you must use either a TLS connection
+# 		or an unencrypted connection that supports PW exchange using an RSA key pair, as described later in this section.
+#
+# 		Either way, the sha256_password plugin uses MySQL's encryption capabilities.
+#
+# Note:
+#
+# 		In the name sha256_password, "sha256" refers to the 256-bit length the plugin uses for encryption.
+# 		In the name caching_sha2_password "sha2" refers more generally to the SHA-2 class of encryption algorithms.
+#
+# 		Of which, 256-bit encryption is one instance.
+#
+# PLUGIN AND LIBRARY NAMES FOR SHA-256 AUTHENTICATION
+#
+# Plugin or File 			Plugin or File name
+#
+# server-side plugin 	sha256_password
+#
+# Client-side plugin 	sha256_password
+#
+# Library file 			None (built in)
+#
+# INSTALLING SHA-256 PLUGGABLE AUTHENTICATION
+#
+# The sha256_password plugin exists in server and client forms:
+#
+# 		) The server-side plugin is built into the server, need not be loaded explicitly, and cannot be disabled by unloading it.
+#
+# 		) The client-side plugin is built into the libmysqlclient library and is available to any program linked against libmysqlclient
+#
+# USING SHA-256 PLUGGABLE AUTHENTICATION
+#
+# To set up an account taht uses the sha256_password plugin for SHA-256 PW hashing, use the following statement, where PW is the desired acc pw:
+#
+# CREATE USER 'sha256user'@'localhost' IDENTIFIED WITH sha256_password BY 'password';
+#
+# The server assigns the sha256_password plugin to the account and uses it ot encrypt the PW using SHA-256, storing those values
+# in the plugin and authentication_string columns of the mysql.user system table.
+#
+# The preceding instructions do not assume that sha256_password is teh default authentication plugin.
+#
+# If sha256_password is the default authentication plugin, a simpler CREATE_USER syntax can be used.
+#
+# To start the server with the default authentication plugin set to sha256_password, put these lines in the server option file:
+#
+# 		[mysqld]
+# 		default_authentication_plugin=sha256_password
+#
+# That causes the sha256_password plugin to be used by default for new accounts.
+#
+# As a result, it is possible to create the account and set its Password without naming the plugin explicitly:
+#
+# 	CREATE USER 'sha256user'@'localhost' IDENTIFIED BY 'password';
+#
+# Anotehr consequence of setting default_authentication_plugin to sha256_password, is that - to use some other plugin for account creation,
+# you must specify that plugin explicitly.
+#
+# For example - to use the mysql_native_password plugin - use this statement:
+#
+# 		CREATE USER 'nativeuser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+#
+# sha256_password supports connections over secure transport.
+#
+# Sha256_password also supports encrypted password exchange using RSA over unencrypted connections, if these conditions are satisfied:
+#
+# 		) MYSQL is compiled using OpenSSL.
+#
+# 			MySQL can be compiled using either OpenSSL or yaSSL, and sha256_password works with distribs compiled using
+# 			either package, but RSA support requires OpenSSL.
+#
+# 		) The MYSQL server to which you wish to connect is configured to support RSA (using the RSA configuration procedure given later in this section)
+#
+#
+# RSA support has these characeteristics:
+#
+# 		) On the server side, two system variables name the RSA private and public key-pair files:
+#
+# 				sha256_password_private_key_path 
+#
+# 				and
+#
+# 				sha256_password_public_key_path
+#
+# 			The Database admin must set these vars at server startup if the key files to use have names that differ
+# 			from the SYS_VAR default values.
+#
+# 		) The server uses the sha256_password_auto_generate_rsa_keys SYS_VAR to determine whether to automatically
+#			generate the RSA key-pair file.
+#
+# 		)  
 #
 #
 #
@@ -33104,4 +33346,4 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 #
 #
-# https://dev.mysql.com/doc/refman/8.0/en/expired-password-handling.html
+# https://dev.mysql.com/doc/refman/8.0/en/sha256-pluggable-authentication.html
