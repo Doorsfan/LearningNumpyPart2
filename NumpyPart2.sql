@@ -34575,5 +34575,806 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # LDAP PLUGGABLE AUTHENTICATION
 #
+# NOTE: LDAP pluggable authentication is an extension included in MySQL Enterprise Edition, a commercial product.
+#
+# MySQL Enterprise Edition supports an authetication method that enables MySQL Server to use LDAP (Lightweight Directory Access Protocol)
+# to authenticate MySQL users by accessing directory services such as X.500
+#
+# MySQL uses LDAP to fetch user, credential and group information.
+#
+# LDAP pluggable authentication provides these capabilities:
+#
+# 		) External authentication: LDAP authentication enables MySQL Server to accept connections from users defined outside the MySQL grant tables in LDAP directories.
+#
+# 		) Proxy user support: LDAP authentication can return to MySQL a user name different from the login user, based on the LDAP group of the external user.
+#
+# 		This means that an LDAP plugin can return the MySQL user that defines the privileges the external LDAP-authenticated user should have.
+#
+# 		For example, an LDAP user named joe can connect and have the privileges of the MySQL user named developer, if the LDAP group for joe is developer.
+#
+# 		) Security: Using TLS, connections to the LDAP server can be secure.
+#
+# The following table shows the plugin and library file names. The file name suffix might differ on your system.
+#
+# The files must be located in the directory named by the plugin_dir system variable.
+#
+# PLUGIN AND LIBRARY NAMES FOR LDAP AUTHENTICATION
+#
+# Plugin or File 					Plugin or File Name
+# Server-side plugin names 	authentication_ldap_sasl, authentication_ldap_simple
+#
+# Client-side plugin names 	authentication_ldap_sasl_client, mysql_clear_password
+#
+# Library file names 			authentication_ldap_sasl.so, authentication_ldap_sasl_client.so, authentication_ldap_simple.so
+#
+# The library files include only the authentication_ldap_XXX plugins. The client-side mysql_clear_password plugin is built into the
+# libmysqlclient client library.
+#
+# There are two server-side LDAP plugins, each of which works with a specific client-side plugin:
+#
+# 	) The server-side authentication_ldap_simple plugin performs simple LDAP authentication.
+#
+# 		For connections by accounts that use this plugin, client programs use the client-side mysql_clear_password plugin, which sends the
+# 		PW to the server in clear text.
+#
+# 		No PW hashing or encryption is used, so a secure connection between the MySQL client and the server is recommended to prevent PW exposure
+#
+# ) The server-side authentication_ldap_sasl plugin performs SASL-based LDAP authentication.
+#
+# 	For connections by accounts that use this plugin, client programs use the client-side authentication_ldap_sasl_client plugin.
+#
+# The client-side and server-side SASL LDAP plugins use SASL messages for secure transmission of credentials within the LDAP protocol,
+# to avoid sending the clear-text PW between the MySQL client and server.
+#
+# NOTE:
+# 		If your system supports PAM and permits LDAP as a PAM authentication method, another way to use LDAP for MySQL user authentication
+# 		is to use the server-side authentication_pam plugin.
+#
+# PREREQUISITES FOR LDAP PLUGGABLE AUTHENTICATION
+#
+# To use LDAP pluggable authentication for MySQL, these prerequisites must be satisfied:
+#
+# 		) An LDAP server must be available for the LDAP authentication plugins to communicate with.
+#
+# 		) LDAP users to be authenticated by MySQL must be present in teh directory managed by the LDAP server.
+#
+# 		) An LDAP client library must be available on systems where the server-side authentication_ldap_sasl or
+# 			authentication_ldap_simple plugins is used.
+#
+# 			Currently, supported libraries are the Windows native LDAP library or the OpenLDAP library on non-Windows systems.
+#
+# 		) To use SASL-based LDAP authentication:
+#
+# 			) The LDAP server must be configured to communicate with a SASL server.
+#
+# 			) A SASL client library must be available on systems where the client-side authentication_ldap_sasl_client plugin is used.
+#
+# 				Currently, the only supported library is the Cyrus SASL library.
+#
+# HOW LDAP AUTHENTICATION OF MYSQL USERS WORKS
+#
+# This section provides a general overview of how MySQL and LDAP work together to authenticate MySQL users.
+#
+# For example showing how to set up MySQL accounts to use specific LDAP authentication plugins, see later.
+#
+# The client connects to the MySQL server, providing the MySQL client user name and the LDAP password:
+#
+# 		) For simple LDAP authentication, the client-side and server-side plugins communicate the plugin in clear text.
+#
+# 		) For SASL-based LDAP authentication, the client-side and server-side plugins use SASL messages for secure transmission of credentials 
+# 			within the LDAP protocol, to avoid sending the clear-text password between the MySQL client and server.
+#
+# If the client user name and host name match no MySQL account, the connection is rejected.
+#
+# If there is a matching MySQL account, authentication against LDAP occurs. The LDAP server looks for an entry matching the user
+# and authenticates the entry against the password:
+#
+# 		) If the MySQL account names and the LDAP user distinguished name (DN), LDAP authentication uses that value and the 
+# 			LDAP password provided by the client.
+#
+# 			(To associate an LDAP user DN with a MySQL account, include a BY clause in the CREATE_USER statement that creates the account)
+#
+# 		) If the MySQL account names no LDAP user DN, LDAP authentication uses the user name and LDAP password provided by the client.
+#
+# 			In this case, the authentication plugin first binds to the LDAP server using the root DN and password as credentials to find
+# 			the user DN based on the client user name, then authenticates the user DN against the LDAP password.
+#
+# 			The bind using the root credentials fails if teh root DN and password are set but to incorrect values, or are empty
+# 			(not set) and the LDAP server does not permit anon connections.
+#
+# If the LDAP server finds no match or multiple matches, authentication fails and the client connection is rejected.
+#
+# If the LDAP serer finds a single match, LDAP authentication succeeds (assuming that the PW is correct), the LDAP server returns
+# the LDAP entry, and the authetication plugin determines the name of the authenticated user based on that entry:
+#
+# 		) If the LDAP entry has a group attribute (by default, the cn attribute) - the plugin returns its value as the authenticated user name.
+#
+# 		) If the LDAP entry has no group attribute, the authentication plugin returns the client user name as the authenticated user name.
+#
+# The MySQL server compares the client user name with the authenticated user name to determine whether proxying occurs for teh client session:
+#
+# 		) If the names are the same, no proxying occurs: The MySQL account matching the client user name is used for privilege checking.
+#
+# 		) If the names differ, proxying occurs: MySQL looks for an account matching the authenticated user name.
+#
+# 			That account becomes the proxied user, which is used for privilege checking.
+# 			The MySQL account that matched the client user name is treated as the external proxy user.
+#
+# INSTALLING LDAP PLUGGABLE AUTHENTICATON
+#
+# This section describes how to install the LDAP authentication plugins. 
+#
+# To be usable by the server, the plugin library files must be located in the MySQL plugin directory (the directory named by the plugin_dir system variable)
 # 
-# https://dev.mysql.com/doc/refman/8.0/en/ldap-pluggable-authentication.html
+# If necessary, configure the plugin directory location by setting the value of plugin_dir at server startup.
+#
+# The server-side plugin library file base names are authentication_ldap_sasl and authentication_ldap_simple.
+#
+# The file name suffix differs per platform (for example, .so for Unix and Unix-like systems, .dll for windows)
+#
+# To laod the plugins at server startup, use --plugin-load-add options to name the library file that contain them.
+# With this plugin-loading method, the options must be given each time the server starts.
+#
+# ALso, specify values for any plugin-provided System variables you wish to configure.
+#
+# Each server-side LDAP plugin exposes a set of system variables that enable its operation to be configured.
+#
+# Setting most of these is optional, but you must set the variables that specify the LDAP server host (so the plugin knows where to connect)
+# and base distinguished names for LDAP bind operations (to limit the scope of searches and obtain faster searches). 
+#
+# For more about hte LDAP System variables, they are covered later.
+#
+# To load the plugins and set the LDAP server host and base distinguished name for LDAP bind operations, put lines such
+# as these in your my.cnf file (adjust the .so suffix accordingly):
+#
+# 		[mysqld]
+# 		plugin-load-add=authentication_ldap_sasl.so
+# 		authentication_ldap_sasl_server_host=127.0.0.1
+# 		authentication_ldap_sasl_bind_base_dn="dc=example,dc=com"
+# 		plugin-load-add=authentication_ldap_simple.so
+# 		authentication_ldap_simple_server_host=127.0.0.1
+# 		authentication_ldap_simple_bind_base_dn="dc=example,dc=com"
+#
+# After modifying my.cnf, restart the server to cause the new settings to take effect.
+#
+# Alternatively, to register the plugins at runtime, use these statements (adjust the .so suffix as necesary):
+#
+# 		INSTALL PLUGIN authentication_ldap_sasl SONAME 'authentication_ldap_sasl.so';
+# 		INSTALL PLUGIN authentication_ldap_simple SONAME 'authentication_ldap_simple.so';
+#
+# INSTALL_PLUGIN loads the plugin immediately, and also registers it in the mysql.plugins system table to cause the
+# server to load it for each subsequent normal startup.
+#
+# After installing the plugins at runtime, their system variables become available and you can add settings for them
+# to your my.cnf file to configure the plugins for subsequent restarts.
+#
+# For example:
+#
+# [mysqld]
+# authentication_ldap_sasl_server_host=127.0.0.1
+# authentication_ldap_sasl_bind_base_dn="dc=example,dc=com"
+# authentication_ldap_simple_server_host=127.0.0.1
+# authentication_ldap_simple_bind_base_dn="dc=example,dc=com"
+#
+# After modifying my.cnf, restart the server to cause the new settings to take effect.
+#
+# To verify plugin installation, examine the INFORMATION_SCHEMA.PLUGINS table or use the SHOW_PLUGINS statement.
+#
+# For example:
+#
+#
+# SELECT PLUGIN_NAME, PLUGIN_STATUS FROM INFORMATION_SCHEMA PLUGINS WHERE PLUGIN_NAME LIKE '%ldap%';
+# +---------------------------------------------+
+# | PLUGIN_NAME 						| PLUGIN_STATUS|
+# +------------------------------+--------------+
+# | authentication_ldap_sasl 		| ACTIVE 		| 
+# | authentication_ldap_simple 	| ACTIVE 		| 
+# +------------------------------+--------------+
+#
+# If a plugin fails to initialize, check the server error log for diagnostic messages.
+#
+# ADDITIONAL NOTES FOR SELINUX:
+#
+#
+# 		ON systems running EL6 or EL that have SELinux enabled, changes to the SELinux policy are required to enable
+# 		the MySQL LDAP plugins to communicate with the LDAP service:
+#
+# 			1. Create a file mysqlldap.te with these contents:
+#
+# 				module mysqlldap 1.0:
+#
+# 				require {
+# 							type ldap_port_t;
+# 							type mysqld_t;
+# 							class tcp_socket name_connect;
+# 				}
+#
+# 				#================= mysqld_t =====================
+#
+# 				allow mysqld_t ldap_port_t:tcp_socket name_connect;
+#
+# 			2. COmpile the security policy module into binary representation
+#
+# 				checkmodule -M -m mysqlldap.te -o mysqlldap.mod
+#
+# 			3. Create an SELinux policy module package:
+#
+# 				semodule_package -m mysqlldap.mod -o mysqlldap.pp
+#
+# 			4. install teh module package:
+#
+# 				semodule -i mysqlldap.pp
+#
+# 			5. When the SELinux policy changes has been made, restart the MySQL server:
+#
+# 				service mysqld restart
+#
+# UNINSTALLING LDAP PLUGGABLE AUTHENTICATION
+#
+# This section describes how to enable MySQL accounts to connect to the MySQL servers using LDAP pluggable authentcation.
+#
+# It is assumed that hte servers is running with the appropriate server-side plugins enabled, and that the
+# appropriate client-side plugins are available on the client host.
+#
+# This section does not describe LDAP configuration or administration. It is assumed that oyu are fmiliar with such.
+#
+# There are two server-side LDAP plugins, each of which works with a specific client-side plugin:
+#
+# 		) The server-side authentication_ldap_simple plugin performs simple LDAP authentication.
+#
+# 			For connections by accounts that uses this plugin, client programs use the client-side mysql_clear_password plugin,
+# 			which sends the PW to the server in clear text.
+#
+# 			No password hashing or encryption is used, so to secure connections between the MySQL client and server is recommended to prevent PW exposure.
+#
+# 		) The server-side authentication_ldap_sasl plugin performs SASL-based LDAP authentication.
+# 
+# 			For connections by accounts that use this plugin, client programs use the client-side authentication_ldap_sasl_client
+# 			plugin.
+#
+# 			The client-side and server-side SASL LDAP plugins use SASL messages for secure transmission of
+# 			credentials within the LDAP protocol, to avoid sending hte clear-text password between the MySQL client and server.
+#
+# Overall reuqirements for LDAP authentication of MySQL Users:
+#
+# 		) There must be an LDAP directory entry for each user to be authenticated.
+#
+# 		) THere msut be a MySQL user account that specifies a server-side LDAP authentication plugin and optionally
+# 			names the associated LDAP users distinguished name (DN).
+#
+# 			(To associate an LDAP user DN with a MySQL account, include a BY clause in the CREATE_USER statement htat creates
+# 			the Acc)
+#
+# 			IF an account names no LDAP string, LDAP authentication uses the user name specified by the client to find the LDAP entry.
+#
+# 		) Client programs connect using the connection method approriate for the server-side authentication plugin the MySQl account uses.
+#
+# 			For LDAP authentication, connections require the MysQl user name and LDAP password.
+#
+# 			In adddition, for accounts that use the server-side authentication_ldap_simple plugin, invoke
+# 			client programs with the --enable-cleartext-plugin option to eanble the client-side mysql_clear_password plugin.
+#
+# The instructions here assume the following scenario:
+#
+# 		) MySQL users betsy and boris authenticate to the LDAP entries for betsy_ldap and boris_ldap, respectively.
+#
+# 			(It is not necessary that the MySQL and LDAP user names differ, but using differnet names here helps clairy whether
+# 				an operation context is MySQL or LDAP)
+#
+# 		) LDAP entries use the uid attribute to specify user names. (This may vary depending on LDAP server. Some LDAP servers use
+# 			the cn attribute for user names rather than uid)
+#
+# 		) These LDAP entries are available in the directory managed by the LDAP server, to provide distinguished name values that uniquely
+# 			identify each other:
+#
+# 				uid=betsy_ldap, pwd=pwd1, ou=People,dc=example,dc=com
+# 				uid=boris_ldap, pwd=pwd2, ou=people,dc=example,dc=com
+#
+# 		) CREATE_USER statements that create MySQL accounts name an LDAP user in the BY clause, to indicate which 
+# 			LDAP entry teh MySQL account authenticates against.
+#
+# The instructions for setting up an account that uses LDAP authentication dependso n which server-side LDAP plugins is used.
+#
+# SIMPLE LDAP AUTHENTICATION
+#
+# To configure a MYSQL account for simple LDAP authentication, the CREATE_USER statement should specify the 
+# authentication_ldap_simple plugin, and optionally name the LDAP user distinguished name (DN):
+#
+# 		CREATE USER user IDENTIFIED WITH authentication_ldap_simple [BY 'LDAP user DN'];
+#
+# Suppose that a MySQL user betsy has this entry in the LDAP directory:
+#
+# 		uid=betsy_ldap,pwd=pwd1,ou=People,dc=example,dc=com
+#
+# Then the statement to create hte MySQL account for besty woudl look like this:
+#
+# 		CREATE USER 'betsy'@'localhost' IDENTIFIED WITH authentication_ldap_simple BY 'uid=betsy_ldap,ou=People,dc=example,dc=com';
+#
+# The authentication string specified in teh BY clause does not include the LDAP password.
+# That msut be provided by the client user at connection time.
+#
+# Clients ocnnect to the MySQL server by providing the MySQL user name and LDAP password, and by enabling the client-side
+# mysql_clear_password plugin:
+#
+# 		mysql --user=betsy --password --enable-cleartext-plugin
+# 		Enter Password: pwd1 (betsy_ldap LDAP password)
+#
+# NOTE:
+#
+# 		The client-side mysql_clear_password plugin with which the server-side authentication_ldap_simple plugin
+# 		communicates sends the password to the MySQL server in clear text so it can be passed as is to the LDAP server.
+#
+# 		This is necessary to use the server-side LDAP library without SASL, but may be a security problem in some configurations.
+#
+# 		These measures minimize the risk:
+#
+# 			) To make inadvertent use of the mysql_clear_password plugin less likely, MySQL clients must explicitly enable it.
+# 				For example, with the --enable-cleartext-plugin option.
+#
+# 			) To avoid password exposure with hte mysql_clear_password plugin enabled, MySQL clients should connect to the MySQL
+# 				server using a secure connection.
+#
+# The authentication process is as follows:
+#
+# 1. The client-side plugin sends besty and pwd1 as the client user name and LDAP pw to the mysql server
+#
+# 2. The connection attempt matches the 'betsy'@'localhost' account. 
+#
+# 		The server-side LDAP plugin finds that this account has an authentication string of 'uid=betsy_ldap,ou=People,dc=example,dc=com'
+# 		to name the LDAP user DN.
+#
+# 		The plugin sends this string and hte LDAP password to the LDAP server.
+#
+# 3. The LDAP server finds the LDAP entry for betsy_ldap and the password matches, so LDAP authentication succeeds.
+#
+# 4. The LDAP entry has no group attribute, so the server-side plugin returns the client user name(betsy) as the authenticated user.
+#
+# 		This is the same user name supplied by the client, so no proxying occurs nad the clietn uses the 'betsy'@'localhost' account for privilege checking.
+#
+# Had the matching LDAP entry contained a group attribute, that attribute value would have been authenticated user name and, if the value differed from Betsy,
+# proxying would have occurred.
+#
+# For examples that use the group attribute, see LDAP Authentication with Proxying.
+#
+# Had the CREATE_USER statement contained no BY clause to specify the betsy_ldap LDAP distinguished name, authentication
+# attempts would use the user name provided by the client (in this case, betsy).
+#
+# In the absence of an LDAP entry for betsy, authentication would fail.
+#
+# SASL-Based LDAP Authentication
+#
+# To configure a MySQL account for SASL LDAP authentication, the CREATE_USER statement should specify the authentication_ldap_sasl plugin,
+# and optionally name the LDAP user distinguished name (DN):
+#
+# 		CREATE USER user IDENTIFIED WITH authentication_ldap_sasl [BY 'LDAP user DN'];
+#
+# Suppose that a MySQL user boris has this entry in the LDAP directory:
+#
+# 		uid=boris_ldap,pwd=pwd2,ou=People,dc=example,dc=com
+#
+# Then the statement to create the MySQL account for boris looks like this:
+#
+# 		CREATE USER 'boris'@'localhost' IDENTIFIED WITH authentication_ldap_sasl BY 'uid=boris_ldap, ou=People, dc=example, dc=com';
+#
+# The authentication string specified in the BY clause does not include the LDAP pw.
+#
+# That msut be provided by the user at connection time.
+#
+# Clients connect to the Mysql server by providing the MySQL user name and teh LDAP PW:
+#
+# mysql --user=boris --password
+#
+# FOr hte server-side authentication_ldap_sasl plugin, clients use the client-side authentication_ldap_sasl_client plugin.
+#
+# If a client program does not find the client-side plugin, specify a --plugin-dir opton that names hte directory where
+# the plugin library file is installed.
+#
+# The authentication process for boris is similar to htat previously described for betsy with simple LDAP authentication, except that
+# the Client-side and server-side SASL LDAP plugins use SASL messages for secure transmission of credentials within the LDAP
+# protocol, to avoid sending the clear-text PW between the MySQL client and server.
+#
+# LDAP Authentication User DN Suffixes
+#
+# LDAP authentication plugins permit the authentication string that provides user DN informatio nto begin with a + char.
+#
+# in the abseence of this char, the authentication string value is treated as is without modification.
+#
+# If the authentication string begins with +, the plugin constructs the full user DN value from the account user name as the
+# cn attribute value, together with the authentication string (with the + removed).
+#
+# The authentication string is stored as given in the mysql.user system table, with the full user DN constructed on the fly before
+# authentication.
+#
+# this account authentication string does not have + at the beginning, so it is taken as teh full user DN:
+#
+# 		CREATE USER 'admin' IDENTIFIED WITH authentication_ldap_simple BY "cn=admin,ou=People,dc=example,dc=com";
+#
+# This account authentication string does have a + at hte start, so it is taken as just part of the full user DN:
+#
+# 		CREATE USER 'accounting' IDENTIFIED WITH authentication_ldap_simple BY "+ou=People,dc=example,dc=com";
+#
+# IN this case, the full user DN is constructed using accounting as the cn attribute together with the authetnication string to yield:
+#
+# "cn=accounting,ou=People,dc=example,dc=com"
+#
+# For acount names that include a host name part, the user name is tkaen from the user name sent by the client.
+#
+# (effectively, this is the user name part of the account name, ignoring the host name part)
+#
+# LDAP Authentication with Proxying
+#
+# The authentication scheme described here uses proxying based on LDAP group attribute values to map
+# connecting MySQL users who authenticate using LDAP onto other MysQL accounts that define different sets of privileges.
+#
+# USers do not connect directly through the accounts that define the privileges.
+#
+# Instead, they connect through a default proxy user authenticated with LDAP, such that all external logins are mapped to the
+# MySQL accounts taht hold the privileges.
+#
+# any user who connects is mapped to one of those MySQL accounts, the privileges for which determines the database operatons
+# permitted to the external user.
+#
+# The instructions here assume the following scenario:
+#
+# 		) LDAP entries use the uid and cn attributes to specify user name and group values, respectively.
+#
+# 			To use different user and group attribute names, set the appropriate system variables to configure the plugin:
+#
+# 				) For authentication_ldap_simple: Set authentication_ldap_simple_user_search_attr and authentication_ldap_simple_group_search_attr
+#
+# 				) For authentication_ldap_sasl: Set authentication_ldap_sasl_user_search_attr and authentication_ldap_sasl_group_search_attr
+#
+# 		) These LDAP entries are available in the directory managed by the LDAP server, to provide distinguished name values that uniquely identify each user:
+#
+# 			uid=basha,pwd=pwd3,ou=People,dc=example,dc=com,cn=accounting
+# 			ui=basil,pwd=pwd4,ou=People,dc=example,dc=com,cn=front_office
+#
+# 			The group attribute values will become the authenticated user names, so they name the proxied accounts, accounting and front_office.
+#
+# 		) The examples assume use of SASL LDAP authentication. Make the appropriate adjustments for simple LDAP authentication.
+#
+# Create hte default proxy MySQL account:
+#
+# 		CREATE USER ''@'%' IDENTIFIED WITH authentication_ldap_sasl;
+#
+# The proxy account definiton has no BY 'auth_string' clause to name an LDAP user DN, so that when the client connects, the client user name
+# is used as the LDAP User name to search for.
+#
+# The matching LDAP entry is expected to include a group attribute naming the proxied MySQL account that defines the privileges
+# the client should have.
+#
+# Note:
+#
+# 		IF your MySQL installation has anonymous users, they might conflict with the default proxy user.
+# 		
+#
+# Create hte proxied accounts and grant their privileges:
+#
+# 		CREATE USER 'accounting'@'localhost' ACCOUNT LOCK;
+# 		CREATE USER 'front_office'@'localhost' ACCOUNT LOCK;
+#
+# 		GRANT ALL PRIVILEGES 
+# 			ON accountingdb.*
+# 			TO 'accounting'@'localhost';
+# 		GRANT ALL PRIVILEGES
+# 			ON frontdb.*
+# 			TO 'front_office'@'localhost';
+#
+# Grant hte PROXY privilege to the proxy account for the proxied accounts:
+#
+# 		GRANT PROXY
+# 			ON 'accounting'@'localhost'
+# 			TO ''@'%';
+# 		GRANT PROXY
+# 			ON 'front_office'@'localhost'
+# 			TO ''@'%';
+#
+# Connect to the MySQL 	server as basha using the mysql command-line client:
+#
+# 		mysql --user=basha --password
+#
+# The server authenticates the connection using the ''@'%' account, for client user Basha.
+# The matching LDAP entry has group attribute cn=accounting, so accounting becomes the authenticated user.
+#
+# THis differs from the client user name basha, with the result that basha is treated as a proxy for accounting and 
+# basha assumes the privileges of the accounting account.
+#
+# The followuing query should return output as shown:
+#
+# SELECT USER(), CURRENT_USER(), @@proxy_user;
+# +------------------------------------------------------+
+# | USER() 				| CURRENT_USER()      | @@proxy_user|
+# +------------------------------------------------------+
+# | basha@localhost 	| accounting@localhost| ''@'%' 		|
+# +------------------------------------------------------+
+#
+# This demonstrates that basha uses the privileges granted to the accounting MYSQL account, and that proxying occurred
+# through the default proxy user account.
+#
+# Now connect as basil instead:
+#
+# mysql --user=basil --password
+# Enter password: pwd4 (basil LDAP password)
+#
+#
+# The authentication process for basil is similar to that previously described for basha.
+#
+# IN this case, teh amtchign LDAP entry has group attribute cn=front_office.
+#
+# So, front_office becomes the authenticated user. This differs from the lcient user basil, with the result
+# that basil is treated as a proxy for front_office and basil assumes the privileges of the front_office account.
+#
+# The following query should return output as shown:
+#
+# SELECT USER(), CURRENT_USER(), @@proxy_user;
+# +------------------------------------------------------------------+
+# | USER() 					| CURRENT_USER() 					| @@proxy_user |
+# +------------------------------------------------------------------+
+# | basil@localhost 		| front_office@localhost 		| ''@'%' 		|
+# +------------------------------------------------------------------+
+#
+#
+# This demosntrates that basil uses the privileges granted to the front_office MySQL account.
+# (i.e proxying through the default proxy user account)
+#
+# NO-LOGIN PLUGGABLE AUTHENTICATION
+#
+# The mysql_no_login sever-side authentication plugin prevents all client connections to any account that uses it.
+#
+# USe cases for such a plugin includes proxied accounts that should never permit direct login but are accessed
+# only through proxy accounts and accounts that must be able to execute stored programs and views with elevated
+# privileges without exposing those privileges to ordinary users.
+#
+# THe following table shows the plugin and library file names. 
+# The file name suffix might differ on respective system.
+#
+# The file must be located in the dir named by the plugin_dir system variable.
+#
+# PLUGIN NAD LIBRARY NAMES FOR NO-LOGIN AUTHENTICATION
+#
+# Server-side plugin 		mysql_no_login
+# Client-side plugin 		None
+# library file 				mysql_no_login.so
+#
+# The following sections provide installation and usage information specific to no-login pluggable authentication:
+#
+# ) installing no-login pluggalbe authentication
+#
+# ) uninstalling no-login pluggable authentication
+#
+# ) Using no-login pluggable authentication
+#
+# INSTALLING NO-LOGIN PLUGGABLE AUTHENTICATION
+#
+# TO be usable by the server, the plugin library file must be located in the MySQL plugin directory (the direcotry named by teh
+# plugin_dir system variable).
+#
+# If necessary, configure the plugin directory location by setting the value of plugin_dir at server startup.
+#
+# The plugin library file base name is mysql_no_login. The file name suffix differs per platform (.so for UNIX based, .dll for Windows)
+#
+# To load the plugin at server startup, use the --plugin-load-add option to name the library file that contains it.#
+# With this plugin-loading method, the option must be given each time the server starts.
+#
+# For example, we can circumvent that and force it by registration to option files:
+#
+# [mysqld]
+# plugin-load-add=mysql_no_login.so (or .dll for Windows)
+# 
+# After modifying my.cnf, restart the server to cause hte new settings to take effect.
+#
+# Alternatively, to register the plugin at runtime, use this statement (adjust hte . suffix as needed9:
+#
+# INSTALL PLUGIN mysql_no_login SONAME 'mysql_no_login.so';
+#
+# INSTALL_PLUGIN loads the plugin immeadiately, and also registers it in the mysql.plugins system table to cause teh server to load
+# it for each subsequent normal startup.
+#
+# To verify the installation, examine the INFORMATION_SCHEMA.PLUGINS table or use the SHOW_PLUGINS statement:
+#
+# SELECT PLUGIN_NAME, PLUGIN_STATUS,
+# 			FROM INFORMATION_SCHEMA.PLUGINS
+# 			WHERE PLUGIN_NAME LIKE '%login%';
+# +-------------------------------------------+
+# | PLUGIN_NAME 		| PLUGIN_STATUS 			 |
+# +-------------------------------------------+
+# | mysql_no_login 	| ACTIVE 					 |
+# +-------------------------------------------+
+#
+# If the plugin fails to initialize - check the server error log for diagnostic messages.
+#
+# UNINSTALLING NO-LOGIN PLUGGABLE AUTHENTICATION
+#
+# The method used to uninstall the no-login authentication plugin depends on how you install it:
+#
+# 		) If oyu installed the plugin at server startup using a --plugin-load-add option, restart the server without the option.
+#
+# 		) If you installed the plugin at runtime using INSTALL_PLUGIN, it remains INSTALLED across server Restarts.
+# 			To uninstall it, use UNINSTALL_PLUGIN:
+#
+# 			UNINSTALL PLUGIN mysql_no_login;
+#
+# USING NO-LOGIN PLUGGABLE AUTHENTICATION
+#
+# This section describes how to use the no-login authentication plugin to prevent connections from MySQL client programs to the server.
+#
+# It is assumed that the server is running with the server-side plugin enabled.
+#
+# To refer to the no-login authentication plugin in the IDENTIFIED WITH clause of a CREATE_USER statement, use the name mysql_no_login.
+#
+# An account that authenticates using mysql_no_login may be used as the DEFINER for stored program and view objects.
+#
+# IF such an object definition also include SQL SECURITY DEFINER, it executes with that accounts privileges.
+#
+# DBAs cna use this behavior to provide access to confidential or sensitive data that is exposed only
+# through well-controlled interfaces.
+#
+# The following example provides a simple illustration of these principles. It defines an account that does not permit
+# client connections, and associates with it a view that exposes only certain columns of the mysql.user system table:
+#
+# CREATE DATABASE nologindb;
+# CREATE USER 'nologin'@'localhost'
+# 		IDENTIFIED WITH mysql_no_login;
+#
+# GRANT ALL ON nologindb.*
+# 		TO 'nologin'@'localhost';
+#
+# GRANT SELECT ON mysql.user
+#		TO 'nologin'@'localhost';
+#
+# CREATE DEFINER = 'nologin'@'localhost'
+# 		SQL SECURITY DEFINER
+# 		VIEW nologindb.myview
+# 		AS SELECT User, Host FROM mysql.user;
+#
+# To provide protected access to the view to an ordinary user, do this:
+#
+# GRANT SELECT ON nologindb.myview TO 'ordinaryuser'@'localhost';
+#
+# Now the ordinary user can use the view to access the limited information it presents:
+#
+# SELECT * FROM nologindb.myview;
+#
+# Attempts by the user to access columns other than those exposed by the view result in an error,
+# as do all attempts to select from the view by users not granted access to it.
+#
+# NOTE:
+#
+# 		Because the nologin account cannot be used directly, the operations required to set up objects
+# 		must be performed by root or similar accounts with hte privileges required to create the obejcts and set DEFINER values.
+#
+# An account that authenticates using mysql_no_login may be used as a proxied base user for proxy accounts:
+#
+# -- Create the proxied account
+# CREATE USER 'proxy_base'@'localhost'
+# 		IDENTIFIED WITH mysql_no_login;
+#
+# -- Grant privileges to proxied account
+# GRANT ... TO 'proxy_base'@'localhost';
+#
+# -- Permit real_user to be proxy for proxied account
+# GRANT PROXY ON 'proxy_base'@'localhost'
+# 		TO 'real_user'@'localhost';
+#
+# THis enables clients to access MySQL through the Proxy account (real_user) but not to bypass the proxy mechanism
+# by connecting directly as the proxied user (proxy_base).
+#
+# SOCKET PEER-CREDENTIAL PLUGGABLE AUTHENTICATION
+#
+# The server-side auth_socket authentication plugin authenticates clients that connect from the local host through
+# the Unix socket file.
+#
+# The plugin uses the SO_PEERCRED socket option to obtain information about the user running the client program.
+#
+# Thus, the plugin can be used only on systems that support the SO_PEERCRED option, such as Linux.
+#
+# The source code for this plugin can be examined as simple example of demonstrating how to write a loadable authentication plugin.
+#
+# The following table shows the plugin and library file names. The files msut be located in the directory named by the
+# plugin_dir system variable.
+#
+# PLugin or File 					PLugin or File Name
+# Server-side PLugin 			auth_socket
+#
+# Client-side plugin 			None
+#
+# Library file  					auth_socket.so
+#
+# INSTALLING SOCKET PLUGGABLE AUTHENTICATION
+#
+# This section describes hwo to install the socket authentication plugin.
+# 
+# To be usable by the server, the plugin library file must be located in the MySQL plugin directory
+# (the direcotry named by the plugin_dir system variable).
+#
+# if necessary, configure the plugin directory location by setting hte value of plugin_dir at server startup.
+#
+# To load the plugin at server startup, use the --plugin-load-add option to name the library file that contains it.
+# With this plugin-loading method, the option must be given each time the server starts.
+#
+# For example, put these lines in the server my.cnf file:
+#
+# [mysqld]
+# plugin-load-add=auth_socket.so
+#
+# After modifying the file, restart the server to cause the new settings to take effect.
+#
+# Alternatively, to register the plugin at runtime, use this statement:
+#
+# 		INSTALL PLUGIN auth_socket SONAME 'auth_socket.so';
+#
+# INSTALL_PLUGIN loads the plugin immediately, and also registers it n the mysql.plugins system table to cause the
+# server to load it for each subsequent normal startup.
+#
+# TO verify the plugin installation, examine the INFORMATION_SCHEMA.PLUGINS table or use the SHOW_PLUGINS statement.
+#
+# For example:
+#
+# SELECT PLUGIN_NAME, PLUGIN_STATUS
+# FROM INFORMATION_SCHEMA.PLUGINS
+# WHERE PLUGIN_NAME LIKE '%socket%';
+# +--------------------------------------+
+# | PLUGIN_NAME 		| PLUGIN_STATUS 	  |
+# +--------------------------------------+
+# | auth_socket 		| ACTIVE 			  |
+# +--------------------------------------+
+#
+# If the plugin fails to initialize, check the server error log for diagnostics.
+#
+# UNINSTALLING SOCKET PLUGGABLE AUTHENTICATION
+#
+# The method used to uninstall the socket authentication plugin depends on how you installed it:
+#
+# 		) If you installed the plugin at server startup using a --plugin-load-add option ,restart the serer without the option.
+#
+# 		) If you isntalled the plugin at runtime using INSTALL_PLUGIN, it remains installed across server restarts.
+#
+# 			To uninstall it, use UNINSTALL_PLUGIN:
+#
+# 			UNINSTALL PLUGIN auth_socket;
+#
+# USING SOCKET PLUGGABLE AUTHENTICATION
+#
+# THe socket plugin checks whether the socket user name (the OS user name) matches the MySQL user name specified
+# by the client program to the server.
+#
+# If the names do not match, the plugin checks whether the socket user name matches the name specified in the 
+# authentication_string column of the mysql.user system table row.
+#
+# IF a match is found, the plugin permits teh connection.
+#
+# The authentication_string value can be specified using an IDENTIFIED ... AS clause with CREATE_USER through the 
+# socket file:
+#
+# CREATE USER 'valerie'@'localhost' IDENTIFIED WITH auth_socket;
+#
+# IF a user on the local host with a login name of stefanie invokes MySQL with the option --user=valerie to connect through
+# the socket file, the server uses auth_socket to authenticate the client.
+#
+# The plugin determines that hte --user option (valerie) differs form the client user's name (Stephanie) and refuses the connection.
+#
+# If a user named valerie tries the same thing,  the plugin finds taht the user name and the MySQL user name are bot hthe same and permits it.
+#
+# HOwever, the plugin refuses the connection even for valerie if the connection is made using a different protocol,
+# such as TCP/IP.
+#
+# To permit both the valerie and stephanie system users to access MySQL through socket file connections that use the account,
+# this cna be done in two ways:
+#
+# ) Name both users at account-creation time, one following CREATE_USER and the otehr in the authentication string:
+#
+# 			CREATE USER 'valerie'@'localhost' IDENTIFIED WITH auth_socket AS 'stephanie';
+#
+# ) If you have already used CREATE_USER To create the account for a single user, use ALTER_USER to add the second user:
+#
+# 			CREATE USER 'valerie'@'localhost' IDENTIFIED WITH auth_socket;
+# 			ALTER USER 'valerie'@'localhost' IDENTIFIED WITH auth_socket AS 'stephanie';
+#
+# To access the account, both valerie and stephanie specify --user=valerie at connect time.
+#
+# TEST PLUGGABLE AUTHENTICATION
+#
+# https://dev.mysql.com/doc/refman/8.0/en/test-pluggable-authentication.html
+#
+#
+# 
