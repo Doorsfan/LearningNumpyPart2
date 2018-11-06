@@ -33338,12 +33338,1242 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 		) The server uses the sha256_password_auto_generate_rsa_keys SYS_VAR to determine whether to automatically
 #			generate the RSA key-pair file.
 #
-# 		)  
+# 		) The Rsa_public_key status variable displays the RSA public key used by the sha256_password authentication plugin.
+#
+# 		) Clients that are in possession of the RSA public key can perform RSA key pair-based password exchange with the server
+# 			during the connection process, as described later.
+#
+# 		) For connections by accounts that authenticate with sha256_password and RSA public key pair-based PW exchange, the server
+# 			sends the RSA public key to the client as needed.
+#
+# 			However, if a copy of the public key is available on the client host, the client can use it to save a round trip in the client
+# 			/Server protocol:
+#
+# 				) For these command-line clients, use the --server-public-key-path option to specify the RSA public key file:
+#
+# 						mysql, mysqladmin, mysqlbinlog, mysqlcheck, mysqldump, mysqlimport, mysqlpump, mysqlshow, mysqlslap, mysqltest, mysql_upgrade
+#
+# 				) For programs that use the C API, call mysql_options() to specify the RSA public key file by passing the MYSQL_SERVER_PUBLIC_KEY
+#					option and the name of the file.
+#
+# 	 			) For replication slaves, use the  CHANGE_MASTER_TO statement with the MASTER_PUBLIC_KEY_PATH option to specify the RSA public key file.
+# 					For Group replication, the group_replication_recovery_get_public_key SYSTEM VARIABLE serves the same purpose.
+#
+# For clients that use the sha256_password plugin, passwords are never exposed as cleartext when connecting to the server.
+# How password transmission occurs depends on whether a secure connection or RSA encryption is used:
+#
+# 		) If the connection is secure, an RSA key pair is unnecessary and is not used. This applies to encrypted connections that use TLS.
+# 			The password is sent as cleartext but cannot be snooped because the connection is secure.
+#
+# 		) If the connection is not secure, and an RSA key pair is available, teh connection remains unencrypted.
+#
+# 			This applies to unencrypted connections without TLS. RSA is used only for password exchange between client and server,
+# 			to prevent password snooping.
+#
+# 			When the server receives the encrypted password, it decrypts it. A scramble is used in the encryption to prevent repeat attacks.
+#
+# 		) If a secure connection is not used and RSA encryption is not available, the connection attempt fails because the PW cannot be sent without
+# 			being exposed as cleartext.
+#
+# As mentioned previously, RSA password encryption is available only if MySQL was compiled using OpenSSL.
+#
+# The implication for MySQL distribs compiled using wolfSSL is that - to use SHA-256 PWs, clients MUST use an encrypted
+# connection to access the server.
+#
+# NOTE:
+#
+# 		To use RSA pw encryption with sha256_password, the client and server both must be compiled using OpenSSL, not just one of them.
+#
+# Assuming that MySQL has been compiled using OpenSSL, use the following procedure to enable the use of an RSA key pair for PW exchange
+# during the client connection process:
+#
+# 		1. Create the RSA private and public key-pair files using the previous instructions.
+#
+# 		2. If the private and public key files are located in the data directory and are named private_key.pem and public_key.pem
+# 			(the default values of the sha256_password_private_key_path and sha256_password_public_key_path system variables), the server
+# 			uses them automatically at startup.
+#
+# 			otherwise, to name the key files explicitly, set the system variables to the key file names in the server option file.
+#
+# 			If the files are located in the server data directory, you need not specify their full path names:
+#
+# 				[mysqld]
+# 				sha256_password_private_key_path=myprivkey.pem
+# 				sha256_password_public_key_path=mypubkey.pem
+#
+# 			If the key files are not located in the data directory, or to make their locations explicit in the system variable values,
+# 			use full path names:
+#
+# 				[mysqld]
+# 				sha256_password_private_key_path=/usr/local/mysql/myprivkey.pem
+# 				sha256_password_public_key_path=/usr/local/mysql/mypubkey.pem
+#
+# 		3. Restart the server, then connect to it and check the Rsa_public_key status variable value.
+#
+# 			The value will differ from that shown here, but should be nonempty:
+#
+# 				SHOW STATUS LIKE 'Rsa_public_key'\G
+# 				*********************** 1. row ****************************
+# 				
+# 				Variable name: Rsa_public_key
+# 						Value: ---------- BEGIN PUBLIC KEY --------------
+# 				<values>
+# 				---------- END PUBLIC KEY -------------
+#
+# 			If the value is empty, the server found some problem with the key files.
+# 			Check the error log for diagnostic information.
+#
+# After the server has been configured with the RSA key files, accounts that authenticate with the sha256_password plugin
+# have the option of using those key files to connect to the server.
+#
+# As mentioned previously, such accounts can use either a secure connection (in which case RSA is not used) or an unencrypted
+# connection that performs password exchange using RSA. Suppose that an unenecrypted connection is used.
+#
+# For example:
+#
+# 		mysql --ssl-mode=DISABLED -u sha256user -p
+# 		Enter password: password
+#
+# For this connection attempt by sha256user, the server determines that sha256_password is the appropriate authentication plugin
+# and invokes it (because that was the plugin specified at CREATE_USER point of time).
+#
+# The plugin finds that the connection is not encrypted and thus requires the password to be transmitted using RSA encryption.
+# In this case, the plugin sends the RSA public key to the client, which uses it to encrypt the PW and returns the result to the sever.
+#
+# The plugin uses the RAS private key on the server side to decrypt the password and accepts or rejects the connection based
+# on whether the password is correct.
+#
+# The server sends the RSA public key to the client as needed. However, if the client has a file containing a local coppy of the
+# RSA public key required by the server, it can specify the file using the --server-public-key-path option:
+#
+# 		mysql --ssl-mode=DISABLED -u sha256user -p --server-public-key-path=file_name
+# 		Enter password: password
+# 
+# The public key value in the file named by the --server-public-key-path option should be the same as the key value in the server-side
+# file named by the sha256_password_public_key_path system variable.
+#
+# If the key file contains a valid public key value but the value is incorrect, an access-denied error occurs.
+# If the key file does not contain a valid public key, the client program cannot use it.
+#
+# In this case, the sha256_password plugin sends the public key to the client as if no --server-public-key-path option had been specified.
+#
+# Client users can obtain the RSA public key two ways:
+#
+# 		) The database administrator can provide a copy of the public key file.
+#
+# 		) A client user who can connect to the server some other way can use a SHOW STATUS LIKE 'Rsa_public_key' statement
+# 			and save the returned key value in a file.
+#
+# CACHING SHA-2 PLUGGABLE AUTHENTICATION
+#
+# MySQL provides two authentication plugins that implement SHA-256 hashing for user account passwords:
+#
+# 		) sha256_password: Implements basic SHA-256 authentication
+#
+# 		) caching_sha2_password: Implements SHA-256 authentication (like sha256_password), but uses caching on the server side
+# 			for better performance and has additional features for wider applicability
+#
+# This section describes the caching SHA-2 authentication plugin.
+#
+# IMPORTANT:
+#
+# 		In MySQL 8.0, caching_sha2_password is the default authentication plugin rather than mysql_native_password.
+#
+# 		For more information about the implications of this change for server ops and compatibility of the server with
+# 		clients and connectors, see later.
+#
+# IMPORTANT:
+#
+# 		To connect to the server using an account that authenticates with the caching_sha2_password plugin, you must
+# 		use either a secure connection or an unencrypted connection that supports password exchange using an RSA key pair,
+# 		as described later in this section.
+#
+# 		Either way, the caching_sha2_password plugin uses MySQL's encryption capabilities.
+#
+# NOTE:
+#
+# 		In the name sha256_password, "sha256" refers to the 256-bit digest length the plugin uses for encryption.
+#
+# 		In the name caching_sha2_password, "sha2" refers more generally to the SHA-2 class of encryption algorithms,
+# 		of which 256-bit encryption is one instance
+#
+# 		The latter name choice leaves room for future expansion of possible digest lengths without changing the plugin name.
+#
+# The caching_sha2_password plugin has these advantages, compared to sha256_password:
+#
+# 		) On the server side, an in-memory cache enables faster reauthentication of users who have connected previously when they connect again.
+#
+# 		) RSA-based password exchange is available regardless of the SSL library against which MySQL is linked.
+#
+# 		) Support is provided for client connections that use the Unix socket-file and shared-memory protocols.
+#
+# PLUGIN AND LIBRARY NAMES FOR SHA-2 AUTHENTICATION
+#
+# Plugin or File 				Plugin or File name
+#
+# Server-side plugin 		caching_sha2_password
+#
+# Client-side plugin 		caching_sha2_password
+#
+# Library file 				None (plugins are built in)
+#
+# Installing SHA-2 Pluggable Authentication
+#
+# The caching_sha2_password plugin exists in server and client forms:
+#
+# 		) The server-side plugin is built into the server, need not be loaded explicitly, and cannot be disabled by unloading it.
+#
+# 		) The client-side plugin is built into the libmysqlclient client library and is available to any program linked against libmysqlclient
+#
+# The server-side plugin uses the sha2_cache_cleaner audit plugin as a helper to perform password cache management.
+# sha2_cache_cleaner, like caching_sha2_password is built in and need not be installed.
+#
+# USING SHA-2 PLUGGABLE AUTHENTICATION
+#
+# To set up an account that uses the caching_sha2_password plugin for SHA-256 password hashing, use the following statement,
+# where password is the desired account password:
+#
+# 		CREATE USER 'sha2user'@'localhost' IDENTIFIED WITH caching_sha2_password BY 'password';
+#
+# The server assigns the caching_sha2_password plugin to the account and uses it to encrypt the password using SHA-256,
+# storing those values in the plugin and authentication_string columns of the mysql.user system table.
+#
+# The preceding instructions do not assume that caching_sha2_password is the default authentication plugin.
+#
+# If caching_sha2_password is the default authentication plugin, a simpler CREATE_USER syntax can be used.
+#
+# To start the server with the default authentication plugin set to caching_sha2_password, put these lines in the
+# server option file:
+#
+# 		[mysqld]
+# 		default_authentication_plugin=caching_sha2_password
+#
+# That causes the caching_sha2_password plugin to be used by default for new accounts.
+# As a result, it is possible to create the account and set its password without naming the plugin explicitly:
+#
+# 		CREATE USER 'sha2user'@'localhost' IDENTIFIED BY 'password';
+#
+# Another consequence of setting default_authentication_plugin to caching_sha2_password is that, to use some other
+# plugin for account creation, you must specify that plugin explicitly.
+#
+# For example, to use the mysql_native_password plugin, use this statement:
+#
+# 		CREATE USER 'nativeuser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+#
+# caching_sha2_password supports connections over secure transport.
+#
+# If you follow the RSA configuration procedure given later in this section, it also supports encrypted
+# password exchange using RSA over unencrypted connections.
+#
+# RSA support has these characteristics:
+#
+# 		) On the server side, two system variables named the RSA private and public key-pair files:
+#
+# 				caching_sha2_password_private_key_path
+#
+# 				and
+#
+# 				caching_sha2_password_public_key_path
+#
+# 			The database administrator must set these variables at server startup if the key files to use have names
+# 			that differ from the system variable default values.
+#
+# 		) The server uses the caching_sha2_password_auto_generate_rsa_keys system variable to determine whether to automatically
+# 			generate the RSA key-pair files.
+#
+# 		) The Caching_sha2_password_rsa_public_key status variable displays the RSA public key value used by the caching_sha2_password 
+# 			authentication plugin.
+#
+# 		) Clients that are in possession of the RSA public key can perform RSA key pair-based password exchange with the server during
+# 			the connection process, as described later.
+#
+# 		) For connections by accounts that authenticate with caching_sha2_password and RSA key pair-based password exchange, the server does
+# 			not send the RSA public key to clients by default.
+#
+# 			Clients can use a client-side copy of the required public key, or request the public key from the server.
+#
+# 			Use of a trusted local copy of the public key enables the client to avoid a round trip in the client/server protocol, and is
+# 			more secure than requesting the public key from the server.
+#
+# 			On the other hand, requesting the public key from the server is more convenient (it requires no management of a client-side file)
+# 			and may be acceptable in secure network environments.
+#
+# 				) For command-line clients, use the --server-public-key-path option to specify the RSA public key file.
+#
+# 					Use the --get-server-public-key option to request the public key from the server.
+#
+# 					The following programs support the two options: mysql, mysqlsh ,mysqladmin, mysqlbinlog, mysqlcheck, mysqldump,
+# 					mysqlimport, mysqlpump, mysqlshow, mysqlslap, mysqltest, mysql_upgrade
+#
+# 				) For programs that use the C API, call mysql_options() to specify the RSA public key file by passing the MYSQL_SERVER_PUBLIC_KEY
+# 					option and the name of the file, or request the public key from the server by passing the MYSQL_OPT_GET_SERVER_PUBLIC_KEY option.
 #
 #
+# 				) For replication slaves, use the CHANGE_MASTER_TO statement with the MASTER_PUBLIC_KEY_PATH option to specify the RSA public key file,
+# 					or the GET_MASTER_PUBLIC_KEY option to request the public key from the master.
 #
+# 					For Group Replication, the group_replication_recovery_public_key_path and group_replication_recovery_get_public_key system variables
+# 					serve the same purpose.
 #
+# In all cases, if the option is given to specify a valid public key file, it takes precedence over the option to request the public key from the server.
 #
+# For clients that use the caching_sha2_password plugin, passwords are never exposed as cleartext when connecting to the server.
 #
+# How password transmission occurs depends on whether a secure connection or RSA encryption is used:
 #
-# https://dev.mysql.com/doc/refman/8.0/en/sha256-pluggable-authentication.html
+# 		) If the connection is secure, an RSA key pair is unnecessary and is not used. This applies to encrypted TCP connections that use TLS,
+# 			as well as Unix socket-file and shared-memory connections.
+#
+# 			The password is sent as cleartext but cannot be snooped because the conn is secure.
+#
+# 		) If the connection is not secure, an RSA key pair is used. This applies to unencrypted TCP connections without TLS and named-pipe connections.
+# 			RSA is used only for password exchange between client and server, to prevent password snooping.
+#
+# 			When the server receives the encrypted password, it decrypts it. A scramble is used in the encryption to prevent repeat attacks.
+#
+# To enable use of an RSA key pair for password exchange during the client connection process, use the following procedure:
+#
+#  	1. Create the RSA private and public key-pair files using earlier instructions.
+#
+# 		2. If the private and public key files are located in the data directory and are named private_key.pem and public_key.pem
+# 			(the default values of the caching_sha2_password_private_key_path and caching_sha2_password_public_key_path system variables), the server
+# 			uses them automatically at startup.
+#
+# 			Otherwise, to name the key files explicitly, set the system variables to the key file names in the server option file.
+# 			
+# 			If the files are located in the server data directory, you need not specify their full path names:
+#
+# 				[mysqld]
+# 				caching_sha2_password_private_key_path=myprivkey.pem
+# 				caching_sha2_password_public_key_path=mypubkey.pem
+#
+# 			If the key files are not located in the data directory, or to make their locations explicit in the system variable values, use full path names:
+#
+# 				[mysqld]
+# 				caching_sha2_password_private_key_path=/usr/local/mysql/myprivkey.pem
+# 				caching_sha2_password_public_key_path=/usr/local/mysql/mypubkey.pem
+#
+# 		3. Restart the server, then connect to it and check the Caching_sha2_password_rsa_public_key status variable value.
+#
+# 			The value will differ from that shown here, but should be nonempty:
+#
+# 				SHOW STATUS LIKE 'Caching_sha2_password_rsa_public_key'\G
+# 				************************* 1. row ****************************
+# 				Variable_name: Caching_sha2_password_rsa_public_key
+# 							Value: -------BEGIN PUBLIC KEY----------
+# 				<values>
+# 				---------END PUBLIC KEY-------
+#
+# 			If the value is empty, the server found some problems with the key files.
+# 			Check the error log for diagnostic information.
+#
+# 			After the server has been configured with the RSA key files, accounts that authenticate with the caching_sha2_password plugin
+# 			have the option of using thoose key files to connect to the server.
+#
+# 			As mentioned previously, such accounts can use either a secure connection (in which case RSA is not used) or
+# 			an unencrypted connection that performs password exchange using RSA.
+#
+# 			Suppose that an unencrypted connection is used. For example:
+#
+# 				mysql --ssl-mode=DISABLED -u sha2user -p
+# 				Enter password: password
+#
+# 			For this connection attempt by sha2user, the server determines that caching_sha2_password is the appropriate authentication
+# 			plugin and invokes it (because that was the plugin specified at CREATE_USER time).
+#
+# 			The plugin finds that the connection is not encrypted and thus requires the password to be transmitted
+# 			using RSA encryption.
+#
+# 			However, the server does not send the public key to the client, and the client provided no public key,
+# 			so it cannot encrypt the PW and teh connection fails:
+#
+# 			ERROR 2061 (HY000): Authentication plugin 'caching_sha2_password'
+# 			reported error: Authentication requires secure connection
+#
+# 			To request the RSA public key from the server, specify the --get-server-public-key option:
+#
+# 				mysql --ssl-mode=DISABLED -u sha2user -p --get-server-public-key
+# 				Enter password: password
+#
+# 			In this case, the server sends the RSA public key to the client, which uses it to encrypt the password and returns the 
+# 			result to the server.
+#
+# 			The plugin uses the RSA private key on the server side to decrypt the PW and accepts or rejects the conection based
+# 			on whether the PW is correct.
+#
+# 			Alternatively, if the client has a file containing a local copy of the RSA public key required by the server, it can
+# 			specify the file using the --server-public-key-path option:
+#
+# 				mysql --ssl-mode=DISABLED -u sha2user -p --server-public-key-path=file_name
+# 				Enter password: password
+#
+# 			In this case, the client uses the public key to encrypt the password and returns the results to the server.
+# 			The plugin uses the RSA private key on the server side to decrypt the PW and accepts or rejects based on correctness.
+#
+# 			The public key value in the file named by the --server-public-key-path option should be the same as the key value
+# 			in the server-side file named by the caching_sha2_password_public_key_path system variable.
+#
+# 			If the key file contains a valid public key value but the value is incorrect, an access-denied error occurs.
+#
+# 			If the key file does not contain a valid public key, the client program cannot use it.
+#
+# 			Client users can obtain the RSA public key two ways:
+#
+# 				) The database admin can provide a copy of the public key file
+#
+# 				) A client user who can connect to the server some other way can use a SHOW STATUS LIKE 'Caching_sha2_password_rsa_public_key"
+# 					statement and save the returned key value in a file.
+#
+# CACHE OPERATION FOR SHA-2 PLUGGABLE AUTHENTICATION
+#
+# On the server side, the caching_sha2_password plugin uses an in-memory cache for faster authentication of clients who have
+# connected previously.
+#
+# Entries consists of account-name/password-hash pairs. The cache works like this:
+#
+# 		1. When a client connects, caching_sha2_password checks whether the client and password match some cache entry.
+#
+# 			If so, authentication succeeds.
+#
+# 		2. If there is no matching cache-entry, the plugin attempts to verify the client against the credentials in the mysql.user system table.
+#
+# 			If this succeeds, caching_sha2_password adds an entry for the client to the hash. Otherwise, authentication fails and the connection is rejected.
+#
+# In this way, when a client first connects, authentication against the mysql.user system table occurs.
+#
+# When the client connects subsequently, faster authentication against the cache occurs.
+#
+# Password cache operations other than adding entries are handled by the sha2_cache_cleaner audit plugin,
+# which performs these actions on behalf of caching_sha2_password:
+#
+# 		) It clears the cache entry for any account that is renamed or dropped, or any account for which the credentials or authentication
+# 			plugins are changed.
+#
+# 		) It empties the cache when the FLUSH_PRIVILEGES statement is executed.
+#
+# 		) It empties the cache at server shutdown. (This means the cache is not persistent across server restarts).
+#
+# Cache cleaning operations affect the authentication requirements for subsequent client connections.
+#
+# For each user account, the first client connection for the user after any of the following operations must use a 
+# secure connection (made using TCP using TLS credentials, a Unix socket file, or shared memory) or RSA key pair-based
+# PW exchange:
+#
+# 		) After account creation
+#
+# 		) After a PW change for the account
+#
+# 		) After RENAME_USER for the account
+#
+# 		) After FLUSH_PRIVILEGES
+#
+# FLUSH_PRIVILEGES clears the entire cache and affects all accounts that use the caching_sha2_password plugin.
+# The other operations clear specific cache entries and affect only accounts that are part of the operation.
+#
+# Once the user authenticates successfully, the account is entered into the cache and subsequent connections do not require
+# a secure connection or the RSA key pair, until another cache clearing event occurs that affects the account.
+#
+# (When the cache can be used, the server uses a challenge-response mechanism that does not use cleartext password
+# transmission and does not require a secure connection).
+#
+# CLIENT-SIDE CLEARTEXT PLUGGABLE AUTHENTICATION
+#
+# A client-side authentication plugin is available that sends the PW to the server without hashing or encryption.
+#
+# THis plugin is built into the MySQL client lib.
+#
+# The following table shows the plugin name.
+#
+# PLUGIN AND LIBRARY NAMES FOR CLEARTEXT AUTHENTICATION
+#
+# Plugin or File 			Plugin or File Name
+# Server-side plugin 	None, see discussion
+#
+# Client-side plugin 	mysql_clear_password
+#
+# Library file 			None (plugin is built in)
+#
+# With many MySQL authentication methods, the client performs hashing or encryption of the password before sending it to the server.
+# This enables the client to avoid sending the PW in clear text.
+#
+# Hashing or encryption cannot be done for authentication schemes that require the server to receive the PW as entered on the client side.
+# In such cases, the client-side mysql_clear_password plugin is used to send the PW to the server in clear text.
+#
+# There is no corresponding server-side plugin. Rather, the client-side plugin can be used by any server-side plugin that needs
+# a cleartext PW.
+#
+# Examples are PAM and simple LDAP authentication plugins.
+#
+# The following discussion provides usage information specific to clear text pluggable authentication.
+# For general information about pluggable authentication in MySQL, see earlier.
+#
+# NOTE:
+#
+# 		Sending PWs in clear text may be a security problem in some configurations.
+#
+# 		To avoid problems if there is any possibility that the password would be intercepted,
+# 		clients should connect to MySQL Server using a method that protects the password.
+#
+# 		Possibilities include SSL, IPsec or a private network.
+#
+# To make inadvertent use of the mysql_clear_password plugin less likely, MySQL clients must explicitly enable it.
+# This can be done in several ways:
+#
+# 		) Set the LIBMYSQL_ENABLE_CLEARTEXT_PLUGIN environment variable to a value that begins with 1, Y or y.
+#
+# 			This enables the plugin for all client connections.
+#
+# 		) The mysql, mysqladmin, mysqlcheck, mysqldump, mysqlshow and mysqlslap client programs support an --enable-cleartext-plugin option
+# 			that enables the plugin on a per-invocation basis.
+#
+# 		) The mysql_options() C API function supports a MYSQL_ENABLE_CLEARTEXT_PLUGIN option that enables the plugin on a per-connection basis.
+#
+# 			Also, any program that uses libmysqlclient and reads option files can enable the plugin by including an enable-cleartext-plugin option
+# 			in an option group read by the client library.
+#
+# PAM PLUGGABLE AUTHENTICATION
+#
+# NOte:
+#
+# 		The PAM pluggable authentication is an extension included in MySQL Enterprise Edition, a commercial product.
+# 
+# MySQL Enterprise Edition supports an authentication method that enables MySQL Server to use PAM (Pluggable Authentication Modules)
+# to authenticate MySQL users.
+#
+# PAM enables a system to use a standard interface to access various kinds of authentication methods, such as UNIX passwords or an LDAP directory.
+#
+# PAM pluggable authentication provides these capabilities:
+#
+# 		) External authentication: PAM authentication enables MySQL server to accept connections from users defined outside the MySQL grant tables
+# 			and that authenticate using methods supported by PAM.
+#
+# 		) Proxy user support: PAM authentication can return to MySQL a user name different from the login user, based on the groups the external user
+# 										is in and the authentication string provided.
+#
+# 									This means that the plugin can return the MySQL user that defines the privileges the external PAM-authenticated user should have.
+#
+# 									For example, a user named joe can connect and have the privileges of the user named developer.
+#
+# PAM pluggable authentication has been tested on Linux and macOS.
+#
+# The PAM plugin uses the information passed to it by MySQL Server (such as user name, host name, password and authentication string),
+# 	plus whatever method is available for PAM lookup.
+#
+# The plugin checks the user credentials against PAM and returns 'Authentication succeeded, Username is user_name' or
+# 'Authentication failed'.
+#
+# The following table shows the plugin and library file names. The file name suffix might differ on your system.
+#
+# The file must be located in the directory named by the plugin_dir SYSTEM VARIABLE.
+#
+# PLUGIN AND LIBRARY NAMES FOR PAM AUTHENTICATION
+#
+# PLugin or File 					PLugin or file name
+#
+# Server-side plugin 			authentication_pam
+#
+# Client-side plugin 			mysql_clear_password
+#
+# Library file 					authentication_pam.so
+#
+# The client-side clear-text plugin that communicates with the server-side PAM plugin is built into the libmysqlclient client library
+# and is included in all distribs, including community distribs.
+#
+# Inclusion of the client-side clear-text plugin in all MySQL distribs enables clients from any distrib to connect
+# to a server that has the server-side plugin loaded.
+#
+# INSTALLING PAM PLUGGABLE AUTHENTICATION
+#
+# This section describes how ot install the PAM authentication plugin. 
+#
+# To be usable by the server, the plugin library file must be located in the MySQL plugin dir (the dir named by the plugin_dir 
+# system variable).
+#
+# If necessary, configure the plugin directory location by setting the value of plugin_dir at server startup.
+#
+# The plugin library file base name is authentication_pam. The file name suffix differs per platform (for example, .so for Unix and
+# Unix-like systems, .dll for Windows)
+#
+# To load the plugin at server startup, use the --plugin-load-add option to name the library file that contains it.
+#
+# With this plugin-loading method, the option must be given each time the server starts.
+# For example, put these lines in the server my.cnf file (adjust the .so suffix for your platform as necessary):
+#
+# 		[mysqld]
+# 		plugin-load-add=authentication_pam.so
+#
+# After modifying my.cnf, restart the server to cause the new settings to take effect.
+#
+# Alternatively, to register the plugin at runtime, use this statement (adjust the .so suffix as necessary):
+#
+# 		INSTALL PLUGIN authentication_pam SONAME 'authentication_pam.so';
+#
+# INSTALL_PLUGIN loads the plugin immediately, and also registers it in the mysql.plugins system table to cause
+# the server to load it for each subsequent normal startup.
+#
+# To verify plugin installation, examine the INFORMATION_SCHEMA.PLUGINS table or use the SHOW_PLUGINS statement.
+#
+# for example:
+#
+# 		SELECT PLUGIN_NAME, PLUGIN_STATUS FROM INFORMATION_SCHEMA PLUGINS WHERE PLUGIN_NAME LIKE '%pam%';
+# 		+-------------------------------+
+# 		| PLUGIN_NAME | 					  |
+# 		+-------------+-----------------+
+# 		| authentication_pam | ACTIVE   |
+# 		+-------------------------------+
+#
+# If the plugin fails to intiialize, check the server error log for diagnostic messages.
+#
+# To associate MySQL accounts with the PAM plugin, see Using PAM Pluggable Authentication.
+#
+# UNINSTALLING PAM PLUGGABLE AUTHENTICATION
+#
+# The method used to uninstall the PAM authentication plugin depends on how you installed it:
+#
+# 		) If you installed the plugin at server startup using a --plugin-load-add option, restart the server without the option.
+#
+# 		) If you installed the plugin at runtime using INSTALL_PLUGIN, it remains installed across server restarts. To uninstall it, use UNINSTALL_PLUGIN:
+#
+# 			UNINSTALL PLUGIN authentication_pam;
+#
+# USING PAM PLUGGABLE AUTHENTICATION
+#
+# This section describes how to use the PAM authentication plugin to connect from MySQL client programs to the server.
+# It is assumed that the server is running with the server-side plugin enabled, as described in Installing PAM Pluggable Authentication.
+#
+# TO refer to the PAM authentication plugin in the IDENTIFIED WITH clause of a CREATE_USER statement, use the name authentication_pam.
+# For example:
+#
+# 		CREATE USER user
+# 			IDENTIFIED WITH authentication_pam
+# 			AS 'authentication_string';
+#
+# The authentication string specifies the following types of information:
+#
+# 		) PAM supports the notion of "service name", which is a name that the system administrator can use to configure
+# 			the authentication method for a particular application.
+#
+# 			There can be several such "applications" associated with a single database server instance, so the choice of service name
+# 			is left to the SQL application developer.
+#
+# 			When you define an account that hsould authenticate using PAM, specify the service name in the authentication string.
+#
+# 		) PAM provides a way for a PAM module to return to the server a MySQL user name other than the login name supplied at login time.
+# 			Use the authentication string to control the mapping between login name and MySQL user name.
+#
+# 			If you want to take advantage of proxy user capabilities, the authentication string must include this kind of mapping.
+#
+# For example, if the service name is mysql, and users in the root and users PAM groups should be mapped to the developer and data_entry
+# MySQL users, respectively, use a statement like this:
+#
+# 		CREATE USER user
+# 			IDENTIFIED WITH authentication_pam
+# 			AS 'mysql, root=developer, users=data_entry';
+#
+# Authentication string syntax for the PAM authentication plugin follows these rules:
+#
+# 		) The string consists of a PAM service name, optionally followed by a group mapping list consisting of one or more keyword/value pairs
+# 			each specifying a group name and a MysQL user name:
+#
+# 				pam_service_name[,group_name=mysql_user_name]...
+# 
+# 			The plugin parses the authentication string on each login check. To minimize overhead, keep the string as short as possible.
+#
+# 		) Each group_name=mysql_user_name pair must be preceded by a comma.
+#
+# 		) Leading and trailing spaces not inside double "" marks are ignored.
+#
+# 		) Unquoted pam_service_name, group_name and mysql_user_name values can contain anything except =, , or space
+#
+# 		) If a pam_service_name, group_name or mysql_user_name value is quoted with ", everything between the quotation marks is part of a value.
+# 
+# 			tHis is necessary, fo rexample, if the value contains space chars.
+#
+# 			All characters are legal except double quotation mark and \.
+# 			To include either character, escape it with a \.
+#
+# If the plugin successfully authenticates a login name, it looks for a group mappings list in the authentication string and,
+# if present, uses it to return a different user name to teh MySQL server based on the groups the external user is a member of:
+#
+# 		) If the authentication string contains no group mapping list, the plugin returns the login name.
+#
+# 		) If the authentication string does contain a group mapping list, the plugin examines each group_name=mysql_user_name pair in the
+# 			list from left to right and tries to find a match for the group_name value in a non-MySQL directory of the groups assigned
+# 			to the authenticated user and returns mysql_user_name for the first match it finds.
+#
+# 			If the plugin finds no match for any group, it returns the login name.
+#
+# 			If the plugin is not capable of looking up a group in a directory, it ignores the group mapping list and
+# 			returns the login name.
+#
+# THe following sections describe how to set up several authentication scenarios that use the PAM authentication plugin:
+#
+# 	) No proxy users. This uses PAM only to check login names and PWs.
+#
+# 		Every external user permitted to connect to MySQL Server should have a matching MySQL account that is defined to use
+# 		external PAM authentication.
+#
+# 		(For a MySQL account of user_name@host_name to match the external user, user_name must be the login name and host_name
+# 		must match the host from which the client connects).
+#
+# 		Authentication can be performed by various PAM-supported methods.
+#
+# 		The discussion shows how to use traditional Unix PWs and LDAP.
+#
+# 		PAM authentication, when not done through proxy users or groups, requires the MySQL account to have the same
+# 		user name as the Unix account.
+#
+# 		MySQL user names are limited to 32 chars.
+#
+# 		Which limits PAM nonproxy authentication to Unix accounts with a name of at most 32 chars.
+#
+# ) Proxy login only and group mapping. For this scenario, create one or a few MySQL accounts that define different sets of privileges.
+#
+# 		(Ideally, nobody should connect using those accounts directly).
+#
+# 	Then define a default user authenticating through PAM that uses some mapping scheme (usually by the external groups the users are in)
+# to map all the external logins to the few MySQL accounts holding the privilege sets.
+#
+# Any user that logs in is mapped to one of the MySQL accoutns and uses its privileges.
+#
+# THe discussion shows how ot set htis up using Unix PWs, but other PAM methods such as LDAP could be used instead.
+#
+# Variations of these scenarios are possible. For example, you can permit some users to log in  directly (without proxying)
+# but reuqire others to connect through proxies.
+#
+# the examples make the following assumptions. You might need to make some adjustments, if your system is set up differently.
+#
+# 	) The PAM configuration directory is /etc/pam.d
+#
+# 	) The PAM service name is mysql, which means that you must set up a PAM file named mysql in the PAM configuration directory (creating
+# 		the file if it does not exist).
+#
+# 		If you use a service name different from mysql, the file name will differ and you must use a different name in the AS `auth_string` 
+# 		clause of CREATE_USER statements.
+#
+# 	) The examples use a login name of antonio and a password of verysecret. Change these accoridng to the user you want ot authenticate.
+#
+# The PAM authentication plugin checks at initialization time whether the AUTHENTICATION_PAM_LOG environemtn value is set in the server's
+# startup environment.
+#
+# If so, the plugin enables logging of diagnostic messages to the standard output.
+#
+# Depeding on how  your server is started, the message might appear on the console or in the error
+# log.
+#
+# These messages can be helpful for debugging PAM-related problems that occur when the plugin performs authentication.
+#
+# UNIX PASSWORD AUTHENTICATION WITHOUT PROXY USERS
+#
+# The authentication scenario uses PAM only to check Unix user login names and passwords.
+#
+# Every external user permitted to connect to MySQL Server should have a matching MySQL account that is defined
+# to use external PAM authentication.
+#
+# 1) Verify that Unix authentication in PAM permits you to log in as the respective user.
+#
+# 2) Set up PAM to authenticate the mysql service by creating a file named /etc/pam.d/mysql.
+#
+# 		The file contents are system dependent, so check existing login-related files in the
+# 		/etc/pam.d directory to see what they look like.
+#
+# 		On Linux, the mysql file might look like this:
+#
+# 			#%PAM-1.0
+# 			auth 				include 			password-auth
+# 			account 			include 			password-auth
+#
+# 		For Gentoo Linux, use system-login rather than password-auth. For macOS, use login rather than password-auth
+#
+# 		The PAM file format might differ on some systems. For example, on Ubuntu and other Debian-based systems, use these files
+# 		contents instead:
+#
+# 			@include common-auth
+# 			@include common-account
+# 			@include common-session-noninteractive
+#
+# 3) Create a MySQL account with the same user name as the Unix login name and define it to authenticate using the PAM plugin:
+#
+# 		CREATE USER 'antonio'@'localhost'
+# 			IDENTIFIED WITH authentication_pam AS 'mysql';
+# 		GRANT ALL PRIVILEGES ON mydb.* TO 'antonio'@'localhost';
+#
+# 4. Connect to the MySQL server using the mysql command-line client. For example:
+#
+# 		mysql --user=antonio --password 	--enable-cleartext-plugin mydb
+# 		Enter password: verysecret
+#
+# The server should permit the connection and the following query hsould return output as shown:
+#
+# 		SELECT USER(), CURRENT_USER(), @@proxy_user;
+# 		+-----------------------------------------------------+
+# 		| USER() 				| CURRENT_USER() 	 | @@proxy_user|
+# 		+--------------------+------------------+-------------+
+# 		| antonio@localhost 	| antonio@localhost| NULL 		   |
+# 		+--------------------+------------------+-------------+
+#
+# This demonstrates that antonio uses the privileges granted to the antonio MySQL acc, and taht no proxy has occured.
+#
+# NOTE:
+#
+# 		The client-side mysql_clear_password plgin with which the sever-side PAM plugin communicates sends the PW to the MySQL server in clear
+# 		text so it can be passed to PAM.
+#
+# 		THis is necessary to use the server-side PAM library, but may be a security problem in some configurations.
+#
+# 		These measures minimize the risk:
+#
+# 				) To make inadvertent use of the mysql_clear_password plugin less likely, MySQL clients must explicitly enable it;
+# 					for example, with the --enable-cleartext-plugin option.
+#
+# 			) To avoid PW exposure with the mysql_clear_password plugin enabled, MySQL clients should connect to the MySQL server
+# 				using a secure connection.
+#
+# NOTE:
+#
+# 		On some systems, Unix authentication uses /etc/shadow, a file that typically has restricted access permissions.
+#
+# 		This can cause MySQL PAM-based authentication to fail. Unfortunately, the PAM implementation does not permit
+# 		distinguishing "PW could not be checked" (due to failed permissions to read /etc/shadow) from "PW did not match".
+#
+# 		IF your system uses /etc/shadow, you may be able to enable access to it by MySQL using thsi method (assuming that
+# 			the MySQL server is run from the mysql system account):
+#
+# 		1. Create a shadow group in /etc/group
+#
+# 		2. Add the mysql user to the shadow group in /etc/group.
+#
+# 		3. Assign /etc/group to the shadow group and enable the group read permission:
+#
+# 			chgrp shadow /etc/shadow
+# 			chmod g+r /etc/shadow
+#
+# 		4. Restart the MySQL server
+#
+# LDAP Authentication without Proxy Users
+#
+# This authentication scenario uses PAM only to check LDAP user login names and passwords.
+#
+# Every external user permitted to connect to MySQL Server should have a matching MySQL account that is defined
+# to use external PAM authentication.
+#
+# 	1. Verify that LDAP authentication in PAM permits you to log in as antonio with password verysecret
+#
+# 	2. Set up PAM to authenticate the mysql service through LDAP by creating a file named /etc/pam.d/mysql.
+#
+# 		The file contents are system dependent, so check existing login-related files in the /etc/pam.d direcotry
+# 		to see what they look like. On Linux, the mysql file might look like this:
+#
+# 			#%PAM-1.0
+# 			auth 			required 		pam_ldap.so
+# 			account 		required 		pam_ldap.so
+#
+# 		If PAM object files have a suffix different from .so on your system, substitute the correct suffix.
+#
+# 		The PAM file format might differ on some systems.
+#
+# 	3. MySQL account creation and connecting to the server is the same as described in UNIX PW AUTHENTICATION WITHOUT PROXY USERS.
+#
+# UNIX PASSWORD AUTHENTICATION WITH PROXY USERS AND GROUP MAPPING
+#
+# The authentication scheme described here uses Proxying and group mapping to map connecting MySQL users who authenticate using
+# PAM onto other MySQL accounts that define different sets of privileges.
+#
+# USers do not connect directly through the accounts that define the privileges.
+#
+# INstead, they connect through a default proxy user authenticated using PAM, such that all
+# the external logins are mapped to the MySQL accounts that holds the privileges.
+#
+# Any user who connects is mapped to one of those MySQL accounts, the privileges for which
+# determines the database operations permitted to the external user.
+#
+# The procedure shown here uses Unix password authentication. To use LDAP instead, see earlier.
+#
+# 1. Verify that Unix authentication in PAM permits you to log in as antonio with password verysecret and that
+# 		antonio is a member of the root of users group.
+#
+# 2. Set up PAM to authenticate the mysql service. Put the following in /etc/pam.d/mysql:
+#
+# 		#%PAM-1.0
+# 		auth 				include 			password-auth
+# 		account 			include 			password-auth
+#
+# 		For Gentoo Linux, use system-login rather than password-auth.
+# 		For macOS, use login rather than password-auth.
+#
+# 		The PAM file format might differ on some systems. For example, on Ubuntu and other Debian-based systems,
+# 		use these file contents instead:
+#
+# 			@include common-auth
+# 			@include common-account
+# 			@include common-session-noninteractive
+#
+# 3. Create a default proxy user (''@'') that maps the external PAM users to the proxied accounts.
+#
+# 		It maps external users from the root PAM group to the developer MySQL account and the external users
+# 		from the users PAM group to the data_entry MySQL account:
+#
+# 			CREATE USER ''@'' IDENTIFIED WITH authentication_pam AS 'mysql, root=developer, users=data_entry';
+#
+# The mapping list following the service name is required when you set up proxy users. Otheriwse, the plugin cannot
+# 	tell how to map the name of PAM groups to the proper proxied user name.
+#
+# NOTE:
+#
+# 		IF your MySQL installation has anon users, they might conflict with the defualt proxy user.
+#
+# 4. Create the proxied accounts that will be used to access the database:
+#
+# 		CREATE USER 'developer'@'localhost' IDENTIFIED BY 'very secret PW';
+# 		GRANT ALL PRIVILEGES ON mydevdb.* TO 'developer'@'localhost';
+# 		CREATE USER 'data_entry'@'localhost' IDENTIFIED BY 'very secret PW';
+# 		GRANT ALL PRIVILEGES ON mydb.* TO 'data_entry'@'localhost';
+#
+# If you do not let anyone know the PWs for these accs, other user cannot use them to 
+# cornect directly to the MySQL server.
+#
+# iNStead, it is expected that users will authneticate using PAM and that they will use the
+# developer or data_entry account by proxy on their PAM group.
+#
+# 5. Grant the PROXY privilege to the proxy account for the proxied accounts:
+#
+# 		GRANT PROXY ON 'developer'@'localhost' TO ''@'';
+# 		GRANT PROXY ON 'data_entry'@'localhost' TO ''@'';
+#
+# 6. Connect to the MySQL server using the mysql command-line client. For example:
+#
+# 		mysql --user=antonio --password --enable-cleartext-plugin mydb
+# 		Enter password: verysecret
+#
+# The server authenticates the connection using the ''@'' account.
+#
+# THe privileges antonio will have dependson what PEM groups he is a member of.
+#
+# If antonio is a member of  the root PAM group, the PAM plugin maps root to the developer 
+# MySQL user name and returns that name to the server.
+#
+# The server verifies that ''@'' has the PROXY privilege for developer and permits the connection.
+# THe following queyr should return output as shown:
+#
+# SELECT USER(), CURRENT_USER(), @@proxy_user;
+# +-----------------------------------------------------+
+# | USER() 			   | CURRENT_USER() 	   | @@proxy_user|
+# +-----------------------------------------------------+
+# | antonio@localhost| developer@localhost| ''@'' 		  |
+# +-----------------------------------------------------+
+#
+# THis demonstrates that anotnio uses the privielges granted to the developer MySQl account, and that proxying
+# occurred through the  default proxy user account.
+#
+# If antonio is not a member of the root PAM group but is a member of the users
+# group, a similar process occurs, but the plugin maps user group membership to the data_entry MySQL user name and
+# returns that name to the server.
+#
+# In this case, antonio uses the privileges of the data_entry MySQL account:
+#
+# SELECT USER(), CURRENT_USER(), @@proxy_user;
+# +-------------------------------------------------------+
+# | 	USER() 			| 		CURRENT_USER()  |  @@proxy_user| 		
+# +-------------------------------------------------------+
+# | antonio@localhost| data_entry@localhost|''@'' 			 |
+# +-------------------------------------------------------+
+#
+# NOTE:
+#
+# THe client-side mysql_clear_password plugin with which the server-side PAM plugin communicates sends the password
+# to the MySQL server in clear text so it can be passed to PAM.
+#
+# This is necessary to use the server-side PAM library, but may be a security problem in some configs.
+#
+# These measures minimize hte risk:
+#
+# 		) To make inadvertent use of the mysql_clear_password plugin less likely, MySQL clients must explicitly enable it;
+# 			For example, with the --enable-cleartext-plugin option.
+#
+# 		) To avoid password exposure with the mysql_clear_password plugin enabled, MySQL clients should connect to
+# 			the MySQL server using a secure connection.
+#
+# PAM PLUGGABLE AUTHENTICATION DEBUGGING
+#
+# The PAM authentication plugin checks at intiailizaiton time whether the AUTHENTICATION_PAM_LOG envrionment value is set
+# (the value does not matter).
+#
+# IF so, the plugin enables logging of diagnostic messages to the standard output.
+#
+# These messages may be helpful for debugging PAM-related problems that occur when the plugin performs
+# authentication.
+#
+# SOme messages include reference to PAM plugin source files and line numbers, which enables plugin actions to be tied more closely
+# to the location in the code where they occur.
+#
+# WINDOWS PLUGGABLE AUTHENTICATION
+#
+# NOTE:
+#
+# 		WIndows pluggable authentication is an extension included in MySQL Enterprise Edition, a commercial product.
+#
+# MySQL Enterprise Edition for Windows supports an authentication method that performs external authentication on Windows,
+# 	enabling MySQL Server to use Native Windows services to authenticate client connections.
+#
+# Users who have logged in to Windows can connect from MySQL client programs to the server based on the information in the
+# environment without specifying an additonal PW.
+#
+# The client and server exchanges data packets in the authentication handshake. As a result of this exchange, the server
+# creates a security context object that represents the identity of the client in the Windows OS.
+#
+# This identity includes the name of the client account.
+#
+# WIndows pluggable authentication uses the identity of the client to check whether it is a given account or a member of a group.
+# By default, negotiation uses Kerberos to atuehtnicate, then NTLM if Kerberos is unavailable.
+#
+# Windows pluggable authentication provides these capabilities:
+#
+# 		) External authentication: Windows authentication enables MySQL Server to accept connections from users defined outside the
+# 			MySQL grant tables who ahve logged in to Windows.
+#
+# 		) Proxy user support: Windows authentication can return to MySQL a user name different from the client user.
+#
+# 			THis means that the plugin can return the MySQL user that defines the privileges the external Windows-authenticated
+# 			user should have.
+#
+# 			FOr example, a user named joe can connect and have the privileges of the user named developer.
+#
+# The following tbale shows the plugin and library file names. The file must be located in the directory named by the
+# plugin_dir system varaible.
+#
+# PLUGIN AND LIBRARY NAMES FOR WINDOWS AUTHENTICATION
+#
+# Plugin or File 			Plugin or File name
+# 
+# Server-side plugin 	authentication_windows
+#
+# Client-side plugin 	authentication_windows_client
+#
+# Library file 			authentication_windows.dll
+#
+# The library file includes only the server-side plugin. THe client-side plugin is built into the libmysqlclient client library.
+#
+# The server-side Windows authentication plugin is included only in MySQL Enterprise Edition.
+# It is not included in MySQL community distributions.
+#
+# The client-side plugin is included in all distirbutions, including community distribs. This permits clients from any distrib
+# to connect to a server that has the server-side plugin loaded.
+#
+# The Windows authentication plugin is supported on any version of Windows supported by MySQL 8.0
+#
+# INSTALLING WINDOWS PLUGGABLE AUTHENTICATION
+#
+# This section describes how ot install the Windows auth plugin. 
+#
+# To be usable by the server, the plugin library file must be located in the MySQL plugin directory (the directory named by the
+# plugin_dir SYSTEM VARIABLE).
+#
+# If necessary, configure the plugin directory location by setting the value of plugin_dir at server startup.
+#
+# To load the plugin at server startup, use the --plugin-load-add option to name the library file that contains it.
+# WIth this plugin-loading method, the option must be given each time the server starts.
+#
+# For example, put these lines in the server my.cnf file:
+#
+# 		[mysqld]
+# 		plugin-load-add=authentication_windows.dll
+#
+# AFter modifying my.cnf, restart the server to cause the new settins to tkae effect.
+#Q
+# Alternatively, to register the plugin at runtime, use this statement:
+#
+# INSTALL PLUGIN authentication_windows SONAME 'authentication_windows.dll';
+#
+# INSTALL_PLUGIN loads the plugin immediately, and also registers it in the mysql.plugins system table to cause the
+# server to load it for each subsequent normal startup.
+#
+# TO verify plugin installation, examine the INFORMATION_SCHEMA.PLUGINS table or use the SHOW_PLUGINS statement
+#
+# For example:
+#
+# 		SELECT PLUGIN_NAME, PLUGIN_STATUS
+# 		FROM INFORMATION_SCHEMA.PLUGINS
+# 		WHERE PLUGIN_NAME LIKE '%windows%';
+# 		+----------------------------------------------+
+# 		| PLUGIN_NAME 		        | PLUGIN_STATUS 	  |
+# 		+----------------------------------------------+
+# 		| authentication_windows  | ACTIVE 				  |
+# 		+----------------------------------------------+
+#
+# If the plugin fails to initialize, check the server error log for diagnostic messages.
+#
+# UNINSTALLING WINDOWS PLUGGABLE AUTHENTICATION
+#
+# The method used to uninstall the Windows authentication plugin depends  on how you installed it:
+#
+# 		) If you installed the plugin at server startup using a --plugin-load-add option, restart the server without the option
+#
+# 		) If you installed the plugin at runtime using INSTALL_PLUGIN, it remains installed across server restarts. to unstainll it, use UNINSTALL_PLUGIN:
+#
+# 			UNINSTALL PLUGIN authentication_windows;
+#
+# In addition, remove any startup options that set Windows plugin-related System Variables
+#
+# USING WINDOWS PLUGGABLE AUTHENTICATION
+#
+# The Windows authentication plugin supports the use of MySQL accounts such that users who have logged in to Windows can connect to the 
+# MySQL server without having to specify an additional PW.
+#
+# IT is assumed that hte server is runnning with the server-side plugin enabled.
+#
+# Once the DBA has enabled the server-side plugin and set up accounts to use it, clients can connect using those accounts
+# with no other setup required on their part.
+#
+# To refer to the Windows authentication plugin in the IDENTIFIED WITH clause of a CREATE_USER statement, use the name
+# authentication_windows.
+#
+# Suppose that the Windows uses Rafal and Tasha should be permitted to connect to MySQL, as well as any users in the Administrators or Power Users group.
+#
+# To set this up, create a MySQL account named sql_admin that uses the Windows plugin for authentication:
+#
+# 		CREATE USER sql_admin IDENTIFIED WITH authentication_windows AS 'Rafal, Tasha, Administration, "Power Users"';
+#
+# The plugin name is authentication_windows.
+#
+# the string following the AS Keyword is the authentication string. It specifies that hte Windows user named Rafal or Tasha are permitted
+# to authenticate to the server as the MysQL user sql_admin, as are any Windows users in the Administrators or Power Users group.
+#
+# The latter group name contains a space, so it must be quoted with double quote chars.
+#
+# After you create the sql_admin account, a user who has logged in to WIndows can attempt to connect to the server using that account:
+#
+# 		mysql --user=sql_admin
+#
+# no password is required here. The authentication_windows plugin uses the WIndows security API to check which Windows user is connecting.
+#
+# If that user is named Rafal or Tasha, or is in the Administrators or Power Users group, the server grants access and the client
+# is authenticated as sql_admin and has whatever privileges are granted to the sql_admin account.
+#
+# Otherwise, the server denies access.
+#
+# Authentication string syntax for the Windows authentication plugin follows these rules:
+#
+# 		) The string consists of one or more user mappings separated by commas.
+#
+# 		) Each user mapping associates a Windows user or group name with a MySQL user name:
+#
+# 			win_user_or_group_name=mysql_user_name
+# 			win_user_or_group_name
+#
+#			For the latter syntax, with no mysql_user_name value given, the implicit value is the MySQL user created by the CREATE_USER statement.
+#
+# 			Thus, these statements are equivalent:
+#
+# 				CREATE USER sql_admin IDENTIFIED WITH authentication_windows AS 'Rafal, Tasha, Administrators, "Power Users"';
+#
+# 				CREATE USER sql_admin IDENTIFIED WITH authentication_windows AS 'Rafal=sql_admin, Tasha=sql_admin, Administrators=sql_admin, "Power Users"=sql_admin';
+#
+# 		) Each blackslash ('\') in a value must be doubled becuase backslash is the escape char in MySQL strings.
+#
+# 		) Leading and trailing spaces not inside " marks are ignored
+#
+# 		) Unuquoted win_user_or_group_name and mysql_user_name values can contain anything except equal signs, comma or spaces.
+#
+# 		) If a win_user_or_group_name and/or mysql_user_name value is quoted with ", everything between the "" marks is part of the value.
+# 			This is necessary, for example, if the name contains space characters.
+#
+# 			All chars within " are legal except " and \, to include those, escape them with \
+#
+# 		) win_user_or_group_name values use conventional syntax for Windows principals, either local or in a domain.
+#
+# 			Examples (note the doubling of backslashes):
+#
+# 				domain\\user
+# 				.\\user
+# 				domain\\group
+# 				.\\group
+# 				BUILTIN\\WellKnownGroup
+#
+# WHen invoked by the server to authenticate a client, the plugin scans the authentication string left to right for a user or group match
+# to the WIndows user.
+#
+# If there is a match, the plugin returns the corresponding mysql_user_name to the MySQL server. If there is no match, authentication fails.
+#
+# A user name match takes preference over a group name match. Suppose that the Windows user named win_user is a member of win_group and the
+# authentication string looks like this:
+#
+# 		'win_group = sql_user1, win_user = sql_user2'
+#
+# When win_user connects to the MySQL server, there is a match both to win_group and to win_user.
+#
+# The plugin authenticates the user as sql_user2 because the more specific user match takes precedence over the group match,
+# even if the group is listed as the first param in the authentication string.
+#
+# Windows authentication always works for connections from the same computer on which the server is running.
+#
+# For cross-computer connections, both computers must be registered with Windows Active Directory.
+#
+# If they are in the same Windows domain, it is unnecessary to specify a domain name.
+#
+# It is also possible to permit connections from a different domain, as in this example:
+#
+# 		CREATE USER sql_accounting IDENTIFIED WITH authentication_windows AS 'SomeDomain\\Accounting';
+#
+# Here SomeDomain is the name of the other domain. The \ is doubled because it is the MySQL escape char within strings.
+#
+# MySQL supports the concept of proxy users whereby a client can connect and authenticate to the MySQL server using one account
+# but while connected has the privileges of another account.
+#
+# Suppose that you want Windows users to connect using a single user name but be mapped based on their Windows user and group
+# names onto specific MySQL accounts as follows:
+#
+# 		) The local_user and MyDomain\domain_user local and domain Windows users should map to the local_wlad MySQL account.
+#
+# 		) Users in the MyDomain\Developers domain group should map to the local_dev MySQL account.
+#
+# 		) Local machine administrators should map to the local_admin MySQL account.
+#
+# To set this up, create a proxy account for WIndows users to connect to, and configure this account so taht users and groups
+# map to the appropriate MySQL accounts (local_wlad, local_dev, local_admin).
+#
+# In addition, grant the MySQL accounts the privileges appropriate to the operations they need to perform.
+#
+# The following instructions use win_proxy as the proxy account, and local_wlad, local_dev and local_admin as the proxied accounts.
+#
+# 1. Create the proxy MySQL account:
+#
+# 		CREATE USER win_proxy IDENTIFIED WITH authentication_windows AS 'local_user = local_wlad, MyDomain\\domain_user = local_wlad,
+# 																							 MyDomain\\Developers = local_dev, BUILTIN\\Administrators = local_admin';
+#
+# 		NOTE : If your MySQL installation has anon users, they might conflict with the default proxy user.
+#
+# 2. For proxying to work, the proxied accounts must exist, so create them:
+#
+# 		CREATE USER local_wlad IDENTIFIED BY 'wlad_pass';
+# 		CREATE USER local_dev IDENTIFIED BY 'dev_pass';
+# 		CREATE USER local_admin IDENTIFIED BY 'admin_pass';
+#
+# 		If you do not let anyone know the passwords for these accounts, other users cannot use them to connect directly to the MySQL server.
+#
+# 		You should also issue GRANT statements (not shown) that grant each proxied account the privileges it needs.
+#
+# 3. The proxy account must have the PROXY privilege for each of the proxied accounts:
+#
+# 		GRANT PROXY ON local_wlad TO win_proxy;
+# 		GRANT PROXY ON local_dev TO win_proxy;
+# 		GRANT PROXY ON local_admin TO win_proxy;
+#
+# Now the Windows users local_user and MyDomain\domain_user can connect to the MySQL server as win_proxy and when authenticated
+# have the privileges of the account given in the authentication string - in this case, local_wlad.
+#
+# A user in the MyDomain\Developers group who connects as win_proxy has the privileges of the local_dev account.
+#
+# A user in the BUILTIN\Administrators group has privileges of the local_admin account.
+#
+# To configure authentication so that all Windows users who do not have their own MySQL account go through a proxy account,
+# substitute the default proxy user (''@'') for win_proxy in teh preceding example.
+#
+# To use the Windows authentication plugin with Connector/NET connection strings in Connector/NET 6.4.4 and higher, see the instructions.
+#
+# Additional control over the Windows authentication plugin is provided by the authentication_windows_use_principal_name and
+# authentication_windows_log_level SYSTEM VARIABLES.
+#
+# LDAP PLUGGABLE AUTHENTICATION
+#
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/ldap-pluggable-authentication.html
