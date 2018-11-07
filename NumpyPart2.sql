@@ -35374,7 +35374,2025 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # TEST PLUGGABLE AUTHENTICATION
 #
-# https://dev.mysql.com/doc/refman/8.0/en/test-pluggable-authentication.html
+# MySQL includes a test plugin that checks account credentials and logs success or failure to the server error log.
 #
+# This is a loadable plugin (not built in) and must be installed prior to use.
+#
+# The test plugin source code is separate from the server source, unlike the built-in native plugin, so it can be examined
+# as a relativily simple example demonstrating how to write a loadable authentication plugin.
+#
+# NOTE:
+#
+# 		This plugin is intended for testing and development purposes, and is not for use in production environments or on servers that
+# 		are exposed to public networks.
+#
+# The following table shows the plugin and library file names. The file name suffix might differ on your system.
+# The file must be located in the directory named by the plugin_dir system variable.
+#
+# PLUGIN AND LIBRARY NAMES FOR TEST AUTHENTICATION
+#
+# Plugin or File 				Plugin or File Name
+#
+# Server-side plugin 		test_plugin_server
+#
+# Client-side plugin 		auth_test_plugin
+#
+# library file 				auth_test_plugin.so
+#
+# INSTALLING TEST PLUGGABLE AUTHENTICATION
+#
+# This section describes how to install the test authentication plugin.
+# For gerneral info about installing plugins, see earlier.
+#
+# TO be usable by the server, the plugin library file must be located in the MySQL plugin directory 
+# (the directory named by the plugin_dir system variable).
+#
+# If necessary, configure the plugin directory location by setting the value of plugin_dir at server startup.
+#
+# To load the plugin at server startup, use the --plugin-load-add option to name the library that contains it.
+# With this plugin-loading method, the option must be given each time the server starts.
+#
+# For example, put these lines in the server my.cnf file (adjust the .so suffix for your platform as necessary):
+#
+# 	[mysqld]
+# 	plugin-load-add=auth_test_plugin.so
+#
+# After modifying my.cnf, restart the server to cause the new settings to take effect.
+#
+# Alternatively, to register the plugin at runtime, use this statement (adjust the .so suffix as necessary):
+#
+# INSTALL PLUGIN test_plugin_server SONAME 'auth_test_plugin.so';
+#
+# INSTALL_PLUGIN loads the plugin immediately, and also registers it in the mysql.plugins system table to cause the
+# server to load it for each subsequent normal startup.
+#
+# To verify plugin installation, examine the INFORMATION_SCHEMA.plugin table or use the SHOW_PLUGIN statement.
+#
+# For example:
+#
+# SELECT PLUGIN_NAME, PLUGIN_STATUS
+# FROM INFORMATION_SCHEMA.PLUGINS
+# WHERE PLUGIN_NAME LIKE '%test_plugin%';
+#
+# +-------------------------------------------+
+# | PLUGIN_NAME 				| PLUGIN_STATUS 	 |
+# +-------------------------------------------+
+# | test_plugin_server 		| ACTIVE 			 |
+# +-------------------------------------------+
+#
+# If the plugin fails to initialize, check the server error log for diagnostic messages.
+#
+# UNINSTALLING TEST PLUGGABLE AUTHENTICATION
+#
+# The method used to uninstall the test authentication plugin depends on how you installed it:
+#
+# 		) If you installed the plugin at server startup using a --plugin-load-add option, restart the server without the option.
+#
+# 		) If you installed the plugin at runtime using INSTALL_PLUGIN it remains installed across server restarts.
+# 			To uninstall it, use UNINSTALL_PLUGIN:
+#
+# 			UNINSTALL PLUGIN test_plugin_server;
+#
+# USING TEST PLUGGABLE AUTHENTICATION
+#
+# To use  the test authentication plugin, create an account and name that plugin in the IDENTIFIED WITH clause:
+#
+# 	CREATE USER 'testuser'@'localhost'
+# 	IDENTIFIED WITH test_plugin_server
+# 	BY 'testpassword';
+#
+# Then provide the --user and --password optons for that account when you connect to the server.
+# For example:
+#
+# mysql --user=testuser --password
+# Enter password: testpassword
+#
+# The plugin fetches the password as received from the client and compares it with the value
+# stored in the authentication_string column of the account row in the mysql.user system table
+#
+# If the two values match, the plugin returns the authentication_string value as the new effective user ID.
+#
+# You can look in the server error log for a message indicating whether authentication succeeded
+# (notice that the password is reported as the "user"):
+#
+# [Note] Plugin test_plugin_server reported:
+# 'successfully authenticated user testpassword'
+#
+# PLUGGABLE AUTHENTICATION SYSTEM VARIABLES
+#
+# These variables are unavailable unless the appropriate server-side plugin is installed:
+#
+# 		) authentication_ldap_sasl for system variables with names of the form authentication_ldap_sasl_xxx
+#
+# 		) authentication_ldap_simple for system variables with names of the form authentication_ldap_simple_xxx
+#
+# AUTHENTICATION PLUGIN SYSTEM VARIABLE SUMMARY
+#
+# 		Name 														Cmd-line  Option File 		System Var 	Status Var 		Var Scope 		Dynamic
+#
+# authentication_ldap_sasl_auth_method_name 			Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_sasl_bind_base_dn 				Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_sasl_bind_root_dn 				Yes 			Yes 				Yes 								Global 			Yes
+#
+# authentication_ldap_sasl_bind_root_pwd 				Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_sasl_ca_path  					Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_sasl_group_search_attr 		Yes 			Yes 				Yes 								Global 			Yes
+# 
+# authentication_ldap_sasl_init_pool_size 			Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_sasl_log_status 					Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_sasl_max_pool_size 				Yes 			Yes 				Yes 								Global 			Yes
+#
+# authentication_ldap_sasl_server_host 				Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_sasl_server_port 				Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_sasl_tls 							Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_sasl_user_search_attr 			Yes 			Yes 				Yes 								Global 			Yes
+#
+# authentication_ldap_simple_auth_method_name 		Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_simple_bind_base_dn 			Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_simple_bind_root_dn 			Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_simple_bind_root_pwd 			Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_simple_ca_path 					Yes 			Yes 				Yes 								Global 			Yes
+#
+# authentication_ldap_simple_group_search_attr 		Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_simple_init_pool_size 			Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_simple_log_status 				Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_simple_max_pool_size 			Yes 			Yes 				Yes 								Global 			Yes
+#
+# authentication_ldap_simple_server_host 				Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_simple_server_port 				Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_simple_tls 						Yes 			Yes 				Yes 								Global 			Yes
+# authentication_ldap_simple_user_search_attr 		Yes 			Yes 				Yes 								Global 			Yes
+#
+# authentication_ldap_sasl_auth_method_name
+#
+# Property 											Value
+#
+# Cmd line format 								--authentication-ldap-sasl-auth-method-name=value
+# Introduced 										8.0.11
+# System Variable 								authentication_ldap_sasl_auth_method_name
+# Scope 												Global
+# Dynamic 											Yes
+# SET_VAR Hint applies 							No
+# Type 												String
+# Default: 											SCRAM-SHA-1
+#
+# For SASL LDAP authentication, the authentication method name.
+# Communication between the authentication plugin and the LDAP server occurs according to this authentication method.
+# These authentication method values are permitted:
+#
+# 		) SCRAM-SHA-1: Authentication uses a SASL challenge-response mechanism to ensure password security.
+#
+# 							The client-side authentication_ldap_sasl_client plugin communicates with the SASL server, using the
+# 							password to create a challenge and obtain a SASL request buffer, then passes this buffer to the server-side
+# 							authentication_ldap_sasl plugin.
+#
+# 							The client-side and server-side SASL LDAP plugins use SASL messages for secure transmission
+# 							of credentials within the LDAP protocol, to avoid sending the clear-text between the MySQL client and server.
+#
+# authentication_ldap_sasl_bind_base_dn
+#
+# Property 											Value
+#
+# Cmd line format 								--authentication-ldap-sasl-bind-base-dn=value
+# Introduced 										8.0.11
+# System variable 								authentication_ldap_sasl_bind_base_dn
+# Scope 												Global
+# Dynamic 											Yes
+# SET_VAR Hint applies 							No
+# Type 												String
+# Default value 									NULL
+#
+# For SASL LDAP authentication, the base distinguished name (DN).
+# This variable can be used to limit the scope of searches by anchoring them at a certain location
+# (the "base") within the search tree.
+#
+# Suppose that members of one set of LDAP user entries each have this form:
+#
+# 		uid=user_name,pwd=user_password,ou=People,dc=example,dc=com
+#
+# And that members of another set of LDAP user entries each have this form:
+#
+# 		uid=user_name,pwd=user_password,ou=Admin,dc=example,dc=com
+#
+# Then searches work like this for different base DN values:
+#
+# 		) If the base DN is ou=People,dc=example,dc=com: Searches find user entries only in the first set.
+#
+# 		) If the base DN is ou=Admin,dc=example,dc=com: Searches find user entries only in the second set.
+#
+# 		) If the base DN is ou=dc=example,dc=com: Searches find user entires in the first or second set.
+#
+# In general, more specific base DN values result in faster searches because they limit the search scope more.
+#
+# authentication_ldap_sasl_bind_root_dn
+#
+# Property 											Value
+#
+# Cmd line format 								--authentication-ldap-sasl-bind-root-dn=value
+# Introduced: 										8.0.11
+# System variable: 								authentication_ldap_sasl_bind_root_dn
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												String
+# Default value: 									NULL
+#
+# for SASL LDAP authentication, the root distinguished name (DN). This variable is used in conjunction with 
+# authentication_ldap_sasl_bind_root_pwd as the credentials for authenticating to the LDAP server for the purpose of
+# performing searches.
+#
+# Authentication uses either one or two LDAP bind operations, depending on whether the MYSQL account names an LDAP user DN:
+#
+# 		) If the account does not name a user DN: authentication_ldap_sasl performs an initial LDAP binding using authentication_ldap_sasl_bind_root_dn
+# 			and authentication_ldap_sasl_bind_root_pwd.
+#
+# 			(These are both empty by default, so if they are not set, the LDAP server must permit anonymous connections)
+#
+# 			The resulting bind LDAP handle is used to search for the user DN, based on the client user name. 
+#
+# 			authentication_ldap_sasl performs a second bind using the user DN and client-supplied password.
+#
+# 		) If the account does name a user DN: the first bind operation is unnecessary in this case.
+# 			authentication_ldap_sasl performs a single bind using the user DN and client-supplied password.
+#
+# 			This is faster than if the MySQL account does not specify an LDAP user DN.
+#
+# authentication_ldap_sasl_bind_root_pwd
+#
+# Property 											Value
+# 
+# Cmd line format 								--authentication-ldap-sasl-bind-root-pwd=value
+# Introduced: 										8.0.11
+# System variable 								authentication_ldap_sasl_bind_root_pwd
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												String
+# Default value: 									NULL
+#
+# For SASL LDAP authentication, the password for the root distinguished name.
+# This variable is used in conjunction with authentication_ldap_sasl_bind_root_dn.
+#
+# See above.
+#
+# authentication_ldap_sasl_ca_path
+#
+# Property 											Value
+#
+# Cmd line format 								--authentication-ldap-sasl-ca-path=value
+# Introduced: 										8.0.11
+# System variable 								authentication_ldap_sasl_ca_path
+# Scope 												Global
+# Dynamic 											Yes
+# SET_VAR Hint applies 							No
+# Type: 												String
+# Default value: 									NULL
+#
+# For SASL LDAP authentication, the absolute path of the certificate authority file.
+#
+# Specify this file if it is desired that the authentication plugin perform verification
+# of the LDAP server certificate.
+#
+# NOTE:
+#
+# 		In addition to setting the authentication_ldap_sasl_ca_path variable to the file name,
+# 		you must add the appropriate certificate authority certificates to the file and enable the 
+# 		authentication_ldap_sasl_tls system variable.
+#
+# authentication_ldap_sasl_group_search_attr
+#
+# Property 											Value
+# Cmd line format 								--authentication-ldap-sasl-group-search-attr=value
+# Introduced: 										8.0.11
+# System Variable: 								authentication_ldap_sasl_group_search_attr
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												String
+# Default Value: 									cn
+#
+# For SASL LDAP authentication, the name of the attribute that specifies group names in LDAP directory entries.
+#
+# If authentication_ldap_sasl_group_search_attr has its default value of cn, searches return the cn value as the
+# group name.
+#
+# For example, if an LDAP entry with a uid value of user1 has a cn attribute of mygroup, searches for user1 return
+# mygroup as the group name.
+#
+# This variable should be the empty string if you want no group or proxy authentication.
+#
+# If the group search attribute is isMemberOf, LDAP authentication directly retrieves the user attribute isMemberOf
+# value and assigns it as group information.
+#
+# If the group search attribute is not isMemberOf, LDAP authentication searches for all groups where the user is a member.
+# (The latter is the default behavior)
+#
+# This behavior is based on how LDAP group information can be stored two ways: 
+#
+# 1) A group entry can have an attribute named memberUid or member with a value that is a user name;
+#
+# 2) A user entry can have an attribute named isMemberOf with values that are group names.
+#
+# authentication_ldap_sasl_group_search_filter
+#
+# Property 											Value
+# Cmd line format 								--authentication-ldap-sasl-group-search-filter=value
+# Introduced: 										8.0.11
+# System Variable: 								authentication_ldap_sasl_group_search_filter
+# Scope: 											Global
+# Dynamic:  										Yes
+# SET_VAR Hint Applies 							No
+# Type 												String
+# Default Value 									(|(&(objectClass=posixGroup) (memberUid=%s))(&(objectClass=group)(member=%s)))
+#
+# For SASL LDAP authentication, the custom group search filter.
+#
+# The search filter value can contain {UA} and {UD} notation to represent the user name and the full user DN.
+#
+# For example, {UA} is replaced with a user name such as "admin", whereas {UD} is replaced with a use full DN
+# such as "uid=admin,ou=People,dc=example,dc=com".
+#
+# The following value is the default, which supports both OpenLDAP and Active Directory:
+#
+# 		(|(&(objectClass=posixGroup)(memberUid={UA}))(&(objectClass=group)(member={UD})))
+#
+# In some cases for the user scenario, memberOf is a simple user attribute that holds no group information.
+#
+# For additional flexibility, an optional {GA} prefix can be used with the group search attribute.
+# Any group attribute with a {GA} prefix is treated as a user attribute having group names.
+#
+# For example, with a value of {GA}MemberOf, if the group value is the DN, the first attribute value
+# from the group DN is returned as the group name.
+#
+# authentication_ldap_sasl_init_pool_size
+#
+# Property 											Value
+#
+# Command-line format 							--authentication-ldap-sasl-init-pool-size=value
+# Introduced 										8.0.11
+# System Variable 								authentication_ldap_sasl_init_pool_size
+# Scope 												Global
+# Dynamic 											Yes
+# SET_VAR Hint applies 							No
+# Type: 												Integer
+# Default value: 									10
+# Minimum value: 									0
+# Maximum value: 									32767
+#
+# For SASL LDAP authentication, the initial size of the pool of connections to the LDAP server.
+#
+# Choose the value for this variable based on the average number of concurrent authentication
+# requests to the LDAP server.
+#
+# The plugin uses authentication_ldap_sasl_init_pool_size and authentication_ldap_sasl_max_pool_size together
+# for connection-pool management:
+#
+# 		) When the authentication plugin initializes, it creates authentication_ldap_sasl_init_pool_size connections, unless
+# 			authentication_ldap_sasl_max_pool_size=0 to disable pooling.
+#
+# 		) If the plugin receives an authentication request where there are no free connectiosn in the current connection pool,
+# 			the plugin can create a new connection, up to the maximum connection pool size given by authentication_ldap_sasl_max_pool_size.
+#
+# 		) If the plugin receives a request when the pool size is already at its maximum and there are no free connections, authentication fails.
+#
+# 		) When the plugin unloads, it closes all pooled connections.
+#
+# Changes to plugin system variable settings may have no effect on connections already in the pool.
+# For example, modifying the LDAP server host, port or TLS settings does not affect existing connections.
+#
+# However, if the original variable values were invalid and the connection pool could not be initialized,
+# the plugin attempts  to reinitialize the pool for the next LDAP request.
+#
+# In this case, the new system variable values are used for the reinitialization attempt.
+#
+# If authentication_ldap_sasl_max_pool_size=0 to disable pooling, each LDAP connection opened by the plugin
+# uses the value the system variables have at that time.
+#
+# authentication_ldap_sasl_log_status
+#
+# Property 											Value
+# cmd line format: 			 					--authentication-ldap-sasl-log-status=value
+# Introduced: 										8.0.11
+# System variable: 								authentication_ldap_sasl_log_status
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												Integer
+# Default: 											1
+# Min: 												1
+# Max: 												5
+#
+# For SASL LDAP authentication, the logging level. 
+#
+# Log levels for authentication_ldap_sasl_log_status
+#
+# Option value 			Type of messages logged
+#
+# 1 							No messages
+# 2 							Error messages
+# 3 							Error and warning messages
+# 4 							Error, warning and information messages
+# 5 							All messages
+#
+# On the client side, messages can be logged to the standard output by setting the AUTHENTICATION_LDAP_CLIENT_LOG environment variable.
+#
+# The permitted and default values are the same as for authentication_ldap_sasl_log_status.
+#
+# The AUTHENTICATION_LDAP_CLIENT_LOG environment variable applies only to SASL LDAP authentication.
+#
+# It has no effect for simple LDAP authentication because the client plugin in that case is mysql_clear_password,
+# which knows nothing about LDAP operations.
+#
+# authentication_ldap_sasl_max_pool_size
+#
+# Property 											Value
+# Cmd line format: 								--authentication-ldap-sasl-max-pool-size=value
+# Introduced: 										8.0.11
+# System variable: 								authentication_ldap_sasl_max_pool_size
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												Integer
+# Default Value: 									1000
+# Minimum value: 									0
+# Maximum value: 									32767
+#
+# For SASL LDAP authentication, the maximum size of the pool of connections to the LDAP server.
+# To disable connection pooling, set this variable to 0.
+#
+# This variable is used in conjunction with authentication_ldap_sasl_init_pool_size.
+# 
+# authentication_ldap_sasl_server_host
+#
+# Property 											Value
+# Command-line format: 							--authentication-ldap-sasl-server-host=value
+# Introduced: 										8.0.11
+# System variable: 								authentication_ldap_sasl_server_host
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												String
+#
+# For SASL LDAP authentication, the LDAP server host.
+# The permitted values for this variable depend on the authentication method:
+#
+# 		) For authentication_ldap_sasl_auth_method_name=SCRAM-SHA-1: The LDAP server host can be a host name or IP address.
+#
+# authentication_ldap_sasl_server_port
+#
+# property 											Value
+# Command-line format: 							--authentication-ldap-sasl-server-port=value
+# Introduced: 										8.0.11
+# System variable: 								authentication_ldap_sasl_server_port
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												Integer
+# Default value: 									389
+# Min value: 										1
+# Max value: 										32376
+#
+# For SASL LDAP authentication, the LDAP server TCP/IP port number.
+#
+# authentication_ldap_sasl_tls
+#
+# Property 											Value
+# Command-line format: 							--authentication-ldap-sasl-tls=value
+# Introduced: 										8.0.11
+# System variable: 								authentication_ldap_sasl_tls
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												Boolean
+# Default value: 									OFF
+#
+# For SASL LDAP authentication, whether connections by the plugin to the LDAP server are secure.
+# If this variable is enabled, the plugin uses TLS to connect securely to the LDAP server.
+#
+# If you enable this variable, you may also wish to set the authentication_ldap_sasl_ca_path variable.
+#
+# MySQL LDAP plugins support the StartTLS method, which initializes TLS on top of a plain LDAP connection.
+# The ldaps method is deprecated and MYSQL does not support it.
+#
+# authentication_ldap_sasl_user_search_attr
+#
+# Property 											Value
+# Command-line format: 							--authentication-ldap-sasl-user-search-attr=value
+# Introduced: 										8.0.11
+# System Variable: 								authentication_ldap_sasl_user_search_attr
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												String
+# Default Value: 									uid
+#
+# For SASL LDAP authentication, the name of the attribute that specifies user names in LDAP directory entries.
+# If a user distinguished name is not provided, the authentication plugin searches for the name using this attribute.
+#
+# For example, if the authentication_ldap_sasl_user_search_attr value is uid, a search for the user name user1 finds entries
+# with a uid value of user1.
+#
+# authentication_ldap_simple_auth_method_name
+#
+# Property 											Value
+# Command-Line Format 							--authentication-ldap-simple-auth-method-name=value
+# Introduced: 										8.0.11
+# System Variable: 								authentication_ldap_simple_auth_method_name
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint Applies 							No
+# Type: 												String
+# Default Value: 									SIMPLE
+#
+# For simple LDAP authentication, the authentication method name.
+#
+# Communication between the authentication plugin and the LDAP server occurs according to this
+# authentication method.
+#
+# These authentication method values are permitted:
+#
+# 		) SIMPLE: This authentication method uses either one or two LDAP bind operations, depending on whether the
+# 						MySQL account names an LDAP user distinguished name.
+#
+# 						See the description of authentication_ldap_simple_bind_root_dn
+#
+# 		) AD-FOREST: authentication_ldap_simple searches all the domains in the Active Directory forest, performing an LDAP bind to each
+# 						Active Directory domain until the user is found in some domain.
+# 
+# NOTE:
+#
+# 		FOr simple LDAP authentication, it is recommended to also set TLS parameters to require that communication with the LDAP server
+# 		take place over secure connections.
+#
+# authentication_ldap_simple_bind_base_dn
+#
+# Property 											Value 
+# Command-line format: 							--authentication-ldap-simple-bind-base-dn=value
+# Introduced: 										8.0.11
+# System Variable: 								authentication_ldap_simple_bind_base_dn
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint Applies: 						No
+# Type: 												String
+# Default Value: 									NULL
+#
+# For simple LDAP authentication, the base distinguished name (DN).
+#
+# This variable can be used to limit the scope of searches by anchoring them
+# at a certain location (the "base") within the search tree.
+#
+# Suppose that members of one set of LDAP user entries each have this form:
+#
+# 	uid=user_name,pwd=user_password,ou=People,dc=example,dc=com
+# 
+# And that members of another set of LDAP user entries each have this form:
+#
+# 	uid=user_name,pwd=user_password,ou=Admin,dc=example,dc=com
+#
+# Then searches work like this for different base DN values:
+#
+# 		) If the base DN is ou=People,dc=example,dc=com. Searches find user entries only in the first set.
+#
+# 		) If the base DN is ou=Admin,dc=example,dc=com. Searches find user entries only in the second set.
+#
+# 		) If the base DN is ou=dc=example,dc=com. Searches find user entries in the first or second set.
+#
+# In general, more specific base DN values result in faster searches because they limit the search scope more.
+#
+# authentication_ldap_simple_bind_root_dn
+#
+# Property 											Value
+# Command-Line Format 							--authentication-ldap-simple-bind-root-dn=value
+# Introduced 										8.0.11
+# System Variable 								authentication_ldap_simple_bind_root_dn
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies 							No
+# Type: 												String
+# Default Value: 									NULL
+#
+# For simple LDAP authentication, the root distinguished name (DN).
+#
+# This variable is used in conjunction with authentication_ldap_simple_bind_root_pwd as the credentials
+# for authenticating to the LDAP server for the purpose of performing searches.
+#
+# Authentication uses either one or two LDAP bind operations, depending on whether the MySQL account
+# account names an LDAP user DN:
+#
+# 			) If the account does not name a user DN: authentication_ldap_simple performs an initial LDAP binding using
+# 				authentication_ldap_simple_bind_root_dn and authentication_ldap_simple_bind_root_pwd.
+#
+# 				(These are both empty by default, so if they are not set, the LDAP server must permit anonymous connections)
+#
+# 				The resulting bind LDAP handle is used to search for the user DN, based on the client user name.
+# 				authentication_ldap_simple performs a second bind using the user DN and client-supplied password.
+#
+# 			) If the account does name a user DN: the first bind operation is unnecessary in this case.
+#
+# 				authentication_ldap_simple performs a single bind using the user DN and client-supplied password.
+#
+# 				THis is faster than if the MYSQL account does not specify an LDAP user DN.
+#
+# authentication_ldap_simple_bind_root_pwd
+#
+# Property 											Value
+# 
+# Command-line Format 							--authentication-ldap-simple-bind-root-pwd=value
+# Introduced: 										8.0.11
+# System Variable: 								authentication_ldap_simple_bind_root_pwd
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												String
+# Default value: 									NULL
+#
+# For simple LDAP authentication, the password for the root distinguished name.
+# This variable is used in conjunction with authentication_ldap_simple_bind_root_dn.
+#
+# authentication_ldap_simple_ca_path
+#
+# Property 											value
+# Command-line format 							--authentication-ldap-simple-ca-path=value
+# Introduced 										8.0.11
+# System Variable: 								authentication_ldap_simple_ca_path
+# Scope 												Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												String
+# Default value: 									NULL
+#
+# For simple LDAP authentication, the absolute path of the certificate authority file.
+#
+# Specify this file if it is desired that the authentication plugin perform verification of the
+# LDAP server certificate.
+#
+# NOTE:
+#
+# 		In addition to setting the authentication_ldap_simple_ca_path variable to the file name, you must add
+# 		the appropriate certificate authority certificates to the file and enable the authentication_ldap_simple_tls system variable.
+#
+# authentication_ldap_simple_group_search_attr
+#
+# Property 											Value
+# Command-line format 							--authentication-ldap-simple-group-search-attr=value
+# Introduced: 										8.0.11
+# System Variable: 								authentication_ldap_simple_group_search_attr
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												String
+# Default value: 									cn
+#
+# For simple LDAP authentication, the name of the attribute that specifies group names in LDAP directory entries.
+# If authentication_ldap_simple_group_search_attr has its default value of cn, searches return the cn value as the group name.
+#
+# For example, if an LDAP entry with a uid value of user1 has a cn attribute of mygroup, searches for user1 return mygroup as the group name.
+#
+# If the group search attribute is isMemberOf, LDAP authentication directly retrieves the user attribute isMemberOf
+# value and assigns it as group information.
+#
+# If the group search attribute is not isMemberOf, LDAP authentication searches for all groups where the user is a member.
+# (The latter is the default behavior).
+#
+# This behavior is based on how LDAP group information can be stored two ways:
+#
+# 1) A group entry can have an attribute named memberUid or member with a value that is a user name;
+#
+# 2) A user entry can have an attribute named isMemberOf with values that are group names.
+#
+# authentication_ldap_simple_group_search_filter
+#
+# Property 											Value
+# Command-line format 							--authentication-ldap-simple-group-search-filter=value
+# Introduced 										8.0.11
+# System Variable 								authentication_ldap_simple_group_search_filter
+# Scope 												Global
+# Dynamic 											Yes
+# SET_VAR Hint Applies 							No
+# Type 												String
+# Default Value: 									(|(&(objectClass=posixGroup) (memberUid=%s))(&(objectClass=group)(member=%s)))
+#
+# 	For simple LDAP authentication, the custom group search filter.
+#
+# 	The search filter value can contain {UA} and {UD} notation to represent the user name and the full user DN.
+# For example, {UA} is replaced with a user name such as "admin", whereas {UD} is replaced with a use full DN such as "uid=admin,ou=People,dc=example,dc=com".
+#
+# The following value is the default, which supports both OpenLDAP and Active Directory:
+#
+# 		(|(&(objectClass=posixGroup)(memberUid={UA}))(&(objectClass=group)(member={UD})))
+#
+# In some cases for the user scenario, memberOf is a simple user attribute that holds no group information.
+# For additional flexibility, an optional {GA} prefix can be used with the group search attribute.
+#
+# Any group attribute with a {GA} prefix is treated as a user attribute having group names.
+#
+# For example, with a value of {GA}MemberOf, if the group value is the DN, the first attribute value from the group DN is returned as the group name.
+#
+# authentication_ldap_simple_init_pool_size
+#
+# Property 											Value
+# Command-Line Format: 							--authentication-ldap-simple-init-pool-size=value
+# Introduced: 										8.0.11
+# System Variable: 								authentication_ldap_simple_init_pool_size
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												Integer
+# Default Value: 									10
+# Min: 												0
+# Max: 												32767
+#
+# For simple LDAP authentication, the initial size of the pool of connections to the LDAP server.
+#
+# Choose the value for this variable based on the average number of concurrent authentication
+# reuqests to the LDAP server.
+#
+# The plugin uses authentication_ldap_simple_init_pool_size and authentication_ldap_simple_max_pool_size
+# together for connection-pool management:
+#
+# 		) When the authentication plugin initializes, it creates authentication_ldap_simple_init_pool_size connections,
+# 			unless authentication_ldap_simple_max_pool_size=0 to disable pooling.
+#
+# 		) If the plugin receives an authentication request when there are no free connections in the current connection pool,
+# 			the plugin can create a new connection - up to the maximum connection pool size given by authentication_ldap_simple_max_pool_Size.
+#
+# 		) If the plugin receives a request when the pool size is already at its maxium and there are no free connections, authentication fails.
+#
+# 		) When the plugin unloads, it closes all pooled connections.
+#
+# Changes to plugin system variable settings may have no effect on connections already in the pool.
+# For example, modifying the LDAP server host, port or TLS settings does not affect existing connections.
+#
+# However, if the original variable values were invalid and the connection pool could not be initialized,
+# the plugin attempts to reinitialize the pool for the next LDAP request.
+#
+# In this case, the new system variable values are used for the reinitialization attempt.
+#
+# If authentication_ldap_simple_max_pool_size=0 to disable pooling, each LDAP connection opened by the plugin
+# uses the values the system variables have at that time.
+#
+# authentication_ldap_simple_log_status
+#
+# Property 											Value
+# Command-Line Format 							--authentication-ldap-simple-log-status=value
+# Introduced 										8.0.11
+# System Variable 								authentication_ldap_simple_log_status
+# Scope: 											Global
+# DYnamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												Integer
+# Default value: 									1
+# Min: 												1
+# Max: 												5
+#
+# For a simple LDAP authentication, the logging level. 
+#
+# Log levels for authentication_ldap_simple_log_status
+#
+# Option value 		Types of Messages Logged
+# 1 						No messages
+# 2 						Error messages
+# 3 						Error and warning messages
+# 4 						Error,warning and information messages
+# 5 						All messages
+#
+# authentication_ldap_simple_max_pool_size
+#
+# Property 											Value
+# Command-line format 							--authentication-ldap-simple-max-pool-size=value
+# Introduced 										8.0.11
+# System Variable: 								authentication_ldap_simple_max_pool_size
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint Applies: 						No
+# Type: 												Integer
+# Default Value: 									1000
+# Min value: 										0
+# Max value: 										32767
+#
+# For simple LDAP authentication, the maximum size of the pool of connections to the LDAP server.
+# To disable connection pooling, set this variable to 0.
+#
+# This variable is used in conjunction with authentication_ldap_simple_init_pool_size.
+#
+# authentication_ldap_simple_server_host
+#
+# Property 											Value
+# Command-Line format 							--authentication-ldap-simple-server-host=value
+# Introduced 										8.0.11
+# System Variable: 								authentication_ldap_simple_server_host
+# Scope: 											Global
+# Dynamic: 											Yes
+# SET_VAR Hint applies: 						No
+# Type: 												String
+#
+# For simple LDAP authentication, the LDAP server host.
+# The permitted values for this variable depends on the authentication method:
+# 
+# 		) For authentication_ldap_simple_auth_method_name=SIMPLE: The LDAP server host can be a host name or IP address.
+#
+# 		) For authentication_ldap_simple_auth_method_name=AD-FOREST. The LDAP server host can be an Active Directory domain name.
+# 																			For example, for an LDAP server URL of ldap://example.mem.local:389, the server name can be mem.local
+#
+# 			An Active Directory forest setup can have multiple domains (LDAP server IPs), which can be discovered using DNS.
+#
+# 			On UNIX/UNIX based systems, some additional setup may require that you configure your DNS with SRV records that specify the LDAP servers
+# 			for the Active Directory domain.
+# 			
+# 			Suppose that your configuration has these properties:
+#
+# 				) The name server that provides information about Active Directory domains has IP address 10.172.166.100
+#
+# 				) The LDAP servers have names ldap1.mem.local through ldap3.mem.local and IP addresses 10.172.166.101 through 10.172.166.103
+#
+# 			you want hte LDAP servers to be discoverable using SRV searches. For example, at the cmd line, a command like this should list the
+# 			LDAP servers:
+#
+# 				host -t SRV _ldap._tcp.mem.local
+#
+# 			Perform the DNS configuration as follows:
+#
+# 				1. Add a line to /etc/resolv.conf to specify the name server that provides information about Active Directory domains:
+#
+# 					nameserver 10.172.166.100
+#
+# 				2. Configure the appropriate zone file for the name server with SRV records for the LDAP servers:
+#
+# 					_ldap._tcp.mem.local. 86400 IN SRV 0 100 389 ldap1.mem.local.
+# 					_ldap._tcp.mem.local. 86400 IN SRV 0 100 389 ldap2.mem.local.
+# 					_ldap._tcp.mem.local. 86400 IN SRV 0 100 389 ldap3.mem.local.
+#
+# 				3. It may also be necessary to specify the IP address for the LDAP servers in /etc/hosts if the server host cannot be resolved.
+#
+# 					For example, add lines like this to the file:
+#
+# 						10.172.166.101 ldap1.mem.local
+# 						10.172.166.102 ldap2.mem.local
+# 						10.172.166.103 ldap3.mem.local
+#
+# 					With the DNS configured as just described, the server-side LDAP plugin can discover the LDAP servers and will try to
+# 					authenticate in all domains until authentication succeeeds or there are no more servers.
+#
+# 					Windows need no such settings as just described. Given the LDAP server host in the authentication_ldap_simple_server_host value,
+# 					the Windows LDAP library searches all domains and attempts to authenticate.
+#
+# authentication_ldap_simple_server_port
+#
+# Property 												Value
+# Command-line format 								--authentication-ldap-simple-server-port=value
+# Introduced: 											8.0.11
+# System variable: 									authentication_ldap_simple_server_port
+# Scope: 												Global
+# Dynamic: 												Yes
+# SET_VAR Hint applies 								No
+# Type: 													Integer
+# Default: 												389
+# Min: 													1
+# Max: 													32376
+#
+# For simple LDAP authentication, teh LDAP server TCP/IP port number.
+#
+# authentication_ldap_simple_tls
+#
+# Property 												Value
+# Command-line format 								--authentication-ldap-simple-tls=value
+# Introduced 											8.0.11
+# System Variable: 									authentication_ldap_simple_tls
+# Scope: 												Global
+# Dynamic: 												Yes
+# SET_VAR Hint applies: 							No
+# Type: 													Boolean
+# Default Value: 										OFF
+#
+# For simple LDAP authentication, whether connections by the plugin to the LDAP servers are secure.
+# If this variable is enabled, the plugin uses TLS to connect securely to the lDAP server.
+#
+# If you enable this variable, you may also wish to set the authentication_ldap_simple_ca_path variable.
+#
+# MySQL LDAP plugins support the StartTLS method, which initializes TLS on top of a plain LDAP connection.
+# The ldaps method is deprecated and MySQL does not supporti t.
+#
+# authentication_ldap_simple_user_search_attr
+#
+# Property 												Value
+# Command-line FOrmat 								--authentication-ldap-simple-user-search-attr=value
+# Introduced: 											8.0.11
+# System variable: 									authentication_ldap_simple_user_search_attr
+# Scope: 												Global
+# Dynamic: 												Yes
+# SET_VAR Hint applies: 							No
+# Type: 													String
+# Default: 												uid
+#
+# For simple LDAP authentication, the name of the attribute that specifies user names in LDAP directory entries.
+# If a user distinguished name is not provided, the authentication plugin searches for the name using this attribute.
+#
+# For example, if the authentication_ldap_simple_user_search_attr value is uid, a search for hte user name
+# user1 finds entries with a uid value of user1.
+#
+# THE CONNECTION CONTROL PLUGINS
+#
+# MySQL Server includes a plugin library that enables administrators to introduce an increasing delay in server responses
+# to clients after a certain number of consecutive failed connection attempts.
+#
+# This capability provides a deterrent that slows down brute force attacks that attempt to access MysQL user accs.
+# the plugin library contains two plugins:
+#
+# 		) CONNECTION_CONTROL checks incoming connections and adds a delay to server responses as necessary.
+#
+# 			This plugin also exposes system variables that enables its operation to be configured and a status
+# 			variable that provides rudimentary monitoring information.
+#
+# 			The CONNECTION_CONTROL plugin uses the audit plugin interface.
+#
+# 			To collect information, it subscribes to the MYSQL_AUDIT_CONNECTION_CLASSMASK event class,
+# 			and processes MYSQL_AUDIT_CONNECTION_CONNECT and MYSQL_AUDIT_CONNECTION_CHANGE_USER subevents to
+# 			check whether the server should introduce a delay befor responding to client connection attempts.
+#
+# 		) CONNECTION_CONTROL_FAILED_LOGIN_ATTEMPTS implements an INFORMATION_SCHEMA table that exposes more detailed monitoring
+# 			information for failed connection attempts.
+#
+# The following section provides information about connection-control plugin installation and configuration.
+#
+# More info about the CONNECTION_CONTROL_FAILED_LOGIN_ATTEMPTS later.
+#
+# CONNECTION-CONTROL PLUGIN INSTALLATION
+#
+# This section describes how ot install the connection-control plugins, CONNECTION_CONTROL and CONNECTION_CONTROL_FAILED_LOGIN_ATTEMPTS.
+#
+# To be usable by the server, the plugin library file must be located in the MySQL plugin directory (the directory named by the plugin_dir
+# system variable).
+#
+# If necessary, configure the plugin directory location by setting the value of plugin_dir at server startup.
+#
+# The plugin library file base name is connection_control. The file name suffix differs per platform (for example, .so for Unix and Unix-like systems,
+# .dll for Windows)
+#
+# To load the plugins at server startup, use the --plugin-load-add option to name the library file that contains them.
+# With this plugin-loading method, the option must be given each time the server starts.
+#
+# For example, put these lines in the server my.cnf file (adjust the .so suffix for your platform as necessary):
+#
+# 		[mysqld]
+# 		plugin-load-add=connection_control.so
+#
+# After modifying my.cnf, restart the server to cause the new settings to take efect.
+#
+# Alternatively, to register the plugins at runtime, use these statements (adjust the .so suffix as called for):
+#
+# 		INSTALL PLUGIN CONNECTION_CONTROL
+# 			SONAME 'connection_control.so';
+# 		INSTALL PLUGIN CONNECTION_CONTROL_FAILED_LOGIN_ATTEMPTS
+# 			SONAME 'connection_control.so';
+#
+# INSTALL_PLUGIN loads the plugin immediately, and also registers it in the mysql.plugins system table to cause the server to load it for each
+# subsequent normal startup.
+#
+# To verify plugin installation, examine the INFORMATION_SCHEMA.PLUGINS table or use the SHOW_PLUGINS statement.
+#
+# For example:
+#
+# 		SELECT PLUGIN_NAME, PLUGIN_STATUS
+# 		FROM INFORMATION_SCHEMA.PLUGINS
+# 		WHERE PLUGIN_NAME LIKE 'connection%';
+#
+#
+# +------------------------------------------------------------+
+# | PLUGIN_NAME 											| PLUGIN_STATUS|
+# +------------------------------------------------------------+
+# | CONNECTION_CONTROL 									| ACTIVE 		|
+# | CONNECTION_CONTROL_FAILED_LOGIN_ATTEMPTS  	| ACTIVE 		|
+# +------------------------------------------------------------+
+#
+# If a plugin fails to initialize, check the server error log for diagnostic messages.
+#
+# If the plugins have been previously registered with INSTALL_PLUGIN or are loaded with --plugin-load-add, you can use the
+# --connection-control and --connection-control-failed-login-attempts options at server startup to control plugin activation.
+#
+# For example, to load the plugins at startup and prevent them from being removed
+# at runtime, use these options:
+#
+# [mysqld]
+# plugin-load-add=connection_control.so
+# connection-control=FORCE_PLUS_PERMANENT
+# connection-control-failed-login-attempts=FORCE_PLUS_PERMANENT
+#
+# If it is desired to prevent the server from running without a given connection-control plugin, use an option value
+# of FORCE or FORCE_PLUS_PERMANENT to force server startup to fail if the plugin does not initialize successfully.
+#
+# NOTE:
+#
+# 		It is possible to install one plugin without the other, but both must be installed for full connection-control capability.
+#
+# 		In particular, installing only the CONNECTION_CONTROL_FAILED_LOGIN_ATTEMPTS plugin is of little use because without
+# 		the CONNECTION_CONTROL plugin to provide the data that populates the CONNECTION_CONTROL_FAILED_LOGIN_ATTEMPTS table,
+# 		retrievals from the table will always be empty.
+#
+# CONNECTION DELAY CONFIGURATION
+#
+# To enable you to configure its operation, the CONNECTION_CONTROL plugin exposes several system variables:
+#
+# 		) connection_control_failed_connections_threshold: 
+# 				
+# 			The number of consecutive failed connection attempts permitted to clients before the server
+# 			adds a delay for subsequent connection attempts.
+#
+# 		) connection_control_min_connection_delay: The amount of delay to add for each consecutive connection failure above the TH.
+#
+# 		) connection_control_max_connection_delay: The maximum delay to add.
+#
+# To entirely disable checking for failed connection attempts, set connection_control_failed_connections_threshold to zero.
+#
+# If connection_control_failed_connections_threshold is > 0, the amount of delay is zero up through that many consecutive
+# failed connection attempts.
+#
+# Thereafter, the amount of delay is the number of failed attempts above the TH, multiplied by connection_control_min_connection_delay MS.
+#
+# For example, with the default connection_control_failed_connections_threshold and connection_control_min_connection_delay values of 3
+# and 1000, respectively - there is no delay for the first consecutive failed connection attempts by a client, and a additive of 1000 MS
+# per fail there after.
+#
+# Up until the max delay permitted by connection_control_max_connection_delay.
+#
+# You can set the CONNECTION_CONTROL system variables at server startup or runtime.
+#
+# Suppose that you want to permit four consecutive failed conn attempts before the server starts delaying its reponses - and to
+# increase the delay to 1500 MS for each additional failure after that.
+#
+# To set the relevant variables at server startup, put these lines in the server my.cnf file:
+#
+# 		[mysqld]
+# 		plugin-load-add=connection_control.so
+# 		connection_control_failed_connections_threshold=4
+# 		connection_control_min_connection_delay=1500
+#
+# To set and persist the variables at runtime, use these statements:
+#
+# 		SET PERSIST connection_control_failed_connections_threshold = 4;
+# 		SET PERSIST connection_control_min_connection_delay = 1500;
+#
+# SET_PERSIST sets the value for the running MySQL instance.
+#
+# It also saves the value to be used for subsequent server restarts.
+# to change a value for the running MySQL instance without saving it for subsequent restarts, use the GLOBAL keyword rather than PERSIST.
+#
+# The connection_control_min_connection_delay and connection_control_max_connection_delay System Variables have fixed
+# min and max values of 1000 and 2.147.483.647, respectively.
+#
+# In addition, the permitted range of values of each variable also depends on the current value of hte other:
+#
+# 		) connection_control_min_connection_delay cannot be set greater than the current value of connection_control_max_connection_delay
+#
+# 		) connection_control_max_connection_delay cannot be set less than the current value of connection_control_min_connection_delay
+#
+# Thus - to make the changes required for some configurations, you might need to set the variables in a specific order.
+#
+# Suppose that the current minimum and maximum delays are 1000 and 2000, and that you want to set them to 3000 and 5000.
+#
+# You cannot first set connection_control_min_connection_delay to 3000, because that is greater than the current
+# connection_control_max_connection_delay value of 2k.
+#
+# Instead, set connection_control_max_connection_delay to 5000, then connection_control_min_connection_delay to 3000.
+#
+# CONNECTION FAILURE ASSESSMENT
+#
+# When the CONNECTION_CONTROL plugin is installed, it checks connection attempts and tracks whether they fail or succeed.
+#
+# For this purpose, a failed connection attempt is one for which the client user and host match a known MySQL account
+# but the provided credentials are incorrect, or do not match any known account.
+#
+# Failed-connection counting is based on the user/host combination for each connection attempt.
+#
+# Determination of the applicable user name and host name takes proxying into account and occurs as follows:
+#
+# 		) If the client user proxies another user, the proxying user's information is used.
+#
+# 			For example, if external_user@example.com proxies proxy_user@example.com, connection counting
+# 			uses the proxying user, external_user@example.com, rather than the proxied user - proxy_user@example.com
+#
+# 			Both external_user@example.com and proxy_user@example.com must have valid entries in the mysql.user system table
+# 			and a proxy relationship betweem them must be defined in the mysql.proxies_priv system table.
+#
+# 		) If the client user does not proxy another user, but does match a mysql.user entry, counting uses the CURRENT_USER()
+# 		value corresponding to that entry.
+#
+# 		For example, if a user user1 connecting from a host host1.example.com matches a user1.host1.example.com entry, counting
+# 		uses user1@host1.example.com
+#
+# 		If the user matches a user1@%.example.com, user1@%.com or user1@% entry instead, counting uses user1@%.example.com, user1@%.com or user1@%, respectively.
+#
+# For the cases just described, the connection attempt matches some mysql.user entry and whether the request succeeds or fails depends 
+# on whether the client provides the correct authentication credentials.
+#
+# For example, if the client presents an incorrect password, the connection attempt fails.
+#
+# If the connection attempt matches no mysql.user entry, the attempt fails. 
+#
+# In this case, no CURRENT_USER() value is avaialable and connection-failure counting uses the user name
+#  provided by the client and the client host as determined by the server.
+#
+# For example, if a client attempts to connect as user user2 from host host2.example.com, the user name part is available
+# in the client request and the server determines the host information.
+#
+# The user/host combination used for counting is user2@host2.example.com
+#
+# NOTE:
+#
+# 		The server maintains information about which client hosts can possibly connect to the server (essentially the union of host values for mysql.user entries).
+# 		If a client attempts to connect from any other host, the server rejects the attempt at an early stage of connection setup:
+#
+# 			ERROR 1130 (HY000): Host 'host_name' is not allowed to connect to this MySQL server
+#
+# 		Because this type of rejection occurs so early, CONNECTION_CONTROL does not see it, and does not count it.
+#
+# CONNECTION FAILURE MONITORING
+#
+# To monitor failed connections, use these information sources:
+#
+# 		) The Connection_control_delay_generated status variable indicates the number of times the server added a delay to its response
+# 			to a failed connection attempt.
+#
+# 			This does not count attempts that occur before reaching the threshold defined by the connection_control_failed_connections_threshold system variable.
+#
+# 		) The INFORMATION_SCHEMA CONNECTION_CONTROL_FAILED_LOGIN_ATTEMPTS table provides information about the current number of consecutive failed connection
+# 			attemtps per client user/host combination.
+#
+# 			This counts all failed attempts, regardless of whether they were delayed.
+#
+# Assigning a value to connection_control_failed_connections_threshold at runtime resets all accumulated failed-connection counters to 0,
+# which has these visible effects:
+#
+# 		) The Connection_control_delay_generated status variable is reset to 0.
+#
+# 		) The CONNECTION_CONTROL_FAILED_LOGIN_ATTEMPTS table becomes empty.
+#
+# CONNECTION-CONTROL SYSTEM AND STATUS VARIABLES
+#
+# This section describes the system and status variables that the CONNECTION_CONTROL plugin provides to enable its
+# operation to be configured and monitored.
+#
+# CONNECTION-CONTROL SYSTEM VARIABLES
+#
+# If the CONNECTION_CONTROL plugin is installed, it exposes these system variables:
+#
+# connection_control_failed_connections_threshold
+#
+# Property 												Value
+# Command-line Format 								--connection-control-failed-connections-threshold=#
+# Introduced: 											8.0.1
+# System variable: 									connection_control_failed_connections_threshold
+# Scope: 												Global
+# Dynamic: 												Yes
+# SET_VAR Hint applies: 							No
+# Type: 													Integer
+# Default value: 										3
+# Min: 													0
+# Max: 													2147483647
+#
+# The number of consecutive failed connection attempts permitted to clients before the server adds a delay for 
+# subsequent connection attempts:
+#
+# 		) If the variable has a nonzero value N, the server adds a delay beginning with consecutive failed attempt N+1.
+#
+# 			If a client has reached the point where connection responses are delayed, the delay also occurs for 
+# 			the next subsequent successful connection.
+#
+# 		) Setting this variable to 0 disables failed-connection counting. In this case, the server never adds delays.
+#
+# For information about how connection_control_failed_connections_threshold interacts with other connection-control
+# system and status variables, see earlier.
+#
+# connection_control_max_connection_delay
+#
+# Property 												Value
+# Command-line Format 								--connection-control-max-connection-delay=#
+# Introduced: 											8.0.1
+# System Variable: 									connection_control_max_connection_delay
+# Scope: 												Global
+# Dynamic: 												Yes
+# SET_VAR Hint applies: 							No
+# Type: 													Integer
+# Default: 												2.147.483.647
+# Min: 													1000
+# Max: 												   2.147.483.647
+# 													
+#
+# The maximum delay in milliseconds for server response to failed connection attempts, if connection_control_failed_connections_threshold
+# is greater than 0.
+#
+# For information about how connection_control_max_connection_delay interacts with other connection-control system and status variables,
+# see earlier.
+#
+# connection_control_min_connection_delay
+#
+# Property 												Value
+# Command-Line Format 								--connection-control-min-connection-delay=#
+# Introduced: 											8.0.1
+# System Variable: 									connection_control_min_connection_delay
+# Scope: 												Global
+# Dynamic: 												Yes
+# SET_VAR Hint Applies: 							No
+# Type: 													Integer
+# Default value: 										1000
+# Min value: 											1000
+# Max value: 											2.147.483.647
+#
+# The minimum delay in MS for sever responses to failed connection attempts, if connection_control_failed_connections_threshold is greater
+# than 0.
+#
+# This is also the amount by which the server increases the delay for additional successive failures once it begins delaying.
+#
+# For more information about how connection_control_min_connection_delay interacts with other connection-control system and status variables
+# , see previous details.
+#
+# CONNECTION-CONTROL STATUS VARIABLES
+#
+# If the CONNECTION_CONTROL plugin is installed, it exposes this status variable:
+#
+# 		) Connection_control_delay_generated
+#
+# 				The number of times the server added a delay to its response to a failed connection attempt.
+# 				This does not count attempts that occur before reaching the threshold defined by the connection_control_failed_connections_threshold system variable.
+#
+# 				This variable provides a simple counter. For more detailed connection-control monitoring information, examine the INFORMATION_SCHEMA
+# 				CONNECTION_CONTROL_FAILED_LOGIN_ATTEMPTS table. More on that later.
+#
+# 				Assigning a value to connection_control_failed_connections_threshold at runtime resets Connection_control_delay_generated to zero.
+#
+# THE PASSWORD VALIDATION COMPONENT
+#
+# The validate_password components serves to test passwords and improve security.
+# This component exposes system variables that enable you to define password policy, and status variables for component monitoring.
+#
+# NOTE:
+#
+# 		In MySQL 8.0.4, the validate_password plugin was reimplemented as the validate_password component.
+# 		The following instructions describe how to use the component, not the plugin.
+#
+# 		For instructions on using it, see external resources.
+#
+# 		The plugin form of validate_password is available but is deprecated and will be removed.
+# 		MySQL installations that use it - should transition to using the component instead. More on that later.
+#
+# The validate_password component implements these capabilities:
+#
+# 		) In SQL statements that assign a password supplied as a cleartext value, the component checks the password against
+# 			the current password policy and rejects the password if it is weak (the statement returns an ER_NOT_VALID_PASSWORD error)
+#
+# 			This applies to the ALTER_USER, CREATE_USER, GRANT and SET_PASSWORD statements.
+#
+# 		) The VALIDATE_PASSWORD_STRENGTH() SQL function asssesses the strength of potentional PWs. 
+#
+# 			The function takes a PW argument and returns an integer from 0 (weak) to 100 (strong)
+#
+# For example, validate_password checks the cleartext password in the following statement.
+#
+# Under the default password policy, which requires passwords to be at least 8 characters long -
+# the PW is weak and the statement produces an error.
+#
+# 		ALTER USER USER() IDENTIFIED BY 'abc';
+# 		ERROR 1819 (HY000): Your password does not satisfy the current policy requirements
+#
+# Passwords specified as hashed values are not checked because the original password values is not available
+# for checking:
+#
+# ALTER USER 'jeffrey'@'localhost'
+# IDENTIFIED WITH mysql_native_password
+# AS '<hash>';
+# Query OK, 0 rows affected (0.01 sec)
+#
+# To configure PW checking, modify the system variable having names of the form validate_password.xxx, these are the
+# parameters that control password policy. See later.
+#
+# If validate_password is not installed, the validate_password.xxx system variables are not available, passwords
+# in statements are not checked and the VALIDATE_PASSWORD_STRENGTH() function always returns 0.
+#
+# For example, without the plugin installed, accounts can be assigned PWs shorter than 8 chars.
+#
+# Assuming that validate_password is installed, it implements three levels of PW checking:
+#
+# LOW, MEDIUM and STRONG.
+#
+# The default is MEDIUM; to change this, modify the value of validate_password.policy
+#
+# The policies implement increasingly strict password tests. 
+# The following descriptions refer to default param values, which can be modified by changing the appropriate system variables.
+#
+# 	) LOW policy test password length only. Passwords must be at least 8 chars long. To change this length, modify the validate_password.length
+#
+# 	) MEDIUM policy adds the conditions that passwords must contain at least 1 numeric character, 1 lowercase character, 1 uppercase character,
+# 		and 1 special (nonalphanumeric) character.
+#
+# 		TO change these values, modify validate_password.number_count, validate_password.mixed_case_count and
+# 		validate_password.special_char_count.
+#
+# 	) STRONG policy adds the condition that password substrings of length 4 or longer must not match words in the dictioanry file,
+# 		if one has been specified.
+#
+# 		To specify the dictionary file, modify validate_password.dictionary_file
+#
+# In addition, validate_password supports the capability of rejecting passwords that match the user name part of the effective
+# user account for the current session, either forward or in reverse.
+#
+# To provide control over this capabiblity, validate_password exposes a validate_password.check_user_name system variable,
+# which is enabled by default.
+#
+# PASSWORD VALIDATION COMPONENT INSTALLATION AND UNINSTALLATION
+#
+# This section describes how to install and uninstall the validate_password password-validation component.
+# For general info, see earlier.
+#
+# NOTE:
+#
+# 		If you install MySQL 8.0 using the MySQL Yum repository, MySQL SLES Repository or RPM packages provided by Oracle,
+# 		the validate_password component is enabled by default after you start your MySQL Server for the first time.
+#
+# 		Upgrades to MySQL 8.0 from 5.7 using Yum or RPM packages leave the validate_password plugin in place.
+# 		To make the transition from the validate_password plugin to the validate_password component, see later.
+#
+# To be usable by the server, the component library file must be located in the MySQL plugin directory
+# (the directory named by the plugin_dir system variable)
+#
+# If necessary, configure the plugin directory location by setting the value of plugin_dir at server startup.
+#
+# To install validate_password, use this statement:
+#
+# INSTALL COMPONENT 'file://component_validate_password';
+#
+# Component installation is a one-time operation that need not be done per server startup.
+#
+# INSTALL_COMPONENT loads the component, and also registers it in the mysql.component system table
+# to cause it to be loaded during subsequent server startups.
+#
+# To uninstall validate_password, use this statement:
+#
+# UNINSTALL COMPONENT 'file://component_validate_password';
+#
+# UNINSTALL_COMPONENT unloads the component, and deregisters it from the mysql.component system table
+# to cause it not to be loaded during subsequent server startups.
+#
+# PASSWORD VALIDATION OPTIONS AND VARIABLES
+#
+# This section describes the system and status variables that validate_password provides to enable
+# its operation to be configured and monitored.
+#
+# PASSWORD VALIDATION COMPONENT SYSTEM VARIABLES
+#
+# If the validate_password component is enabled, it exposes several system variables that enable configuration
+# of password checking:
+#
+# SHOW VARIABLES LIKE 'validate_password.%';
+# +----------------------------------------------+
+# | Variable_name 						   | Value   |
+# +----------------------------------------------+
+# | validate_password.check_user_name   | ON 	 |
+# | validate_password.dictionary_file 	 | 		 |
+# | validate_password.length 			    | 8 	    |
+# | validate_password.mixed_case_count  | 1 	    |
+# | validate_password.number_count 	    | 1 	    |
+# | validate_password.policy 			    | MEDIUM |
+# | validate_password.special_char_count| 1 		 |
+# +----------------------------------------------+
+#
+# To change how PWs are checked, you can set these system variables at server startup or at runtime.
+# The following list describes the meaning of each variable.
+#
+# validate_password.check_user_name
+#
+# 	Property 								Value
+# Command-line Format 					--validate-password.check-user-name
+# Introduced 								8.0.4
+# System Variable 						validate_password.check_user_name
+# Scope 										Global
+# Dynamic 									Yes
+# SET_VAR Hint Applies 					No
+# Type 										Boolean
+# Default value 							ON
+#
+# Whether validate_password compares passwords to the user name part of the effective user account
+# for the current session and rejects them if they match.
+#
+# This variable is unavailable unless validate_password is installed.
+#
+# By default, validate_password.check_user_name is enabled. This variable controls user name matching independent of the value
+# of validate_password.policy
+#
+# When validate_password.check_user_name is enabled, it has these effects:
+#
+# 		) Checking occurs in all contexts for which validate_password is invoked, which includes use of statements such as ALTER_USER
+# 			or SET_PASSWORD to change the current user's password, and invocation of functions such as VALIDATE_PASSWORD_STRENGTH()
+#
+# 		) The user names used for comparison are taken from the values of the USER() and CURRENT_USER() functions for the current session.
+#
+# 			An implication is that a user who has sufficient privileges to set another user's password can set the password to that user's name,
+# 			and cannot se that user's password to the name of the user executing the statement.
+#
+# 			For example, 'root'@'localhost' can set the password for 'jeffrey'@'localhost' to 'jeffrey', but cannot set the password
+# 			to 'root'
+#
+# 		) Only the user name part of the USER() and CURRENT_USER() function values is used, not the host name part.
+#
+# 			If a user name is empty, no comparison occurs.
+#
+# 		) If a password is the same as the user name or its reverse, a match occurs and the PW is rejected.
+#
+# 		) User-name matching is case sensitive. The password and user name values are compared as binary strings on a byte-by-byte basis.
+#
+# 		) If a password matches the user name, VALIDATE_PASSWORD_STRENGTH() returns 0 regardless of how other validate_password system variables are set.
+#
+# validate_password.dictionary_file
+#
+# Property 									Values
+# Introduced 								8.0.4
+# System Variable 						validate_password.dictionary_file
+# Scope 										Global
+# Dynamic 									Yes
+# SET_VAR Hint applies 					No
+# Type 										File name
+#
+# The path name of the dictionary file that validate_password uses for checking passwords.
+# This variable is unavailable unless validate_password is installed.
+#
+# By default, this variable has an empty value and dictionary checks are not performed.
+# For dictionary checks to occur, the variable value must be nonempty.
+#
+# If the file is named as a relative path, it is interpreted relative to the server data directory.
+# File contents should be lowercase, one word per line.
+#
+# Contents are treated as having a character set of utf8.
+# The maximum permitted file size if 1mb.
+#
+# For the dictionary file to be used during password checking, the password policy must be set 
+# to 2 (Strong); see the description of the validate_password.policy system variable.
+#
+# Assuming that is true, each substring of the password of length 4 p to 100 is compared to the
+# words in the dictionary file.
+#
+# Any match causes the password to be rejected. Comparisons are not case sensitive.
+#
+# For VALIDATE_PASSWORD_STRENGTH(), the password is checked against all policies, including STRONG - so the strength
+# assessment includes the dictionary check regardless of the validate_password.policy value
+#
+# validate_password.dictionary_file can be set at runtime and assigning a value causes the named file to be
+# read without a server restart.
+#
+# validate_password.length
+#
+# Property 									Value
+# Introduced 								8.0.4
+# System Variable 						validate_password.length
+# Scope 										Global
+# Dynamic 									Yes
+# SET_VAR Hint Applies 					No
+# Type 										Integer
+# Default  value 							8
+# Min 										0
+#
+# The minimum number of charachters that validate_password requires PWs to have.
+# This variable is unavailable unless validate_password is installed.
+#
+# The validate_password.length minimum value is a function of several other related system variables.
+# The value cannot be set less than the value of this expression:
+#
+# validate_password.number_count + validate_password.special_char_count + (2 * validate_password.mixed_case_count)
+#
+# If validate_password adjusts the value of validate_password.length due to the preceding constraint, it writes
+# a message to the error log.
+#
+# validate_password.mixed_case_count
+#
+# Property 									Value
+# Introduced 								8.0.4
+# System Variable 						validate_password.mixed_case_count
+# Scope 										Global
+# Dynamic 									Yes
+# SET_VAR Hint applies 					No
+# Type 										Integer
+# Default 									1
+# Min 										0
+#
+# THe minimum number of lowercase and uppercase characters that validate_password requires passwords to have if the password
+# policy is MEDIUM or stronger.
+#
+# This variable is unavailable unless validate_password is installed.
+#
+# For a given validate_password.mixed_case_count value, the password must have that many lowercase characters,
+# and that many uppercase characters.
+#
+# validate_password.number_count
+#
+# Property 									Value
+# Introduced 								8.0.4
+# System variable 						validate_password.number_count
+# Scope 										Global
+# Dynamic 									Yes
+# SET_VAR Hint applies 					No
+# Type 										Integer
+# Default  									1
+# Min 										0
+#
+# The minimum number of numeric (digit) characters that validate_password requires passwords to have if the password
+# policy is MEDIUM or stronger.
+#
+# This variable is unavailable unless validate_password is installed.
+#
+# validate_password.policy
+#
+# Property 									Value
+# Introduced 								8.0.4
+# System Variable 						validate_password.policy
+# Scope 										Global
+# DYnamic 									Yes
+# SET_VAR Hint Applies 					No
+# Type 										Enumeration
+# Default 									1
+# Valid 										0
+# 												1
+# 												2
+#
+# The password policy enforced by validate_password. This variable is unavailable unless validate_password is installed.
+#
+# validate_password.policy affects how validate_password uses its other policy-setting system variables,
+# except for checking passwords against user names, which is controlled independently by validate_password.check_user_name
+#
+# The validate_password.policy value can be specified using numeric values 0, 1,2 - or the corresponding symbolic values LOW, MEDIUM, STRONG.
+# The following table describes the tests performed for each policy.
+#
+# For the length test, the required length is the value of the validate_password.length system variable.
+# Similarly, the required values for the other tests are given by other validate_password.xxx variables.
+#
+# Policy 				Tests Performed
+# 0 or LOW 				Length
+# 1 or MEDIUM 			Length; numeric, lowercase/uppercase and special characters
+# 2 or STRONG 			Length; numeric, lowercase/uppercase and special characters; dictionary file
+#
+# validate_password.special_char_count
+#
+# Property 									Value
+# Introduced 								8.0.4
+# System Variable 						validate_password.special_char_count
+# Scope 										Global
+# Dynamic 									Yes
+# SET_VAR Hint Applies 					No
+# Type 										INteger
+# Default 									1
+# Min 										0
+#
+# The minimum number of nonalphanumeric characters that validate_password requires passwords to have
+# if the password policy is MEDIUM or higher.
+#
+# This variable is unavailable unless validate_password is installed.
+#
+# PASSWORD VALIDATION COMPONENT STATUS VARIABLES
+#
+# If the validate_password component is enabled, it exposes status variables that provide operational information:
+#
+# SHOW STATUS LIKE 'validate_password.%';
+# +--------------------------------------------+-------------------------+
+# | Variable_name 									       | Value 			    |
+# +----------------------------------------------------------------------+
+# | validate_password.dictionary_file_last_parsed 	 | 2018-01-15 08:33:49|
+# | validate_password.dictionary_file_words_count 	 | 1902 					 |
+# +----------------------------------------------------------------------+
+#
+# The following list describes the meaning of each status variable.
+#
+# validate_password.dictionary_file_last_parsed
+#
+# 		WHen the dictionary file was last parsed. This variable is unavailable unless validate_password is installed.
+#
+# validate_password.dictionary_file_words_count
+#
+# 		THe number of words read from the dictionary file. This variable is unavailable unless validate_password is installed.
+#
+# PASSWORD VALIDATION PLUGIN OPTIONS
+#
+# NOTE:
+#
+# 		In MysQL 8.04, the validate_password plugin was reimplemented as the validate_password component.
+# 		The validate_password plugin is deprecated and will be removed.
+#
+# 		Transition to the component instead. More about this later.
+#
+# To control the activation of the validate_password plugin, use this option:
+#
+# --validate-password[=value]
+#
+# Property 									Value
+# Command-line Format 					--validate-password[=value]
+# Type 										Enumeration
+# Default: 									ON
+# Valid: 									ON, OFF, FORCE, FORCE_PLUS_PERMANENT
+#
+# This option controls how the server loads the deprecated validate_password plugin at startup.
+#
+# The value should be one of those available for plugin-loading options.
+#
+# For example, --validate-password=FORCE_PLUS_PERMANENT tells the server to load the plugin
+# at startup and prevents it from being removed while the server is running.
+#
+# This option is available only if the validate_password plugin has been previously registered with
+# INSTALL_PLUGIN or is loaded with --plugin-load-add.
+#
+# PASSWORD VALIDATION PLUGIN SYSTEM VARIABLES
+#
+# Note:
+#
+# 		In MySQL 8.0.4, the validate_password plugin was reimplemented as the validate_password component.
+# 		The validate_password plugin is deprecated.
+#
+# 		Thus, it's system variables are also deprecated, use the component system variables instead.
+#
+# validate_password_check_user_name
+#
+# Property 								Value
+# Command-line Format 				--validate-password-check-user-name
+# System variable 					validate_password_check_user_name
+# Scope 									Global
+# Dynamic 								Yes
+# SET_VAR Hint Applies 				No
+# Type 									Boolean
+# Default Value 						ON
+#
+# This validate_password plugin system variable is deprecated.
+# Use corresponding validate_password.check_user_name system variable of the validate_password component instead.
+#
+# // The system variables of which are for the plugin are deprecated and mirror the updated Componeont system variables.
+#
+# TRANSITIONING TO THE PASSWORD VALIDATION COMPONENT
+#
+# Note:
+#
+# 		In MySQL 8.0.4, the validate_password plugin was reimplemented as the validate_password component.
+# 		The validate_password plugin is deprecated.
+#
+# MySQL installations that currently use the validate_password plugin should make the transition
+# to using the validate_password component instead.
+#
+# To do so, use the following procedure.
+#
+# The procedure installs the component before uninstalling the plugin, to avoid having a time window during which no PW validation
+# occurs.
+#
+# (The component and plugin can be installed simultaneously. In this case, the server attempts ot use the component,
+# falling back to the plugin if the component is unavailable).
+#
+# 1. Install the validate_password component:
+#
+# 		INSTALL COMPONENT 'file://component_validate_password';
+#
+# 2. Test the validate_password component to ensure that it works as expected.
+#
+# If you need to set any validate_password.xxx SYSTEM VARIABLES, you can do so at
+# runtime using SET GLOBAL (Any option file changes that must be made are performed in the next step)
+#
+# 3. Adjust any references to the plugin system and status variables to refer to the corresponding component system and
+# 		status variables.
+#
+# 		Suppose that you configure the plugin at startup using an option file like this:
+#
+# 		[mysqld]
+# 		validate-password=FORCE_PLUS_PERMANENT
+# 		validate_password_dictionary_file=/usr/share/dict/words
+# 		validate_password_length=10
+# 		validate_password_number_count=2
+#
+# To adjust hte option file, omit the --validate-password option (it applies only to the plugin, not the component),
+# and modify the system variable references:
+#
+# 		[mysqld]
+# 		validate_password.dictionary_file=/usr/share/dict/words
+# 		validate_password.length=10
+# 		validate_password.number_count=2
+#
+# Similar adjustments are needed for applications that refer at runtime to validate_password plugin system and status variables.
+#
+# 4. Uninstall the validate_password plugin:
+#
+# 		UNINSTALL PLUGIN validate_password;
+#
+# If the validate_password plugin is loaded at server startup using a --plugin-load or --plugin-load-add option
+# omit that option from the server startup procedure.
+#
+# For example, if the option is listed in a server option file, remove it from the file.
+#
+# 5. Restart the Server.
+#
+# THE MYSQL KEYRING
+#
+# MySQL Server supports a keyring service that enables internal server components and plugins to securly store sensitve information
+# for later retrieval. The implementation is plugin-based:
+#
+# 	) The keyring_file plugin stores keyring data in a file local to the server host. This plugin is available in all MySQL distribs.
+# 		Both community and Enterprise included.
+#
+# 	) The keyring_encrypted_file plugin stores keyring data in an encrypted file local to the server host.
+# 		This plugin is available in MySQL Enterprise Edition distribs.
+#
+# 	) keyring_okv is a KMIP 1.1 plugin for use with KMIP-compatible back end keyring storage products such as Oracle Key Vault and 
+# 		Gemalto SafeNet KeySecure Applicance.
+#
+# 		Available in the Enterprise edition distribs.
+#
+# ) The keyring_aws plugin communicates with the Amazon Web Services Key Management Service for key generation and uses a local file
+# 		for key storage.
+#
+# 		This plugin is available in MySQL Enterprise Distribs.
+#
+# ) A MySQL server operational mode enables migration of keys between underlying keyring keystores.
+# 		This enables DBAs to switch a MySQL installation from one keyring plugin to another.
+#
+# ) An SQL interface for keyring key management is implemented as a set of user-defined functions (UDFs)
+#
+# WARNING:
+#
+# 		The keyring_file and keyring_encrypted_file plugins for encryption key management are not intended as regulatory compliance solution.
+# 		Security standards such as PCI, FIPS and others require use of key management systems to secure, manage and protect encryption keys
+# 		in key vaults or hardware security modules (HSMs)
+#
+# Uses for the keyring within MySQL include:
+#
+# ) The innoDB sotrage engine uses the keyring to store its key for tablespace encryption.
+# 		InnoDB can use any supported keyring plugin.
+#
+# ) MYSQL Enterprise Audit uses the keyring to store the audit log file encryption password.
+# 		The audit login plugin can use any supported keyring plugin.
+#
+# Keyring plugins and UDFs access a keyring service that provides the interface for server components to the keyring.
+# More of this and other things, later.
+#
+# KEYRING PLUGIN INSTALLATION
+#
+# Keyring service consumers require a keyring plugin to be installed. MySQL provides these plugin choices:
+#
+# 		) keyring_file: A plugin that stores keyring data in a file local to the server host. Available in all MySQL distribs.
+#
+# 		) keyring_encrypted_file: A plugin that stores keyring data in an encrypted file local to the server host. Available in MySQL EE Distribs.
+#
+# 		) keyring_okv: A plugin that uses KMIP-compatible back end keyring storage products such as Oracle Key Vault and Gemalto SafeNet KeySecure applicance.
+# 							Available in MySQL EE distribs.
+#
+# 		) keyring_aws: A plugin that communicates with the Amazon Web Services Key Management Services as a back end for key generation and uses a local file
+# 							for key storage. available in MySQL EE distribs.
+#
+# This section describes how to install the keyring plugin of your choosing. 
+#
+# If you intend to use keyring user-defined functions (UDFs) in conjunction with the keyring plugin, install the UDFs following
+# keyring installation using the instructions described later.
+#
+# To be usable by the server, the plugin library file must be located in the MySQL plugin directory (the dir named by the plugin_dir
+# system variable). If necessary, configure the plugin directory location by setting the value of plugin_dir at server startup.
+#
+# Installation for each keyring plugin is similar. The following instructions use keyring_file. Users of a different keyring plugin
+# can substitute its name for keyring_file.
+#
+# The keyring_file plugin library file base name is keyring_file.
+#
+# The file name suffix differs per platform (for example .so for Unix based systems, .dll for Windows)
+#
+# NOTE:
+# 		Only one keyring plugin should be enabled at a time. Enabling multiple keyring plugins is unsupported and results may not be as anticipated.
+#
+# The keyring plugin must be loaded early during the server startup sequence so that server components can access it as necessary
+# during their own initialization.
+#
+# For example, the InnoDB storage engine uses the keyring for tablespace encryption, so the keyring plugin must be loaded
+# and available prior to InnoDB initialization.
+#
+# To load the plugin, use the --early-plugin-load option to name the plugin library file that contains it.
+#
+# For example, on platforms where the plugin library file suffix is .so, use these lines in the server my.cnf
+# file (adjust the .so suffix for your platform as necessar):
+#
+# [mysqld]
+# early-plugin-load=keyring_file.so
+#
+# Before starting the server, check the notes for your chosen keyring plugin to see whether it permits or requires additional configuration.
+#
+# After performing any plugin-specific configuration, verify plugin installation.
+#
+# With the MySQL server running, examine the INFORMATION_SCHEMA.PLUGINS table or use the
+# SHOW_PLUGINS statement.
+#
+# For example:
+#
+# SELECT PLUGIN_NAME, PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME LIKE 'keyring%';
+# +--------------------------------++
+# | PLUGIN_NAME 		| PLUGIN_STATUS|
+# +------------------+--------------+
+# | keyring_file 		| ACTIVE 		|
+# +------------------+--------------+
+#
+# If the plugin fails to initialize, check the server error log for diagnostic messages.
+#
+# If no keyring plugin is available when a server component tries to access the keyring service,
+# the service cannot be used by that component.
+#
+# As a result, the component may fail to initialize or may initialize with limited functionality.
+#
+# For example, if InnoDB finds that there are encrypted tablespaces when it initializes, it attempts
+# to access the keyring.
+#
+# If the keyring is unavailable, InnoDB can access only unencrypted tablespaces.
+#
+# To ensure that InnoDB can access encrypted tablespaces as well, use --early-plugin-load to
+# load the keyring plugin. 
+#
+# Plugins can be loaded by other methods, such as the --plugin-load or --plugin-load-add option or the
+# INSTALL_PLUGIN statement.
+#
+# However, keyring plugins loaded using those methods may be available too late in the server
+# startup sequence for certain server components, such as InnoDB:
+#
+# 		) Plugin loading using --plugin-load or --plugin-load-add occurs after InnoDB initialization
+#
+# 		) PLugins installed using INSTALL_PLUGIN are registered in the mysql.plugin system table and
+# 			loaded automatically for subsequent server restarts.
+#
+# 			However, because mysql.plugin is an InnoDB table, any plugins named in it can be loaded
+# 			during startup only after InnoDB initialization.
+#
+# USING THE KEYRING_FILE FILE-BASED PLUGIN
+#
+# The keyring_file is a keyring plugin that stores keyring data in a file local to the server host.
+#
+# Warning:
+#
+# 		The keyring_file plugin for encryption key management is not intended as a regulatory compliance solution.
+# 		Security standards such as PCI, FIPS, and others require use of key management systems to secure,
+# 		manage and protect encryption keys in key vaults or hardware security modules (HSMs)
+#
+# To install the keyring_file plugin, use the general keyring installation found earlier, together
+# with the configuration information specific to keyring_file found here.
+#
+# TO be usable during the server startup process, keyring_file must be loaded using the --early-plugin-load
+# option.
+#
+# The keyring_file_data system variable optionally configures the location of the file used by the keyring_file
+# plugin for data storage.
+#
+# The default value is platform specific. To configure the file location explicitly, set the variable value at
+# startup.
+#
+# For example, use these lines in the server my.cnf file (adjust the .so suffix and file location for your platform as necessary):
+#
+# 		[mysqld]
+# 		early-plugin-load=keyring_file.so
+# 		keyring_file_data=/usr/local/mysql/mysql-keyring/keyring
+#
+# Keyring operations are transactional: The keyring_file plugin uses a backup file during write operations
+# to ensure that it can roll back to the original file if an operation fails.
+#
+# The backup file has the same name as the value of the keyring_file_data system variable with a suffix of .backup
+#
+# For additional info about keyring_file_data, see later.
+#
+# To ensure that keys are flushed only when the correct keyring storage file exists, keyring_file stores a 
+# SHA-256 checksum of the keyring in the file.
+#
+# Before updating the file, the plugin verifies that it contains the expected checksum.
+#
+# The keyring_file plugin supports the functions that comprise the standard keyring service interface.
+#
+# Keyring operations performed by those functions are accessible at two levels:
+#
+# 		) SQL interface: In SQL statements, call the user-defined functions (UDFs)
+#
+# 		) C interface: In C-language code, call the keyring service functions described later.
+#
+# Example (using UDFs):
+#
+# 		SELECT keyring_key_generate('MyKey', 'AES', 32);
+# 		SELECT keyring_key_remove('MyKey');
+#
+# THe key types permitted by keyring_file are described later.
+#
+# USING THE KEYRING_ENCRYPTED FILE KEYRING PLUGIN
+#
+# Note:
+#
+# 		The keyring_encrypted_file plugin is an extension included in MySQL EE.
+#
+# The keyring_encrypted_file plugin is a keyring plugin that stores keyring data in a encrypted
+# file local to the server host.
+#
+# Warning:
+#
+# 		The keyring_encrypted_file plugin for encryption key management is not intended as a regulatory compliance solution.
+# 		Security standards such as PCI, FIPS and others require use of key management systems to secure, manage and protect
+# 		keys in key vaults or hardware security modules (HSMs)
+#
+# To install the keyring_encrypted_file plugin, use the general keyring installation instructions found earlier, together
+# with the configuration information specific to keyring_encrypted_file found here.
+#
+# TO be usable during the server startup process, keyring_encrypted_file must be loaded using the --early-plugin-load
+# option.
+#
+# TO specify the password for encrypting the keyring data file, set the keyring_encrypted_file_password system variable.
+# (The password is mandatory; if not specified at server startup, keyring_encrypted_file initialization fails).
+#
+# THe keyring_encrypted_file_data system variable optionally configures the location of the file used by the 
+# keyring_encrypted_file plugin for data storage.
+#
+# The default value is platform specific.
+#
+# To configure the file location explicitly, set the variable value at startup.
+# For example, use these lines in the server my.cnf file (adjust the .so suffix and file location for your platform as necesary and subsittue your chosen PW):
+#
+# 	[mysqld]
+# 	early-plugin-load=keyring_encrypted_file.so
+# 	keyring_encrypted_file_data=/usr/local/mysql/mysql-keyring/keyring-encrypted
+# 	keyring_encrypted_file_password=password
+#
+# Because the my.cnf file stores a PW when written as shown, it should have a restrictive mode and and be accesible 
+# only to the account used to run the MySQL server.
+#
+# Keyring operations are transactional: The keyring_encrypted_file plugin uses a backup file during write operations to ensure
+## that it can roll back to the original file if an operation fails.
+#
+# The backup file has the same name as the value of the keyring_encrypted_file_data system variable with a suffix of .backup
+#
+# For additional information about the system variables used to configure the keyring_encrypted_file plugin, see later.
+#
+# To ensure that keys are flushed only when the correct keyring storage file exists, keyring_encrypted file stores a
+# SHA-256 checksum of the keyring in the file.
+#
+# Before updating the file, the plugin verifies that it contains the expected checksum.
+#
+# In addition, keyring_encrypted_file encrypts file contents using AES before writing the file,
+# and decrypts the file contents after reading the file.
+#
+# The keyring_encrypted_file plugin supports the functions that comprise the standard keyring service interface.
+#
+# Keyring operations performed by those functions are accessible at two levels:
+#
+# ) SQL interface: In SQL statements, call the user-defined functions (UDFs)
+#
+# ) C interface: In C-language code, call the keyring service functions
+#
+# Example (using UDFs):
+#
+# 		SELECT keyring_key_generate('MyKey', 'AES', 32);
+# 		SELECT keyring_key_remove('MyKey');
+#
+# THe key types permitted by keyring_encrypted_file are described later.
+#
+# USING THE KEYRING_OKV KMIP PLUGIN
+#
+# Note:
+#
+# 		The keyring_okv plugin is an extension included in MySQL EE.
+#
+# The Key Management Interoperability Protocol (KMIP) enables communication of cryptographic keys between
+# a key management service and its clients.
+#
+# The keyring_okv keyring plugin uses the KMIP 1.1 protocol to communicate securely as a client of a KMIP backend.
+#
+# Keyring material is generated exclusively by the backend, not by keyring_okv.
+#
+# THe plugin works with these KMIP-compatible products:
+#
+# 		) Oracle Key Vault
+#
+# 		) Gemalto SafeNet KeySecure Appliance
+#
+# The keyring_okv plugin supports the functions that comprise the standard keyring service interface.
+# Keyring operations performed by those functions are accessible at two levels:
+#
+# ) SQL interface: In SQL statements, call the user-defined functions (UDFs)
+#
+# ) C interface: In C-language code, call the keyring service function, described later
+#
+# Example (using UDFs):
+#
+# 		SELECT keyring_key_generate('MyKey', 'AES', 32);
+# 		SELECT keyring_key_remove('MyKey');
+#
+# The key types permitted by keyring_okv are described later.
+#
+# TO install the keyring_okv plugin, use the general keyring installation instructions described earlier,
+# together with the configuration information specific to keyring_okv found here:
+#
+# GENERAL KEYRING_OKV CONFIGURATION
+#
+# Regardless of which KMIP backend the keyring_okv plugin uses for keyring storage,
+# the keyring_okv_conf_dir system variable configures the location of the directory used 
+# by keyring_okv for its support files.
+#
+# The default value is empty, so you must set the variable to name a properly configured directory
+# before the plugin can communicate with the KMIP backend.
+#
+# Unless you do so, keyring_okv writes a message to the error log during server startup that it cannot
+# communicate:
+#
+# [Warning] Plugin keyring_okv reported: 'For keyring_okv to be initialized, please point the keyring_okv_conf_dir
+# variable to a directory containing Oracle Key Vault configuration file and ssl materials'
+#
+# The keyring_okv_conf_dir variable must name a directory that contains the following items:
+#
+# ) okvclient.ora - A file that contains details of the KMIP backend with which keyring_okv will communicate.
 #
 # 
+#
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/keyring-okv-plugin.html
