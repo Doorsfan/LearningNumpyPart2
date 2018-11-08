@@ -37392,7 +37392,2017 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # ) okvclient.ora - A file that contains details of the KMIP backend with which keyring_okv will communicate.
 #
-# 
+# ) ssl - A directory that contains the certificate and key files required to establish a secure connection with the KMIP backend:
+# 			CA.pem, cert.pem and key.pem.
 #
+# 			If the key file is password-protected, the ssl directory can contain a single-line text file named password.txt
+# 			containing the password needed to decrypt the key file
+#
+# Both the okvclient.ora file and ssl directory with the certificate and key files are required for keyring_okv to work
+# properly.
+#
+# The procedure used to populate the configuration directory with these files depends on the KMIP backend used with
+# keyring_okv, as described elsewhere.
+#
+# The configuration directory used by keyring_okv as the location for its support files should have a restrictive
+# mode and be accessible only to the account used to run the MySQL server.
+#
+# For example, on Unix and Unix based systems, to use the /usr/local/mysql/mysql-keyring-okv directory, the following
+# commands (executed as root) create the directory and set its mode and ownership:
+#
+# 		cd /usr/local/mysql
+# 		mkdir mysql-keyring-okv
+# 		chmod 750 mysql-keyring-okv
+# 		chown mysql mysql-keyring-okv
+# 		chgrp mysql mysql-keyring-okv
+#
+# To be usable during the server startup process, keyring_okv must be loaded using the --early-plugin-load option.
+# Also, set the keyring_okv_conf_dir system variable to tell the keyring_okv where to find its configurations dir.
+#
+# For example, use these lines in the server my.cnf file (adjust the .so suffix need be):
+#
+# 		[mysqld]
+# 		early-plugin-load=keyring_okv.so
+# 		keyring_okv_conf_dir=/usr/local/mysql/mysql-keyring-okv
+#
+# For additional info regarding keyring_okv_conf_dir - see later.
+#
+# CONFIGURING KEYRING_OKV FOR ORACLE KEY VAULT
+#
+# The discussion here assumes that you are familiar with Oracle Key Vault.
+# Some pertinent info can be found externally.
+#
+# In Oracle Key Vault terminology, clients that use Oracle Key to store and retrieve security objects 
+# are called endpoints.
+#
+# To communicate with Oracle Key Vault, it is necessary to register as an endpoint and enroll by downloading
+# and installing endpoint support files.
+#
+# The following procedure briefly summarizes the process of setting up keyring_okv for use with Oracle Key Vault:
+#
+# 		1. Create the configuration directory for the keyring_okv plugin to use.
+#
+# 		2. Register an endpoint with Oracle Key Vault to obtain an enrollment token.
+#
+# 		3. Use the enrollment token to obtain the okvclient.jar client software download
+#
+# 		4. Install the client software to populate the keyring_okv configuration directory that contains the
+# 			Oracle Key Vault support files.
+#
+# Use the following procedure to configure keyring_okv and Oracle Key Vault to work together.
+# This description only summarizes how to interact with Oracle Key Vault.
+#
+# For details, visit the Oracle Key Vault site nad consult the Oracle Key Vault Administrator's Guide
+#
+# 1. Create the configuration directory that will contain the Oracle Key Vault support files, and make sure
+# 		that the keyring_okv_conf_dir system variable is set to name that directory.
+#
+# 2. Log in to the Oracle Key Vault management console as a user who has the System Admin role.
+#
+# 3. Select the endpoints tab to arrive at the Endpoints page. On the endpoints page, click add..
+#
+# 4. Provide the required endpoint information to register.
+# 		The endpoint type should be other.
+#
+# 		Successfully registering results in an enrollment token.
+#
+# 5. Log out from the Oracle Key Vault server.
+#
+# 6. Connect again to the Oracle Key Vault server, this time without logging in.
+# 		Use the endpoint enrollment token to enroll and request the okvclient.jar software
+# 		download.
+#
+# 		Save this file to your system.
+#
+# 7. install the okvclient.jar file using the following command (required JDK >= 1.4):
+#
+# 		java -jar okvclient.jar -d dir_name [-v]
+#
+# 		The directory name following the -d option is the location in which to install the extracted files.
+#
+# 		The -v option, if given, causes log information to be produced that may be useful if the command
+# 		fails. 
+#
+# 		When the command asks for an Oracle Key Vault endpoint password, do not provide one.
+# 		Instead, just press enter.
+#
+# 		(The result is that no PW will bw required when the endpoint connects to Oracle Key Vault)
+#
+# 8. The preceding command produces an okvclient.ora file, which should be in this location under the
+# 		directory named by the -d option in the preceding java -jar command:
+#
+# 		install_dir/conf/okvclient.ora
+#
+# 		The file contents include lines that look something like this:
+#
+# 		SERVER=host_ip:port_num
+# 		STANDBY_SERVER=host_ip:port_num
+#
+# 		The keyring_okv plugin attempts to communicate with the server running on the host named
+# 		by the SERVER variable and falls back to STANDBY_SERVER if that fails:
+#
+# 			) For the SERVER variable, a setting in the okvclient.ora file is mandatory
+#
+# 			) For the STANDBY_SERVER variable, a setting in the okvclient.ora file is optional
+#
+# 9. Go to the Oracle Key Vault installer directory and test the setup by running this command:
+#
+# 		okvutil/bin/okvutil list
+#
+# 		The output should look something like this:
+#
+# 			Unique ID 									Type 				Identifier
+# 			<value> 										Symmetric Key  -
+# 			<value> 										Symmetric key  -
+#
+# 		For a fresh Oracle Key Vault server (a server without any key in it), the output looks like this instead,
+# 		to indicate that there are no keys in the vault:
+#
+# 			no objects found
+#
+# 10. Use this command to extract the ssl directory containing SSL materials from the okvclient.jar file:
+#
+# 		jar xf okvclient jar ssl
+#
+# 11. Copy the Oracle Key Vault support files (the okvclient.ora file and the ssl directory) into the configuration directory.
+#
+# 12. (Optional) If you wish to password-protect the key file, use the instructions given later.
+#
+# After completing the procedure, restart the MySQL server. It loads the keyring_okv plugin and keyring_okv uses the file
+# in its configuration directory to communicate with Oracle Key Vault.
+#
+# Configuring keyring_okv for Gemalto SafeNet KeySecure Appliance
+#
+# Gemalto SafeNet KeySecure Appliance uses the KMIP protocol (version 1.1 or 1.2).
+# The keyring_okv keyring plugin (which supports KMIP 1.1) can use KeySecure as its KMIP backend for keyring storage.
+#
+# Use the following procedure to configure keyring_okv and KeySecure to work together.
+# THe description only summarizes how to interact with KeySecure.
+#
+# For details, consult the section named Add a KMIP server in the KeySecure User Guide.
+#
+# 1. Create the configuration directory that will contain the KeySecure support files, and make sure
+# 		that the keyring_okv_conf_dir system variable is set to name that directory.
+#
+# 		(For details, see the General keyring_okv Configuration)
+#
+# 2. In the configuration directory, create a subdirectory named ssl to use for storing the required
+# 		SSL certificate and key files.
+#
+# 3. In the configuration directory, create a file named okvclient.ora. It should have the following format:
+#
+# 		SERVER=host_ip:port_num
+# 		STANDBY_SERVER=host_ip:port_num
+#
+# 		For example, if KeySecure is running on host 198.51.100.20 and listening on port 9002, the okvclient.ora file looks like this:
+#
+# 		SERVER=198.51.100.20:9002
+# 		STANDBY_SERVER=198.51.100.20:9002
+#
+# 4. Connect to the KeySecure Management Console as an administrator with credentials for Certificate Authorities access.
+#
+# 5. Navigate to Security >> Local CAs and create a local certificate authority (CA)
+#
+# 6. Go to Trusted CA lists. Select Default and click on Properties.
+#
+# 		Then select Edit for Trusted Certificate Authority List and add the CA just created.
+#
+# 7. Download the CA and save it in the SSL directory as a file named CA.pem
+#
+# 8. Navigate to Security >> Certificate Requests and create a certificate.
+# 		Then you will be able to download a compressed tar file containing certificate PEM files.
+#
+# 9. Extract the PEM files from in the downloaded file.
+# 		For example, if the file name is csr_w_pk_pkcs8.gz, decompress and unpack it using this command:
+#
+# 		tar zxvf csr_w_pk_pkcs8.gz
+#
+# 		Two files result from the extraction operation: certificate_request.pem and private_key_pkcs8.pem
+#
+# 10. Use this openssl command to decrypt the private key and create a file named key.pem:
+#
+# 		openssl pkcs8 -in private_key_pkcs8.pem -out key.pem
+#
+# 11. Copy the key.pem file into the ssl directory
+#
+# 12. Copy the certificate request in certificate_request.pem into the clipboard.
+#
+# 13. Navigate to Security >> Local CAs.
+#
+# 		Select the same CA that you created earlier (the one you downloaded to create the CA.pem file),
+# 		and click Sign Request.
+#
+# 		Paste the Certificate Request from the clipboard, choose a certificate purpose of Client (the keyring is a client
+# 		of KeySecure), and click Sign Reqeuest.
+#
+# 		The result is a certificate signed with the selected CA in a new page.
+#
+# 14. Copy the signed certificate to the clipboard, then save the clipboard contents as a file named cert.pem in the ssl directory.
+#
+# 15. (Optional) If you wish to password-protect the key file, use the instructions in Password-Protecting the keyring_okv Key File.
+#
+# After completing the preceding procedure, restart the MySQL server.
+#
+# It loads the keyring_okv plugin and keyring_okv uses the files in its configuration directory to
+# communicate with KeySecure.
+#
+# Password-Protecting the keyring_okv Key File
+#
+# You can optionally protect the key file with a password and supply a file containing the password to enable the key
+# file to be decrypted.
+#
+# To do so, change location to the ssl directory and perform these steps:
+#
+# 		1. Encrypt the key.pem key file. For example, use a command like this, and enter the encryption password at the prompts:
+#
+# 			openssl rsa -des3 -in key.pem -out key.pem.new
+# 			Enter PEM pass phrase:
+# 			Verifying - Enter PEM pass phrase:
+#
+# 		2. Save the encryption password in a single-line text file named password.txt in the ssl directory.
+#
+# 		3. Verify that the encrypted key file can be decrypted using the following command.
+#
+# 			The decrypted file should display on the console:
+#
+# 			openssl rsa -in key.pem.new -passin file.password.txt
+#
+# 		4. Remove the original key.pem file and rename key.pem.new to key.pem
+#
+# 		5. Change the ownership and access mode of new key.pem file and password.txt file as
+# 			necessary to ensure that they have the same restrictions as other files in the SSL Dir.
+#
+# USING THE KEYRING_AWS AMAZON WEB SERVICES KEYRING PLUGIN
+#
+# Note:
+# 		The keyring_aws plugin is an extension included in MySQL EE.
+#
+# The keyring_aws plugin is a keyring plugin that communicates with the Amazon Web Services Key Management Service 
+# (AWS KMS) as a backend for key generation and uses a local file for key storage.
+#
+# All keyring material is generated exclusively by the AWS server, not by keyring_aws.
+#
+# keyring_aws is available on these platforms:
+#
+# 		) Debian 8
+#
+# 		) EL7
+#
+# 		) macOS 10.12
+#
+# 		) OS X 10.10 and 10.11
+#
+# 		) SLES 12
+#
+# 		) Ubuntu 14.04 and 16.04
+#
+# 		) Windows
+#
+# The discussion here assumes that you are familiar with AWS in general and KMS in particular.
+# SOme pertinent info sources:
+#
+# 	<AWS site>
+#
+# 	<KMS docs>
+#
+# The following section provide configuration and usage information for the keyring_aws keyring plugin.
+#
+# KEYRING_AWS CONFIGURATION
+#
+# To install the keyring_aws plugin, use the general installation instructions found in the installation part,
+# together with the plugin-specific configuration information found here.
+#
+# THe plugin library contains the keyring_aws plugin and two user-defined functions (UDFs),
+# keyring_aws_rotate_cmk() and keyring_aws_rotate_keys().
+#
+# To configure keyring_aws, you must obtain a secret access key that provides credentials for
+# communicating with AWS KMS and write it to a configuration file:
+#
+# 1. Create an AWS KMS account
+#
+# 2. Use AWS KMS to create a secret access key ID and secret access key.
+# 		The access key serves to verify your identity and that of your applications.
+#
+# 3. Use the AWS KMS account to create a customer master key (CMK) ID.
+# 		At MySQL startup,, set the keyring_aws_cmk_id system variable to the CMK ID value.
+#
+# 		This variable is mandatory and there is no default. (Its value can be changed at runtime if desired using SET_GLOBAL)
+#
+# 4. If necessary, create the directory in which the configuration file will be located.
+#
+# 		The directory should have a restrictive mode and be accessible only to the account
+# 		used to run the MySQL server.
+#
+# 		For example, on UNIX based systems, to use /usr/local/mysql/mysql-keyring/keyring_aws_conf as the
+# 		file name, the following commands (executed as root) create its parent directory and set the directory
+# 		mode and ownership:
+#
+# 			cd /usr/local/mysql
+# 			mkdir mysql-keyring
+# 			chmod 750 mysql-keyring
+# 			chown mysql mysql-keyring
+# 			chgrp mysql mysql-keyring
+#
+# 		At MySQL startup, set the keyring_aws_conf_file system variable to /usr/local/mysql/mysql-keyring/keyring_aws_conf to indicate
+# 		the configuration file location to the server.
+#
+# 5. Prepare the keyring_aws configuration file, which should contain two lines:
+#
+# 		) Line 1: The secret access key ID
+#
+# 		) Line 2: The secret access key
+#
+# 		For example, if the key ID is 10xEXAMPLE and the key is 10y/10z/10x, the config file looks like this:
+#
+# 			10xEXAMPLE
+# 			10y/10z/10x
+#
+# To be usable during the server startup process, keyring_aws must be loaded using the --early-plugin-load option.
+#
+# The keyring_aws_cmk_id system variable is mandatory and configures the customer master key (CMK) Id obtained from
+# the AWS KMS server.
+#
+# The keyring_aws_conf_file and keyring_aws_data_file system variables optionally configure the locations of the
+# files used by the keyring_aws plugin for configuration information and data storage.
+#
+# The file location variable default values are platform specific.
+#
+# To configure the locations explicitly, set the variable values at startup.
+#
+# For example, use these lines in the server my.cnf file (adjust the .so if needed):
+#
+# 		[mysqld]
+# 	 	early-plugin-load=keyring_aws.so
+# 		keyring_aws_cmk_id='arn:aws:kms:us-west-2:111111111222222223333333:key/abcd1234etc.'
+# 		keyring_aws_conf_file=/usr/local/mysql/mysql-keyring/keyring_aws_conf
+# 		keyring_aws_data_file=/usr/local/mysql/mysql-keyring/keyring_aws_data
+#
+# For the keyring_aws plugin to start successfully, the configuration file must exist and contain
+# valid secret access key information, intiailized as described previously.
+#
+# The storage file need not exist. If it does not, keyring_aws attempts to create it
+# (as well as its parent directory, if necessary)
+#
+# For additional information about the system variables used to configure the keyring_aws plugin,
+# see later.
+#
+# Start the MySQL server and install the UDFs associated with the keyring_aws plugin.
+#
+# This is a one-time operation, performed by executing the following statements
+# (Adjust the .so need be):
+#
+# 		CREATE FUNCTION keyring_aws_rotate_cmk RETURNS INTEGER SONAME 'keyring_aws.so';
+# 		CREATE FUNCTION keyring_aws_rotate_keys RETURNS INTEGER SONAME 'keyring_aws.so';
+#
+# KEYRING_AWS OPERATION
+#
+# At plugin startup, the keyring_aws plugin reads the AWS secret access key ID and key from its configuration file.
+# It also reads any encrypted keys contained in its storage file into its in-memory cache.
+#
+# During operation, keyring_aws maintains encrypted keys in the in-memory cache and uses the storage file as
+# local persistent storage.
+#
+# Each keyring operation is transactional: keyring_aws either successfully changes both the in-memory key cache
+# and the keyring storage file; or the operation fails and the keyring state remains unchanged.
+#
+# To ensure that keys are flushed only when the correct keyring storage file exists, keyring_aws stores a
+# SHA-256 checksum of the keyring in the file.
+#
+# Before updating the file, the plugin verifies that it contains the expected checksum.
+#
+# The keyring_aws plugin supports the functions that comprise the standard keyring service interface.
+# Keyring operations performed by these functions are accessible at two levels:
+#
+# ) C interface: In C-language code, call the keyring-service functions described later
+#
+# ) SQL interface: In SQL statements, call the user-defined functions (UDFs) described later
+#
+# Example (using UDFs):
+#
+# 		SELECT keyring_key_generate('MyKey', 'AES', 32);
+# 		SELECT Keyring_key_remove('MyKey');
+#
+# In addition, the keyring_aws_rotate_cmk() and keyring_aws_rotate_keys() UDFs "extend" the keyring plugin
+# interface to provide AWS-related capabilities not covered by the standard keyring service interface.
+#
+# These capabilities are accessible only by calling the UDFs.
+#
+# There are no corresponding C-language key service functions.
+#
+# The key types permitted by keyring_aws are described later.
+#
+# KEYRING_AWS CREDENTIAL CHANGES
+#
+# Assuming that the keyring_aws plugin has initialized properly at server startup, it is possible to change the credentials
+# used for communicating with AWS KMS:
+#
+# 	1. Use AWS KMS to create a new secret access key ID and secret access key.
+#
+# 	2. Store the new credentials in the configuration file (the file named by the keyring_aws_conf_file system variable).
+#
+# 		The file format is as described previously.
+#
+# 	3. Reinitialize the keyring_aws plugin so that it rereads the configuration file.
 # 
-# https://dev.mysql.com/doc/refman/8.0/en/keyring-okv-plugin.html
+# 		Assuming that the new credentials are valid, the plugin should initialize successfully.
+#
+# 		There are two ways to reinitialize the plugin:
+#
+# 			) Restart the server. This is simpler and has no side effects, but is not suitable for installations that require
+# 				minimal server downtime with as few restarts as possible.
+#
+# 			) Reinitialize the plugin without restarting the server by executing the following statements (adjust the .so suffix as called for):
+#
+# 				UNINSTALL PLUGIN keyring_aws;
+# 				INSTALL PLUGIN keyring_aws SONAME 'keyring_aws.so';
+#
+# 		Note:
+#
+# 			In addition to loading a plugin at runtime, INSTALL_PLUGIN has the side effect of registering the plugin in the mysql.plugin system table.
+#
+# 			Because of this, if you decide to stop using keyring_aws, it is not sufficient to remove the --early-plugin-load
+# 			option from the set of options used to start the server.
+#
+# 			That stops the plugin from loading early, but the server still attempts to load it when
+# 			it gets to the point in the startup sequence where it loads the plugins registered in mysql.plugin
+#
+# 			Consequently, if you execute the UNINSTALL_PLUGIN plus INSTALL_PLUGIN sequence just described to change
+# 			the AWS KMS credentials, then to stop using keyring_aws, it is necessary to execute UNINSTALL_PLUGIN again to
+# 			unregister the plugin in addition to removing the --early-plugin-load option.
+#
+# MIGRATING KEYS BETWEEN KEYRING KEYSTORES
+#
+# The MySQL server supports an operational mode that enables migration of keys between underlying
+# keyring keystores.
+#
+# This enables DBAs to switch a MySQL installation from one keyring plugin to another.
+#
+# A migration server (that is, a server started in key migration mode) does not accept client connections.
+# 
+# Instead, it runs only long enough to migrate keys, then exits.
+#
+# A migration server reports errors to the console (the standard error output)
+#
+# It is possible to perform offline or online key migration:
+#
+# 		) If you are sure that no running server on the local host is using the source or destination keystore,
+# 			an offline migration is possible.
+#
+# 			In this case, the migration server can modify the keystores without possibility of a running server
+# 			modifying keystore content during the migration.
+#
+# 		) If a running server on the local host is using the source or destination keystore, an online migration
+# 			must be performed.
+#
+# 			In this case, the migration server connects to the running server and instructs it to pause keyring operations
+# 			while key migration is in progress.
+#
+# The result of a key migration operation is that the destination keystore contains the keys it had prior to the migration,
+# plus the keys from the source keystore.
+#
+# THe source keystore is the same before and after the migration because keys are copied, not moved.
+#
+# If a key to be copied already exists in the destination keystore, an error occurs and the destination keystore
+# is restored to its premigration state.
+#
+# The user who invokes the server in key-migration mode must not be the root system user, and must have
+# permission to read and write the keyring files.
+#
+# To perform a key migration operation, determine which key migration options are needed.
+#
+# Migration options indicate which keyring plugins are involved,, and whether to perform an
+# offline or online migration.
+#
+# ) TO indicate the source and destination keyring plugins, specify these options:
+#
+# 		) --keyring-migration-source: The source keyring plugin that manages the keys to be migrated.
+#
+# 		) --keyring-migration-destination: The destination keyring plugin to which the migrated keys are to be copied.
+#
+# 		These options tell the server to run in key migration mode. Both options are mandatory for all key migration
+# 		operations.
+#
+# 		The source and destination plugins must differ, and the migration server must support both plugins.
+#
+# ) For an offline migration, no additional key migration options are needed.
+#
+# 	WARNING:
+#
+# 		Do not perform an offline migration involving a keystore that is in used by a running server.
+#
+# ) For an online migration, some running server currently is using the source or destination keystore.
+#
+# 		Specify the key migration options that indicate how to connect to the running server.
+#
+# 		This is necessary so that hte migration server can connect to the running server and tell it to
+# 		pause keyring use during the migration operation.
+#
+# 		uSe of any of the following options signifies an online migration:
+#
+# 			) --keyring-migration-host: The host where the running server is located. This is always the local host.
+#
+# 			) --keyring-migration-user, --keyring-migration-password: The user name and PW for the account to use to connect to the running server.
+#
+# 			) --keyring-migration-port: For TCP/IP Connections, the port number to connect on the running server.
+#
+# 			) --keyring-migration-socket: For UNIX socket file or Windows named pipe connections, the socket file or named pipe to connect to
+# 													on the running server.
+#
+# For additional details about the key migration options, see later.
+#
+# Start the migration server with the key migration options determined as just described, possibly with other options.
+#
+# Keep the following considerations in mind:
+#
+# 		) Other server options might be required, such as other configuration parameters for the two keyring plugins.
+#
+# 		For example, if keyring_file is one of the plugins, you must set the keyring_file_data system variable if the keyring
+# 		data file location is not the default location.
+#
+# 		Other non-keyring options may be required as well.
+#
+# 		One way to specify these options is by using --defaults-file to name an option file that contains the required options.
+#
+# 		) If you invoke the migration server from a system account different from that normally used to run MySQL, it might create
+# 			keyring directories or files that are inaccessible to the server during normal operations.
+#
+# 			Suppose that mysqld normally runs as the mysql system user, but you invoke the migration server while logged in
+# 			as isabel.
+#
+# 			Any new directories or files created by the migration server will be owned by isabel.
+#
+# 			Subsequent startup will fail when a server run as the mysql system user attempts to access file system
+# 			objects owned by isabel.
+#
+# 			To avoid this problem, start the migration server as the root system user and provide a --user=user_name option,
+# 			where user_name is the system account normally used to run MySQL.
+#
+# 		) The migration server expects path name options values to be full paths.
+#
+# 			Relative path names may not be resolved as you expect.
+#
+# Example command line for offline key migration:
+#
+# 		mysqld --defaults-file=/usr/local/mysql/etc/my.cnf
+# 			--keyring-migration-source=keyring_file.so
+# 			--keyring-migration-destination=keyring_encrypted_file.so
+# 			--keyring_encrypted_file_password=password
+#
+# Example command line for online key migration:
+#
+# 		mysqld --defaults-file=/usr/local/mysql/etc/my.cnf
+# 			--keyring-migration-source=keyring_file.so
+# 			--keyring-migration-destination=keyring_encrypted_file.so
+# 			--keyring_encrypted_file-password=password
+# 			--keyring-migration-host=localhost
+# 			--keyring-migration-user=root
+# 			--keyring-migration-password=root_password
+#
+# The key migration server performs the migration operation as follows:
+#
+# 	1. (Online migration only) Connect to the running server using the connection options.
+#
+# 		The account used to connect must have the privileges required to modify the
+# 		global keyring_operations system variable (ENCRYPTION_KEY_ADMIN in addition to either SYSTEM_VARIABLES_ADMIN or SUPER)
+#
+# 	2. (Online migration only) Disable keyring_operations on the running server. ( The running server must support keyring_operations)
+#
+# 	3. Load the source and destination keyring plugins.
+#
+# 	4. Copy keys from the source keyring to the destination keyring.
+#
+# 	5. Unload the keyring plugins.
+#
+#  6. (Online migration only) Enable keyring_operations on the running server.
+#
+#  7. (Online migration only) Disconnect from the running server
+#
+# 	8. Exit
+#
+# If an error occurs during key migration, any keys that were copied to the destination plugin are removed,
+# leaving the destination keystore unchanged.
+#
+# Important:
+#
+# 		For an online migration operation, the migration server takes care of enabling and disabling keyring_operations on the running server.
+#
+# 		However, if the migration server exits abnormally (for example, if someone forcibly terminates it), it is possible
+# 		that keyring_operations will not have been re-enabled on the running server, leaving it unable to perform keyring operations.
+#
+# 		In this case, it may be necessary to connect to the running server and enable keyring_operations manually.
+#
+# After a successful online key migration operation, the running server might need to be restarted:
+#
+# 		) If the running server was using the source keystore, it need not be restarted after the migration.
+#
+# 		) If the running server was using the source keystore before the migration but should use the destination keystore after the migration,
+# 			it must be reconfigured to use the destination keyring plugin and restarted.
+#
+# 		) If the running server was using the destination keystore and will continue to use it, it should be restarted after the migration
+# 			to load all keys migrated into the destination keystore.
+#
+# NOTE:
+#
+# 		MySQL server key migration mode supports pausing a single running server.
+#
+# 		To perform a key migration if multiple key servers are using the keystores involved,
+# 		use this procedure:
+#
+# 			1. Connect each running server manually and set keyring_operations=OFF
+#
+# 			2. Use the migration server to perform an offline key migration.
+#
+# 			3. Connect to each running server manually and set keyring_operations=ON
+#
+# ALl running servers must support the keyring_operations=ON system variable.
+#
+# SUPPORTED KEYRING KEY TYPES
+#
+# MySQL keyring supports generating keys of different types (encryption algorithms) and lengths.
+#
+# The available key types depend on which keyring plugin is installed.
+# A given plugin may also impose constraints on key lengths per key type.
+#
+# The following table summarizes the permitted key types per keyring plugin.
+# Lengths are in bytes.
+#
+# For a key generated using one of the keyring user-defined functions (UDFs) described later,
+# the length can be no longer than 2,048 bytes, due to limitations of the UDF interface.
+#
+# KEYRING PLUGIN KEY TYPES
+#
+# Plugin Name 						Permitted Key Type 						Permitted Key lengths for Key Type
+#
+# keyring_encrypted_file 		AES DSA RSA 								No special restrictions
+#
+# keyring_file 					AES DSA RSA 								NO special restrictions
+#
+# keyring_okv 						AES 											16, 24, 32
+#
+# keyring_aws 						AES 											16, 24, 32
+#
+# GENERAL PURPOSE KEYRING KEY MANAGEMENT FUNCTIONS
+#
+# MySQL Server supports a keyring service that enables internal server components and plugins to securly store sensetive information for later retrieval.
+#
+# MySQL Server also includes an SQL interface for keyring key management, implemented as a set of general-purpose user-defined functions
+# (UDFs) that access the functions provided by the internal keyring service.
+#
+# The keyring UDFs are contained in a plugin library file, which also contains a keyring_udf plugin that must be
+# enabled prior to UDF invocation.
+#
+# For these UDFs to be used, a keyring plugin such as keyring_file or keyring_okv must be enabled.
+#
+# The UDFs described here are general purpose and intended for use with any keyring plugin.
+#
+# A given keyring plugin might have UDFs of its own that are intended for use only with that plugin.
+#
+# THe following section provides installation instructions for the keyring UDFs and demonstrates how to use them.
+# For information about the keyring service functions invoked by teh UDFs, see later.
+#
+# INSTALLING OR UNINSTALLING GENERAL-PURPOSE KEYRING FUNCTIONS
+#
+# This section describes how to install or uninstall the keyring user-defined functions (UDFs), which are implemented
+# in a plugin library file that also contains a keyring_udf plugin.
+#
+# For general information about installing or uninstalling plugins and UDFs, see later.
+#
+# The keyring UDFs enable keyring management operations, but the keyring_udf plugin must also be installed
+# because the UDFs will not work correctly without it.
+#
+# Attempts to use the UDFs without hte keyring_udf plugin result in an error.
+#
+# TO be usable by the server, the plugin library file must be located in the MySQL plugin directory (the directory named
+# by the plugin_dir system variable).
+#
+# If necessary, configure the plugin directory location by setting the value of plugin_dir at server startup.
+#
+# The plugin library file base name is keyring_udf. The file name suffix differs per platform (for example,
+# .so is UNIX based, .dll for Windows)
+#
+# To install the keyring_udf plugin and the UDFs, use the INSTALL_PLUGIN and CREATE_FUNCTION statements
+# (Adjust the .so suffix if need be):
+#
+# INSTALL PLUGIN keyring_udf SONAME 'keyring_udf.so';
+#
+# CREATE FUNCTION keyring_key_generate RETURNS INTEGER
+# 		SONAME 'keyring_udf.so';
+#
+# CREATE FUNCTION keyring_key_fetch RETURNS STRING
+# 		SONAME 'keyring_udf.so';
+#
+# CREATE FUNCTION keyring_key_length_fetch RETURNS INTEGER
+# 		SONAME 'keyring_udf.so';
+#
+# CREATE FUNCTION keyring_key_type_fetch RETURNS STRING
+# 		SONAME 'keyring_udf.so';
+#
+# CREATE FUNCTION keyring_key_store RETURNS INTEGER
+# 		SOANME 'keyring_udf.so';
+#
+# CREATE FUNCTION keyring_key_remove RETURNS INTEGER
+# 		SONAME 'keyring_udf.so';
+#
+# If the plugin and UDFs are used on a master replication server, install them on all slave servers as well, to avoid replication
+# problems.
+#
+# Once installed as just described, the plugin and UDFs remain installed until uninstalled.
+#
+# To remove them, use the UNINSTALL_PLUGIN and DROP_FUNCTION statements:
+#
+# 		UNINSTALL PLUGIN keyring_udf;
+# 		DROP FUNCTION keyring_key_generate;
+# 		DROP FUNCTION keyring_key_fetch;
+# 		DROP FUNCTION keyring_key_length_ fetch;
+#
+# 		DROP FUNCTION keyring_key_type_fetch;
+# 		DROP FUNCTION keyring_key_store;
+# 		DROP FUNCTION keyring_key_remove;
+#
+# USING GENERAL-PURPOSE KEYRING FUNCTIONS
+#
+# Before using the keyring user-defined functions (UDFs), install them according to the instructions provided later.
+#
+# The keyring UDFs are subject to these constraints:
+#
+# 		) To use any keyring UDF, the keyring_udf plugin must be enabled.
+# 			Otherwise, an error occurs:
+#
+# 			ERROR 1123 (HY000): Can't initialize function 'keyring_key_generate';
+# 			This function requires keyring_udf plugin which is not installed.
+# 			Please install
+#
+# 			To install the keyring_udf plugin, see later.
+#
+# 		) The keyring UDFs invoke keyring service (see later)
+#
+# 			These service functions in turn use whatever keyring plugin is installed
+# 			(for example, keyring_file or keyring_okv).
+#
+# 			Therefore, to use any keyring UDF, some underlying keyring plugin must be installed.
+#
+# 			Otherwise, an error occurs:
+#
+# 				ERROR 3188 (HY000): Function 'keyring_key_generate' failed because underlying keyring
+# 				service returned an error.
+#
+# 				Please check if a keyring plugin is installed and that provided arguments are valid for the
+# 				keyring you are using.
+#
+# 			To install a keyring plugin, see earlier.
+#
+# 		) To use any keyring UDF, a user must possess the global EXECUTE privilege.
+# 			Otherwise, an error occurs:
+#
+# 				ERROR 1123 (HY000): Can't initialize function 'keyring_key_generate';
+# 				The user is not privileged to execute this function.
+# 				Use needs EXECUTE privilege.
+#
+# 			To grant the global EXECUTE privilege, use this statement:
+#
+# 				GRANT EXECUTE ON *.* TO user;
+#
+# 			Alternatively, should you prefer to avoid granting the global EXECUTE privilege while still permitting
+# 			users to access specific key-management operations, "wrapper" stored programs can be defined
+# 			(a technique described later in this section)
+#
+# 		) A key stored in the keyring by a given user can be manipulated later only by the same user.
+#
+# 			That is, the value of the CURRENT_USER() function at the time of key manipulation, must have the
+# 			same value as when the key was stored in the keyring.
+#
+# 			(This constraint rules out the use of the keyring UDFs for manipulation of instance-wide keys, such as
+# 			those created by InnoDB support tablespace encryption)
+#
+# 			To enable multiple users to perform operations on the same key, "wrapper" stored programs can be defined
+# 			(a technique described later in these sections)
+#
+# 		) Keyring UDFs support the key types and lengths supported by the underlying keyring plugin, with the additional
+# 			constraint that keys cannot be longer than 2,048 bytes (16,384 bits), due to limitations on the UDF interface.
+#
+# TO create a new random key and store it in the keyring, call keyring_key_generate(), passing to it an ID for the key,
+# along with the key type (encryption method) and its length in bytes.
+#
+# The following call creates a 2,048-bit DSA-encrypted key named MyKey
+#
+# SELECT keyring_key_generate('MyKey', 'DSA', 256);
+# +------------------------------------------------+
+# | keyring_key_generate('MyKey', 'DSA', 256) 		|
+# +------------------------------------------------+
+# | 														1 		|
+# +------------------------------------------------+
+#
+# a return value of 1 indicates success.
+#
+# IF the key cannot be created, the return value is NULL and an error occurs.
+# One reason this might occur, is that hte underlying keyring plugin does not support the specified
+# combination of key type and key length. See earlier.
+#
+# To be able to check the return type regardless of whether an error occurs, use SELECT ... INTO @var_name and
+# test the variable value:
+#
+# SELECT keyring_key_generate('','',-1) INTO @x;
+# ERROR 3188 (HY000): Function 'keyring_key_generate' failed because underlying keyring service
+# returned an error.
+#
+# Please check if a keyring plugin is installed and that provided arguments are valid for the keyring
+# you are using.
+#
+# SELECT @x;
+# +--------+
+# | @x 	  |
+# +--------+
+# | NULL   |
+# +--------+
+#
+# SELECT keyring_key_generate('x', 'AES', 16) INTO @x;
+# SELECT @x;
+# +--------+
+# | @x 	  |
+# +--------+
+# | 		1 |
+# +--------+
+#
+# This technique also applies to other keyring UDFs that for failure return a value and an error.
+#
+# The ID passed to keyring_key_generate() provides a means by which to refer ot the key in subsequent UDF calls.
+# For example, use the key ID to retrieve its type as a string or its length in bytes as an integer.
+#
+# SELECT keyring_key_type_fetch('MyKey');
+# +--------------------------------------+
+# | keyring_key_type_fetch('MyKey') 	  |
+# +--------------------------------------+
+# | DSA 											  |
+# +--------------------------------------+
+#
+# SELECT keyring_key_length_fetch('MyKey');
+# +---------------------------------------+
+# | keyring_key_length_fetch('MyKey') 		|
+# +---------------------------------------+
+# | 					256 							|
+# +---------------------------------------+
+#
+# To retrieve a key value, pass the key ID to keyring_key_fetch().
+#
+# The following example uses HEX() to display the key value because it may contain nonprintable
+# chars.
+#
+# The example also uses a short key for brevity, but be aware that longer keys provide better security:
+#
+# SELECT keyring_key_generate('MyShortKey', 'DSA' 8);
+# +---------------------------------------------------+
+# | keyring_key_generate('MyShortKey', 'DSA', 8) 		|
+# +---------------------------------------------------+
+# | 																1 	|
+# +---------------------------------------------------+
+#
+# SELECT HEX(keyring_key_fetch('MyShortKey'));
+# +-------------------------------------------------+
+# | HEX(keyring_key_fetch('MyShortKey')) 				 |
+# +-------------------------------------------------+
+# | <value> 													 |
+# +-------------------------------------------------+
+#
+# Keyring UDFs treat key IDs, types and values as binary strings, so comparisons are case-sensitive.
+# For example, IDs of MyKey and mykey refer to different keys.
+#
+# To remove a key, pass the key ID to keyring_key_remove():
+#
+# 	SELECT keyring_key_remove('MyKey');
+# +-----------------------------------+
+# | keyring_key_remove('MyKey') 		  |
+# +-----------------------------------+
+# | 1 										  |
+# +-----------------------------------+
+#
+# To obfuscate and store a key that you provide, pass the key ID, type and value to keyring_key_store():
+#
+# 	SELECT keyring_key_store('AES_key', 'AES', 'Secret string');
+# +------------------------------------------------------------+
+# | keyring_key_store('AES_key', 'AES', 'Secret string') 		|
+# +------------------------------------------------------------+
+# | 1 																		   |
+# +------------------------------------------------------------+
+#
+# As indicated previously, a user must have the global EXECUTE privilege to call keyring UDFs, and the user who
+# stores a key in the keyring initially must be the same user who performs subsequent operations on the key later, as determined
+# from the CURRENT_USER() value in effect for each UDF call.
+#
+# To permit key operations to users who do not have the global EXECUTE privilege, or who may not be the
+# key "owner", use this technique:
+#
+# 1. Define "wrapper" stored programs that encapsulate the required key operations and have a DEFINER value equal to the key owner.
+#
+# 2. Grant the EXECUTE privilege for specific stored programs to the individual users who should be able to invoke them.
+#
+# 3. If the operations implemented by the wrapper stored programs do not include key creation, create any necessary keys in advance,
+# 		using the account named as the DEFINER in the stored program definitions.
+#
+# This technique enables keys to be shared among users and provides to DBAs more fine-grained control over who can do what
+# with keys, without having to grant global privs.
+#
+# The following eample shows how to set up a shared key named SharedKey that is owned by the DBA, and a get_shared_key()
+# stored function that provides access to the current key value.
+#
+# THe value can be retrieved by any user with the EXECUTE privilege for that function, which is created in the key_schema schema.
+#
+# From a MySQL administrative account ('root'@'localhost' in this example), create the administrative schema and the stored
+# function to access the key:
+#
+# CREATE SCHEMA key_schema;
+#
+# CREATE DEFINER = 'root'@'localhost'
+# FUNCTION key_schema.get_shared_key()
+# RETURNS BLOB READS SQL DATA 
+# RETURN keyring_key_fetch('SharedKey');
+#
+# From the administrative account, ensure that the shared key exists:
+#
+# SELECT keyring_key_generate('SharedKey', 'DSA', 8);
+# +----------------------------------------------+
+# | keyring_key_generate('SharedKey', 'DSA', 8)  |
+# +----------------------------------------------+
+# | 														1 	 |
+# +----------------------------------------------+
+#
+# From the administrative account, create an ordinary user account to which key access is to be granted:
+#
+# CREATE USER 'key_user'@'localhost'
+# IDENTIFIED BY 'key_user_pwd';
+#
+# From the key_user account, verify that without the proper EXECUTE privilege, the new account cannot
+# access the shared key:
+#
+# SELECT HEX(key_schema.get_shared_key());
+# ERROR 1370 (42000): execute command denied ot user 'key_user'@'localhost'
+# for routine 'key_schema.get_shared_key'
+#
+# For the administrative account, grant EXECUTE to key_user for the stored function:
+#
+# GRANT EXECUTE ON FUNCTION key_schema.get_shared_key TO 'key_user'@'localhost';
+#
+# From the key_user account, verify that the key is now accessible:
+#
+# SELECT HEX(key_schema.get_shared_key());
+# +--------------------------------------+
+# | HEX(key_schema.get_shared_key()) 	  |
+# +--------------------------------------+
+# | <value> 									  |
+# +--------------------------------------+
+#
+# GENERAL-PURPOSE KEYRING FUNCTION REFERENCE
+#
+# For each general-purpose keyring user-defined function (UDF), this section describes its purpose,
+# calling sequence, and return value.
+#
+# For information about the conditions under which these UDFs can be invoked, see later.
+#
+# ) keyring_key_fetch(key_id)
+# 	
+# 		Given a key ID, deobfuscates and returns the key value.
+#
+# 		Args:
+# 			) key_id:A string that specifies the key ID.
+#
+# 		Returns:
+#
+# 			Reutnrs the key value as a string for success, NULL if the key does not exist, or NULL and an error for failure.
+#
+# 		NOTE: 
+#
+# 			Keyring values retrieved using keyring_key_fetch() are limited to 2,048 bytes, due to limitations of the UDF interface.
+# 			A keyring value longer than that length can be stored using a keyring service function, but if retreived using
+# 			keyring_key_fetch() - it is truncated to 2,048 bytes.
+#
+# Example:
+#
+# SELECT keyring_key_generate('RSA_key', 'RSA', 16);
+# +---------------------------------------------------+
+# | keyring_key_generate('RSA_key', 'RSA', 16) 		   |
+# +---------------------------------------------------+
+# | 																1  |
+# +---------------------------------------------------+
+#
+# SELECT HEX(keyring_key_fetch('RSA_key'));
+# +----------------------------------------+
+# | HEX(keyring_key_fetch('RSA_key')) 		 |
+# +----------------------------------------+
+# | <value> 										 |
+# +----------------------------------------+
+#
+# SELECT keyring_key_type_fetch('RSA_key');
+# +-----------------------------------------+
+# | keyring_key_type_fetch('RSA_key') 		  |
+# +-----------------------------------------+
+# | RSA 												  |
+# +-----------------------------------------+
+#
+# SELECT keyring_key_length_fetch('RSA_key');
+# +-----------------------------------------+
+# | keyring_key_length_fetch('RSA_key') 	  |
+# +-----------------------------------------+
+# | 										16 		  |
+# +-----------------------------------------+
+#
+# The example uses HEX() to display the keyy value because it may contain nonprintable chars.
+# The example also uses a short key for brevity, but be aware that longer keys are safer.
+#
+# ) Keyring_key_generate(key_id, key_type, key_length)
+#
+# Generates a new random key with a given ID, type and length, and stores it in the keyring.
+#
+# The type and length values must be consistent with the values supported by the underlying
+# keyring plugin, with the additional constraint that keys cannot be longer than 2,048 bytes (16,384 bits),
+# due to limitations of the UDF interface.
+#
+# For the permitted types per plugin, see later.
+#
+# Arguments:
+#
+# 		) key_id:A string that specifies the key ID.
+#
+# 		) key_type: A string that specifies the key type
+#
+# 		) key_length: a integer that specifies the key length in bytes. Max length is 2,048
+#
+# Return value:#
+#
+# 		Returns 1 for success, or NULL and an error for failure.
+#
+# Example:
+#
+# 		SELECT keyring_key_generate('RSA_key', 'RSA', 384);
+# 		+--------------------------------------------------+
+#  	| keyring_key_generate('RSA_key', 	'RSA', 384) 	|
+# 		+--------------------------------------------------+
+# 		| 																1 	|
+# 		+--------------------------------------------------+
+#
+# ) keyring_key_length_fetch(key_id)
+#
+# 		Given a key ID, returns the key length.
+#
+# 		Arguments:
+#
+# 			) key_id: A string that specifies the key ID.
+#
+# 		Return value:
+#
+# 			Returns the key length in bytes as an integer for success, NULL if the key does not exist, or NULL and an error for failure.
+#
+# 		Example:
+#
+# 		See the description of keyring_key_fetch()
+#
+# ) keyring_key_remove(key_id)
+#
+# Removes the key with a given ID from the keyring.
+#
+# Arguments:
+#
+# 		) key_id: A string that specifies the key ID.
+#
+# 	Return value:
+#
+# 		Returns 1 for success, or NULL for failure.
+#
+# 	Example:
+#
+# 		SELECT keyring_key_remove('AES_key');
+# 		+------------------------------------------+
+# 		| keyring_key_remove('AES_key') 				 |
+# 		+------------------------------------------+
+# 		| 											1 			 |
+# 		+------------------------------------------+
+#
+# ) keyring_key_store(key_id, key_type, key)
+#
+#  Obfuscates and stores a key in the keyring.
+#
+# 		Arguments:
+#
+# 			) key_id: A string that specifies the key ID.
+#
+# 			) key_type: A string that specifies the key type.
+#
+# 			) key: A string that specifies the key value.
+#
+# 		Return value:
+#
+# 		Returns 1 for success, or NULL and an error for failure.
+#
+# 		Example:
+#
+# 			SELECT keyring_key_store('new key', 'DSA', 'My key value');
+# 			+-----------------------------------------------------------+
+# 			| keyring_key_store('new key', 'DSA', 'My key value' 			|
+# 			+-----------------------------------------------------------+
+# 			| 																1 				|
+# 			+-----------------------------------------------------------+
+#
+# ) keyring_key_type_fetch(key_id)
+#
+# 	Given a key ID, returns the key type.
+#
+# 	Arguments:
+#
+# 		) key_id: A string that specifies the key ID.
+#
+# 	Return value:
+#
+# 		Returns the key type as a string for success, NULL if the key does not exist, and an error for failure.
+#
+# 	Example:
+#
+# 		See the description of keyring_key_fetch()
+#
+# PLUGIN-SPECIFIC KEYRING KEY-MANAGEMENT FUNCTIONS
+#
+# For each keyring plugin-specific user-defined function (UDF), this section describes its purpose, calling sequence, and return value.
+#
+# For information about general-purpose keyring UDFs, see earlier.
+#
+# ) keyring_aws_rotate_cmk()
+#
+# 		This UDF is associated with the keyring_aws plugin. Its use requires the SUPER Privilege.
+#
+# 		keyring_aws_rotate_cmk() rotates the customer master key (CMK).
+# 		Rotation changes only the key that AWS KMS uses for subsequent data key-encryption operations.
+#
+# 		AWS KMS maintains previous CMK versions, so keys generated using previous CMKs remain decryptable
+# 		after rotation.
+#
+# 		Rotation changes the CMK values used inside AWS KMS but does not change the ID used to refer to it,
+# 		so there is no need to change the keyring_aws_cmk_id system variable after calling keyring_aws_rotate_cmk().
+#
+# 		Arguments: NONE
+#
+# 		Return value: Returns 1 for success, or NULL and an error for failure.
+#
+# ) keyring_aws_rotate_keys()
+#
+# 		This UDF is associated with the keyring_aws plugin. Its use requires the SUPER privilege.
+#
+# 		keyring_aws_rotate_keys() rotates keys stored in the keyring_aws storage file named by the keyring_aws_data_file
+# 		system variable.
+#
+# 		Rotation sends each key stored in the to AWS KMS for re-encryption using the value of the keyring_aws_cmk_id system
+# 		variable as the CMK value, and stores the new encrypted keys in the file.
+#
+# 		keyring_aws_rotate_keys() is useful for key re-encryption under these circumnstances:
+#
+# 			) After rotating the CMK; that is, after invoking the keyring_aws_rotate_cmk() UDF
+#
+# 			) After changing the keyring_aws_cmk_id system variable to a different key value
+#
+# 		Arguments: None
+#
+# 		Return value:. 1 for success, NULL and an error for failure.
+#
+# KEYRING COMMAND OPTIONS
+#
+# MySQL supports the following keyring-related command-line options:
+#
+# 		) --keyring-migration-destination=plugin
+#
+# 			Property 			Value
+# 			Cmd line: 			--keyring-migration-destination=plugin_name
+# 			Introduced: 		8.0.4
+# 			Type: 				String
+#
+# 			The destination keyring plugin for key migration.
+# 			See later.
+#
+# 			The format and interpretation of the option value is the same as described
+# 			for the --keyring-migration-source option.
+#
+# 			NOTE:
+#
+# 				--keyring-migration-source and --keyring-migration-destination are mandatory for all keyring
+# 				migration operations.
+#
+# 				The source and destination plugins must differ, and the migration server must support both plugins.
+#
+# 		) --keyring-migration-host=host_name
+#
+# 			Property 			Value
+# 			Cmd line: 			--keyring-migration-host=host_name
+# 			Introduced: 		8.0.4
+# 			Type: 				String
+# 			Default: 			localhost
+#
+# 			The host location of the running server that is currently using one of the key migration keystores.
+# 			See later.
+#
+# 			Migration always occurs on the local host, so the option always specifies a value for connecting to a local server,
+# 			such as localhost, 127.0.0.1, ::1 or the local host IP address or host name.
+#
+# 		) --keyring-migration-password[=password]
+#
+# 			Property 			Value
+# 			Cmd line: 			--keyring-migration-password[=password]
+# 			Introduced: 		8.0.4
+# 			Type: 				String
+#
+# 			The password for connecting to the running server that is currently using one of the key migration
+# 			keystores.
+#
+# 			See later.
+#
+# 			If you omit the password value following the option name on the command line, the server prompts for one.
+#
+# 			Specifying a password on the command line should be considered insecure.
+# 			See earlier.
+#
+# 			You can use an option file to avoid giving the password on the command line.
+# 			In this case, the file should have a restrictive mode and be accessible only to the account
+# 			used to run the migration server.
+#
+# 		) --keyring-migration-port=port_num
+#
+# 			Property 			Value
+# 			Cmd line: 			--keyring-migration-port=port_num
+# 			Introdued: 			8.0.4
+# 			Type 					Numeric
+# 			Default: 			3306
+#
+# 			For TCP/IP connections, the port number for connecting to the running server that is currently
+# 			using one of the key migration keystores.
+#
+# 			See later.
+#
+# 		) --keyring-migration-socket=path
+#
+# 			Property 			Value
+# 			Cmd line: 			--keyring-migration-socket={file_name|pipe_name}
+# 			Introduced: 		8.0.4
+# 			Type: 				String
+#
+# 			For Unix socket file or Windows named pipe connections, the socket file
+# 			or named pipe for connecting to the running server that is currently using one of the
+# 			key migration keystores.
+#
+# 			See previous.
+#
+# 		) --keyring-migration-source=plugin
+#
+# 			Property 			Value
+# 			Cmd line: 			--keyring-migration-source=plugin_name
+# 			Introduced: 		8.0.4
+# 			Type: 				String
+#
+# 			The source keyring plugin for key migration. See earlier.
+#
+# 			The option value is similar to that for --plugin-load, except that only one plugin library can be specified.
+# 			The value is given as name=plugin_library or plugin_library.
+#
+# 			The name is the name of a plugin to load, and plugin_library is the name of the library
+# 			file that contains the plugin code.
+#
+# 			If the plugin library is named without any preceding plugin name, the server loads all plugins in the library.
+# 			The server looks for plugin library files in the directory named by the plugin_dir system variable.
+#
+# 			NOTE:
+#
+# 				--keyring-migration-source and --keyring-migration-destination are mandatory for all keyring
+# 				migration operations.
+#
+# 				The source and destination plugins must differ, and the migration server must support both plugins.
+#
+# 		) --keyring-migration-user=user_name
+#
+# 			Property 			Value
+# 			Cmd line: 			--keyring-migration-user=user_name
+# 			Introduced: 		8.0.4
+# 			Type: 				String
+#
+# 			The user name for connecting to the running server that is currently using one of the key migration keystores.
+# 			See previous.
+#
+# KEYRING SYSTEM VARIABLES
+#
+# MySQL Keyring plugins support the following system variables.
+# Use them to configure keyring plugin operation.
+#
+# These variables are unavailable unless the appropriate keyring plugin is installed.
+#
+# ) keyring_aws_cmk_id
+#
+# 	Property 				Value
+# 	Cmd line: 				--keyring-aws-cmk-id
+# 	Introduced: 			8.0.11
+# 	System var: 			keyring_aws_cmk_id
+# 	Scope: 					Global
+# 	Dynamic: 				Yes
+# 	SET_VAR Hint: 			No
+# 	Type: 					String
+#
+# 	The customer master key (CMK) ID obtained from the AWS KMS server and used by the keyring_aws plugin.
+#
+# 	This variable is unavailable unless that plugin is installed, but if it is installed, a value
+# 	for this variable is mandatory.
+#
+# ) keyring_aws_conf_file
+#
+# 	Property 				Value
+# 	Cmd line: 				--keyring-aws-conf-file
+# 	Introduced:: 			8.0.11
+# 	System var: 			keyring_aws_conf_file
+# 	Scope: 					Global
+# 	Dynamic: 				No
+# 	SET_VAR Hint: 			No
+# 	Type: 					File name
+# 	Default: 				platform specific
+#
+# 	The location of the configuration file for the keyring_aws keyring plugin.
+# 	This variable is unavailable unless that plugin is installed.
+#
+# 	At plugin startup, keyring_aws reads the AWS secret access key ID and key from the configuration file.
+#
+# 	For the keyring_aws plugin to start successfully, the configuration file must exist and contain
+# 	valid secret access key information, initialized as previously described.
+#
+# 	The default file name is keyring_aws_conf, located in the default keyring file directory.
+# 	The location of this default directory is the same as for the keyring_file_data system variable.
+#
+# 	See the description of that variable for details, as well as for considerations to take into account if you
+# 	create the directory manually.
+#
+# ) keyring_aws_data_file
+#
+# 	Property 				Value
+# 	Cmd line: 				--keyring-aws-data-file
+# 	Introduced: 			8.0.11
+# 	System variable: 		keyring_aws_data_file
+# 	Scope: 					Global
+# 	Dynamic: 				No
+# 	SET_VAR Hint: 			No
+# 	Type: 					File name
+# 	Default: 				platform specific
+#
+# 	The location of the storage file for the keyring_aws keyring plugin.
+# 	This variable is unavailable unless that plugin is installed.
+#
+# 	At plugin startup, if the value assigned to keyring_aws_data_file specifies a file
+# 	that does not exist, the keyring_aws plugin attempts to create it (as well as its parent
+# 	directory, if necessary).
+#
+# 	If the file does exist, keyring_aws reads any encrypted keys contained in the file into
+# 	its in-memory cache.
+#
+# 	keyring_aws does not cache unencrypted keys in memory.
+#
+# 	The default file name is keyring_aws_data, located in the default keyring file directory.
+#
+# 	The location of this default directory is the same as for the keyring_file_data
+# 	system variable.
+#
+# 	See the description of that variable for details, as well as for considerations to take into
+# 	account if you create the directory manually.
+#
+# ) keyring_aws_region
+#
+# 	Property 				Value
+# 	Cmd line: 				--keyring-aws-region
+# 	Introduced: 			8.0.11
+# 	Sys var: 				keyring_aws_region
+# 	Scope: 					Global
+# 	Dynamic: 				Yes
+# 	SET_VAR Hint: 			No
+# 	Type: 					Enumeration
+# 	Default: 				us-east-1
+# 	Valid: 					ap-northeast-1
+# 								ap-northeast-2
+# 								ap-south-1
+# 								ap-southeast-1
+# 								ap-southeast-2
+# 								eu-central-1
+# 								eu-west-1
+# 								sa-east-1
+# 								us-east-1
+# 								us-west-1
+# 								us-west-2
+#
+# The AWS region
+#
+# ) keyring_encrypted_file_data
+#
+# 	Property 				Value
+# 	Cmd line: 				--keyring-encrypted-file-data=file_name
+# 	Introduced: 			8.0.11
+# 	System variable: 		keyring_encrypted_file_data
+# 	Scope: 					Global
+# 	Dynamic: 				Yes
+# 	SET_VAR Hint: 			No
+# 	Type: 					File name
+# 	Default: 				platform specific
+#
+# 	The path name of the data file used for secure data storage by the keyring_encrypted_file plugin.
+# 	This variable is unavailable unless that plugin is installed.
+#
+# 	The file location should be in a directory considered for use only by the keyring plugins.
+# 	For example, do not locate the file under the data directory.
+#
+# 	Keyring operations are transactional: The keyring_encrypted_file plugin uses a backup file during write
+# 	operations to ensure that it can roll back to the original file if an operation fails.
+#
+# 	The backup file has the same name as the value of the keyring_encrypted_file_data system variable with a suffix of .backup
+#
+# 	Do not use the same keyring_encrypted_file data file for multiple MySQL instances.
+# 	Each instance should have its own unique data file.
+#
+# 	The default file name is keyring_encrypted, located in a directory that is platform specific and depends on the
+# 	value of the INSTALL_LAYOUT CMake option, as shown in the following table.
+#
+# 	To specify the default directory for the file explicitly if you are building from source,
+# 	use the INSTALL_MYSQLKEYRINGDIR CMake option.
+#
+# 	INSTALL_LAYOUT value 				Default keyring_encrypted_file_data Value
+#
+# 	DEB, RPM, SLES, SVR4 				/var/lib/mysql-keyring/keyring_encrypted 
+#
+# 	Otherwise 								keyring/keyring_encrypted under the CMAKE_INSTALL_PREFIX value
+#
+# 	At plugin startup, if the value assigned to keyring_encrypted_file_data specifies a file that does not exist,
+# 	the keyring_encrypted_file plugin attempts to create it (as well as its parent directory, if necessary)
+#
+# 	If you create the directory manually, it should have a restrictive mode and be accessible only to the
+# 	account used to run the MySQL server.
+#
+# 	For example, on UNIX based systems, to use the /usr/local/mysql/mysql-keyring directory, the following commands
+# 	(executed as root) create the directory and set its mode and ownership:
+#
+# 	cd /usr/local/mysql
+# 	mkdir mysql-keyring
+# 	chmod 750 mysql-keyring
+# 	chown mysql mysql-keyring
+# 	chgrp mysql mysql-keyring
+#
+# 	If the keyring_encrypted_file plugin cannot create or access its data file, it writes an error message
+# 	to the error log.
+#
+# 	If an attempted rutime assignment to keyring_encrypted_file_data results in an error, the variable value remains unchanged.
+#
+# 	Important:
+#
+# 		Once the keyring_encrypted_file plugin has created its data file and started to use it, it is important
+# 		not to remove the file.
+#
+# 		Loss of the file will cause data encrypted using its keys to become inaccessible.
+#
+# 		(It is permissible to rename or move the file, as long as you change the value of keyring_encrypted_file_data to match)
+#
+# ) keyring_encrypted_file_password
+#
+# 	Property 							Value
+# 	Cmd line: 							--keyring-encrypted-file-password=password
+# 	Introduced: 						8.0.11
+# 	System variable: 					keyring_encrypted_file_password
+#	Scope: 								Global
+# 	Dynamic: 							Yes
+# 	SET_VAR Hint: 						No
+# 	Type: 								String
+#
+# 	The password used by the keyring_encrypted_file plugin.
+# 	This variable is unavailable unless that plugin is installed.
+#
+# 	The password is mandatory for plugin operation; if not specified at server startup,
+# 	keyring_encrypted_file initialization fails.
+#
+# 	If this variable is specified in an option file, the file should have a restrictive mode
+# 	and be accessible only to the account used to run the MySQL server.
+#
+# 	Important:
+#		Once the keyring_encrypted_file_password value has been set, changing it does not rotate the
+# 		keyring password and could make the server inaccessible.
+#
+# 		If an incorrect password is provided, the keyring_encrypted_file plugin cannot load keys
+# 		from the encrypted keyring file.
+#
+# 	The password value cannot be displayed at runtime with SHOW_VARIABLES or the Performance Schema
+# 	global_variables table because the display value is obfuscated.
+#
+# keyring_file_data
+#
+# Property 								Value
+# Cmd line: 							--keyring-file-data=file_name
+# System variable: 					keyring_file_data
+# Scope: 								Global
+# Dynamic: 								Yes
+# SET_VAR Hint: 						No
+# Type: 									File name
+# Default value: 						platform specific
+#
+# THe path name of the data file used for secure data storage by the keyring_file plugin.
+# This  variable is unavailable unless that plugin is installed.
+#
+# The file location should be in a directory considered for use only by the keyring plugins.
+# For example, do not locate the file under the data directory.
+#
+# Keyring operations are transactional: The keyring_file plugin uses a backup file during 
+# write operations to ensure that it can roll back to the original file if an operation fails.
+#
+# The backup file has the same name as the value of the keyring_file_data system variable with a suffix of .backup
+#
+# Do not use the same keyring_file data file for multiple MySQL instances.
+# Each instance should have its own unique data file.
+#
+# The default file name is keyring, located in a directory that is platform specific and depends on
+# the value of the INSTALL_LAYOUT CMake option, as shown as follows.
+#
+# To specify the default directory for the file explicitly if you are building from source,
+# use the INSTALL_MYSQLKEYRINGDIR CMake option.
+#
+# INSTALL_LAYOUT Value 					Default keyring_file_data Value
+#
+# DEB, RPM, SLES, SVR4 					/var/lib/mysql-keyring/keyring  
+#
+# Otherwise 								keyring/keyring under the CMAKE_INSTALL_PREFIX value
+#
+# At plugin startup, if the value assigned to keyring_file_data specifies a file that does not exist,
+# the keyring_file plugin attempts to create it (as well as its parent directory, if called for)
+#
+# If you create the directory manually, it should have a restrictive mode and be accessible only to the
+# account used to run the MySQL server.
+#
+# For example, on Unix and UNIX based systems, to use the /usr/local/mysql/mysql-keyring directory, the following
+# commands (executed as root) create the directory and set its mode and ownership:
+#
+# 		cd /usr/local/mysql
+# 		mkdir mysql-keyring
+# 		chmod 750 mysql-keyring
+# 		chown mysql mysql-keyring
+# 		chgrp mysql mysql-keyring
+#
+# If the keyring_file plugin cannot create or access its data file, it writes an error message to the error log.
+#
+# If an attempted runtime assignment to keyring_file_data results in an error, the variable value remains unchanged.
+#
+# Important:
+#
+# 		Once the keyring_file plugin has created its data file and started to use it, it is important not to remove the file.
+#
+# 		For example, InnoDB uses the file to store the master key used to decrypt the data in tables that use
+# 		InnoDB tablespace encryption, see more later.
+#
+# 		Loss of the file will cause data in such tables to become inaccessible.
+#
+# 		(It is permissible to rename or move the file, as long as you change the value of keyring_file_data to match)
+#
+# 		It is recommended that you create a separate backup of the keyring data file immediately after you
+# 		create the first encrypted table and before and after master key rotation.
+#
+# ) keyring_okv_conf_dir
+#
+# 	Property 						Value
+# 	Cmd line:						--keyring-okv-conf-dir=dir_name
+# 	Introduced: 					8.0.11
+# 	System variable: 				keyring_okv_conf_dir
+# 	Scope: 							Global
+# 	Dynamic: 						Yes
+# 	SET_VAR Hint: 					No
+# 	Type: 							Directory name
+# 	Default: 						empty string
+#
+# The path name of the directory that stores configuration information used by the keyring_okv plugin.
+# This variable is unavailable unless that plugin is installed.
+#
+# The location should be a directory considered for use only by the keyring_okv plugin.
+#
+# For example, do not locate the directory under the data directory.
+#
+# The default keyring_okv_conf_dir value is empty.
+#
+# For the keyring_okv plugin to be able to access Oracle Key Vault, the value must be set
+# to a directory that contains Oracle Key Vault configuration and SSL materials.
+#
+# For instructions on setting up this directory, see earlier.
+#
+# The directory should have a restrictive mode and be accessible only to the account used
+# to run the MySQL server.
+#
+# For example, on UNIX based systems, to use the /usr/local/mysql/mysql-keyring-okv directory,
+# the following commands (executed as root) create the directory and set its mode and ownership:
+#
+# 	cd /usr/local/mysql
+# 	mkdir mysql-keyring-okv
+# 	chmod 750 mysql-keyring-okv
+# 	chown mysql mysql-keyring-okv
+# 	chgrp mysql mysql-keyring-okv
+#
+# If the value assigned to keyring_okv_conf_dir specifies a directory that does not exist, or that does
+# not contain configuration information that enables a connection to Oracle Key Vault to be established, keyring_okv
+# writes an error message to the error log.
+#
+# If an attempted runtime assignment to keyring_okv_conf_dir results in an error, the variable and keyring operation remain
+# unchanged.
+#
+# ) keyring_operations
+#
+# Property 					Value
+# Introduced: 				8.0.4
+# System Variable 		keyring_operations
+# Scope: 					Global
+# Dynamic: 					Yes
+# SET_VAR Hint: 			No
+# Type 						Boolean
+# Default: 					ON
+#
+# Whether keyring operations are enabled.
+#
+# This variable is used during key migration operations.
+#
+# The privileges required to modify this variable are ENCRYPTION_KEY_ADMIN,
+# in addition to either SYSTEM_VARIABLES_ADMIN or SUPER.
+#
+# MYSQL ENTERPRISE AUDIT
+#
+# Note:
+# 		MySQL Enterprise Audit is an extension included in MySQL EE.
+#
+# MySQL EE includes MysQL Enterprise Audit, implemented using a server plugin named audit_log.
+#
+# MySQL Enterprise Audit uses the open MySQL Audit API to enable standard, policy-based monitoring, logging and
+# blocking of connection and query activity executed on specific MySQL servers.
+#
+# Designed to meet Oracle audit specification, MysQL Enterprise Audit provides a out of the box, easy to use Auditing
+# and compliance solution for applications that are governed by both internal and external regulatory guidelines.
+#
+# When installed, the audit plugin enables MySQL Server to produce a log file containing an audit record of server activity.
+#
+# The log contents include when clients connect and disconnect, and what actions they perform while connected,
+# such as which databases and tables they access.
+#
+# After you install the audit plugin, it writes an audit log file.
+#
+# By default, the file is named audit.log in the server data directory.
+#
+# To change the name of the file, set the audit_log_file system variable at server startup.
+#
+# By default, audit log file contents are written in new-style XML format, without compression or encryption.
+# To select the file format, set the audit_log_format system variable at server startup.
+#
+# For details on file formats and contents, see later.
+#
+# For more information about controlling how logging occurs, including audit log file naming and format selection,
+# see later.
+#
+# To perform filtering of audited events, see later.
+#
+# For descriptions of the parameters used to configure the audit log plugin, se later.
+#
+# If the audit log plugin is enabled, the Performance Schema has instrumentation for it.
+# To identify such relevant instruments, use this query:
+#
+# 		SELECT NAME FROM performance_schema.setup_instruments WHERE NAME LIKE '%/alog/%';
+#
+# AUDIT LOG COMPONENTS
+#
+# MySQL Enterprise Audit is based on the audit log plugin and related components:
+#
+# 		) A server-side plugin named audit_log examines auditable events and determines whether to write them to the audit log.
+#
+# 		) User-defined functions enable manipulation of filtering definitions that control logging behavior, the encryption PW and log file reading.
+#
+# 		) Tables in the mysql system database provide persistent storage of filter and user account data.
+#
+# 		) System variables enable audit log configuration and status variables provide runtime operational information.
+#
+# 		) An AUDIT_ADMIN privilege enable users to administer the audit log.
+#
+# INSTALLING OR UNINSTALLING MySQL ENTERPRISE AUDIT
+#
+# This section describes how to install or uninstall MySQL Enterprise Audit, which is implemented using
+# the audit log plugin and related components described later.
+#
+# For general information about installation plugins, see earlier.
+#
+# Note:
+# 		If installed, the audit_log plugin involves some minimal overhead even when disabled.
+# 		To avoid this overhead, do not install MySQL Enterprise Audit unless you plan to use it.
+#
+# To be usable by the server, the plugin library file must be located in the MySQL plugin directory
+# (the directory named by the plugin_dir system variable).
+#
+# If necessary, configure the plugin directory location by setting the value of plugin_dir at server startup.
+#
+# To install MySQL Enterprise Audit, look in the share directory of your MySQL installation and choose the
+# script that is appropriate for your platform.
+#
+# The available scripts differ in the suffix used to refer to the plugin library file:
+#
+# 		) audit_log_filter_win_install.sql: Choose this script for Windows systems that use .dll as the file name suffix.
+#
+# 		) audit_log_filter_linux_install.sql: Choose this script for Linux and similar systems that use the .so file name suffix.
+#
+# Run the script as follows. The examples here use the Linux installation script.
+# Make the appropriate substitution for your system.
+#
+# mysql -u root -p < audit_log_filter_linux_install.sql
+# Enter password: (enter root password here)
+#
+# Note:
+#
+# 		Some MySQL versions have introduced changes to the structure of the MySQL Enterprise Audit tables.
+# 		To ensure that your tables are up to date for upgrades from earlier than 8.0, run mysql_update --force (which will also perform any other needed updates).
+#
+# 		If you prefer to run the update statements only for the MySQL Enterprise Audit tables, see the 
+# 		following discussion.
+#
+# 		As of MySQL 8.0.12, for new MySQL installations, the USER and HOST columns in the audit_log_user table
+# 		used by MySQL Enterprise Audit have definitions that better correspond ot the definitions of the User
+# 		and Host columns in the mysql.user system table.
+#
+# 		FOr upgrades to an installation for which MySQL Enterprise Audit is already installed, it is recommended
+# 		that you alter the table defs as follows:
+#
+# 			ALTER TABLE mysql.audit_log_user
+# 				DROP FOREIGN KEY audit_log_user_ibfk_1;
+#
+# 			ALTER TABLE mysql.audit_log_filter
+# 				CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_as_ci;
+#
+# 			ALTER TABLE mysql.audit_log_user
+# 				CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_as_ci;
+#
+# 			ALTER TABLE mysql.audit_log_user
+# 				MODIFY COLUMN USER VARCHAR(32);
+#
+# 			ALTER TABLE mysql.audit_log_user
+# 				ADD FOREIGN KEY (FILTERNAME) REFERENCES mysql.audit_log_filter(NAME);
+#
+# To verify plugin installation, examine the INFORMATION_SCHEMA.PLUGINS table or use the SHOW_PLUGINS
+# statement.
+#
+# For example:
+#
+# SELECT PLUGIN_NAME, PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME LIKE 'audit%';
+# +------------------------------+
+# | PLUGIN_NAME 	| PLUGIN_STATUS|
+# +------------------------------+
+# | audit_log 		| ACTIVE 		|
+# +------------------------------+
+#
+# If the plugin fails to initialize, check the server error log for diagnostic messages.
+#
+# After MySQL Enterprise Audit is installed, you can use the --audit-log option for subsequent server startups
+# to control audit_log plugin activation.
+#
+# For example, to prevent the plugin from being removed at runtime, use this option:
+#
+# 	[mysqld]
+# 	audit-log=FORCE_PLUS_PERMANENT
+#
+# If it is desired to prevent the server from running without the audit plugin, use --audit-log with
+# a value of FORCE or FORCE_PLUS_PERMANENT to force server startup to fail if the plugin does not initialize successfully.
+#
+# Important:
+#
+# 		By default, rule-based audit log filtering logs no auditable events for any users.
+#
+# 		This differs from legacy audit log behavior, which logs all auditable events for all users.
+#
+# 		SHould you wish to produce log-everything behavior with rule-based filtering, create
+# 		a simple filter to enable logging and assign it to the default account:
+#
+# 			SELECT audit_log_filter_set_filter('log_all', '{ "filter": { "log": true } }');
+# 			SELECT audit_log_filter_set_user('%', 'log_all');
+#
+# 		The filter assigned to % is used for connections from any account that has no explicitly assigned filter (which initially
+# 		is true for all accounts)
+#
+# Once installed as just described, MySQL Enterprise Audit remains installed until uninstalled.
+# TO remove it, execute the following statements:
+#
+# DROP TABLE IF EXISTS mysql.audit_log_filter;
+# DROP TABLE IF EXISTS mysql.audit_log_user;
+# UNINSTALL PLUGIN audit_log;
+# DROP FUNCTION audit_log_filter_set_filter;
+# DROP FUNCTION audit_log_filter_remove_filter;
+# DROP FUNCTION audit_log_filter_set_user;
+#
+# DROP FUNCTION audit_log_filter_remove_user;
+# DROP FUNCTION audit_log_filter_flush;
+# DROP FUNCTION audit_log_encryption_password_get;
+# DROP FUNCTION audit_log_encryption_password_set;
+#
+# DROP FUNCTION audit_log_read;
+# DROP FUNCTION audit_log_read_bookmark;
+#
+# MySQL ENTERPRISE AUDIT SECURITY CONSIDERATIONS
+#
+# By default, contents of audit log files produced by the audit log plugin are not encrypted and may
+# contain sensetive information, such as the text of SQL statements.
+#
+# For security reasons, audit log files should be written to a directory accessibly only to the MySQL
+# server and to users with a legitimate reason to view the log.
+#
+# The default file name is audit.log in the data directory.
+#
+# This can be changed by setting the audit_log_file system variable at server startup.
+#
+# Other audit log files may exist due to log rotation.
+#
+# For additional security, enable audit log file encryption.
+#
+# AUDIT LOG FILE FORMATS
+#
+# The MySQL server calls the audit log plugin to write an audit record to its log file whenever
+# an auditable event occurs.
+#
+# Typically, ,the first audit record written after plugin startup contains the server description and
+# startup options.
+#
+# Elements following that one represents events such as client connect and disconnect events,
+# executed SQL statements and so forth.
+#
+# Only top-level statements are logged, not statements within stored programs such as triggers
+# or stored procedures.
+#
+# Contents of files referenced by statements such as LOAD_DATA_INFILE are not logged.
+#
+# To select the logging format that the audit log plugin uses to write its log file,
+# set the audit_log_format system variable at server startup.
+#
+# These formats are available:
+#
+# 		) Old-style XML format (audit_log_format=OLD): The original audit logging format used by default in older MySQL series.
+#
+# 		) New-style XML format (audit_log_format=NEW): An XML format that has better compatibility with Oracle Audit Vault than old-style
+# 			XML format.
+#
+# 			MySQL 8.0 uses new-style XML format by default.
+#
+# 		) JSON format (audit_log_format=JSON)
+#
+# By default, audit log file contents are written in new-style XML format, without compression or encryption.
+#
+# NOTE:
+# 		FOr information about issues to consider when changing log format, see Audit Log File Format.
+#
+# OLD-STYLE XML AUDIT LOG FILE FORMAT
+#
+# Here is a sample log file in old-style XML format (audit_log_format=OLD), reformatted slightly for readability:
+#
+# 	<?xml version="1.0" encoding="utf-8"?>
+# 	<AUDIT>
+# 		<AUDIT_RECORD
+# 			TIMESTAMP="2017-10-16T14:25:00 UTC"
+# 			RECORD_ID="1_2017-10-16T14:25:00"
+# 			NAME="Audit
+# 			SERVER_ID="1"
+# 			VERSION="1"
+# 			STARTUP_OPTIONS="--port=3306"
+# 			OS_VERSION="i686-Linux"
+# 			MYSQL_VERSION="5.7.21-log"/>
+# 		<AUDIT_RECORD
+# 			TIMESTAMP="2017-10-16T14:25:24 UTC"
+# 			RECORD_ID="2_2017-10-16T14:25:00"
+# 			NAME="Connect"
+# 			CONNECTION_ID="4"
+# 			STATUS="0"
+# 			STATUS_CODE="0"
+# 			USER="root"
+# 			OS_LOGIN=""
+# 			HOST="localhost"
+# 			IP="127.0.0.1"
+# 			COMMAND_CLASS="connect"
+# 			CONNECTION_TYPE="SSL/TLS"
+# 			PRIV_USER="root"
+# 			PROXY_USER=""
+# 			DB="test"/>
+#
+# ...
+# 
+# 	<AUDIT_RECORD
+# 		TIMESTAMP="2017-10-16T14:25:24 UTC"
+# 		RECORD_ID="6_2017_10-16T14:25:00"
+# 		NAME="Query"
+# 		CONNECTION_ID="4"
+# 		STATUS="0"
+# 		STATUS_CODE="0"
+# 		USER="root[root] @ localhost [127.0.0.1]"
+# 		OS_LOGIN=""
+# 		HOST="localhost"
+# 		IP="127.0.0.1"
+# 		COMMAND_CLASS="drop_table"
+# 		SQLTEXT="DROP TABLE IF EXISTS t"/>
+#
+# ---
+#
+# <AUDIT_RECORD
+# 		TIMESTAMP="2017-10-16T14:25:24 UTC"
+# 		RECORD_ID="8_2017-10-16T14:25:00"
+# 		NAME="Quit"
+# 		CONNECTION_ID="4"
+# 		STATUS="0"
+# 		STATUS_CODE="0"
+# 		USER="root"
+# 		OS_LOGIN=""
+# 		HOST="localhost"
+# 		IP="127.0.0.1"
+# 		COMMAND_CLASS="connect"
+# 		CONNECTION_TYPE="SSL/TLS"/>
+#	<AUDIT_RECORD
+# 		TIMESTAMP="2017-10-16T14:25:32 UTC"
+# 		RECORD_ID="12_2017-10-16T14:25:00"
+# 		NAME="NoAudit"
+# 		SERVER_ID="1"/>
+# 	</AUDIT>
+#
+#
+# The audit log file is written as XML, using UTF-8 (up to 4 bytes per character).
+#
+# The root element is <AUDIT>. The root element contains <AUDIT_RECORD> elements, each of which provides
+# information about an audited event. 
+#
+# When the audit log plugin begins writing a new log file, it writes the XML declaration and opening
+# <AUDIT> root element tag.
+#
+# When the plugin closes a log file, it writes the closing </AUDIT> root element tag.
+# The closing tag is not present while the file is open.
+#
+# Attributes of <AUDIT_RECORD> elements have these characteristics:
+#
+# 		) Some attributes appear in every <AUDIT_RECORD> element. 
+#  		Others are optional and may appear depending on the audit record type.
+#
+# 		) Order of attributes within an <AUDIT_RECORD> element is not guaranteed.
+#
+# 		) Attribute values are not fixed length.
+# 			Long values may be truncated as indicated in teh attribute desc. given later.
+#
+# 		) The <,>, " and &  chars are encoded as &lt;, &gt;, &quot; and &amp; respectively.
+#  			NUL bytes (U+00) are encoded as the ? char.
+#
+# 		) Characters not valid as XML characters are encoded using numeric character references.
+# 			Valid XML characters are:
+#
+# 				#x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
+#
+# The following attributes are mandatory in every <AUDIT_RECORD> element:
+#
+# ) NAME:
+# 
+#  	A string representing the type of instruction that generated the audit event, such as a command that hte server received from a client.
+#
+# 		Example: NAME="Query"
+#
+# 		Some common NAME values:
+#
+# 			Audit 	When auditing starts, which may be server startup time
+#
+# 			Connect 	When a client connects, also known as logging in			 
+#
+# 			Query 	An SQL statement (executed directly)
+#
+# 			Prepare 	Preparation of an SQL statement; usually followed by Execute
+#
+# 			Execute 	Execution of an SQL statement; usually follows Prepare
+#
+# 			Shutdown Server shutdown
+#
+# 			Quit 		When a client disconnects
+#
+# 			NoAudit 	Auditing has been turned off
+#
+# 		The possible values are: Audit, Binlog, Dump, Change user, Close stmt, Connect out, Connect, Create DB, Daemon, Debug, Delayed
+# 											insert, Drop DB, Execute, Fetch, Field List, Init, DB, Kill, Long, Data, NoAudit, Ping, Prepare
+#
+# 											Processlist, Query, Quit, Refresh, Register Slave, Reset stmt, Set option, Shutdown, Sleep,
+# 											Statistics, Table Dump, Time
+#
+# 		With the exception of "Audit" and "NoAudit", these values correspond to the COM_XXX command values listed in the my_command.h header file.
+# 		For example, "Create DB" and "Change user" correspond to COM_CREATE_DB and COM_CHANGE_USER, respectively.
+#
+# ) RECORD_ID:
+#
+# 		A unique identifier for the audit record.
+#
+# 		The value is composed from a sequence number and timestamp, in the format SEQ_TIMESTAMP. 
+#
+# 		When the audit log plugin opens the audit log file, it initializes the sequence number to the size of the audit log file,
+# 		then increments the sequence by 1 for each record logged.
+#
+# 		The timestamp is a UTC value in YYYY-MM-DDThh:mm:ss format indicating the date and time when the
+# 		audit log plugin opened the file.
+#
+# 		Example: RECORD_ID="12_2017-10-16T14:25:00"
+#
+# ) TIMESTAMP:
+#
+# 		A string representing a UTC value in YYYY-MM-DDThh:mm:ss UTC format indicating the date and time when the audit event
+# 		was generated.
+#
+# 		For example, the event corresponding to execution of an SQL statement received from a client has a TIMESTAMP value
+# 		occuring after the statement finishes, not when it was received.
+#
+# 		Example: TIMESTAMP="2017-10-16T14:25:32 UTC"
+#
+# The following attributes are optional in <AUDIT_RECORD> elements.
+#
+# Many of them occur only for elements with specific values of the NAME attribute:
+#
+# 		 		
+#
+# https://dev.mysql.com/doc/refman/8.0/en/audit-log-file-formats.html
