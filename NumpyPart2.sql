@@ -39403,6 +39403,2014 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # Many of them occur only for elements with specific values of the NAME attribute:
 #
-# 		 		
+# ) COMMAND_CLAS
 #
-# https://dev.mysql.com/doc/refman/8.0/en/audit-log-file-formats.html
+# 		A string that indicates the type of action performed.
+#
+# 		Example: COMMAND_CLASS="drop_table"
+#
+# 		The values correspond to the statement /sql/xxx command counters; for example, xxx
+# 		is drop_table and select for DROP_TABLE and SELECT statements, respectively.
+#
+# 		The following statement displays the possible names:
+#
+# 			SELECT REPLACE(EVENT_NAME, 'statement/sql/', '') AS name
+# 			FROM performance_schema.events_statements_summary_global_by_event_name
+# 			WHERE EVENT_NAME LIKE 'statement/sql/%'
+# 			ORDER BY name;
+#
+# ) CONNECTION_ID
+#
+# 		A unsigned integer representing the client connection identifier.
+#
+# 		This is the same as the value returned by the CONNECTION_ID() function within the session.
+#
+# 		Example: CONNECTION_ID="127"
+#
+# ) CONNECTION_TYPE
+#
+# 		The security state of the connection to the server.
+# 		Permitted values are TCP/IP (TCP/IP connections established without encryption),
+# 		SSL/TLS (TCP/IP connection established with encryption),
+# 		Socket (Unix socket file connection),
+# 		Named Pipe (Windows named pipe connection),
+# 		and Shared Memory (Windows shared memory connection)
+#
+# 		Example: CONNECTION_TYPE="SSL/TLS"
+#
+# ) DB
+#
+# 		A string representing the default database name.
+#
+# 		Example: DB="test"
+#
+# ) HOST
+#
+# 		A string representing the client host name
+#
+# 		Example: HOST="localhost"
+#
+# ) IP
+#
+# 		A string representing the client IP address.
+#
+# 		Example: IP="127.0.0.1"
+#
+# ) MYSQL_VERSION
+#
+# 		A string representing the MySQL server version.
+#
+# 		This is the same as the value of the VERSION() function or version system variable.
+#
+# 		Example: MYSQL_VERSION="5.7.21-log"
+#
+# ) OS_LOGIN
+#
+# 		A string representing the external user name used during the authentication process, as set by
+# 		the plugin used to authenticate the client.
+#
+# 		With native (built-in) MySQL authentication, or if the plugin does not set the value, this attribute is empty.
+#
+# 		The value is the same as that of the external_user system variable.
+#
+# 		Example: OS_LOGIN="jeffrey"
+#
+# ) OS_VERSION
+#
+# 		A string representing the operating system on which the server was built or is running.
+#
+# 		Example: OS_VERSION="x86_64-Linux"
+#
+# ) PRIV_USER
+#
+# 		A string representing the user that the server authenticated the client as.
+#
+# 		This is the user name that hte server uses for privilege checking, and it may differ
+# 		from the USER value.
+#
+# 		Example: PRIV_USER="jeffrey"
+#
+# ) PROXY_USER
+#
+# 		A string representing the proxy user.
+# 		The value is empty if user proxying is not in effect.
+#
+# 		Example: PROXY_USER="developer"
+#
+# ) SERVER_ID
+#
+# 		a unsigned integer representing the server ID.
+#
+# 		This is the same as the value of the server_id system variable.
+#
+# 		Example: SERVER_ID="1"
+#
+# ) SQLTEXT
+#
+# 		A string representing the text of an SQL statement.
+# 		The value can be empty. Long values may be truncated.
+#
+# 		The string, like the audit log file itself, is written using UTF-8 (up to 4 bytes per character),
+# 		so the value may be the result of conversion.
+#
+# 		For example, the original statement might have been received from the client as an SJIS string.
+#
+# 		Example: SQLTEXT="DELETE FROM t1"
+#
+# ) STARTUP_OPTIONS
+#
+# 		A string representing the options that were given on the command line or in option files when the MySQL server was started.
+#
+# 		Example: STARTUP_OPTIONS="--port=3306 --log_output=FILE"
+#
+# ) STATUS
+#
+# 		An unsigned integer representing the command status: 0 for success, nonzero if an error occurred.
+#
+# 		This is the same as the value of the mysql_errno() C API function.
+#
+# 		See the description for STATUS_CODE for information about how it differs from STATUS.
+#
+# 		The audit log does not contain the SQLSTATE value or error message. To see theh associations between error codes,
+# 		SQLSTATE values, and messages - see later.
+#
+# 		Warnings are not logged.
+#
+# 		Example: STATUS="1051"
+#
+# ) STATUS_CODE
+#
+# 		An unsigned integer representing the command status: 0 for success, 1 if an error occurred.
+#
+# 		The STATUS_CODE value differs from the STATUS value: STATUS_CODE is 0 for success and 1 for error, which is compatible
+# 		with the EZ_collector consumer for Audit Vault.
+#
+# 		STATUS is the value of the mysql_errno() C API function.
+#
+# 		This is 0 for success and nonzero for error, and thus is not necessarily 1 for error.
+#
+# 		Example: STATUS_CODE="0"
+#
+# ) USER
+#
+# 		A string representing the user name sent by the client. This may differ from the PRIV_USER value.
+#
+# ) VERSION
+#
+# 		An unsigned integer representing the version of the audit log file format.
+#
+# 		Example: VERSION="1"
+#
+# NEW-STYLE XML AUDIT LOG FILE FORMAT
+#
+# Here is a sample log file in new-style XML format (audit_log_format=NEW), reformatted slightly for readability:
+#
+# 	<?xml version="1.0" encoding="utf-8"?>
+# 	<AUDIT>
+# 		<AUDIT_RECORD>
+# 			<TIMESTAMP>2017-10-16T14:06:33 UTC</TIMESTAMP>
+# 			<RECORD_ID>1_2017-10-16T14:06:33</RECORD_ID>
+# 			<NAME>Audit</NAME>
+# 			<SERVER_ID>1</SERVER_ID>
+# 			<VERSION>1</VERSION>
+# 			<STARTUP_OPTIONS>/usr/local/mysql/bin/mysqld
+# 				--socket=/usr/local/mysql/mysql.sock
+# 				--port=3306</STARTUP_OPTIONS>
+# 			<OS_VERSION>i686-Linux</OS_VERSION>
+# 			<MYSQL_VERSION>5.7.21-log</MYSQL_VERSION>
+# 		</AUDIT_RECORD>
+# 		<AUDIT_RECORD>
+# 			<TIMESTAMP>2017-10-16T14:09:38 UTC</TIMESTAMP>
+# 			<RECORD_ID>2_2017-10-16T14:06:33</RECORD_ID>
+# 			<NAME>Connect</NAME>
+# 			<CONNECTION_ID>5</CONNECTION_ID>
+# 			<STATUS>0</STATUS>
+# 			<STATUS_CODE>0</STATUS_CODE>
+# 			<USER>root</USER>
+# 			<OS_LOGIN/>
+# 			<HOST>localhost</HOST>
+# 			<IP>127.0.0.1</IP>
+# 			<COMMAND_CLASS>connect</COMMAND_CLASS>
+# 			<CONNECTION_TYPE>SSl/TLS</CONNECTION_TYPE>
+# 			<PRIV_USER>root</PRIV_USER>
+# 			<PROXY_USER/>
+# 			<DB>test</DB>
+# 		</AUDIT_RECORD>
+# ---
+#
+# 		<AUDIT_RECORD>
+# 			<TIMESTAMP>2017-10-16T14:09:38 UTC</TIMESTAMP>
+# 			<RECORD_ID>6_2017-10-16T14:06:33</RECORD_ID>
+# 			<NAME>Query</NAME>
+# 			<CONNECTION_ID>5</CONNECTION_ID>
+# 			<STATUS>0</STATUS>
+# 			<STATUS_CODE>0</STATUS_CODE>
+# 			<USER>root[root] @ localhost [127.0.0.1]</USER>
+# 			<OS_LOGIN/>
+# 			<HOST>localhost</HOST>
+# 			<IP>127.0.0.1</IP>
+# 			<COMMAND_CLASS>drop_table</COMMAND_CLASS>
+# 			<SQLTEXT>DROP TABLE IF EXISTS t</SQLTEXT>
+# 		</AUDIT_RECORD>
+# ---
+# 		<AUDIT_RECORD>
+# 			<TIMESTAMP>2017-10-16T14:09:39 UTC</TIMESTAMP>
+# 			<RECORD_ID>8_2017-10-16T14:06:33</RECORD_ID>
+# 			<NAME>Quit</NAME>
+# 			<CONNECTION_ID>5</CONNECTION_ID>
+# 			<STATUS>0</STATUS>
+# 			<STATUS_CODE>0</STATUS_CODE>
+# 			<USER>root</USER>
+# 			<OS_LOGIN/>
+# 			<HOST>localhost</HOST>
+# 			<IP>127.0.0.1</IP>
+# 			<COMMAND_CLASS>connect</COMMAND_CLASS>
+# 			<CONNECTION_TYPE>SSL/TLS</CONNECTION_TYPE>
+# 		</AUDIT_RECORD>
+#
+# ---
+#
+# 		<AUDIT_RECORD>
+# 			<TIMESTAMP>2017-10-16T14:09:43 UTC</TIMESTAMP>
+# 			<RECORD_ID>11_2017-10-16T14:06:33</RECORD_ID>
+# 			<NAME>Quit</NAME>
+# 			<CONNECTION_ID>6</CONNECTION_ID>
+# 			<STATUS>0</STATUS>
+# 			<STATUS_CODE>0</STATUS_CODE>
+# 			<USER>root</USER>
+# 			<OS_LOGIN/>
+# 			<HOST>localhost</HOST>
+# 			<IP>127.0.0.1</IP>
+# 			<COMMAND_CLASS>connect</COMMAND_CLASS>
+# 			<CONNECTION_TYPE>SSL/TLS</CONNECTION_TYPE>
+# 		</AUDIT_RECORD>
+# 		<AUDIT_RECORD>
+# 			<TIMESTAMP>2017-10-16T14:09:45 UTC</TIMESTAMP>
+# 			<RECORD_ID>12_2017-10-16T14:06:33</RECORD_ID>
+# 			<NAME>NoAudit</NAME>
+# 			<SERVER_ID>1</SERVER_ID>
+# 		</AUDIT_RECORD>
+# 	</AUDIT>
+#
+# The audit log file is written as XML, using UTF-8 (up to 4 bytes per char).
+# The root element is <AUDIT>. It contains the <AUDIT_RECORD> elements, each of which provides
+# information about an audited event.
+#
+# When the audit log plugin begins writing a new log file, it writes the XML Declaration and opening <AUDIT>
+# root element tag.
+#
+# When the plugin closes a log file, it writes the closing </AUDIT> root element tag.
+#
+# The closing tag is not present while the file is open.
+#
+# Elements within <AUDIT_RECORD> elements have these characteristics:
+#
+# 		) Some elements appear in every <AUDIT_RECORD> element. Others are optional and may appear depending on the audit record type.
+#
+# 		) Order of elements within an <AUDIT_RECORD> element is not guaranteed.
+#
+# 		) Element values are not fixed length. Long values may be truncated as indicated in the element descriptions given later.
+# 		
+# 		) The <,>,", and & characters are encoded as &lt;, &gt;, &quot; and &amp; respetively. NUL bytes (U+00) are encoded as the ? character.
+#
+# 		) Characters not valid as XML characters are encoded using numeric character references.
+#
+# 			Valid XML characters are:
+#
+# 			#x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
+#
+# The following elements are mandatory in every <AUDIT_RECORD> element:
+#
+# 		) <NAME>
+#
+# 		a string representing the type of instruction that generated the audit event.
+# 		Such as a command that the server received from a client.
+#
+# 		Example:
+#
+# 			<NAME>Query</NAME>
+#
+# 		Some common <NAME> values:
+#
+# 			Audit: When auditing starts, which may be server startup time
+# 			Connect: When a client connects, also known as logging in
+# 			Query: An SQL statement (executed-directly)
+#
+# 			Prepare: Preparation of an SQL statement; usually followed by Execute
+# 			Execute: Execution of an SQL statement; usually follows Prepare
+# 			Shutdown: Server shutdown
+# 	
+# 			Quit: When a client disconnects
+# 			NoAudit: Auditing has been turned off
+#
+# The possible values are:
+#
+# Audit, Binlog Dump, Change user, Close stmt, Connect Out, Connect, Create DB, Daemon, Debug, Delayed insert,
+# Drop DB, Execute, Fetch, Field List, Init DB, Kill, Long Data, NoAudit, Ping, Prepare, Processlist, Query,
+# Quit, Refresh, Register Slave, Reset stmt, Set option,, Shutdown, Sleep, Statistics, Table Dump, Time
+#
+# With the exception of Audit and NoAudit, these values correspond to the COM_xxx command values listed in
+# the my_command.h header file.
+#
+# For example, Create DB and Change user correspond to COM_CREATE_DB and COM_CHANGE_USER, respectively.
+#
+# 
+# ) <RECORD_ID>
+#
+# 		A unique identifier for the audit record. The value is composed from a sequence number and timestamp, in the format SEQ_TIMESTAMP.
+#
+# 		When the audit log plugin opens the audit log file, it initializes the sequence number to the size of the audit log file,
+# 		then increments the sequence by 1 for each record logged.
+#
+# 		The timestamp is a UTC value in YYYY-MM-DDThh:mm:ss format indicating the date and time when the audit log plugin opened the file.
+#
+# 		Example:
+#
+# 			<RECORD_ID>12_2017-10-16T14:06:33</RECORD_ID>
+#
+# ) <TIMESTAMP>
+#
+# 		A string representing a UTC value in YYYY-MM-DDYhh:mm:ss UTC format indicating the date and time when the audit event
+# 		was generated.
+#
+# 		For example, the event corresponding to execution of an SQL statement received from a client has a <TIMESTAMP> value occurring
+# 		after the statement finishes, not when it was received.
+#
+# 		Example:
+#
+# 			<TIMESTAMP>2017-10-16T14:09:45 UTC</TIMESTAMP>
+#
+# The following elements are optional in <AUDIT_RECORD> elements. Many of them occur only with specific <NAME> element values.
+#
+# 		) <COMMAND_CLASS>
+#
+# 			A string that indicates the type of action performed.
+#
+# 			Example:
+#
+# 				<COMMAND_CLASS>drop_table</COMMAND_CLASS>
+#
+# 			The values correspond to the statement/sql/xxx commands counters, for example, xxx is drop_table and select
+# 			for DROP_TABLE and SELECT statements, respectively.
+#
+# 			The following statement displays the possible names:
+#
+# 				SELECT REPLACE(EVENT_NAME, 'statement/sql/', '') AS name
+# 				FROM performance_schema.events_statements_summary_global_by_event_name
+# 				WHERE EVENT_NAME LIKE 'statement/sql/%' ORDER BY name;
+#
+# 		) <CONNECTION_ID>
+#
+# 			An unsigned integer representing the client connection identifier.
+#
+# 			This is the same as the value returned by the CONNECTION_ID() function within the session.
+#
+# 			Example:
+#
+# 				<CONNECTION_ID>127</CONNECTION_ID>
+#
+# 		) <CONNECTION_TYPE>
+#
+# 			The security state of the connection to the server.
+#
+# 			Permitted values are TCP/IP (TCP/IP connection established without encryption),
+# 			SSL/TLS (TCP/IP connection established with encryption), Socket (Unix socket file connection),
+# 			Named Pipe (Windows named pipe connection), and Shared Memory (Windows shared memory connection)
+#
+# 			Example:
+#
+# 				<CONNECTION_TYPE>SSL/TLS</CONNECTION_TYPE>
+#
+# 		) <DB>
+#
+# 			A string representing the default database name.
+#
+# 			Example:
+#
+# 				<DB>test</DB>
+#
+# 		) <HOST>
+#
+# 			a string representing the client host name.
+#
+# 			Example:
+#
+# 				<HOST>localhost</HOST>
+#
+# 		) <IP>
+#
+# 			a string representing the client IP address.
+#
+# 			Example:
+#
+# 				<IP>127.0.0.1</IP>
+#
+# 		) <MYSQL_VERSION>
+#
+# 			A string representing the MySQL server version. This is the same as the value of the VERSION() function or
+# 			version system variable.
+#
+# 			Example:
+#
+# 				<MYSQL_VERSION>5.7.21-log</MYSQL_VERSION>
+#
+# 		) <OS_LOGIN>
+#
+# 			A string representing the external user name used during the authentication process, as
+# 			set by the plugin used to authenticate the client.
+#
+# 			With native (built-in) MySQL authentication, or if the plugin does not set the value, this element is empty.
+#
+# 			The value is the same as that of the external_user system variable.
+#
+# 			Example:
+#
+# 				<OS_LOGIN>jeffrey</OS_LOGIN>
+#
+# 		) <OS_VERSION>
+#
+# 			A string representing the operating system on which the server was built or is running.
+#
+# 			Example:
+#
+# 				<OS_VERSION>x86_64-Linux</OS_VERSION>
+#
+# 		) <PRIV_USER>
+#
+# 			A string representing the user that the server authenticated the client as.
+#
+# 			This is the user name that the server uses for privilege checking, and may differ from
+# 			the <USER> value.
+#
+# 			Example:
+#
+# 				<PRIV_USER>jeffrey</PRIV_USER>
+#
+# 		) <PROXY_USER>
+#
+# 			A string representing the proxy user. This value is empty if user proxying is not in effect.
+#
+# 			Example:
+#
+# 				<PROXY_USER>developer</PROXY_USER>
+#
+# 		) <SERVER_ID>
+#
+# 			An unsigned integer representing the server ID.
+# 			This is the same as the value of the server_id system variable.
+#
+# 			Example:
+#
+# 				<SERVER_ID>1</SERVER_ID>
+#
+# 		) <SQLTEXT>
+#
+# 			A string representing the text of an SQL statement.
+#
+# 			The value can be empty. Long values may be truncated.
+#
+# 			The string, like the audit log file itself, is written using UTF-8 (up to 4 bytes per character),
+# 			so the value may be the result of conversion.
+#
+# 			For example, the original statement might have been received from the client as an SJIS string.
+#
+# 			Example:
+#
+# 				<SQLTEXT>DELETE FROM t1</SQLTEXT>
+#
+# 		) <STARTUP_OPTIONS>
+#
+# 			A string representing the options that were given on the command line or in option files when the MySQL
+# 			server was started.
+#
+# 			The first option is the path to the server executable.
+#
+# 			Example:
+#
+# 				<STARTUP_OPTIONS>/usr/local/mysql/bin/mysqld
+# 					--port=3306 --log_output=FILE</STARTUP_OPTIONS>
+#
+# 		) <STATUS>
+#
+# 			An unsigned integer representing the command status: 0 for success, nonzero if an error occurred.
+#
+# 			This is the same as the value of the mysql_errno() C API function.
+#
+# 			See the description for <STATUS_CODE> for information about how it differs from <STATUS>
+#
+# 			The audit log does not contain the SQLSTATE value or error message..
+# 			To see the associations between error codes, SQLSTATE values and messages - see later.
+#
+# 			Warnings are not logged.
+#
+# 			Example: <STATUS>1051</STATUS>
+#
+# 		) <STATUS_CODE>
+#
+# 			An unsigned integer representing the command status: 0 for success, 1 if an error occurred.
+#
+# 			The STATUS_CODE value differs from the STATUS value: STATUS_CODE is 0 for success and 1 for error,
+# 			which is compatible with the EZ_collector consumer for Audit Vault.
+#
+# 			STATUS is the value of the mysql_errno() C API function. This is 0 for success and nonzero for error,
+# 			and thus is not necesarily 1 for error.
+#
+# 			Example:
+#
+# 				<STATUS_CODE>0</STATUS_CODE>
+#
+# 		) <USER>
+#
+# 			A string representing the user name sent by the client. This may differ from the <PRIV_USER> value.
+#
+# 			Example:
+#
+# 				<USER>root[root] @ localhost [127.0.0.1]</USER>
+#
+# 		) <VERSION>
+#
+# 			An unsigned integer representing the version of the audit log file format.
+#
+# 			Example:
+#
+# 				<VERSION>1</VERSION>
+#
+# JSON Audit Log File Format
+#
+# For JSON-format audit logging (audit_log_format=JSON), the log file contents form a JSON array with each array
+# element representing an audited event as a JSON hash of key/value pairs.
+#
+# Examples of complete event records appear later in this section.
+#
+# The following is an excerpt of partial events:
+#
+# [
+# 		{
+# 			"timestamp": "2018-01-15 13:50:01",
+# 			"id": 0,
+# 			"class": "audit",
+# 			"event": "startup",
+# 			---
+# 		},
+# 		{
+# 			"timestamp": "2018-01-15 15:02:32",
+# 			"id": 0,
+# 			"class": "connection",
+# 			"event": "connect",
+# 			---
+# 		},
+# 		---
+# 		{
+# 			"timestamp": "2018-01-15 17:37:26"
+# 			"id": 0,
+# 			"class": "table_access",
+# 			"event": "insert",
+# 			---
+# 		}
+# 		---
+# ]
+#
+# The audit log file is written using UTF-8 (up to 4 bytes per char).
+# When the audit log plugin begins writing a new log file, it writes the opening [ array marker.
+#
+# When the plugin closes a log file, it writes the closing ] array marker. The closing marker is not
+# present while the file is open.
+#
+# Items within audit records have these characteristics:
+#
+# 		) Some items appear in every audit record. Others are optional and may appear depending on the audit record type.
+#
+# 		) Order of items within an audit record is not guaranteed.
+#
+# 		) Item values are not fixed length. Long values may be truncated as indicated in the item descriptions given later.
+#
+# 		) The " and \ characters are encoded as \" and \\, respectively.
+#
+# The following example shows the JSON object formats for different event types (as indicated by the class and event items),
+# reformatted slightly for readability.
+#
+# Auditing startup event:
+#
+# 		{ "timestamp": "2018-01-15 14:21:56",
+# 		  "id": 0,
+# 		  "class": "audit",
+# 		  "event": "startup",
+# 		  "connection_id": 0,
+# 		  "startup_data": { "server_id": 1,
+# 								  "os_version": "i686-Linux",
+# 								  "mysql_version": "5.7.21-log",
+# 								  "args": ["/usr/local/mysql/bin/mysqld",
+# 											  "--loose-audit-log-format=JSON",
+# 											  "--log-error=log.err",
+# 											  "--pid-file=mysqld.pid",
+# 											  "--port=3306" ] } }
+#
+# When the audit log plugin starts as a result of server startup (as opposed to being enabled at runtime),
+# connection_id is set to 0, and account and login are not present.
+#
+# Auditing shutdown event:
+#
+# 		{ "timestamp": "2018-01-15 14:28:20",
+# 		  "id": 3,
+# 		  "class": "audit",
+# 		  "event": "shutdown",
+# 		  "connection_id": 0,
+# 		  "shutdown_data": { "server_id": 1 } }
+#
+# When the audit log plugin is uninstalled as a result of server shutdown (as opposed to being disabled at runtime),
+# connection_id is set to 0, and account and login are not present.
+#
+# Connect or change-user event:
+#
+# 		{ "timestamp": "2018-01-15 14:23:18",
+# 		  "id": 1,
+# 		  "class": "connection",
+# 		  "event": "connect",
+# 		  "connection_id": 5,
+# 		  "account": { "user": "root", "host": "localhost" },
+# 		  "login": { "user": "root", "os": "", "ip": "::1", "proxy": "" },
+# 		  "connection_data": { "connection_type": "ssl",
+# 									  "status": 0,
+# 									  "db": "test" } }
+#
+# Disconnect event:
+#
+# 		{ "timestamp": "2018-01-15 14:24:45",
+# 		  "id": 3,
+# 		  "class": "connection",
+# 		  "event": "disconnect",
+# 		  "connection_id": 5,
+# 		  "account": { "user": "root", "host": "localhost" },
+# 		  "login": { "user": "root", "os": "", "ip": "::1", "proxy": "" },
+# 		  "connection_data": { "connection_type": "ssl" } }
+#
+# Query event:
+#
+# 		{ "timestamp": "2018-01-15 14:23:35",
+# 			"id": 2,
+# 			"class": "general",
+# 			"event": "status",
+# 			"connection_id": 5,
+# 			"account": { "user": "root", "host": "localhost" },
+# 			"login": { "user": "root", "os": "", "ip": "::1", "proxy": "" },
+# 			"general_data": { "command": "Query",
+# 									"sql_command": "show_variables",
+# 									"query": "SHOW VARIABLES",
+# 									"status": 0 } }
+#
+# Table access event (read, delete, insert, update):
+#
+# 		{ "timestamp": "2018-01-15 14:23:41",
+# 		  "id": 0,
+# 	     "class": "table_access",
+# 		  "event": "insert",
+# 	     "connection_id": 5,
+# 		  "account": { "user": "root", "host": "localhost" },
+# 		  "login": { "user": "root", "os": "", "ip": "127.0.0.1", "proxy": "" },
+# 		  "table_access_data": { "db": "test",
+# 										 "table": "t1",
+# 										 "query": "INSERT INTO t1 (i) VALUES(1),(2),(3)",
+# 										 "sql_command": "insert" } }
+#
+# The items in the following list appear at the top level of JSON-format audit records:
+# Each item value is either a scalar or a JSON hash.
+#
+# For items that have a hash value, the description lists only the item names within that hash.
+# For more complete descriptions of second-level hash items, see later in this section.
+#
+# ) account
+#
+# 		The MySQL account associated with the event.
+#
+# 		The value is a hash containing these items equivalent to the value of the CURRENT_USER() function
+# 		within the section:
+#
+# 		user,host.
+#
+# 		Example:
+#
+# 			"account": { "user": "root", "host": "localhost" }
+#
+# ) class
+#
+# 		A string representing the event class.
+# 		The class defines the type of event, when taken together with the event item that specifies the event subclass.
+#
+# 		Example:
+#
+# 			"class": "connection"
+#
+# 		The following table shows the permitted combinations of class and event values.
+#
+# 		TABLE 6.26 AUDIT LOG CLASS AND EVENT COMBINATIONS
+#
+# 		Class Value 				Permitted Event Values
+# 		audit 						startup, shutdown
+#
+# 		connection 					connect, change_user, disconnect
+#
+# 		general 						status
+#
+# 		table_access_data 		read, delete, insert, update
+#
+# ) connection_data
+#
+# Information about a client connection.
+#
+# The value is a hash containing these items: connection_type, status,db.
+# This item occurs only for audit records with a class value of connection.
+#
+# Example:
+#
+# 		"connection_data": { "connection_type": "ssl",
+# 									"status": 0,
+# 									"db": "test" }
+#
+# ) connection_id
+#
+# An unsigned integer representing the client connection identifier.
+# This is the same as the value returned by the CONNECTION_ID() function within the session.
+#
+# Example:
+#
+# 		"connection_id": 5
+#
+# ) event:
+#
+# A string representing the subclass of the event class.
+#
+# The subclass defines the type of event, when taken together with the class item that specifies the event class.
+# For more information, see the class item desc.
+#
+# Example:
+#
+# 		"event": "connect"
+#
+# ) general_data
+#
+# 	Information about an executed statement or command. The value is a hash containing these items:
+# 	command, sql_command, query, status.
+#
+# This item occurs only for audit records with a class value of general.
+#
+# Example:
+#
+# 		"general_data": { "command": "Query",
+# 								"sql_command": "show_variables",
+# 								"query": "SHOW VARIABLES",
+# 								"status": 0 }
+#
+# ) id
+#
+# 	An unsigned integer representing an event ID.
+#
+# Example:
+#
+# 		"id": 2
+#
+# For audit records that have the same timestamp value, their id values distinguish them and form a sequence.
+# Within the audit log, timestamp/id pairs are unique.
+#
+# These pairs are bookmarks that identify event locations within the log.
+#
+# ) login
+#
+# Information indicating how a client connected to the server.
+# The value is a hash containing these items: users, os, ip, proxy.
+#
+# Example:
+#
+# 		"login": { "user": "root", "os": "", "ip": "::1", "proxy": "" }
+#
+# ) shutdown_data
+#
+# Information pertaining to audit log plugin termination.
+# The value is a hash containing these items: server_id.
+#
+# This item occurs only for audit records with class and event values of audit and shutdown, respectively.
+#
+# Example:
+#
+# 		"shutdown_data": { "server_id": 1 }
+#
+# ) startup_data
+#
+# Information pertaining to audit log plugin initialization.
+# The value is a hash containing these items: server_id, os_version, mysql_version, args.
+#
+# THis item occurs only for audit records with class and event values of audit and startup,
+# respectively.
+#
+# Example:
+#
+# 	"startup_data": { "server_id": 1,
+# 							"os_version": "i686-Linux",
+# 							"mysql_version": "5.7.21-log",
+# 							"args": ["/usr/local/mysql/bin/mysqld",
+# 										"--loose-audit-log-format=JSON",
+# 										"--log-error=log.err",
+# 										"--pid-file=mysqld.pid",
+# 										"--port=3306" ] }
+#
+# ) table_access_data
+#
+# Information about an access to a table.
+#
+# The value is a hash containing these items: db, table, query, sql_command.
+#
+# This item occurs only for audit records with a class value of table_access.
+#
+# Example:
+#
+# 	"table_access_data": { "db": "test",
+# 								  "table": "t1",
+# 								  "query": "INSERT INTO t1 (i) VALUES(1),(2),(3)",
+# 								  "sql_command": "insert" }
+#
+# ) timestamp
+#
+# A string representing a UTC value in YYYY-MM-DD hh:mm:ss format indicating the date and time when the audit
+# event was generated.
+#
+# For example, the event corresponding to execution of an SQL statement received from a client has a timestamp
+# value occurring after the statement finishes,, not when it was received.
+#
+# Example:
+#
+# 		"timestamp": "2018-01-15 13:50:01"
+#
+# For audit records that have the same timestamp value, their id values distinguished them and form a sequence.
+# Within the audit log, timestamp/id pairs are unique.
+#
+# These pairs are bookmarks that identify event locations within the log.
+#
+# These items appear within hash values associated with top-level items of JSON-format audit records:
+#
+# 	) args
+#
+# 		An array of options that were given on the command line or in option files when the MySQL server was started.
+# 		The first option is the path to the server executable.
+#
+# 		Example:
+#
+# 			"args": ["/usr/local/mysql/bin/mysqld",
+# 						"--loose-audit-log-format=JSON",
+# 						"--log-error=log.err",
+# 						"--pid-file=mysqld.pid",
+# 						"--port=3306" ]
+#
+# 	) command
+#
+# 		A string representing the type of instruction that generated the audit event, such as a command that the server
+# 		received from a client.
+#
+# 		Example:
+#
+# 			"command": "Query"
+#
+# 	) connection_type
+#
+# 		The security state of the connection to the server.
+# 		Permitted values are tcp/ip (TCP/IP connection established without encryption),
+# 		ssl(TCP/IP connection established with encryption),
+# 		socket(Unix socket file connection),
+# 		named_pipe(Windows named pipe connection),
+# 		shared_memory(Windows shared memory connection)
+#
+# 		Example:
+#
+# 			"connection_type": "tcp/tcp"
+#
+# ) db
+#
+# 		A string representing a database name.
+# 		For connection_data, it is the default database.
+#
+# 		For table_access_data, it is the table database.
+#
+# 		Example:
+#
+# 			"db": "test"
+#
+# ) host
+#
+# 		A string representing the client host name.
+#
+# 		Example:
+#
+# 			"host": "localhost"
+#
+# ) ip
+#
+# 		A string representing the client IP address.
+#
+# 		Example:
+#
+# 			"ip": "::1"
+#
+# ) mysql_version
+#
+# 		A string representing the MySQL server version.
+# 		This is the same as the value of the VERSION() function or version system variable.
+#
+# 		Example:
+#
+# 			"mysql_version": "5.7.21-log"
+#
+# ) os
+#
+# 		A string representing the external user name used during the authentication process, as set by the plugin used to authenticate
+# 		the client.
+#
+# 		With native (built-in) MySQL authentication, or if the plugin does not set the value, this attribute is empty.
+#
+# 		The value is the same as that of the external_user system variable.
+#
+# 		Example:
+#
+# 			"os": "jeffrey"
+#
+# ) os_version
+#
+# 		A string representing the operating system on which the server was built or is running.
+#
+# 		Example:
+#
+# 			"os_version": "i686-Linux"
+#
+# ) proxy
+#
+# 		A string representing the proxy user. The value is empty if user proxying is not in effect.
+#
+# 		Example:
+#
+# 			"proxy": "developer"
+#
+# ) query
+#
+# 		A string representing the text of an SQL statement.
+# 		The value can be empty.
+#
+# 		Long values may be truncated. The string, like the audit log file itself, is written using UTF-8
+# 		(up to 4 bytes per character), so the value may be the result of conversion.
+#
+# 		For example, the original statement might have been received from the client as an SJIS string.
+#
+# 		Example:
+#
+# 			"query": "DELETE FROM t1"
+#
+# ) server_id
+#
+# 		An unsigned integer representing the server ID.
+# 		THis is the same as the value of the server_id system variable.
+#
+# 		Example:
+#
+# 			"server_id": 1
+#
+# ) sql_command
+#
+# 		A string that indicates the SQL statement type.
+#
+# 		Example:
+#
+# 			"sql_command": "insert"
+#
+# 		The values correspond to the statement/sql/xxx command counters.
+# 		For example, xxx is drop_table and select for DROP_TABLE and SELECT statements, respectively.
+#
+# 		The following statement displays the possible names:
+#
+# 			SELECT REPLACE(EVENT_NAME, 'statement/sql/', '') AS name
+# 			FROM performance_schema.events_statements_summary_global_by_event_name
+# 			WHERE EVENT_NAME LIKE 'statement/sql/%'
+# 			ORDER BY name;
+#
+# ) status
+#
+# 		An unsigned integer representing the command status: 0 for success, nonzero if an error occurred.
+# 		This is the same as the value of the mysql_errno() C API function.
+#
+# 		The audit log does not contain the SQLSTATE value or error message.
+#
+# 		To see the associations between error codes, SQLSTATE values and messages, see later.
+#
+# 		Warnings are not logged.
+#
+# 		Example:
+#
+# 			"status": 1051
+#
+# ) table
+#
+# 		A string representing a table name.
+#
+# 		Example:
+#
+# 			"table": "t1"
+#
+# ) user
+#
+# 		A string representing a user name. The meaning differs depending on the item within which user occurs:
+#
+# 			) Within account items, user is a string representing the user that the server authenticated the client as.
+#
+# 				This is the user name that the server uses for privilege checking.
+#
+# 			) Within login items, user is a string representing the user name sent by the client.
+#
+# 		Example:
+#
+# 			"user": "root"
+#
+# AUDIT LOG LOGGING CONTROL
+#
+# This section describes how to control general characteristics of audit logging, such as the file to which
+# the audit log plugin writes events, the format of written events and whether compression and encryption
+# are enabled.
+#
+# For more info about user-defined functions and system variables that affect audit logging, see earlier.
+#
+# The audit log plugin can also control which audited events are written to the audit log file, based on
+# teh account from which events originate or even content.
+#
+# More on this, later.
+#
+# AUDIT LOG FILE NAME
+#
+# To control the audit log file name, set the audit_log_file system variable at server startup.
+# By default, the name is audit.log in the server data directory.
+#
+# For security reasons, the audit log file should be written to a directory accessible only 
+# to the MySQL server and to users with a legitimate reason to view the log.
+#
+# The plugin interprets the audit_log_file value as composed of a base name and an optional suffix.
+#
+# If compression or encryption are enabled, the effective file name (the name actually used to create the log file)
+# differs from the configured file name because it has additional suffixes:
+#
+# 		) If compression is enabled, the plugin adds a suffix of .gz
+#
+# 		) If encryption is enabled, the plugin adds a suffix of .enc
+#
+# The effective audit log file name is the resulting name after adding possible compression
+# and encryption suffixes to the configured file name. 	
+#
+# For example, if the configured audit_log_file is audit.log, the effective file name is one of these values:
+#
+# 		audit.log 			Not  compressed or encrypted
+# 		audit.log.gz 		Compressed
+#		audit.log.enc 		Encrypted
+# 		audit.log.gz.enc 	Compressed and encrypted
+#
+# The audit log plugin performs certains actions at initialization and termination time based on the audit log file name:
+#
+# 		) During initialization, the plugin checks whether a file with the audit log file name already exists and renames it if so.
+# 			(In this case, the plugin assumes that the previous server invocation exited unexpectedly with the audit log plugin running).
+#
+# 			The plugin then writes to a new empty audit log file.
+#
+# 		) At termination, the plugin renames the audit log file.
+#
+# 		) When renaming occurs (whether at plugin initialization or termination), the renamed file has a timestamp
+# 			inserted after its base name and before its suffix.
+#
+# 			For example, if the file name is audit.log, the plugin renames it to a value such as audit.20180115T140633.log
+# 			The timestamp is a UTC value in YYYYMMDDThhmmss format.
+#
+# AUDIT LOG FILE FORMAT
+#
+# To control the audit log file format, set the audit_log_format system variable at server startup.
+# By default, the form is NEW (new-style XML format).
+#
+# For details about each format, see earlier.
+#
+# If you change áudit_log_format, it is recommended that you also change audit_log_file.
+# Otherwise, there will be two sets of log files with the same base name but different formats.
+#
+# AUDIT LOG FILE COMPRESSION
+#
+# Audit log file compression can be enabled for any logging format.
+#
+# To control whether audit log file compression is enabled, set the audit_log_compression system variable at server startup.
+# Permitted values are NONE (no compression; the default) and GZIP (GNU Zip compression).
+#
+# If both compression and encryption are enabled, compression occurs before encryption.
+# To recover the original file manually, first decrypt it - then uncompress it.
+#
+# See more later.
+#
+# AUDIT LOG FILE ENCRYPTION
+#
+# Audit log file encryption can be enabled for any logging format.
+# Encryption is based on a user-defined password.
+#
+# To use this feature, the MySQL keyring must be enabled because audit logging uses it
+# for password storage.
+#
+# Any keyring plugin can be used; see earlier.
+#
+# To control whether audit log file encryption is enabled, set the audit_log_encryption system variable
+# at server startup.
+#
+# Permitted values are NONE (no encryption; the default) and AES (AES-256-CBC cipher encryption)
+#
+# To set or get the encryption password, use these user-defined functions (UDFs):
+#
+# 		) To set the encryption password, invoke audit_log_encryption_password_set(), which stores the password in the keyring,
+# 			renames the current log file and begins a new log file encrypted with the new password.
+#
+# 			The renamed file has a timestamp inserted after its base name and before its suffix.
+#
+# 			For example, if the file name is audit.log.enc, the plugin renames it to a value such as audit.20180115T140633.log.enc
+#
+# 			The timestamp is a UTC value in YYYYMMDDThhmmss format.
+#
+# 			Previously written audit log files are not re-encrypted with the new password.
+# 			Remember the previous password should you need to decrypt those files.
+#
+# 		) To get the current encryption password, invoke audit_log_encryption_password_get(), which retrieves the password from the keyring.
+#
+# For the first server startup after audit log encryption is enabled, the audit log plugin automatically generates
+# the initial encryption password and stores it in the keyring.
+#
+# To discover this password, invoke audit_log_encryption_password_get()
+#
+# For additional information about audit log encryption functions, see earlier.
+#
+# If both compression and encryption are enabled, compression occurs before encryption.
+# To recover the original file manually, first decrypt it, then uncompress it.
+#
+# See later for more info.
+#
+# AUDIT LOG FILE MANUAL UNCOMPRESSION AND DECRYPTION
+#
+# Audit log files can be uncompressed and decrypted using standard tools.
+#
+# This should be done only for log files that have been closed and are no longer in use,
+# not for the log file that the audit log plugin is currently writing.
+#
+# You can recognize closed log files because they will have been renamed by the audit log plugin
+# to include a timestamp in the file name.
+#
+# For this discussion, assume that audit_log_file is set to audit.log
+#
+# IN that case, a closed audit log file has one of these names:
+#
+# 		audit.timestamp.log 			Not compressed or encrypted
+# 		audit.timestamp.log.gz 		Compressed
+# 		audit.timestamp.log.enc 	Encrypted
+# 		audit.timestamp.log.gz.enc Compressed and encrypted
+#
+# To uncompress a compressed log file manually, use gunzip, gzip -d or equivalent commands.
+#
+# For example:
+#
+# 		gunzip -c audit.timestamp.log.gz > audit.timestamp.log
+#
+# To decrypt an encrypted log file manually, use the openssl command.
+# For example:
+#
+# 	openssl enc -d -aes-256-cbc -pass pass:password -md sha256 -in audit.timestamp.log.enc -out audit.timestamp.log
+#
+# If both compression and encryption are enabled for audit logging, compression occurs before encryption.
+# In this case, the file name has .gz and .enc suffixes added, corresponding to the order in which those operations occur.
+#
+# To recover the original file manually, perform the operations in reverse.
+# That is, first decrypt the file, then uncompress it:
+#
+# 		openssl enc -d -aes-256-cbc -pass pass:password -md sha256 -in audit.timestamp.log.gz.enc -out audit.timestamp.log.gz 
+# 		gunzip -c audit.timestamp.log.gz > audit.timestamp.log
+#
+# AUDIT LOGGING WRITE STRATEGY
+#
+# The audit log plugin can cause any of several strategies for log writes.
+# Regardless of strategy, logging occurs on a best-effort basis, with no guarantee of consistency.
+#
+# To specify a write strategy, set the audit_log_strategy system variable at server startup.
+#
+# By default, the strategy value is ASYNCHRONOUS and the plugin logs asynchronously to a buffer,
+# waiting if the buffer is full.		 		
+#
+# It is possible to tell the plugin not to wait (PERFORMANCE) or to log synchronously, either using
+# file system caching (SEMISYNCHRONOUSLY) or forcing output with a sync() call after each write request (SYNCHRONOUS)
+#
+# For asynch write strategy, the audit_log_buffer_size system variable is teh buffer size in bytes.
+# Set this variable at server startup to change the buffer size.
+#
+# The plugin uses a single buffer, which it allocates when it initializes and removes when it terminates.
+# The plugin does not allocate this buffer for nonasynch write strategies.
+#
+# Asynch logging strategy has these characteristics:
+#
+# 		) Minimal impact on server performance and scalability
+#
+# 		) Blocking of threads that generate audit events for the shortest possible time; that is, time to allocate the buffer plus
+# 			time to copy the event to the buffer.
+#
+# 		) Output goes to the buffer. A separate thread handles writes from the buffer to the log file.
+#
+# With asynch logging, the integrity of the log file may be compromised if a problem occurs during a write
+# to the file or if the plugin does not shutdown cleanly (for example, in the event that the server host exits unexpectedly).
+#
+# To reduce this risk, set audit_log_strategy to use synch logging.
+#
+# A disadvantage of PERFORMANCE strategy is that it drops events when the buffer is full.
+# For a heavily loaded server, the audit log may have events missing.
+#
+# AUDIT LOG FILE SPACE MANAGEMENT AND NAME ROTATION
+#
+# The audit log file has the potentional to grow  very large and consume a lot of disk space.
+#
+# To enable management of the space used by its log files, the audit log plugin provides
+# the audit_log_rotate_on_size and audit_log_flush system variables, which control audit log file
+# rotation and flushing.
+#
+# Rotation can be done manually or automatically based on file size.
+#
+# MANUAL AUDIT LOG FILE ROTATION.
+#
+# By default, audit_log_rotate_on_size=0 and there is no log rotation except that which you perform manually.
+#
+# IN this case, the audit log plugin closes and reopens the log file when the audit_log_flush value changes from disabled
+# to enabled.
+#
+# Log file renaming must be done externally to the server. 
+#
+# Suppose that the log file name is audit.log and you want to maintain the three most recent log files,
+# cycling through the names audit.log.1.xml through audit.log.3.xml.
+#
+# On Unix, perform rotation manually like this:
+#
+# 1. From the cmd line, rename the current log files:
+#
+# 			mv audit.log.2.xml audit.log.3.xml
+# 			mx audit.log.1.xml audit.log.2.xml
+# 			mv audit.log audit.log.1.xml
+#
+# At this point, the plugin is still writing to the current log file, which has been renamed to audit.log.1.xml
+#
+# 2. Connect to the server and flush the log file so the plugin closes it and reopens a new audit.log file:
+#
+# 		SET GLOBAL audit_log_flush = ON;
+#
+# NOTE:
+#
+# 		FOr JSON-format logging, renaming audit log files manually makes them unavailable to the log-reading functions
+# 		because the audit log plugin no longer can determine that they are part of the log file sequence.
+#
+# 		Consider setting audit_log_rotate_on_size greater than 0 to use size-based rotation instead.
+#
+# AUTOMATIC SIZE-BASED AUDIT LOG FILE ROTATION.
+#
+# If audit_log_rotate_on_size is greater than 0, setting audit_log_flush has no effect.
+#
+# Instead, whenever a write to the log file causes its size to exceed the audit_log_rotate_on_size value,
+# the audit log plugin closes the file, renames it and opens a new log file.
+#
+# When the plugin renames the original file, the renamed file has a timestamp inserted after its base name
+# and before its suffix.
+#
+# For example, if the file name is audit.log, the plugin renames it to a value such as audit.20180115T140633.log
+#
+# The timestamp is a UTC value in YYYYMMDDThhmmss format.
+#
+# NOTE:
+#
+# 		With size-based log file rotation, renamed log files do not rotate off the end of the name sequence.
+#
+# 		Instead, they have unique names and accumulate indefinitly.
+# 		To avoid excessive space use, remove old files periodically, backing them up first as necessary.
+#
+# AUDIT LOG FILE READING
+#
+# The audit log plugin enables bookmarking and reading of JSON-format audit log files.
+# (These capabilities do not apply to files written in other log formats).
+#
+# When the audit log plugin initializes and is configured for JSON logging, it uses the directory
+# containing the audit log file (determined from the audit_log_file value), as the location to search
+# for readable audit log files.
+#
+# To do this, it uses the value of audit_log_file to determine the file base name and suffix values,
+# then looks for files with names that match the following pattern, where [...] indicates optional file name parts:
+#
+# 		basename[.timestamp].suffix[.gz][.enc]
+#
+# The plugin opens each matching file, checks that it really contains JSON audit records, and sorts them using
+# the timestamps from the first record of each file to construct a list of log files that are subject to use with the log-reading functions.
+#
+# The plugin cannot include in the sequence files that were renamed manually and do not match the preceding pattern,
+# or that were encrypted with a password different from the current password.
+#
+# To read events from the audit log, use these user-defined functions (UDFs):
+#
+# 		) audit_log_read_bookmark() returns a JSON string representing a bookmark for the most recently written audit log event.
+#
+# 			This bookmark is suitable for passing to audit_log_read() to indicate to that function where to begin reading.
+#
+# 			Example bookmark:
+#
+# 			{ "timestamp": "2018-01-15 21:03:44", "id": 0 }
+#
+# 		) audit_log_read() reads events from the audit log and returns a JSON string containing an array of audit events.
+#
+# Example audit_log_read() invocation using the current bookmark:
+#
+# 		SELECT audit_log_read(audit_log_read_bookmark());
+# 		+---------------------------------------------------------------------------+
+# 		| audit_log_read(audit_log_read_bookmark()) 		 									 |
+#   	+---------------------------------------------------------------------------+
+# 		| [ {"timestamp":"2018-01-15 22:41:24", "id":0, "class":"connection", ... 	 |
+# 		+---------------------------------------------------------------------------+
+#
+# Each event in the audit_log_read() return value is a JSON hash, except that the last array element may be a JSON null value
+# to indicate no following events are available to read.
+#
+# For example:
+#
+# [
+# 		{ "timestamp": "2018-01-15 22:08:08", "id": 10,
+# 		  "class": "general", "event": "status",
+# 		  ---
+# 		},
+# 		{
+# 		  "timestamp": "2018-01-15 22:08:08", "id": 11,
+# 		  "class": "connection", "event": "disconnect",
+# 			---
+# 		},
+# 		{
+# 			"timestamp": "2018-01-15 13:39:33", "id": 0,
+# 			"class": "connection", "event": "connect",
+# 			---
+# 		},
+# 		{
+# 			"timestamp": "2018-01-15 13:39:33", "id": 1,
+# 			"class": "general", "event": "status",
+# 			---
+# 		},
+# 		{
+# 			"timestamp": "2018-01-15 13:39:33", "id": 2,
+# 			"class", "connection", "event": "disconnect",
+# 			---
+# 		},
+# 		null
+# ]
+#
+# Use audit_log_read() like this:
+#
+# ) For the first call to audit_log_read() within a session, pass a bookmark indicating where to begin reading.
+#
+# ) If the final value of the returned array is not a JSON null value, there are more events following those just read
+# 		and audit_log_read() can be called without or with a bookmark argument.
+#
+# 		Without an argument, reading continues with the next unread event.
+# 		With a bookmark argument, reading continues from the bookmark.
+#
+# ) If the final value of the returned array is a JSON null value, there are no more events left to be read and the next call
+# 		to audit_log_read() must include a bookmark argument.
+#
+# A bookmark is a JSON hash that indicates where and how much to read. The following items are significant in the bookmark value
+# (other items are ignored):
+#
+# 	) timestamp, id: The location within the audit log of the first event to read.
+# 							Both items must be present to completely specify a position.
+#
+# 	) max_array_length: The maximum number of events to read from the log.
+# 	
+# 								If omitted, the default is to read to teh end of the log or until the 
+# 								read buffer is full, whichever comes first.
+#
+# The result returned from either log-reading function is a binary string.
+#
+# To use the string with functions that require a nonbinary string (such as the functions that manipulate JSON values),
+# convert it to utf8mb4.
+#
+# Suppose that a bookmark has this value:
+#
+# SELECT @mark := audit_log_read_bookmark() AS mark;
+# +-------------------------------------------------+
+# | mark 											 			 |
+# +-------------------------------------------------+
+# | { "timestamp": "2018-01-15 16:10.28", "id": 2 } |
+# +-------------------------------------------------+
+#
+# Calling audit_log_read() with that bookmark can return multiple events.
+#
+# To set a limit on the number of events read by audit_log_read(), convert the bookmark
+# to utf8mb4 then add to it a max_array_length item with a value of 1.
+#
+# For example, using the preceding bookmark, convert and modify it as follows:
+#
+# 		SET @mark = CONVERT(@mark USING utf8mb4);
+# 		SET @mark := JSON_SET(@mark, '$.max_array_length', 1);
+# 		SELECT @mark;
+# 		+-------------------------------------------------------------------------+
+# 		| @mark 																						  |
+# 		+-------------------------------------------------------------------------+
+# 		| {"id": 2, "timestamp", "2018-01-15 16:10:28", "max_array_length": 1 	  |
+# 		+-------------------------------------------------------------------------+
+#
+# The modified bookmark, when passed to audit_log_read() - produces a result of a single audit record.
+#
+# To set a limit on the number of bytes that audit_log_read() reads, set the audit_log_read_buffer_size system variable.
+# As of MySQL 8.0.12, this variable has a default of 32kb and can be set at runtime.
+#
+# Each client should set its session value of audit_log_read_buffer_size appropriately for its use of audit_log_read().
+# Prior to MySQL 8.0.12, audit_log_read_buffer_size has a default of 1 MB, affects all clients, and can be changed
+# only at server startup.
+#
+# Each call to audit.log_read() returns as many available items as fit within the buffer size,
+# skipping items that do not fit within the buffer size.
+#
+# Given this behavior, consider these factors when assessing the proper buffer size for an application:
+#
+# ) There is a tradeoff between number of calls to audit_log_read() and items returned per call:
+#
+# 	With a smaller buffer size, calls return fewer times - so more calls are needed.
+#
+# With a large buffer - calls return more items, so fewer calls are needed.
+#
+# ) With a smaller buffer size, such as the default size of 32kb, there is a greater chance that
+# items will exceed the buffer size and audit_log_read() will skip them.
+#
+# Skipped items generate warnings.
+#
+# For additional information about audit log-reading functions, see later.
+#
+# AUDIT LOG FILTERING
+#
+# Note:
+#
+# 		This section describes how audit log filtering works as of if the audit log plugin and the accompanying audit 
+# 		tables and UDFs are installed.
+#
+# 		If the plugin is installed, but not the accompanying audit tables and UDFs, the plugin operates in legacy
+# 		filtering mode.
+#
+# 		Legacy mode is filtering behavior as it was prior to MySQL 5.7.13. I.e, before rule-based filtering.
+#
+# In legacy filtering mode - the audit log plugin had the capability of controlling logging of audited events
+# by filtering them based on the account from which events originate or event status.
+#
+# Current filtering capabilities are extended:
+#
+# 		) Audited events can be filtered using these characteristics:
+#
+# 			) USer account
+#
+# 			) Audit event class
+#
+# 			) Audit event subclass
+#
+# 			) Value of event fields such as those that indicate operation status or SQL statement executed
+#
+# 		) Audit filtering is rule based:
+#
+# 			) A filtering definition creates a set of auditing rules.
+#
+# 				Definitions can be configured to include or exclude events for logging based on
+# 				the characeristics just described.
+#
+# 			) Filter rules have the capability of blocking (aborting) execution of qualifying events,
+# 				in addition to existing capabilities for event logging.
+#
+# 			) Multiple filters can be defined, and any given filter can be assigned to any number of user accounts.
+#
+# 			) It is possible to define a default filter to use with any user account that has no explicitly assigned filter.
+#
+# 		) Audit filters can be defined, displayed and modified using an SQL interface based on user-defined functions (UDFs)
+#
+# 		) Audit filter definitions are stored in the tables in the mysql system database.
+#
+# 		) Within a given session, the value of the read-only audit_log_filter_id system variable indicates whether a filter
+# 			has been assigned to the session.
+#
+# 			NOTE:
+#
+# 				By default, rule-based audit log filtering logs no auditable events for any users.
+#
+# 				To log all auditable events for all users, use the following statements, 
+# 				which create a simple filter to enable logging and assign it to the default account:
+#
+# 					SELECT audit_log_filter_set_filter('log_all', '{ "filter": { "log": true } }');
+# 					SELECT audit_log_filter_set_user('%', 'log_all');
+#
+# 				The filter assigned to % is used for connections from any account that has no explicitly assigned filter
+# 				(which initially is true for all accounts)
+#
+# The following list briefly summarizes the UDFs that implement the SQL interface for audit filtering control:
+#
+# 		) audit_log_filter_set_filter(): Define a filter
+#
+# 		) audit_log_filter_remove_filter(): Remove a filter
+#
+# 		) audit_log_filter_set_user(): Start filtering a user account
+#
+# 		) audit_log_filter_remove_user(): Stop filtering a user account
+#
+# 		) audit_log_filter_flush(): Flush manual changes to the filter tables to affect ongoing filtering.
+#
+# For usage examples and complete details about the filtering functions, see later.
+#
+# Audit log filtering functions are subject to these constraints:
+#
+# 		) To use any filtering function, the audit_log plugin must be enabled.
+#
+# 			Otherwise, an error occurs:
+#
+# 			SELECT audit_log_filter_flush();
+# 			+---------------------------------------------------------------------------+
+# 			| audit_log_filter_flush() 															    | 
+# 			+---------------------------------------------------------------------------+
+# 			| ERROR: audit_log plugin has not been installed with INSTALL PLUGIN syntax |
+# 			+---------------------------------------------------------------------------+
+#
+# 			The audit tables must also exist or an error occurs:
+#
+# 			SELECT audit_log_filter_flush();
+# 			+---------------------------------------------------------------------------+
+# 			| audit_log_filter_flush() 																 |
+# 			+---------------------------------------------------------------------------+
+# 			| ERROR: Could not reinitialize audit log filters 									 |
+# 			+---------------------------------------------------------------------------+
+#
+# 			To install the audit_log plugin, see earlier.
+#
+# 		) To use any filtering function, a user must possess the SUPER privilege. Otherwise, an error occurs:
+#
+# 			SELECT audit_log_filter_flush()\G
+# 			********************************* 1. row *********************************
+# 			audit_log_filter_flush(): ERROR: Request ignored for 'user1'@'localhost'.
+# 											  SUPER_ACL needed to perform operation
+#
+# 			To grant the SUPER privilege to a user account, use this statement:
+#
+# 			GRANT SUPER ON *.* TO user;
+#
+# 			Alternatively, should you prefer to avoid granting the SUPER privilege while still permitting
+# 			users to access specific filtering functions, "wrapper" stored programs can be defined.
+#
+# 			This technique is described in the context of keyring UDFs earlier; it can be adapted for use with
+# 			filtering UDFs.
+#
+# 		) The audit_log plugin operates in legacy-mode if it is installed but the accompanying audit tables
+# 			and functions are not created.
+#
+# 			The plugin writes these messages to the error log at server startup:
+#
+# 			[Warning] Plugin audit_log reported: 'Failed to open the audit log filter tables.'
+# 			[Warning] Plugin audit_log reported: 'Audit Log plugin supports a filtering, which has
+# 			not been installed yet.
+#
+# 			Audit Log plugin will run in the legacy mode, which will be disabled in teh enxt release.
+#
+# 			In legacy mode, filtering can be done based only on event account or status.
+#
+# USING AUDIT LOG FILTERING FUNCTIONS
+#
+# Before using the audit log user-defined functions (UDFs), install them according to earlier.
+# The SUPER privilege is required to use any of these functions.
+#
+# The audit log filtering functions enable filtering control by providing an interface to create,
+# modify and remove filter definitions and assign filters to user accounts.
+#
+# Filter definitions are JSON values. For information about using JSON data in MySQL, see later.
+#
+# This section shows some simple filter definitions. For more info about filter definitions, see earlier.
+#
+# When a connection arrives, the audit log plugin determines which filter to use for the new session by
+# searching for the user account name in the current filter assignments:
+#
+# 		) If a filter is assigned to the user, the audit log uses that filter.
+#
+# 		) Otherwise, if no user-specific filter assignment exists, but there is a filter assigned to the 
+# 			default account (%), the audit log uses the default filter.
+#
+# 		) Otherwise, the audit log selects no audit events from the session for processing.
+#
+# If a change-user operation occurs during a session (see later), filter assignment for the
+# session is updated using the same rules but for the new user.
+#
+# By default, no accounts have a filter assigned, so no processing of auditable events occurs for any account.
+#
+# Suppose that instead you want the default ot be to log only connection-related activity
+#
+# (for example, to see connect, change-user and disconnect events - but not the SQL statements
+# users execute while connected).
+#
+# TO achieve this, define a filter (shown here named log_conn_events) that enables logging only
+# of events in the connection class, and assign that filter to the default account,
+# represented by the % account name:
+#
+# 		SET @f = '{ "filter": { "class": { "name": "connection" } } }';
+# 		SELECT audit_log_filter_set_filter('log_conn_events', @f);
+# 		SELECT audit_log_filter_set_user('%', 'log_conn_events');
+#
+# Now the audit log uses this default account filter for connections from any account that
+# has no explicitly defined filter.
+#
+# To assign a filter explicitly to a particular user account or accounts, define the filter, then assign
+# it to the relevant accounts:
+#
+# 		SELECT audit_log_filter_set_filter('log_all', '{ "filter": { "log": true } }');
+# 		SELECT audit_log_filter_set_user('user1@localhost', 'log_all');
+# 		SELECT audit_log_filter_set_user('user2@localhost', 'log_all');
+#
+# Now full logging is enabled for user1@localhost and user2localhost.
+#
+# COnnections from other accounts continue to be filtered using the default account filter.
+#
+# To disassociate a user account from its current filter, either unassign the filter or assign a different filter:
+#
+# 		) Unassign the filter from the user account:
+#
+# 			SELECT audit_log_filter_remove_user('user1@localhost');
+#
+# 			Filtering of current sessions for the account remains unaffected.
+# 			Subsequent connections from the account are filtered using the default account filter
+# 			if there is one, and are not logged otherwise.
+#
+# 		) Assign a different filter to the user account:
+#
+# 			SELECT audit_log_filter_set_filter('log_nothing', '{ "filter": { "log": false } }');
+# 			SELECT audit_log_filter_set_user('user1@localhost', 'log_nothing');
+#
+# 		Filtering of current sessions for the account remains unaffected.
+#
+# 		Subsequent connections from the account are filtered using the new filter.
+# 		For the filter shown here, that means no logging for new connections from user1@localhost.
+#
+# For audit log filtering, user name and host name comparisons are case-sensitive.
+#
+# This differs from comparisons for privilege checking, for which host name comparisons
+# are not case-sensitive.
+#
+# To remove a filter, do this:
+#
+# 		SELECT audit_log_filter_remove_filter('log_nothing');
+#
+# Removing a filter also unassigns it from any user to whom it has been assigned, including any current sessions for those users.
+#
+# The filtering UDFs just described affect filtering immediately and update the audit log tables
+# in the mysql system database that store filters and user accounts.
+#
+# It is also possible to modify the audit log tables directly using statements such as INSERT, UPDATE and DELETE.
+# But such changes do not affect filtering immediately.
+#
+# To flush your changes and make them operational, call audit_log_filter_flush():
+#
+# 		SELECT audit_log_filter_flush();
+#
+# To determine whether a filter has been assigned to the current session, check the session value
+# of the read-only audit_log_filter_id system variable.
+#
+# If the value is 0, no filter is assigned:
+# A nonzero value indicates the internally maintained ID of the assigned filter:
+#
+# 		SELECT @@audit_log_filter_id;
+# 		+-------------------------------------------+
+# 		| @@audit_log_filter_id 						  |
+# 		+-------------------------------------------+
+# 		| 						2 								  |
+# 		+-------------------------------------------+
+#
+# WRITING AUDIT LOG FILTER DEFINITIONS
+#
+# Filter definitions are JSON values.
+# For information about using JSON data in MySQL, see later.
+#
+# Filter definitions have this form, where actions indicates how filtering takes place:
+#
+# 		{ "filter": actions }
+#
+# LOGGING ALL EVENTS
+#
+# To explicitly enable or disable logging of all events, use a log element in the filter:
+#
+# 		{
+# 			"filter": 	{ "log": true }
+# 		}
+#
+# The log value can be either true or false.
+#
+# The preceding filter enables logging of all events. It is equivalent to:
+#
+# 		{
+# 			"filter": { }
+# 		}
+#
+# Logging behavior depends on the log value and whether class or event items are specified:
+#
+# 		) With log specified, its given value is used.
+#
+# 		) Without log specified, logging is true if no class or event item is specified, and false otherwise
+# 			(in which case, class or event can include their own log item)
+#
+# LOGGING SPECIFIC EVENT CLASSES
+#
+# To log events of a specific class, use a class element in the filter, with its name field denoting the name of the class to log:
+#
+# 		{
+# 			"filter": {
+# 				"class": { "name": "connection" }
+# 			}
+# 		}
+#
+# The name value can be connection, general or table_access to log connection, general or table-access events, respectively.
+#
+# The preceding filter enables logging of events in teh connection class.
+# IT is equivalent to the following filter with log items made explicit:
+#
+# 		{
+# 			"filter": {
+# 				"log": false,
+# 				"class":. { "log": true,
+# 								"name": "connection" }
+# 			}
+# 		}
+#
+# To enable logging of multiple classes, define the class value as a JSON array element that names the classes:
+#
+# 		{
+# 			"filter": {
+# 				"class": [
+# 					{ "name": "connection" },
+# 					{ "name": "general" },
+# 					{ "name": "table_access" }
+# 				]
+# 			}
+# 		}
+#
+# NOTE:
+#
+# 		When multiple instances of a given item appear at the same level within a filter definition,
+# 		the item values can be combined into a single instance of that item within an array value.
+#
+# 		The preceding definition can be written like this:
+#
+# 			{
+# 				"filter": {
+# 					"class": [
+# 						{ "name": [ "connection", "general", "table_access" ] }
+# 					]
+# 				]
+# 			}
+# 			
+#
+#
+# LOGGING SPECIFIC EVENT SUBCLASSES
+#
+# To select specific event subclasses, use an event item containing a name item that names the subclasses.
+# The default action for events selected by an event item is to log them.
+#
+# For example, this filter enables logging for the named event subclasses:
+#
+# 		{
+# 			"filter": {
+# 				"class": [
+# 					{
+# 						"name": "connection",
+# 						"event": [
+# 							{ "name": "connect" },
+# 							{ "name": "disconnect" }
+# 						]
+# 					},
+# 					{ "name": "general" },
+# 					{
+# 						"name": "table_access",
+# 						"event": [
+# 							{ "name": "insert" },
+# 							{ "name": "delete" },
+# 							{ "name": "update" }
+# 					]
+# 				}
+# 			]
+# 		}
+# }	
+#
+# The event item can also contain explicit log items to indicate whether to log qualifying events.
+# This event item selects multiple events and explicitly indicates logging behavior for them:
+#
+# 		"event": [
+# 			{ "name": "read", "log": false },
+# 			{ "name": "insert", "log": true },
+# 			{ "name": "delete", "log": true },
+# 			{ "name": "update", "log": true }
+# 		]
+#
+# The event item can also indicate whether to block qualifying events, if it contains an abort item.
+# For details, see later.
+#
+# EVENT CLASS AND SUBCLASS COMBINATIONS
+#
+# Event Class 			Event Subclass 				Desc
+# connection 			connect 							Connection initiation (successful or unsuccessful)
+# connection 			change_user 					Uses re-authentication with different user/pw during session
+# connection 			disconnect 						Connection termination
+#
+# general 				status 							general operation information
+#
+# table_access 		read 								Table read statements, such as SELECT or INSERT_INTO_..._SELECT
+# table_access 		delete 							Table delete statements, such as DELETE or TRUNCATE_TABLE
+# table_access 		insert 							Table insert statements, such as INSERT or REPLACE
+# table_access 		update 							Table update statements, such as UPDATE
+#
+# LOG AND ABORT CHARACTERISTICS PER EVENT CLASS AND SUBCLASS COMBINATION
+#
+# Event Class 			Event Subclass 	Can be logged Can be Aborted
+# connection 			connect 							Yes/No
+# connection 			change_user 					Yes/No
+# connection 			disconnect 						Yes/No
+#
+# general 				status 							Yes/No
+# table_access 		read 								Yes/Yes
+# table_access 		delete 							Yes/Yes
+# table_access 		insert 							Yes/Yes
+# table_access 		update 							Yes/Yes
+#
+# INCLUSIVE AND EXCLUSIVE LOGGING
+#
+# A filter can be defined in inclusive or exclusive mode:
+#
+# 		) Inclusive mode logs only explicitly specified items.
+#
+# 		) Exclusive mode logs everything but explicitly specified items.
+#
+# To perform inclusive logging, disable logging globally and enable logging for specific classes.
+#
+# This filter logs connect and disconnect events in the connection class,
+# and events in the general class:
+#
+# {
+# 		"filter": {
+# 			"log": false,
+# 			"class": [
+# 				{
+# 					"name": "connection"
+# 					"event": [
+# 						{ "name": "connect", "log": true },
+# 						{ "name": "disconnect", "log": true }
+# 					]
+# 				},
+# 				{ "name": "general", "log": true }
+# 			]
+# 		}
+# 	}
+#
+# To perform exclusive logging, enable logging globally and disable logging for specific classes.
+# This filter logs everything except events in the general class:
+#
+# {
+# 		"filter": {
+# 			"log": true,
+# 			"class":
+# 				{ "name": "general", "log": false }
+# 		}
+# }
+#
+# The filter logs change_user events in teh connection class, and table_access events:
+#
+# {
+# 		"filter": {
+# 			"log": true,
+# 			"class": [
+# 				{
+# 					"name": "connection",
+# 					"event": [
+# 						{ "name": "connect", "log": false },
+# 						{ "name": "disconnect", "log": false }
+# 					]
+# 				},
+# 				{ "name": "general", "log": false }
+# 			]
+# 		}
+# }
+#
+# TESTING EVENT FIELD VALUES
+#
+# To enable logging based on specific event field values, specify a field item within the log item taht indicates
+# the field name and its expected value:
+#
+# {
+# 		"filer": {
+# 			"class": {
+# 			"name": "general",
+# 				"event": {
+# 					"name": "status",
+# 					"log": {
+# 						"field": { "name": "general_command.str", "value": "Query" }
+# 					}
+# 				}
+# 			}
+# 		}
+# 	}
+#
+# Each event contains event class-specific fields that can be accessed from within a filter to perform custom filtering.
+#
+# A connection event indicates when a connection-related activity occurs during a session, such as a user connecting or disconnecting from
+# the server.
+#
+# The following table indicates the permitted fields for connection events.
+#
+# CONNECTION EVENT FIELDS
+#
+# Field Name 								Field type 						Desc.
+#
+# status 									integer 							Event Status: 0: OK Otherwise: Failed
+# connection_id 							unsigned integer 				Connection ID
+# user.str 									string 							User name specified during authentication
+#
+# user.length 								unsigned integer 				User name length
+# priv_user.str 							string 							Authenticated user name (account user name)
+# priv_user.length 						unsigned integer 				Authenticated user name length
+#
+# external_user.str 						String 							External user name (provided by third-party authentication plugin)
+# external_user.length 					unsigned integer 				External user name length
+#
+# proxy_user.str 							String 							Proxy user name
+# proxy_user.length 						unsigned integer 				Proxy user name length
+#
+# host.str 									string 							Connected user host
+# host.length 								unsigned integer 				Connected user host length
+#
+# ip.str 									string 							Connected user IP address
+# ip.length 								unsigned integer 				Connected user IP address length
+#
+# database.str 							string 							Database name specified at connect time
+# database.length 						unsigned integer 				Database name length
+#
+# connection_type 						integer 							Connection type: 
+# 																					or "::undefined": undefined
+# 																					or "::tcp/ip": TCP/IP
+# 																					or "::socket": Socket
+# 																					or "::named_pipe": Named pipe
+# 																					or "::ssl" TCP/IP with encryption
+# 																					or "::shared_memory": Shared memory
+#
+# The "::xxx" values are symbolic pseudo-constants taht may be given instead of literal numeric values.
+# They must bq uoted as string and are case-sensitive.
+#
+# A general event indicates the status code of an operation and its details.
+# The following indicates permitted fields for general events.
+#
+# GENERAL EVENT FIELDS
+#
+# Field Name 				Field Type 					Desc.
+# 
+# general_error_code 	integer 						Event status: 0: OK Otherwise: Failed
+# general_thread_id 		unsigned integer 			Connection/thread ID
+#
+# general_user.str 		string 						User name specified during authentication
+# general_user.length 	unsigned integer 			User name length
+#
+# general_command.str 	string 						Command name
+# general_command.length unsigned integer 		Command name length
+#
+# general_query.str 		String 						SQL statement text
+# general_query.length 	unsigned integer 			SQL statement text length
+#
+# general_host.str 		String 						host name
+# general_host.length 	unsigned integer 			Host name length
+#
+# general_sql_command.str string 					SQL command type name
+# general_sql_command.length unsigned integer 	SQL command type name length
+#
+# general_external_user.str string 					External user name (provided by third-party authentication plugin)
+# general_external_user.length unsigned int 		External user name length
+#
+# general_ip.str 			String 						Connected user IP address
+# general_ip.length 		Unsigned integer 			Connection user IP address length
+#
+# general_command.str indicates a command name: Query, Execute, Quit or Change User.
+#
+# A general event with the general_command.str field set to Query or Execute contains general_sql_command.str
+# set to a value that specifies the type of SQL command: alter_db, alter_db_upgrade, admin_commands, etc.
+#
+# These values can be seen as the last components of the Performance Schema instruments displayed by this statement:
+#
+# SELECT NAME FROM performance_schema.setup_instruments
+# WHERE NAME LIKE 'statement/sql/%' ORDER BY NAME;
+#
+# +--------------------------------------+
+# | NAME 										  |
+# +--------------------------------------+
+# | statement/sql/alter_db 				  |
+# | statement/sql/alter_db_upgrade 		  |
+# | statement/sql/alter_event 			  |
+# | statement/sql/alter_function 		  |
+# | statement/sql/alter_instance 		  |
+# | statement/sql/alter_procedure 		  |
+# | statement/sql/alter_server 			  |
+# ---
+#
+# A table-access event provides information about specific table accesses.
+# The following table indicates the permitted fields for table-access events:
+#
+# 
+#
+# 
+#
+#
+#
+# https://dev.mysql.com/doc/refman/8.0/en/audit-log-filtering.html
