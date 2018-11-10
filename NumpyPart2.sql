@@ -41407,10 +41407,2054 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # A table-access event provides information about specific table accesses.
 # The following table indicates the permitted fields for table-access events:
 #
+# Field Name 			Field Type 					Desc
+#
+# connection_id 		unsigned integer 			Event connection ID
+# sql_command_id 		integer 						SQL command ID
+# query.str 			String 						SQL statement text
+# query.length 		unsigned integer 			SQL statement text length
+#
+# table_database.str string 						Database name associated with event
+# table_database.len unsigned integer 			Database name length
+#
+# table_name.str 		String 						Table name associated with event
+# table_name.len 		Unsigned int 				Table name length
+#
+# The following list showcases which statements produce which table-access events:
+#
+# 		) read event:
+#
+# 			) SELECT
+#
+# 			) INSERT_..._SELECT (for tables referenced in SELECT clause)
+#
+# 			) REPLACE_...._SELECT (for tables referenced in SELECT clause)
+#
+# 			) UPDATE_..._WHERE (for tables referenced in WHERE clause)
+#
+# 			) HANDLER_..._READ
+#
+# 		) delete event:
+#
+# 			) DELETE
+#
+# 			) TRUNCATE TABLE
+#
+# 		) insert event:
+#
+# 			) INSERT
+#
+# 			) INSERT_..._SELECT (for table referenced in INSERT clause)
+#
+# 			) REPLACE
+#
+# 			) REPLACE_..._SELECT (for table referenced in REPLACE clause)
+#
+# 			) LOAD DATA INFILE
+#
+# 			) LOAD XML INFILE
+#
+# 		) update event:
+#
+# 			) UPDATE
+#
+# 			) UPDATE_..._WHERE (for tables referenced in UPDATE clause)
+#
+# BLOCKING EXECUTION OF SPECIFIC EVENTS
+#
+# Event items can include an abort item that indicates whether to prevent qualifying events from executing.
+# For example, abort enables rules to be written that block execution of specific SQL statements.
+#
+# The abort item must appear within an event item. For example:
+#
+# "event": {
+# 		"name": qualifying event subclass names
+# 		"abort": condition
+# 	}
+#
+# For event subclasses selected by the name item, the abort function is true or false, depending on condition evaluation.
+#
+# If the condition evaluates to true, the event is blocked.
+# Otherwise, the event continues executing.
+#
+# The condition specification can be as simple as true or false, or it can be more complex such that evaluation
+# depends on event characteristics.
+#
+# This filter blocks INSERT, UPDATE and DELETE statements:
+#
+# {
+# 		"filter": {
+# 			"class": {
+# 				"name": "table_access",
+# 				"event": {
+# 					"name": [ "insert", "update", "delete" ],
+# 					"abort": true
+#				}
+# 			}
+# 		}
+# 	}
+#
+# Á more complex filter, with a subsectioning of blocking the same things, but only for a specific table (finances.bank_account):
+#
+# {
+# 		"filter": {
+# 			"class": {
+# 				"name": "table_access",
+# 				"event": {
+# 					"name": [ "insert", "update", "delete" ],
+# 					"abort": {
+# 						"and": [
+# 							{ "field": { "name": "table_database.str", "value": "finances" } },
+# 							{ "field": { "name": "table_name.str", "value": "bank_account } }
+# 						]
+# 					}
+# 				}
+# 			}
+# 		}
+# 	}
+#
+# Statements matched and blocked by the filter return an error to the client:
+#
+# 	ERROR 1045 (28000): Statemnt was aborted by an audit log filter
+#
+# Not all events can be blocked.
+# For an event that cannot, the audit log writes a warning to the error log rather than blocking it.
+#
+# For attempts to define a filter in which the abort item appears elsewhere than in an event item, an error occurs.
+#
+# LOGICAL OPERATORS
+#
+# Logical operators (and, or, not) can be used in log items. This permits construction of more advanced filtering configurations:
+#
+# {
+# 		"filter": {
+# 			"class": {
+# 				"name": "general",
+# 				"event": {
+# 					"name": "status",
+# 					"log": {
+# 						"or": [
+# 							{
+# 								"and": [
+# 									{ "field": { "name": "general_command.str", "value": "Query" }},
+# 									{ "field": { "name": "general_command.length", "value": 5 }}
+# 								]
+# 							},
+# 							{
+# 								"and": [
+# 									{ "field": { "name": "general_command.str", "value": "Execute" }},
+#Q 								{ "field": { "name": "general_command.length", "value": 7 }}
+# 								]
+# 							}
+# 						]
+# 					}
+# 				}
+# 			}
+# 		}
+# 	}
+#
+#
+# REFERENCING PREDEFINED VARIABLES
+#
+# To refer to a predefined variable in a log condition, use a variable item, which tests equality against a given value:
+#
+# {
+# 		"filter": {
+# 			"class": {
+# 				"name": "general",
+# 				"event": {
+# 					"name": "status",
+# 					"log": {
+# 						"variable": {
+# 							"name": "audit_log_connection_policy_value", "value": "::none"
+# 						}
+# 					}
+# 				}
+# 			}
+# 		}
+# 	}
+#
+# Each predefined variable correspond to a system variable.
+#
+# By writing a filter that tests a predefined variable, you can modify filter operation by setting the
+# corresponding system variable, without having to redefine the filter.
+#
+# For examplke, by writing a flter that tests the value of the audit_log_connection_policy_value predefined
+# variable, you can modify filter operation by changing the value of the audit_log_connection_policy system varible.
+#
+# The audit_log_xxx_policy system variable are used for legacy mode audit log.
+#
+# With rule-based audit log filtering, those variables remain visible (for example, using SHOW_VARIABLES), but changes
+# to them have no effect unless you write filters containing constructs that refer to them.
+#
+# The following list describes the permitted predefined variables for variable items:
+#
+# 		) audit_log_connection_policy_value
+#
+# 			This variable corresponds to the value of the audit_log_connection_policy system variable.
+# 			The value is an unsigned integer.
+#
+# 			The following showcases the permitted values and the corresponding audit_log_connection_policy values.
+#
+# 			Audit_log_connection_policy_value Values
+#
+# 			Value 				CORRESPONDING audit_log_connection_policy Value
+#
+# 			0 or "::none" 		NONE
+#
+# 			1 or "::errors"  	ERRORS
+#
+# 			2 or "::all" 		ALL
+#
+# 			The "::xxx" values are symbolic pseudo-constants that may be given instead of the literal numeric values.
+# 			They must be quoted as string and are case-sensitive.
+#
+# 		) audit_log_policy_value
+#
+# 			This variable corresponds to the value of the audit_log_policy system variable.
+#
+# 			This value is an unsigned integer.
+#
+# 			The following table shows the permitted values and the corresponding audit_log_policy values.
+#
+# 			AUDIT_LOG_POLICY_VALUE VALUES
+#
+# 			Value 				Corresponding audit_log_policy Value
+#
+# 			0 or "::none" 		NONE
+#
+# 			1 or "::logins" 	LOGINS
+#
+#  		2 or "::all" 		ALL
+#
+# 			3 or "::queries" 	QUERIES
+#
+# 			The "::xxx" values are symbolic pseudo-constants that may be given instead of the literal numeric values.
+# 			They must be quoted as strings and are case-sensitive.
+#
+# 		) audit_log_statement_policy_value
+#
+# 			This variable corresponds to the value of the audit_log_statement_policy system varialbe.
+# 			The value is an unsigned integer.
+#
+# 			The following table shows the perrmited values and the corresponding audit_log_statement_policy values.
+#
+# 			AUDIT_LOG_STATEMENT_POLICY_VALUE values
+#
+# 			Value 				Corresponding audit_log_statement_policy Value
+#
+# 			0 or "::none" 		NONE
+#
+# 			1 or "::errors" 	ERRORS
+#
+# 			2 or "::all" 		ALL
+#
+# 			The "::xxx" values are symbolic pseudo-constants that may be given instead of the literal numeric values.
+# 			They must be quoted as strings and are case-sensitive.
+#
+# REFERENCING PREDEFINED FUNCTIONS
+#
+# To refer to a predefined function in a log condition, use a function item, which takes
+# names and args values to specify the function name and its arguments, respectively:
+#
+# 	{
+# 	  "filter": {
+# 			"class": {
+# 				"name": "general",
+# 				"event": {
+# 					"name": "status",
+# 					"log": {
+# 						"function": {
+# 							"name": "find_in_include_list",
+# 							"args": [ { "string": [ { "field": "user.str" },
+# 															{ "string": "@"},
+# 															{ "field": "host.str" } ] } ]
+# 						}
+# 					}
+# 				}
+# 			}
+# 		}
+# 	}
+#
+# The function as specified in the name item should be the function name only, without paranthesis
+# or the argument list.
+#
+# Arguments in the args item, if there is one, must be given in the order listed in the function desc.
+# Arguments can refer to predefined variables, event fields, or string or numeric constants.
+#
+# The preceding filter determines whether to log general class status events depending on whether the
+# current user is found in the audit_log_include_accounts system variable.
+#
+# That user is constructed using fields in the event.
+#
+# The following list describes the permitted predefined functions for function items:
+#
+# 		) audit_log_exclude_accounts_is_null()
+#
+# 			Checks whether the audit_log_exclude_accounts system variable is NULL.
+# 			This function can be helpful when defining filters that correspond to the legacy audit log implementation.
+#
+# 			arguments: None
+#
+# 		) audit_log_include_accounts_is_null()
+#
+# 			Checks whether the audit_log_include_accounts system variable is NULL.
+# 			This function can be helpful when defining filters that correspond to the legacy audit log implementation.
+#
+# 			Argument: None
+#
+# 		) debug_sleep(millisec)
+#
+# 			Sleeps for a given number of milliseconds. This function is used during performance measurement.
+# 			
+# 			debug_sleep() is available for debug builds only.
+#
+# 			Arguments:
+#
+# 				) millisec: an unsigned integer that specifies the number of milliseconds to sleep.
+#
+# 		) find_in_exclude_list(account)
+#
+# 			Checks whether an account string exists in the audit log exclude list
+# 			(the value of the audit_log_exclude_accounts system variable)
+#
+# 			Arguments:
+#
+# 				) account: A string that specifies the user account name.
+#
+# 		) find_in_include_list(account)
+#
+# 			Checks whether an account string exists in the audit log include list
+# 			(the value of the audit_log_include_accounts system variable)
+#
+# 			Argument:
+#
+# 				) account: A string that specifies the user account name.
+#
+# 		) string_find(text, substr)
+#
+# 			Checks whether the substr value is contained in the text value.
+# 			This search is case-sensitive.
+#
+# 			Arguments:
+#
+# 				) text: The text string to search.
+#
+# 				) substr: The substring to search for in text.
+#
+# REPLACING A USER FILTER
+#
+# In some cases, the filter definition can be changed dynamically.
+# To do this, define a filter configuration within an existing filter.
+#
+# For example:
+#
+# {
+# 		"filter": {
+# 			"id": "main",
+# 			"class": {
+# 				"name": "table_access",
+# 				"event": {
+# 					"name": [ "update", "delete" ],
+# 					"log": false,
+# 					"filter": {
+# 						"class": {
+# 							"name": "general",
+# 							"event": { "name": "status",
+# 										  "filter": { "ref": "main" } }
+# 					},
+# 					"activate": {
+# 						"or": [
+# 							{ "field": { "name": "table_name.str", "value": "temp_1" } },
+# 							{ "field": { "name": "table_name.str", "value": "temp_2" } }
+# 						]
+# 					}
+# 				}
+# 			}
+# 		}
+# 	}
+# }
+#
+# A new filter is activated when the activate element within a subfilter evalutes to true.
+# Using activate in a top-level filter is not permitted.
+#
+# A new filter can be replaced with the original one by using a ref item inside the subfilter
+# to refer to the original filter id.
+#
+# The filter shown operates like this:
+#
+# 		) The main filter waits for table_access events, either update or delete.
+#
+# 		) If the update or delete table_access event occurs on the temp_1 or temp_2 table, the filter
+# 			is replaced with the internal one (without an id, since there is no need to refer to it explicitly)
+#
+# 		) If the end of command is signalled (general/status event), an entry is written to the audit log file and
+# 			the filter is replaced with the main filter.
+#
+# The filter is useful to log statements that update or delete anything from the temp_1 or temp_2 tables, such
+# 	as this one:
+#
+# 		UPDATE temp_1, temp_3 SET temp_1.a=21, temp_3.a=23;
+#
+# The statement generates multiple table_access events, but the audit log file will contain only
+# general/status entries.
+#
+# Note:
+#
+# 		Any id values used in the definition are evaluted with respect only to that definition.
+# 		They have nothing to do with the value of the audit_log_filter_id system variable.
+#
+# LEGACY MODE AUDIT LOG FILTERING
+#
+# Note:
+# 		THis section describes legacy audit log filtering, which applies if the audit_log plugin is installed
+# 		but not the accompanying audit tables and UDFs needed for rule-based filtering.
+#
+# The audit log plugin can filter audited events.
+#
+# This enables you to control whether audited events are written to the audit log file based on the account
+# from which events originate or event status.
+#
+# Status filtering occurs separately for connection events and statement events.
+#
+# EVENT FILTERING BY ACCOUNT
+#
+# To filter audited events based on the originating account, set one of these system variables at server startup or runtime:
+#
+# 		) audit_log_include_accounts: The accounts to include in audit logging. If this variable is set, only these accounts are audited.
+#
+# 		) audit_log_exclude_accounts: The accounts to exclude from audit logging. If this variable is set, all but these accounts are audited.
+#
+# The value for either variable can be NULL or a string containing one or more comma-separated account names, each in user_name@host_name format.
+#
+# By default, both variables are NULL, in which case, no account filtering is done and auditing occurs for all accounts.
+#
+# Modifications to audit_log_include_accounts or audit_log_exclude_accounts affect only connections created subsequent
+# to the modification, not existing connections.
+#
+# Example: To enable audit logging only for the user1 and user2 local host accounts, set the audit_log_include_accounts system
+# variable like this:
+#
+# 		SET GLOBAL audit_log_include_accounts = 'user1@localhost, user2@localhost';
+#
+# Only one of audit_log_include_accounts or audit_log_exclude_accounts can be non-NULL at a time:
+#
+# 		) If you set audit_log_include_accounts, the server sets audit_log_exclude_accounts to NULL.
+#
+# 		) If you attempt to set audit_log_exclude_accounts, an error occurs unless audit_log_include_accounts is NULL.
+# 			In this case, you must first clear audit_log_include_accounts by setting it to NULL.
+#
+# 		-- This sets audit_log_exclude_accounts to NULL
+# 		SET GLOBAL audit_log_include_accounts = value;
+#
+# 		-- This fails because audit_log_include_accounts is not NULL
+# 		SET GLOBAL audit_log_exclude_accounts = value;
+#
+# 		-- To set audit_log_exclude_accounts, first set
+# 		-- audit_log_include_accounts to NULL
+# 		SET GLOBAL audit_log_include_accounts = NULL;
+# 		SET GLOBAL audit_log_exclude_accounts = value;
+#
+# If you inspect the value of either variable, be aware that SHOW_VARIABLES display NULL as an empty string.
+# To avoid this, use SELECT instead:
+#
+# 		SHOW VARIABLES LIKE 'audit_log_include_accounts';
+# 		+-----------------------------------------------+
+# 		| Variable_name 					| Value 				|
+# 		+-----------------------------------------------+
+# 		| audit_log_include_accounts 	| 					   |
+# 		+-----------------------------------------------+
+#
+# 		SELECT @@audit_log_include_accounts;
+# 		+--------------------------------------------+
+# 		| @@audit_log_include_accounts 					|
+# 		+--------------------------------------------+
+# 		| NULL 													|
+# 		+--------------------------------------------+
+#
+# If a user name or host name requires quoting because it contains a comma, space or other special character, quote it using
+# single quotes.
+#
+# If the variable value itself is quoted with single quotes, double each inner single quote or escape it with a backlash.
+#
+# The following statements each enable audit logging for the local root account and are equivalent,
+# even though the quoting styles differ:
+#
+# SET GLOBAL audit_log_include_accounts = 'root@localhost';
+# SET GLOBAL audit_log_include_accounts = ''root''@''localhost'';
+# SET GLOBAL audit_log_include_accounts = '\'root\'@\'localhost\'';
+# SET GLOBAL audit_log_include_accounts = "'root'@'localhost'";
+#
+# The last statement will nto work if the ANSI_QUOTES sql mode is enabled, because in that mode, double quotes signifiy
+# identifier quoting, not string quoting.
+#
+# EVENT FILTERING BY STATUS
+#
+# To filter audited events based on status, set the following system variables at server startup or runtime.
+# These variables apply only for legacy audit log filtering.
+#
+# For JSON audit log filteirng, differnet status variables apply.
+#
+# ) audit_log_connection_policy: Logging policy for connection events
+#
+# ) audit_log_statement_policy: Logging policy for statement events
+#
+# Each variable takes a value of ALL (log all associated events, this is the default), ERRORS (lgo only failed events), or NONE (do not log events).
+# For example, to log all statement events but only failed connection events, use these settings:
+#
+# SET GLOBAL audit_log_statement_policy = ALL;
+# SET GLOBAL audit_log_connection_policy = ERRORS;
+#
+# ANother policy system variable, audit_log_policy, is available but does not afford as much control as audit_log_connection_policy and
+# audit_log_statement_policy.
+#
+# It can be set only at server startup. At runtime, it is a readonly variable, it takes a value of ALL (log all events; this is the default),
+# LOGINS (log connection events), QUERIES (log statement events), or NONE (do not log events).
+#
+# For any of those values, the audit log plugin logs all selected events without distinction as to
+# success or failure.
+#
+# Use of audit_log_policy at startup works as follows:
+#
+# 		) If you do not set audit_log_policy or set it to its default of ALL, any explicit settings for audit_log_connection_policy
+# 			or audit_log_statement_policy apply as specified.
+#
+# 			If not specified, they default to ALL.
+#
+# 		) If you set audit_log_policy to a non-ALL value, that value takes precedence over and is used to set
+# 			audit_log_connection_policy and audit_log_statement_policy, as indicated in the following table.
+#
+# 			If you also set either of those variables to a value other than their default of ALL, the server
+# 			writes a message to the error log to indicate that their values are being overridden.
+#
+# STARTUP AUDIT_LOG_POLICY VALUE 			RESULTING AUDIT_LOG_CONNECTION_POLICY VALUE 		RESULTING AUDIT_LOG_STATEMENT_POLICY VALUE
+#
+# LOGINS 											ALL 															NONE
+# 
+# QUERIES 											NONE 															ALL
+#
+# NONE 												NON 															NONE
+#
+# AUDIT LOG REFERENCE
+#
+# to install the audit log tables and functions, use the instructions provided earlier.
+# Unless those components are installed, the audit_log plugin operates in legacy mode.
+#
+# AUDIT LOG TABLES
+#
+# MYSQL Enterprise AUdit uses tables in the mysql system database for persistent storage of filter and user account data.
+# The tables can be accessed only by users with privlege for that DB.
+#
+# The tables use the InnoDB storage engine.
+#
+# If htese tables are missing, the audit_log plugin operates in legacy mode.
+#
+# The audit_log_filter table stores filter definitions.
+# The table has these columns:
+#
+# 		) NAME
+# 
+# 			The filter name
+#
+# 		) FILTER
+#
+# 			The filter definition associated with the filter name. Definitions are stored as JSON values.
+#
+# The audit_log_user table stores user account information. The table has these columns:
+#
+# 		) USER
+#
+# 			The user name part of an account. For an account user1@localhost, the USER part is user1.
+#
+# 		) HOST
+#
+# 			The host name part of an account. For an account user1@localhost, the HOST part is localhost.
+#
+# 		) FILTERNAME
+#
+# 			The name of the filter assigned to the account.
+# 			The filter name associates the account with a filter defined in the audit_log_filter table.
+#
+# AUDIT LOG FUNCTIONS
+#
+# THis section describes, for each audit log user-defined functions (UDFs), its purpose, calling sequence,
+# and return value.
+#
+# For information about the conditions under which these UDFs can be invoked, see earlier.
+#
+# Each audit log UDF returns a string that indicates whether the operation succeeded.
+# OK indicates success. ERROR: message indicates failure.
+#
+# These audit log UDFs are available:
+# 
+# 		) audit_log_encryption_password_get()
+#
+# 			Retrieves the current audit log encryption password as a binary string.
+# 			The password is fetched from the MySQL keyring, which must be enabled or an error occurs.
+#
+# 			Any keyring plugin can be used.
+#
+# 			For additional information about audit log encryption, see later.
+#
+# 			Arguments: None
+#
+# 			Return value: 	The PW string for success (up to 766 bytes), or NULL and an error for failure.
+#
+# 			Example:
+#
+# 				SELECT audit_log_encryption_password_get();
+# 				+----------------------------------------+
+# 				| audit_log_encryption_password_get() 	  |
+# 				+----------------------------------------+
+# 				| secret 										  |
+# 				+----------------------------------------+
+#
+# 		) audit_log_encryption_password_set(password)
+#
+# 			Sets the audit log encryption password and stores it in the MySQL keyring, which must be 
+# 			enabled or an error occurs.
+#
+# 			Any keyring plugin can be used, for more info, see keyrings.
+#
+# 			For additional information about audit log encryption, see later.
+#
+# 			Arguments:
+#
+# 				password: The passwrong string. The max length is 766 bytes.
+#
+# 			Return value:
+#
+# 				1 for success, 0 for failure.
+#
+# 			Example:
+#
+# 				SELECT audit_log_encryption_password_set(password);
+# 				+-------------------------------------------------+
+# 				| audit_log_encryption_password_set(password) 	  |
+# 				+-------------------------------------------------+
+# 				| 1 															  |
+# 				+-------------------------------------------------+
+#
+# 		) audit_log_filter_flush()
+#
+# 			Calling any of the other filtering UDFs affects operational audit log filtering immediately and updates
+# 			the audit log tables.
+#
+# 			If instead you modify the contents of those tables directly using statements such as INSERT, UPDATE and DELETE,
+# 			the changes do not affect filtering immediately.
+#
+# 			To flush your changes and make them operational, call audit_log_filter_flush()
+#
+# 			audit_log_filter_flush() affects all current sessions and detaches them from their previous filters.
+# 			Current sessions are no longer logged unless they disconnect and reconnect, or execute a change-user operation.
+#
+# 			If this function fails, an error message is returned and the audit log is disabled until the next successful call to
+# 			audit_log_filter_flush().
+#
+# 			Arguments: None
+#
+# 			Return: A string that indicates whether the operaiton succeeded. OK indicates success. ERROR: message indicates failure.
+#
+# 			Example:
+#
+# 				SELECT audit_log_filter_flush();
+# 				+-------------------------+
+# 				| audit_log_filter_flush()|
+# 				+-------------------------+
+# 				| OK 							  |
+# 				+-------------------------+
+#
+# 		) audit_log_filter_remove_filter(filter_name)
+#
+# 			Given a filter name, removes the filter from the current set of filters.
+# 			It is not an error for the filter not to exist.
+#
+# 			If a removed filter is assigned to any user accounts, those users stop being filtered
+# 			(they are removed from the audit_log_user table)
+#
+# 			Termination of filtering includes any current sessions for those users:
+#
+# 				They are detached from the filter and no longer logged. 
+#
+# 			Arguments: filter_name: A string that specifies the filter name.
+#
+# 			Returns: a string that indicates whether the operation succeeded. OK indicates success. ERROR: message indicates failure.
+#
+# 			Example:
+#
+# 				SELECT audit_log_filter_remove_filter('SomeFilter');
+# 				+---------------------------------------------+
+# 				| audit_log_filter_remove_filter('SomeFilter')|
+# 				+---------------------------------------------+
+# 				| OK 														 |
+# 				+---------------------------------------------+
+#
+# 		) audit_log_filter_remove_user(user_name)
+#
+# 			Given a user account name, cause the user to be no longer assigned to a filter.
+#
+# 			It is not an error if the user has no filter assigned. 
+# 			Filtering of current sessions for the user remains unaffected.
+#
+# 			New connections for the user are filtered using the default account filter
+# 			if there is one, and are not logged otherwise.
+#
+# 			If the name is %, the function removes the default account filter that is used for
+# 			any user account that has no explicitly assigned filter.
+#
+# 			Arguments:
+#
+# 				) user_name: The user account name as a string in user_name@host_name format, or % to represent
+# 									the default account.
+#
+# 			Return value:
+#
+# 				A string that indicates whether the operation succeeded. OK indicates success. 
+# 				ERROR: message indicates failure.
+#
+# 			Example:
+#
+# 				SELECT audit_log_filter_remove_user('user1@localhost');
+# 				+------------------------------------------------------+
+# 				| audit_log_filter_remove_user('user1@localhost') 		 |
+# 				+------------------------------------------------------+
+# 				| OK 																	 |
+# 				+------------------------------------------------------+
+#
+# 		) audit_log_filter_set_filter(filter name, definition)
+#
+# 			Given a filter name and definition, adds the filter to the current set of filters. If the filter already exists
+# 			and is used by any current sesisons, those sessions are detached from the filter and are no longer logged.
+#
+# 			This occurs because the new filter definition has a new filter ID that differs from its previous ID.
+#
+# 			Arguments:
+#
+# 				) filter_name: A string that specifies the filter name.
+#
+# 				) definition: A JSON value that specifies the filter definition..
+#
+# 			Return value:
+#
+# 				A string that indicates whether the operation succeeded.
+# 				OK indicates success. ERROR: message indicates failure.
+#
+# 			Example:
+#
+# 				SET @f = '{ "filter": { "log": false } }';
+# 				SELECT audit_log_filter_set_filter('SomeFilter', @f);
+# 				+----------------------------------------------------+
+# 				| audit_log_filter_set_filter('SomeFilter', @f) 	  |
+# 				+----------------------------------------------------+
+# 				| OK 																  |
+# 				+----------------------------------------------------+
+#
+# 		) audit_log_filter_set_user(user_name, filter_name)
+#
+# 			Given a user account name and a filter name, assigns the filter to the user.
+#
+# 			A user can be assigned only one filter, so if the user was already assigned a filter,
+# 			the assignment is replaced.
+#
+# 			Filtering of current sessions for the user remains unaffected.
+#
+# 			New connections are filtered using the new filter.
+#
+# 			As a special case, the name % represents the default account.
+#
+# 			The filter is used for connections from any user account that has no explicitly assigned filter.
+#
+# 			Arguments:
+#
+# 				) User_name: The user account name as a string in user_name@host_name format, or % to represent the default account.
+#
+# 				) filter_name: A string that specifies the filter name.
+#
+# 			Return value:
+#
+# 				A string that indicates whether the operation succeeded. OK indicates success. ERROR: messages indicate failure.
+#
+# 			Example:
+#
+# 				SELECT audit_log_filter_set_user('user1@localhost', 'SomeFilter');
+# 				+-----------------------------------------------------------------+
+# 				| audit_log_filter_set_user('user1@localhost', 'SomeFilter') 		|
+# 				+-----------------------------------------------------------------+
+# 				| OK 																					|
+# 				+-----------------------------------------------------------------+
+#
+# 		) audit_log_read([arg])
+#
+# 			Reads events from the audit log and returns a binary JSON string containing an array of audit events.
+#
+# 			IF the audit log format is not JSON, an error occurs.
+#
+# 			Each event in the return value is a JSON hash, except that the last array element may be a JSON null value 
+# 			to indicate no following events are available to read.
+#
+# 			For hte first call to audit_log_read() within a session, pass a bookmark indicating where to begin reading.
+#
+# 			If the final value of the returned array is not a JSON null value, there are more events following
+# 			those just read and audit_log_read() can be called without or with a bookmark argument.
+#
+# 			Without an argument, reading continues with the next unread event. With a bookmark argument, reading continues from the bookmark.
+#
+# 			If the final value of hte returned array is a JSON null value, there are no more events left to be read
+# 			and the next call to audit_log_read() must include a bookmark argument.
+#
+# 			To obtain a bookmark for the most recently written event, call audit_log_read_bookmark()
+#
+# 			For additional info about audit log-reading functions, see later.
+#
+# 			Arguments:
+#
+# 				arg: An optional bookmark, represented as a string containing a JSON hash that indicates where and how much to read.
+# 						The following items are significant in the arg value (other items are ignored):
+#
+# 						) timestamp, id: The location within the audit log of the first event to read.
+# 												Both items must be present to completely specify a position.
+#
+# 						) max_array_length: The maximum number of events ot read from the log.
+#
+# 													If omitted, the default is to read to the end of the log or until
+# 													the read buffer is full, whichever comes first.
+#
+# 			Return value:
+#
+# 				A binary JSON string containing an array of audited events for success, or NULL and an error for failure.
+#
+# 			Example:
+#
+# 				SELECT audit_log_read(audit_log_read_bookmark());
+# 				+-------------------------------------------------------------------------+
+# 				| audit_log_read(audit_log_read_bookmark()) 			  							  |
+# 				+-------------------------------------------------------------------------+
+# 				| [ {"timestamp":"2018-01-15 22:41:24", "id":0, "class":"connection", ... |
+# 				+-------------------------------------------------------------------------+
+#
+# 		) audit_log_read_bookmark()
+#
+# 			Returns a binary JSON string representing a bookmark for the most recently written audit log event.
+#
+# 			IF the audit log format is not JSON, an error occurs.
+#
+# 			The bookmark is a JSON hash with a timestamp and id items indicating the event position within
+# 			the audit log.
+#
+# 			It is suitable for passing to audit_log_read() to indicate to that function where ot begin reading.
+#
+# 			For additional information about log-reading functions, see later.
+#
+# 			Arguments: None
+#
+# 			Returns: A binary JSON string containing a bookmark for success, or NULL and an error for failure.
+#
+# 			Example:
+#
+# 				SELECT audit_log_read_bookmark();
+# 				+-------------------------------------------------+
+# 				| audit_log_read_bookmark() 							  |
+# 				+-------------------------------------------------+
+# 				| { "timestamp": "2018-01-15 21:03:44", "id": 0 } |
+#				+-------------------------------------------------+
+#
+# AUDIT LOG OPTION and VARIABLE REFERENCE
+#
+# Audit Log Option and Variable Reference
+#
+# NAME 									CMD LINE 	OPTION FILE  SYSTEM VAR  STATUS VAR  VAR SCOPE 	DYNAMIC
+#
+# audit-log 							Yes 			Yes 								 
+# audit_log_buffer_size 			Yes 			Yes 			   Yes 							Global 		No
+# audit_log_connection_policy 	Yes 			Yes 				Yes 							Global 		Yes 
+#
+# audit_log_current_session 											Yes 							Both 			No
+# audit_log_current_size 																	Yes 		Global 		No
+# audit_log_event_max_drop_size 															Yes 		Global 		No
+#
+# audit_log_events 																			Yes 		Global 		No
+# audit_log_events_filtered 																Yes 		Global 		No
+# audit_log_events_lost 																	Yes 		Global 		No
+#
+# audit_log_events_written 																Yes 		Global 		No
+# audit_log_exclude_accounts 		Yes 			Yes 				Yes 							Global 		Yes
+# audit_log_file 						Yes 			Yes 				Yes 							Global 		No
+#
+# audit_log_flush 														Yes 							Global 		Yes
+# audit_log_format 					Yes 			Yes 				Yes 							Global 		No
+# audit_log_include_accounts 		Yes 			Yes 				Yes 							Global 		Yes
+#
+# audit_log_policy 					Yes 			Yes 				Yes 							Global 		No
+# audit_log_rotate_on_size 		Yes 			Yes 				Yes 							Global 		Yes
+# audit_log_statement_policy 		Yes 			Yes 				Yes 							Global 		Yes
+#
+# audit_log_strategy 				Yes 			Yes 				Yes 							Global 		No
+# Audit_log_total_size 																		Yes 		Global 		No
+# Audit_log_write_waits 																	Yes 		Global 		No
+#
+# AUDIT LOG OPTIONS AND VARIABLES
+#
+# This section describes the command options and system variables that control operation of MySQL Enterprise Audit.
+#
+# If values specified at startup time are incorrect, the audit_log plugin may fail to initialize
+# properly and the server does not load it.
+#
+# In this case, teh server may also produce error messages for other audit log settings
+# because it will not recognize them.
+#
+# To control the activation of the audit log plugin, use this option:
+#
+# 	) --audit-log[=value]
+#
+# 			Property 			Value
+#  		Cmd-line 			--audit-log[=value]
+# 			Introduced: 		8.0.11
+# 			Type: 				Enumeration
+# 			Default: 			ON
+# 			Valid: 				ON, OFF, FORCE, FORCE_PLUS_PERMANENT
+#
+# This option controls how the server loads the audit_log plugin at startup.
+#
+# It is available only if the plugin has been previously registered with INSTALL_PLUGIN or is loaded with
+# --plugin-load or --plugin-load-add
+#
+# The option value should be one of those available for plugin-loading options, as described
+# in the installation parts.
+#
+# For example, --audit-log=FORCE_PLUS_PERMANENT tells the server to load the plugin and prevent it from
+# being removed while the server is running.
+#
+# If the audit log plugin is enabled, it exposes several system variables that permit control over logging:
+#
+# 		SHOW VARIABLES LIKE 'audit_log%';
+# 		+-------------------------------------------+
+# 		| Variable_name 					 | value      |
+#		+-------------------------------------------+
+# 		| audit_log_buffer_size 		| 1048576 	  |
+# 		| audit_log_connection_policy | ALL 		  |
+# 		| audit_log_current_session 	| OFF 		  |
+# 		| audit_log_exclude_accounts  | 				  |
+# 		| audit_log_file 				   | audit.log   |
+# 		| audit_log_filter_id 			| 0 			  |
+# 		| audit_log_flush 				| OFF 		  |
+# 		| audit_log_format 				| NEW 		  |
+# 		| audit_log_include_accounts 	| 				  |
+# 		| audit_log_policy 				| ALL 		  |
+# 		| audit_log_rotate_on_size 	| 0 			  |
+# 		| audit_log_statement_policy 	| ALL 		  |
+# 		| audit_log_strategy 			| ASYNCHRONOUS|
+# 		+-------------------------------------------+
+#
+# You can set any of thse variable at server startup, and some of them at runtime.
+# Those that are avaialble only for legacy mode audit filtering are so noted.
+#
+# ) audit_log_buffer_size
+#
+# 		property 				Value
+# 		Cmd line 				--audit-log-buffer-size=value
+# 		Introduced: 			8.0.11
+# 		System var: 			audit_log_buffer_size
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					INteger
+# 		Default: 				1048576
+# 		Min value: 				4096
+# 		Max: (64-bit) 			a lot
+# 		mAx (32-bit) 			Less
+#
+# 		When the audit log plugin writes events to the log asynchronously, it uses a buffer to store event
+# 		contents prior to writing them.
+#
+# 		This variable controls the size of that buffer, in bytes.
+#
+# 		The server adjusts the value to a multiple of 4096.
+#
+# 		The plugin uses a single buffer, which it allocates when it initializes and removes
+# 		when it terminates.
+#
+# ) audit_log_compression
+#
+# 		Property 				Value
+# 		Cmd line: 				--audit-log-compression=value
+# 		Introduced: 			8.0.11
+# 		Sys var: 				audit_log_compression
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Enumeration
+# 		Default: 				NONE
+# 		Valid: 					NONE, GZIP
+#
+# 		The type of compression for the audit log file. Permitted values are NONE (no compression),
+# 		and GZIP (GNU ZIp Compression)
+#
+# 		For more info, see later.
+#
+# ) audit_log_connection_policy
+#
+# 		Property 				Value
+# 		Cmd line: 				--audit-log-connection-policy=value
+# 		Introduced: 			8.0.11
+# 		System var: 			audit_log_connection_policy
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					Enumeration
+# 		Default: 				ALL
+# 		Valid: 					ALL, ERRORS, NONE
+#
+# 		NOTE: This only applies to legacy audit log filtering
+#
+# 		The policy controlling how the audit log plugin writes connection events to the log file.
+# 		The following table show sthe permitted values:
+#
+# 			VALUE 	DESC
+# 			ALL  		Log all connection events
+# 			
+# 			ERRORS 	Log only failed connection events
+#
+# 			NONE 		Do not log connection events
+#
+# 			NOTE:
+# 				At server startup, any explicit value given for audit_log_connection_policy
+# 				may be overridden if audit_log_policy is also specified.
+#
+# ) audit_log_current_session
+#
+# 		Property 				Value
+# 		Introduced: 			8.0.11
+# 		System var: 			audit_log_current_session
+# 		Scope: 					Global, Session
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Boolean
+# 		Default: 				depends on filtering policy
+#
+# 		Whether audit logging is enabled for the current session. 
+# 		The session value of this variable is read only.
+#
+# 		It is set when the session begins based on teh values of the audit_log_include_accounts
+# 		and audit_log_exclude_accounts system variables.
+#
+# 		The audit log plugin uses the session value to determine whether 
+# 		to audit events for the session.
+#
+# 		(There is a global value, but hte plugin does not use it)
+#
+# ) audit_log_encryption
+#
+# 		Property 				Value
+# 		Cmd line: 				--audit-log-encryption=value
+# 		Introduced: 			8.0.11
+# 		System var: 			audit_log_encryption
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Enumeration
+# 		Default: 				NONE
+# 		Valid: 					NONE, AES.
+#
+# 		The type of encryption for the audit log file.
+# 		Permitted values are NONE (no encryption; the default)
+# 		AES(AES-256-CBC cipher encryption)
+#
+# ) audit_log_exclude_accounts
+#
+# 		Property 				Value
+# 		Cmd line: 				--audit-log-exclude-accounts=value
+# 		Introduced: 			8.0.11
+# 		Sys var: 				audit_log_exclude_accounts
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR Hint: 			No
+# 		Type: 					String
+# 		Default: 				NULL
+#
+# 		NOTE: This applies only to legacy mode audit log filtering
+#
+# 		The accounts for which events should not be logged.
+#
+# 		The value should be NULL, or a string containing a list of one or more comma-separated
+# 		account names.
+#
+# 		For more info, read earlier.
+#
+# 		MOdifications to audit_log_exclude_accounts affect only connections created subsequent
+# 		to the modifcation, not existing connections.
+#
+# ) audit_log_file
+#
+# 		Property 				Value
+# 		cmd line: 				--audit-log-file=file_name
+# 		Introduced: 			8.0.11
+# 		System variable: 		audit_log_file
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					File name
+# 		Default: 				audit.log
+#
+# 		The base name and suffix of the file to which the audit log plugin writes events.
+#
+# 		The default value is audit.log, regardless of logging format.
+#
+# 		To have the name suffix correspond to the format, set hte name explicitly,
+# 		choosing a different suffix (for example, audit.xml or XML format, audit.json for JSON format)
+#
+# 		If the value of audit_log_file is a relative path name, the plugin interprets it relative to the data directory.
+# 		IF the value is a full path name, the plugin uses the value as is.
+
+# 		A full path name may be useful if it is desirable to locate audit files on a separate file system or directory.
+#
+# 		For security reasons, the audit log file should be written to a directory accessible only to the MySQL
+# 		server and users with a legitimate reason to  view the log. 
+#
+# 		For details about how the audit log plugin interprets the audit_log_file values and the rules for file renaming
+# 		that occurs at plugin initializaiton and termination, see earlier.
+#
+# 		The audit log plugin uses the directory containing the audit log file (determined from the audit_log_file value)
+# 		as the location to search for readable audit log files.
+#
+# 		From these log files and the current file, the plugin constructs a list of the ones that are subject
+# 		to use with the audit log bookmarking and reading functions.
+#
+# ) audit_log_filter_id
+#
+# 		Property 				Value
+# 		Introduced: 			8.0.11
+# 		Sys var: 				audit_log_filter_id
+# 		Scope: 					Global, Session
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					integer
+#
+# 		The session value of this variable indicates the internally maintained ID of the audit files for the current session.
+# 		A value of 0 means that the session has no filter assigned.
+#
+# ) audit_log_flush
+#
+# 		Property 				Value
+# 		INtroduced 				8.0.11
+# 		Sys var: 				audit_log_flush
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR HINT: 			No
+# 		Type: 					Boolean
+# 		Default: 				OFF
+#
+# 		When this variable is set to enabled (1 or ON), the audit log plugin closes and reopens its log file to flush it.
+# 		(The value remains OFF so that you need not disable it explicitly before enabling it again to perform another flush).
+#
+# 		Enabling this variable has no effect unless audit_log_rotate_on_size is 0.
+#
+# 		For more info, see earlier.
+#
+# ) audit_log_format
+#
+# 		Property 				Value
+# 		Cmd line: 				--audit-log-format=value
+# 		Introduced: 			8.0.11
+# 		System variable: 		audit_log_format
+# 		Scope: 					Global
+# 		Dynamic: 				No
+# 		SET_Var hint: 			No
+# 		Type: 					Enumeration
+# 		Default: 				NEW
+# 		Valid: 					OLD, NEW, JSON
+# 	 		 
+# 		The audit log file format.
+# 		Permitted values are OLD (old-style XML), NEW (new-style XML; the default), and JSON format.
+#
+# 		More info on log ofrmat, earlier.
+#
+# ) audit_log_include_accounts
+#
+# 		Property 				Value
+# 		Cmd line: 				--audit-log-include-accounts=value
+# 		Introduced: 			8.0.11
+# 		Sys var: 				audit_log_include_accounts
+# 		Scope: 					Global
+# 		Dynamic: 				Yes
+# 		SET_VAR HINT: 			No
+# 		Type: 					String
+# 		Default: 				NULL
+#
+# 		NOTE: This only applies to legacy mode audit log filtering.
+#
+# 		The accounts for which events should be logged. The value should be NULL or a string containing a list
+# 		of one or more comma separated account names.
+#
+# 		Modifications to audit_log_include_accounts affect only connections created subsequently to the modifciation, not existing connections.
+#
+# ) audit_log_policy
+#
+# 		Property 				Value
+# 		Cmd line: 				--audit-log-policy=value
+# 		Introduced: 			8.0.11
+# 		Sys var: 				audit_log_policy
+# 		SCope: 					Global
+# 		Dynamic: 				No
+# 		SET_VAR Hint: 			No
+# 		Type: 					Enumeration
+# 		Default: 				ALL
+# 		Valid: 					ALL, LOGINS, QUEIES, NONE
+#
+# 		NOTE: This only applies to legacy mode audit log filtering
+#
+# 		The policy controlling how the audit login plugin writes events to its log file.
+# 		The following table shows the permitted values:
+#
+# 		Value 		Desc
+# 		ALL 			Log all events
+# 		LOGINS 		Log only login events
+# 		QUERIES 		Log only query events
+# 		NONE 			Log nothing (disable the audit stream)
+#
+# 		audit_log_policy can be set only at server startup.
+# 		At runtime, it is a read-only variable.
+#
+# 		Two other system variables, audit_log_connection_policy and audit_log_statement_policy,
+# 		provide finer control over logging policy and can be set either at startup or at runtime.
+#
+# 		If you use audit_log_policy at startup instead of the other two variables, the server uses
+# 		its value to set those variables.
+#
+# ) audit_log_read_buffer_size
+#
+# 		PROPERTY 					Value
+# 		Cmd line: 					--audit-log-read-buffer-size=#
+# 		Introduced: 				8.0.11
+# 		Sys var (>= 8.0.11) 		audit_log_read_buffer_size
+#
+# 		Scope (>= 8.0.12) 		global, Session
+# 		scope (8.0.11) 			Global
+#
+# 		Dynamic (>= 8.0.12) 		Yes
+# 		Dynamic (8.0.11) 			No
+# 		
+# 		SET_VAR Hint (>= 8.0.11) No
+#		Type 							Integer
+#
+# 		Default (>= 8.0.12) 		32768
+# 		Default (8.0.11) 			1048576
+#
+# 		Min (>= 8.0.12) 			32768
+# 		Min (8.0.11) 				1024
+# 		Max: 							4194304
+#
+# 		The buffer size for reading from the audit log file, in bytes.
+# 		The audit_log_read() function reads no more than this many bytes.
+#
+# 		Log file reading is supported only for JSON logging format.
+#
+# 		As of MySQL 8.0.12, this var has a default of 32kb and can be set at runtime.
+#
+# 		Each client should set its session value of audit_log_read_buffer_size
+# 		appropriately for its use of audit_log_read().
+#
+# 		Prior to MySQL 8.0.12, audit_log_read_buffer_size has a default of 1MB,
+# 		affects all clients, and can be changed only at server startup.
+#
+# ) audit_log_rotate_on_size
+#
+# 		Property 					Value
+# 		Cmd line: 					--audit-log-rotate-on-size=N
+# 		Introduced: 				8.0.11
+# 		Sys var: 					audit_log_rotate_on_size
+# 		Scope: 						Global
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						integer
+# 		Default value: 			0
+#
+# 		If the audit_log_rotate_on_size value is 0, the audit log plugin does not perform automatic log file rotation..
+# 		Instead, use audit_log_flush() to close and reopen the log on demmand.
+#
+# 		IN this case, manually rename the file externally to the server before flushing it.
+#
+# 		If the audit_log_rotate_on_size value is greater than 0, automatic size-based log file rotation occurs.
+#
+# 		Whenever a write to the log file causes its size to exceed the audit_log_rotate_on_size value,
+# 		the audit log plugin closes the current log file, renames it and opens a new log file.
+#
+# 		For more info about audit log file rotation, see later.
+#
+# 		If you set this variable to a value that is not a multiple of 4096, it is truncated to the nearest multiple.
+# 		(Thus, setting it to a value less than 4096 bytes has the effect of setting it to 0 and no rotation occurs, except manually)
+#
+# ) audit_log_statement_policy
+#
+# 		Property 					Value
+# 		Cmd line: 					--audit-log-statement-policy=value
+# 		Introduced: 				8.0.11
+# 		Sys var: 					audit_log_statement_policy
+# 		Scope: 						Global
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						Enumeration
+# 		Default: 					ALL
+# 		Valid: 						ALL, ERRORS, NONE
+#
+# 		NOTE: Only applies to legacy audit log filtering
+#
+# 		The policy controlling how the audit log plugin writes statement events to its log file.
+# 		The following table shows the permitted values:
+#
+# 		Value 		Desc
+#
+# 		ALL 			Log all statemnts events
+#
+# 		ERRORS 		Log only failed statement events
+#
+# 		NONE 			Do not log statement events 		
+#
+# 		NOTE:
+# 			At server startup, any explicit value given for audit_log_statement_policy may be overridden if audit_log_policy is also specified,
+# 			as described earlier.
+#
+# ) audit_log_strategy
+#
+# 		Property 					Value
+# 		Cmd line: 					--audit-log-strategy=value
+# 		Introduced: 				8.0.11
+# 		System var: 				audit_log_strategy
+# 		Scope: 						Global
+# 		Dynamic: 					No
+# 		SET_VAR Hint: 				No
+# 		Type: 						Enumeration
+# 		DEfault: 					ASYNCHRONOUS
+# 		Valid: 						ASYNCHRONOUS, PERFORMANCE, SEMISYNCHRONOUS, SYNCHRONOUS
+#
+# 		The logging method used by the audit log plugin. These strategy values are permitted:
+#
+# 			Asynchronous: Log asynchronously. Wait for space in the output buffer.
+#
+# 			Performance: Log asynchronously. Drop requests for which there is insufficient space in the output buffer.
+#
+# 			Semisynchronous: Log synchronously. Permit caching by the operating system.
+#
+# 			Synchronous: Log synchronously. Call sync() after each request.
+#
+# AUDIT LOG STATUS VARIABLES
+#
+# If the audit log plugin is enabled, it exposes several status variables that provide operational information.
+# These variables are available for legacy mode audit filtering and JSON mode audit filtering:
+#
+# 		) Audit_log_current_size
+# 		
+# 			The size of the current audit log file. The value increases when an event is written to the log and is reset ot 0 when the log is rotated.
+#
+# 		) Audit_log_event_max_drop_size
+# 	
+# 			The size of the largest dropped event in performance logging mode. #
+# 
+# 		) Audit_log_events
+#
+# 			The number of events handled by the audit log plugin, whether or not they were written to the log based on filtering policy
+#
+# 		) Audit_log_events_filtered
+#
+# 			The numbenr of events handled by the audit log plugin that were filtered (not written to the log) based on filtering policy
+#
+# 		) Audit_log_events_lost
+#
+# 			The number of events lost in performance logging mode because an event was larger than the available audit log buffer space.
+# 			This value may be useful for assessing how to set audit_log_buffer_size to size the buffer for performance mode.
+#
+# 		) Audit_log_events_written
+#
+# 			The number of events written to the audit log.
+#
+# 		) Audit_log_total_size
+#
+# 			The total size of events written to all audit log files. 
+# 			Unlike Audit_log_current_size, the value of Audit_log_total_size increases even when the log is rotated.
+#
+# 		) Audit_log_write_waits
+#
+# 			The number of times an event had to wait for space in teh audit log buffer in asynchronously logging mode.
 # 
 #
+# AUDIT LOG RESTRICTIONS
+#
+# MysQL Enterprise audit is subject to these general restrictions:
+#
+# 		) Only SQL statements are logged. Changes made by no-SQL APIs, such as memcached, Node.JS and the NDB API are not logged.
+#
+# 		) Only top-level statements are logged, not statements within stored programs such as triggers or stored procedures.
+#
+# 		) Contents of files referenced by statements such as LOAD_DATA_INFILE are not logged.
+#
+# NDB CLUSTER -> It is possible to use MySQL Enterprise Audit with MySQL NDB cluster, subject to the following conditions:
+#
+# 		) All changes to be logged must be done using the SQL interface.
+# 			Changes using no-SQL interfaces, such as those provided by the NDB API, memcached, or ClusterJ, are not logged.
+#
+# 		) The plugin must be installed on each MySQl server that is used to execute SQL on the cluster.
+#
+# 		) Audit plugin data must be aggreggated amongst all MySQL servers used with the cluster.
+# 			This aggreggation is the responsibility of the application or user.
+#
+# MySQL ENTERPRISE FIREWALL
+#
+# MySQL Enterprise Edition includes MySQL Enterprise Firewall, an application-level firewall that enables datbase 
+# admins to permit or deny SQL statements execution based on matching against whitelists or accepted statement patterns.
+#
+# This helps harden the MySQL server against attackers such as SQL injections or attempts to exploit applicaitons by using
+# them outside of their legitimate query workload characteristics.
+#
+# Each MySQL account registered with the firewall has its own statement whitelist, enabling protection to be tailored
+# per account.
+#
+# For a given account, the firewall can operate in recording, protecting or detecting mode, for training
+# in the accepted statement patterns, active protection against unacceptable statements, or passive detection of unacceptable
+# statements.
+#
+# This figure illustreates how the firewall processes incoming statements in each mode:
+#
+# MySQL ENTERPRISE FIREWALL OPERATIONS
+#
+#
+#
+#
+# Receive SQL from client >>>>>>>>>>>>>> Digest into parser tokens >>>>>> Firewall
+# 																						  				V 					OFF
+# 											Store SQL Digest    <<<<<<<<<<<<<<Check user Firewall Mode >>>>>>		 
+#  							in Firewall Whitelist			Recording  				V 							V
+# 													V												V 							V
+# 													V 					Yes						V  						V
+# 													V<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< In Whitelist?     		V	
+#												   V 												V 							V
+# 													V 												V No 						V
+# 													V 												V 							V
+# 													V 											Firewall Alert 			V
+# 													V 											to Error Log 				V
+# 													V	 											V	 						V
+# 													V 			Detect							V 							V
+# 													<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Detect or Protect Mode 		V
+# 													V 												V 							V
+# 													V											Protect >> Reject 		V
+# 													V 														 					V
+# 													Execute SQL <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#
 # 
 #
+# The following sections describe the components of MYSQL Enterprise Firewall, discuss how ot install it and use it,
+# and provide reference info for its components.
 #
+# MySQL ENTERPRISE FIREWALL COMPONENTS
 #
-# https://dev.mysql.com/doc/refman/8.0/en/audit-log-filtering.html
+# MySQL Enterprise Firewall is based on a plugin library that implements these components:
+#
+# 		) A server-side plugin named MySQL_FIREWALL examines SQL statements before htey execute,
+# 			and based on it's in-memory cache, renders a decision whether to execute or reject each statement.
+#
+# 		) Server-side plugins named MySQL_FIREWALL_USERS and MYSQL_FIREWALL_WHITELIST implement INFORMATION_SCHEMA tables that provide
+# 			views into the firewall data cache.
+#
+# 		) System tables named firewall_users and firewall_whitelist in the mysql databse provide persistent storage of firewall data.
+#
+# 		) Stored procedures named sp_set_firewall_mode() and sp_reload_firewall_rules() performs tasks such as registering
+# 			MySQl accounts with the firewall, establishing their operational mode, and managing transfer of firewall data
+# 			between the cache and the underlying system tables.
+#
+# 		) A user of user-defined functions provide an SQL-level API for lower-level tasks such as syncrhonizing the cahce 
+# 			with the underlying system tables.
+#
+# 		) System variables enable firewall configuration and status variables provide runtime operational information.
+#
+# 		) FIREWALL_ADMIN and FIREWALL_USER privileges enables users to administer firewall rules for any user, and their own firewall rules, respectively.
+#
+# INSTALLING OR UNINSTALLING MySQL ENTERPRISE FIREWALL
+#
+# MySQL Enterprise Firewall installation is a one-time operaiton that installs the components described earlier.
+#
+# Installation can be pformed using a grpahical interface or manually:
+#
+# 		) On Windows MySQL isntaller includes an option to enable MySQL Enterpise Firewall for you.
+#
+# 		) MySQL WOrkbench 6.3.4 >= can install MySQL Enterprise Firewall, enable or disable an installed firewall,
+# 			or uninstall the firewall..
+#
+# 		) Manual MYSQL enterprise firewall installation involves running a script located in the share directory
+# 			of your MySQL installation.
+#
+# 		NOTE: 
+# 			If installed, MySQL Enterprise FIrewall involves some minimal overhead, even when disabled.
+# 			To avoid this overhead, do not install lest you intend to use it.
+#
+# 		Note:
+# 			MySQL Enteprise Firewall does not work together with the query cache.
+# 			IF the query cache is enabled, disable it before installing the firewall.
+#
+# INSTALLING MYSQL ENTERPRISE FIREWALL
+#
+# If MySQL Enterprise Firewall is already installed from an older version of MysQl, uninstall it.
+#
+# The installation script is in the share directory of the MySQL installation.
+#
+# win_install_firewall.sql for Windows based, linux_install_firewall.sql for Linux based.
+#
+# The installation script creates stored procedures in the default database, so choose a database to use.
+# Then run the script as follows, naming the chosen databse on the cmdl ine.
+#
+# The example here uses hte mysql database and the Linux installation script.
+#
+# Make hte appropriate substitution for your system.
+#
+# mysql -u root -p mysql < linux_install_firewall.sql
+# Enter password: (enter password here)
+#
+# INstalling MysQL ENterprise Firewall either using a graphical interface or manually should enable the firewall.
+# To verify that, connect to the server and execute this statement:
+#
+# SHOW GLOBAL VARIABLES LIKE 'mysql_firewall_mode';
+# +-----------------------------+
+# | Variable_name      | Value  |
+# +-----------------------------+
+# | Mysql_firewall_mode| ON 	  |
+# +-----------------------------+
+#
+# UNINSTALLING MYSQL ENTERPRISE FIREWALL
+#
+# MySQL Enteprise Firewall can be uninstalled using MySQL workbench or manually.
+#
+# To uninstall MySQl Enterprise Firewall using MysQL workbench 6.3.4 or higehr, see respective place.
+#
+# To uninstall MySQL Enterprise firewall manually, exceute the following statements.
+# it is assumed that the stored procedures were created in the MySQL databse.
+#
+# Adjust the DROP_PROCEDURE statements appropriately if the procedures were created
+# in a different DB.
+#
+# DROP TABLE mysql.firewall_whitelist;
+# DROP TABLE mysql.firewall_users;
+#
+# UNINSTALL PLUGIN mysql_firewall;
+# UNINSTALL PLUGIN mysql_firewall_whitelist;
+# UNINSTALL PLUGIN mysql_firewall_users;
+#
+# DROP FUNCTION set_firewall_mode;
+# DROP FUNCTION normalize_statement;
+# DROP FUNCTION read_firewall_whitelist;
+#
+# DROP FUNCTION read_firewall_users;
+# DROP FUNCTION mysql_firewall_flush_status;
+#
+# DROP PROCEDURE mysql.sp_set_firewall_mode;
+# DROP PROCEDURE mysql.sp_reload_firewall_rules 
+#
+# USING MYSQL ENTERPRISE FIREWALL
+#
+# Before using MYSQL Enterprise Firewall, install it according to the instructions previously.
+#
+# Also, MySQL Enterprise Firewall does not work together with the query cache; disable the query cache
+# if it is enabled.
+#
+# THis section describes how to configure MySQL Enterprise Firewall using SQL statements.
+# Alternatively, the workbench provides a UI for it.
+#
+# To enable or disable the firewall, set the mysql_firewall_mode system variable.
+#
+# by default, this variable is enabled when the firewall is installed.
+# To control the install firewall state explicitly, you can set the variable at server startup.
+#
+# Fo rexample, to enable the firewall in an option file, use these lines:
+#
+# 	[mysqld]
+# 	mysql_firewall_mode=ON
+#
+# It is also possible to disalbe or enable the firewall at runtime:
+#
+# 	SET GLOBAL mysql_firewall_mode = OFF;
+# 	SET GLOBAL mysql_firewall_mode = ON;
+#
+# In addition to the global on/off firewall mode, each account registered with the firewall has its own operational mode.
+#
+# For an account in recording mode, the firewall learns an applications "fingerprint", that is, the acceptable
+# statement patterns that taken together - form a whitelist.
+#
+# After training, switch the firewall to protecting mode to harden MySQL against access by statements that deviate from
+# the fingerprint.
+#
+# For additional training, switch the firewall back to recording mode as necessary to update the
+# whitelist with new statement patterns.
+#
+# An instrusion-detection mode is avialable that writes supsicious statements ot hte error log but does not deny access.
+#
+# The firewall maintains whitelist rules on a per-account basis, enabling implementation of protection strats such as these:
+#
+# 	) For an applicaiton that has unique protection requirements, configure it to use an account that is not used for any other purpose.
+#
+# 	) For applications that are related and share protection requirements, configure them as group to use the same account.
+#
+# Firewall operations is based on conversion of SQL statements to normalized digest form.
+# Firewall digests are like the statement digest used by the Performance Schema (mroe on that later).
+#
+# However, unlike the Performance Schema, the relevant digest-related system variable is max_digest_length.
+#
+# For a connection from a registered account, the firewall converts each incoming statement to normalized form
+# and processes it accoring to the account mode:
+#
+# 	) IN recording mode, the firewall adds the normalized statement to the account whitelist rules.
+#
+# 	) In protection mode, the firewall compares the normalized statement to the account whitelist rules.
+#
+# 		If there is a match, teh statement passes and the server continues to process it.
+#
+# 		Otherwise, the server rejects the statement and returns an error to the client.
+#
+# 		The firewall also writes the rejected statement to the erorr log if the mysql_firewall_trace system
+# 		variable is enabled.
+#
+# 	) IN detecting mode, the firewall matches statements as in protecting mode, but writes nonmatching
+# 		statements ot the error log without denying access.
+#
+# accounts that have a mode of OFF or are not registered with the firewall are ignored by it.
+#
+# TO protect an account using MySQL Enterprise FIrewall,, follow these steps:
+#
+# 1. Register an account and put it in recording mode.
+#
+# 2. Connect to the MySQL server using the registered acc and execute statements otb e learned.
+# 		This establishes the account whitelist of accepted statements.
+#
+# 3. Switch the registered account to protecting mode.
+#
+# THe following examples shows how to reigster an account with the firewall, use the firewall to learn acceptable
+# statements for that account and protect the account against execution of unacceptable statements.
+#
+# The example account, 'fwuser'@'localhost' is for use by an application that accesses tables in the sakila DB.
+#
+# NOTE:
+#
+# 		THe user and host parts of the account name are quoted separately for statements such as CREATE_USER
+# 		and GRANT, whereas to specify an account for use with a firewall component, name it as a single quoted
+# 		string 'fwuser@localhost'
+#
+# 		The convention for naming accounts as a single quoted string for firewall components means that you cannot
+# 		use accounst that have embedded @ chars in the user name.
+#
+# Perform the step in the following procedure as an ADMIN priv acc, except those designated for execution by the acc registered
+# with the firewall.
+#
+# The default DB should be sakila, for statements executed using the registered account.
+#
+# 1. IF called for, create teh acc to be protected (choose an appropriate pW), and grant privs for the saila DB:
+#
+# 		CREATE USER 'fwuser'@'localhost' IDENTIFIED BY 'fWp@3sw0rd';
+# 		GRANT ALL on sakila.* to 'fwuser'@'localhost';
+#
+# 2. use the sp_set_firewall_mode() stored procedure to register the account with the firewall and place it in recording mode.
+# 		(If the procedure is located in a database other than MySQL - adjust the statement accordingly):
+#
+# 		CALL mysql.sp_set_firewall_mode('fwuser@lcoalhost', 'RECORDING');
+#
+# 		During the course of its execution, the stored procedure invokes firewall user-defiend functions, which may produce output of their own.
+#
+# 3. Using the registered account, connect to the server, then execute some statements that are legitimate for it:
+#
+# 		SELECT first_name, last_name FROM customer WHERE customer_id = 1;
+# 		UPDATE rental SET return_date = NOW() WHERE rental_id = 1;
+# 		SELECT get_customer_balance(1, NOW());
+#
+# The firewall converts the statements to digest form and records them in the account whitelist.
+#
+# NOTE:
+# 		uNtil the account executes statements in recording mode, its whitelist is empty.
+# 		Which is equvialent to "deny all".
+#
+# 		IF switched to protective mode, the account will be effectively prohibited from executing statements..
+#
+# 4. At this point, the user and whitelist information is cached and can be seen in the firewall INFORMATION_SCHEMA tables:
+#
+# 		SELECT MODE FROM INFORMATION_SCHEMA.MYSQL_FIREWALL_USERS
+# 		WHERE USERHOST = 'fwuser@localhost';
+# 		+-------------+
+# 		| MODE 		  |
+# 		+-------------+
+# 		| RECORDING   |
+# 		+-------------+
+#
+# 		SELECT RULE FROM INFORMATION_SCHEMA.MYSQL_FIREWALL_WHITELIST
+# 		WHERE USERHOST = 'fwuser@localhost';
+#
+# 		+-------------------------------------------------------------------------------+
+# 		| RULE 																								  |
+#  	+-------------------------------------------------------------------------------+
+# 		| SELECT `fire_name`,  `last_name` FROM `customer` WHERE `customer_id` = ? 	  |
+# 		| SELECT `get_customer_balance` ( ? , NOW ( ) ) 										  |
+# 		| UPDATE `rental` SET `return_date` = NOW ( ) WHERE `rental_id` = ? 				  |
+# 		| SELECT @@`version_comment` LIMIT ? 														  |
+# 		+-------------------------------------------------------------------------------+
+#
+# NOTE:
+#
+# 		The @@version_comment rule comes from a statement sent automatically by the mysql client when
+# 		you connect to the server as the registered user.
+#
+# 		IT is important to train teh firewall under conditions matching application use.
+#
+# 		For example, a given MySQL connector might send statements to the server at teh beginning
+# 		of a connection to determine server characteristics and capabilities.
+#
+# 		IF an application normally is used through taht connector, train the firewall that way, too.
+#
+# 		That enables those initail statements to become part of the whitelist for the account
+# 		associated with the application.
+#
+# 5. Use the stored procedure to switch the registered user to protecting mode:
+#
+# 		CALL mysql.sp_set_firewall_mode('fwuser@localhost', 'PROTECTING');
+#
+# 		IMPORTANT:
+#
+# 				Switching the account out of RECORDING mode synchronizes its firewall cache data
+# 				to the underlying mysql system database for persistent storage.
+#
+# 				If you do not switch the mode for a user who is being recored, the cached whitelist
+# 				data is not written to the system tables and will be lost when the server is restarted.
+#
+# 6. Using the registered account, execute some acceptable and unacceptable statements.
+
+# 		The firewall matches each one against the account whitelist and accepts or rejects it.
+#
+# 		This statement is not identical to a training statement, but produces the same normalized statement as one of them,
+# 		so the firewall accepts it:
+#
+# 			SELECT first_name, last_name FROM customer WHERE customer_id = '48';
+# 			+-----------------------+
+# 			| first_name | last_name|
+# 			+-----------------------+
+# 			| ANN 		 | EVANS 	|
+# 			+-----------------------+
+#
+# 		These statements do not match anything in the whitelist and each results in an error:
+#
+# 			SELECT first_name, last_name FROM customer WHERE customer_id = 1 OR TRUE;
+# 			ERROR 1045 (28000): Statement was blocked by Firewall
+#
+# 			SHOW TABLES LIKE 'customer%';
+# 			ERROR 1045 (28000): Statement was blocked by Firewall
+#
+# 			TRUNCATE TABLE mysql.slow_log;
+# 			ERROR 1045 (28000): Statement was blocked by Firewall
+#
+# 		The firewall also writes the rejected statements to the error log if the mysql_firewall_trace 
+# 		system variable is enabled.
+#
+# 		For example:
+#
+# 			[Note] PLugin MYSQL_FIREWALL reported:
+# 			'ACCESS DENIED for fwuser@localhost. Reason: No match in whitelist.
+# 			Statement: TRUNCATE TABLE `mysql`.`slow_log`'
+#
+# 		You can use these log messages in your efforts to identify the source of attacks.
+#
+# 7. You can log nonmatching statements as supsicious without denying access.
+# 		To do this, put the account in intrusion-detecting mode:
+#
+# 			CALL mysql.sp_set_firewall_mode('fwuser@localhost', 'DETECTING');
+#
+# 8. Using the registered account, connect to the server, then execute a statement that does not match
+# 		the whitelist:
+#
+# 		SHOW TABLES LIKE 'customer%';
+# 		+-----------------------------+
+# 		| Tables_in_sakila (customer%)|
+# 		+-----------------------------+
+# 		| customer 							|
+# 		| customer_list 					|
+# 		+-----------------------------+
+#
+# 		In detecting mode, the firewall permits the nonmatching statement to execute but writes a message
+# 		to the error log:
+#
+# 		[Note] Plugin MYSQL_FIREWALL reported:
+# 		'SUSPICIOUS STATEMENT from 'fwuser@localhost'. Reason: No match in whtielist.
+# 		Statement: SHOW TABLES LIKE ? '
+#
+# 9. To assess firewall activity, examine its status variables:
+#
+# 		SHOW GLOBAL STATUS LIKE 'Firewall%';
+#		+-----------------------------------+
+# 		| Variable_name 				| Value 	|
+# 		+-----------------------------------+
+# 		| Firewall_access_denied 	 | 3 		|
+# 		| Firewall_access_granted 	 | 4 		|
+# 		| Firewall_access_suspicious| 1 		|
+# 		| Firewall_cached_entries 	 | 4 		|
+# 		+-----------------------------------+
+#
+# 		The variable indicates the number of statements rejected, accepted, logged as supicious, and added to the cache, respectively.
+#
+# 		The Firewall_access_granted count is 4 - because of the @@version_comment statement sent by the MySQL client each 
+# 		time you use it to connect as the registered user, plus the SHOW_TABLES statement that was not blocked in DETECTING mode.
+#
+# SHould additional training for an account be necessary, switch it to recording mode again, then back to protecting mode
+# after executing statements to be added to the whitelist.
+#
+# MySQL ENTERPRISE FIREWALL REFERENCE
+#
+# MySQL ENTERPRISE FIREWALL TABLES
+#
+# MySQL Enterprise Firewall maintains account and whitelist information.
+#
+# It uses INFORMATION_SCHEMA tables to provide views into cached data, and tables in teh mysql system database to  		
+# store this data in persistent form.
+#
+# When enabled, the firewall bases its operational decisions on the cached data.
+#
+# The INFORMATION_SCHEMA tables are accessible by anyone.
+#
+# The MysQL tables can be accessed only by users with privileges for that database. 		
+#
+# The INFORMATION_SCHEMA:MYSQL_FIREWALL_USERS and mysql.firewall_users table list registered firewall
+# accounts and their operational modes.
+#
+# The tables have these columns:
+#  
+# 		) USERHOST
+#
+# 			An account registered with the firewall.
+#
+# 			Each account has the format user_name@host_name and represents actual user and host names as authenticated
+# 			by the server.											
+#
+# 			Patterns and netmasks should not be used when registering users.
+#
+# 		) MODE
+#
+# 			The current firewall operation mode for the account.
+#
+# 			The permitted mode values are OFF, DETECTING, PROTECTING, RECORDING and RESET.
+#
+# 			For details about their meanings, see the description of sp_set_firewall_mode()
+#
+# The INFORMATION_SCHEMA.MYSQL_FIREWALL_WHITELIST and mysql.firewall_whitelist tables list 
+# registered firewall accounts and their whitelists.
+#
+# The tables have these columns:
+#
+# 		) USERHOST
+#
+# 			An account registered with the firewall. The format is the same as for the user account tables.
+#
+# 		) RULE
+#
+# 			A normalized statement indicating an acceptable statement pattern for teh account. An accounte whitelist is the union of its rules.
+#
+# 		) ID
+#
+# 			An integer column that is a primary key for the table. This was added in 8.0.12
+#
+# MYSQL ENTERPRISE FIREWALL PROCEDURES AND FUNCTIONS
+#
+# MySQL Enterprise Firewall has stored procedures that perform tasks such as registering
+# MySQL accounts with the firewall, establishing their operational mode and managing transfer of
+# firewall data between the cache and the underlying system tables. 
+#
+# It also has a set of user-defiend functions (UDFs) that provides an SQL-level API for low level
+# tasks such as synchronizing the cache with the underlying system tables.
+#
+# Under normal operation, the stored procedures implemetn the user interface.
+# The UDFs are invoked by the stored procedures, not directly by users.
+#
+# To invoke a stored procedure when the default database is not hte database that contains
+# the procedure, qualify the procedure name with hte database name.,
+#
+# For example:
+#
+# 		CALL mysql.sp_set_firewall_mode(user, mode);
+#
+# The following list describes each firewall stored procedure and UDF:
+#
+# 		) sp_reload_firewall_rules(user)
+#
+# 			This stored procedure uses firewall UDFs to reset a registered account and reload the
+# 			in-memory rules for it from the rules stored in the mysql.firewall_whitelist table.
+#
+# 			This procedure provides control over firewall operation for individual accounts.
+#
+# 			The user argument names the affected account, as as tring in user_name@host_name format.
+#
+# 			Example:
+#
+# 				CALL mysql.sp_reload_firewall_rules('fwuser@localhost');
+#
+# 			WARNING:
+#
+# 				This procedure sets the account mode to RESET, which clears the account whitelist and sets it
+# 				mode to OFF.
+#
+# 				If the account mode was not OFF prior to the sp_reload_firewall_rules() call, use sp_set_firewall_mode()
+# 				to restore its previous mode after reloading the rules.
+#
+# 				For example, if the account was in PROTECTING mode, that is no longer true after calling
+# 				sp_reload_firewall_rules() and you must set it to PROTECTING again explicitly.
+#
+# 		) sp_set_firewall_mode(user,mode)
+#
+# 			THis stored procedure registers a MySQL account with hte firewall and establishes its operational mode.
+#
+# 			The procedure also invokes firewall UDFs as necessary to transfer firewall data between the cache
+# 			and the underlying system tables.
+#
+# 			THis procedure may be called even if the mysql_firewall_mode system variable is OFF, although
+# 			setting the mode for an account has no operational effect while the firewall is disabled.
+#
+# 			THe user argument names the affected account, as a string in user_name@host_name format.
+#
+# 			The mode is hte operational mode for the user, as a string. These mode values are permitted:
+#
+# 				) OFF: Disables the firewall for the account
+#
+# 				) DETECTING: Intrusion-detecting mode: Write suspicious (nonmatching) statements to the error log but do not deny access.
+#
+# 				) PROTECTING: Protect the account by matching incoming statements against the account whitelist.
+#
+# 				) RECORDING: Training mode: Record acceptable statements for the account.
+#
+# 								Incoming statements that do not immediately fail with a syntax error are recorded to become part
+# 								of the account whitelist rules.
+#
+# 				) RESET: Clear the account whitelist and set the account mode to OFF.
+#
+# Switching the mode for an account to any mode but RECORDING synchronizes the firewall cache data to the underlying
+# mysql system database for persistent storage.
+#
+# Switching the mode from OFF to RECORDING reloads the whitelist from the mysql.firewall_whitelist table into the cache.
+#
+# If an account has an empty whitelist, setting its mode to PROTECTING produces an error message that is returned
+# in a result set, but not an SQL error:
+#
+# 		CALL mysql.sp_set_firewall_mode('a@b', 'PROTECTING');
+# 		+------------------------------------------------------------------------+
+# 		| set_firewall_mode(arg_userhost, arg_mode) 			 							 |
+# 		+------------------------------------------------------------------------+
+# 		| ERROR: Protecting mode requested for a@b but the whitelist is empty.   |
+# 		+------------------------------------------------------------------------+
+#
+# 		1 row in set (0.02 sec)
+#
+# 		Query OK, 0 rows affected (0.02 sec)
+#
+# ) mysql_firewall_flush_status()
+#
+# 		This UDF resets several firewall status variables to 0:
+#
+# 			Firewall_access_denied
+# 			Firewall_access_granted
+# 			Firewall_access_suspicious
+#
+# 		Example:
+#
+# 			SELECT mysql_firewall_flush_status();
+#
+# ) normalize_statement(stmt)
+#
+# 		This UDF normalizes an SQL statement into the digest form used for whitelist rules.
+#
+# 		Example:
+#
+# 			SELECT normalize_statement('SELECT * FROM t1 WHERE c1 > 2');
+#
+# ) read_firewall_users(user, mode)
+#
+# 		This aggreggate UDF updates the firewall user cache through a SELECT statement on the 
+# 		mysql.firewall_users table.
+#
+# 		Example:
+#
+# 			SELECT read_firewall_users('fwusers@localhost', 'RECORDING')
+# 			FROM mysql.firewall_users;
+#
+# ) read_firewall_whitelist(user, rule)
+#
+# 		THis aggreggate UDF updates the recorded statement cache through a SELECT statement on the
+# 		mysql.firewall_whitelist table.
+#
+# 		Example:
+#
+# 			SELECT read_firewall_whitelist('fwuser@localhost', 'RECORDING')
+# 			FROM mysql.firewall_whitelist;
+#
+# ) set_firewall_mode(user, mode)
+#
+# 		This UDF manages the user cache and establishes the user operational mode.
+#
+# 		Example:
+#
+# 				SELECT set_firewall_mode('fwuser@localhost', 'RECORDING');
+#
+# MYSQL ENTERPRISE FIREWALL SYSTEM VARIABLES
+#
+# MySQL Enterprise Firewall supports the following system variables.
+# Use them to configure firewall operation.
+#
+# These variables are unavailable unless the FW is installed.
+#
+# 	) mysql_firewall_mode
+#
+# 		Property 					Value
+# 		Cmd line: 					--mysql-firewall-mode={OFF|ON}
+# 		Introduced: 				8.0.11
+# 		Sys Var: 					mysql_firewall_mode
+# 		Scope: 						Global
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						Boolean
+# 		Default: 					ON
+#
+# 		Whether MySQL Enterprise Firewall is enabled (the default) or disabled.
+#
+# ) mysql_firewall_trace
+#
+# 		Property 					Value
+# 		Cmd line: 					--mysql-firewall-trace={OFF|ON}
+# 		INtroduced: 				8.0.11
+# 		Sys var: 					mysql_firewall_trace
+# 		Scope: 						Global
+# 		Dynamic: 					Yes
+# 		SET_VAR Hint: 				No
+# 		Type: 						Boolean
+# 		Default: 					OFF
+#
+# 		Whether the MySQL Enterprise Firewall Trace is enabled or disabled (the default).
+#
+# 		WHen mysql_firewall_trace is enabled, for PROTECTING mode, the firewall writes
+# 		rejected statements to the error log.
+#
+# MYSQL ENTERPRISE FIREWALL STATUS VARIABLES
+#
+# MySQL ENterprise Firewall supports hte following status variables.
+#
+# Use them to obtain information about firewall operational status.
+# THese variables are unavailabel unless hte firewall is installed.
+#
+# Firewall status variables are set to 0 whenever the MYSQL_FIREWALL plugin is installed
+# or the server is started.
+#
+# Many of them are reset to zero by the mysql_firewall_flush_status UDF.
+#
+# ) Firewall_access_denied
+#
+# 		The number of statements rejected by MySQL Enterprise Firewall
+#
+# ) Firewall_access_granted
+#
+# 		The number of statements accepted by MySQL Enterprise Firewall
+#
+# ) Firewall_access_suspicious
+#
+# 		Number of statements logged by the MySQl Enterprise Firewall as Suspicious for users who are in DETECTING mode.
+#
+# ) Firewall_cached_entries
+#
+# 		The number of statements recorded by MySQL Enterprise Firewall, including duplicates.
+#
+# MySQL ENTERPRISE DATA MASKING AND DE-IDENTIFICATION
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/data-masking.html	
+#
