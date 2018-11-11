@@ -43455,6 +43455,2016 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 		The number of statements recorded by MySQL Enterprise Firewall, including duplicates.
 #
 # MySQL ENTERPRISE DATA MASKING AND DE-IDENTIFICATION
-# 
-# https://dev.mysql.com/doc/refman/8.0/en/data-masking.html	
 #
+# NOTE:
+#
+# 		MySQL Enterprise Data Masking and De-Identification is an extension included in MySQL Enterprise Edition.
+#
+# As of MySQL 8.0.13, MySQL Enterprise Edition provides data masking and de-identification capabilities:
+#
+# 		) Transformation of existing data to mask it and remove identifying characteristics, such as changing
+# 			all digits of a credit card number but the last four to 'X' Chars.
+#
+# 		) Generation of random data, such as email addresses and payment card numbers.
+#
+# The way that applications use these capabilities depends on the purpose for which the data will be used
+# and who will access it:
+#
+# 		) Applications that use sensitive data may protect it by performing data masking and permiting use
+# 			of partially masked data for client identification.
+#
+# 			Example: A call center may ask for clients to provide their last four social security number digits.
+#
+# 		) Applications that require properly formatted data, but not necessarily the original data, can synthesize sample data.
+#
+# 			Example: An application developer who is testing data validators but has no access to original data may synthesize
+#  					random data with the same format.
+#
+# Example 1:
+#
+# 		Medical research facilities can hold patient data that comprises a mix of personal and medical data.
+# 		This may include genetic sequences (long strings), test results stored in JSON format, and other data types.
+#
+# 		Although the data may be used mostly by automated analysis software, access to genome data or test results
+# 		of particular patients is still possible.
+#
+# 		In such cases, data masking should be used to render this information not personally identifiable.
+#
+# Example 2:
+#
+# 		A credit card processor company provides a set of services using sensitive data, such as:
+#
+# 			) Processing a large number of financial transactions per second
+#
+# 			) Storing a large amount of transaction-related data.
+#
+# 			) Protecting transaction-related data with strict requirements for personal data.
+#
+# 			) Handling client complaints about transactions using reversible or partially masked data.
+#
+# A typical transaction may include many types of sensitive information, including:
+#
+# 		) Credit card number
+#
+# 		) Transaction type and amount
+#
+# 		) Merchant type
+#
+# 		) Transaction cryptogram (to confirm transaction legitimacy)
+#
+# 		) Geolocation of GPS-equipped terminal (for fraud detection)
+#
+# Those types of information may then be joined within a bank or other card-issuing financial institution
+# with client personal data, such as:
+#
+# 		) Full cient name (either person or company)
+#
+# 		) Address
+#
+# 		) Date of birth
+#
+# 		) Social Security number
+#
+# 		) Email address.
+#
+# 		) Phone number
+#
+# Various employee roles within both the card processing company and the financial institution require access
+# to that data.
+#
+# Some of these roles may require access only to masked data.
+#
+# Other roles may require access to the original data on a case-to-case basis, which is recorded in audit logs.
+#
+# Masking and de-identification are core to regulatory compliance, so MySQL Enterprise Data Masking and De-identificaiton
+# can help application developers satisfy privacy requirements:
+#
+# 		) PCI - DSS: Payment Card Data
+#
+# 		) HIPAA: Privacy of Health Data, Heqlth Information Technology for Economic and Clinical Health Act (HITECH Act)
+#
+# 		) EU General Data Protection Directive (GDPR): Protection of Personal Data
+#
+# 		) Data Protection Act (UK): Protection of Personal Data
+#
+# 		) Sarbanes Oxley, GLBA, The USA Patriot Act, Identity Theft and Assumption Deterrence Act of 1998.
+#
+# 		) FERPA - Student Data, NASD, CA SB1386 and AB 1950,, State Data Protection Laws, Basel II
+#
+# THe following sections describe the components of MySQL Enterprise Data Masking and De-Identification,
+# discuss how to install and use it, and provide reference information for its components.
+#
+# MySQL Enterprise DATA MASKING AND DE-IDENTIFICATION COMPONENTS
+#
+# MySQL Enterprise Data Masking and De-Identification is based on a plugin library that implements these components:
+#
+# 		) A server-side plugin named data_masking
+#
+# 		) A set of user-defined functions (UDFs) provides an SQL-level API for performing masking 
+# 			and de-identification operations.
+#
+# 			Some of these functions require the SUPER privilege.
+#
+# INSTALLING OR UNINSTALLING MySQL ENTERPRISE DATA MASKING AND DE-IDENTIFICATION
+#
+# This section describes how to install or uninstall MySQL Enterprise Data Masking and De-Identification,
+# which is implemented as a plugin library file containing a plugin and user-defined functions (UDFs).
+#
+# To be usable by the server, the plugin library file must be located in the MySQL plugin directory
+# (the directory named by the plugin_dir system variable).
+#
+# If necessary, configure the plugin directory location by setting the value of plugin_dir at server startup.
+#
+# The plugin library file base name is data_masking. The file name suffix differs per platform (for example,
+# .so for UNIX based systems, .dll for Windows)
+#
+# To install the MySQL Enterprise Data Masking and De-Identification plugin and UDFs, use the INSTALL_PLUGIN and
+# CREATE_FUNCTION statements (adjust the .so suffix for your platform as called for):
+#
+# INSTALL PLUGIN data_masking SONAME 'data_masking.so';
+# CREATE FUNCTION gen_blacklist RETURNS STRING SONAME 'data_masking.so';
+#
+# CREATE FUNCTION gen_dictionary RETURNS STRING SONAME 'data_masking.so';
+#
+# CREATE FUNCTION gen_dictionary_drop RETURNS STRING SONAME 'data_masking.so';
+# 
+# CREATE FUNCTION gen_dictionary_load RETURNS STRING SONAME 'data_masking.so';
+#
+# CREATE FUNCTION gen_range RETURNS INTEGER SONAME 'data_masking.so';
+#
+# CREATE FUNCTION gen_rnd_email RETURNS STRING SONAME 'data_masking.so';
+#
+# CREATE FUNCTION gen_rng_pan RETURNS STRING SONAME 'data_masking.so';
+#
+# CREATE FUNCTION gen_rnd_ssn RETURNS STRING SONAME 'data_masking.so';
+#
+# CREATE FUNCTION gen_rnd_us_phone RETURNS STRING SONAME 'data_masking.so';
+#
+# CREATE FUNCTION mask_inner RETURNS STRING SONAME 'data_masking.so';
+#
+# CREATE FUNCTION mask_outer RETURNS STRING SONAME 'data_masking.so';
+#
+# CREATE FUNCTION mask_pan RETURNS STRING SONAME 'data_masking.so';
+#
+# CREATE FUNCTION mask_pan_relaxed RETURNS STRING SONAME 'data_masking.so';
+#
+# CREATE FUNCTION mask_ssn RETURNS STRING SONAME 'data_masking.so';
+#
+# If the plugin and UDFs are used on a master replication server, install them on all slave 
+# servers as well to avoid replication problems.
+#
+# Once installed as just described, the plugin and UDFs remain installed until uninstalled.
+# To remove them, use the UNINSTALL_PLUGIN and DROP_FUNCTION statements:
+#
+# UNINSTALL PLUGIN data_masking;
+# DROP FUNCTION gen_blacklist;
+# DROP FUNCTION gen_dictionary;
+# DROP FUNCTION get_dictionary_drop;
+#
+# DROP FUNCTION gen_dictionary_load;
+# DROP FUNCTION gen_range;
+# DROP FUNCTION gen_rnd_email;
+# 
+# DROP FUNCTION gen_rnd_pan;
+# DROP FUNCTION gen_rnd_ssn;
+# DROP FUNCTION gen_rnd_us_phone;
+#
+# DROP FUNCTION mask_inner;
+# DROP FUNCTION mask_outer;
+# DROP FUNCTION mask_pan;
+#
+# DROP FUNCTION mask_pan_relaxed;
+# DROP FUNCTION mask_ssn;
+#
+# USING MySQL ENTERPRISE DATA MASKING AND DE-IDENTIFICATION
+#
+# before using MySQL Enterprise Data Masking and De-identification, install it.
+#
+# To use MySQL Enterprise Data Masking and De-Identification in applications, invoke the
+# functions that are appropriate for the operations you wish to perform.
+#
+# For detailed function desc., see later.
+#
+# This section demonstrates how ot use the functions to carry out some representative
+# tasks.
+#
+# It first presents an overview of the available functions, followed by some examples of
+# how the functions might be used in real-world context.
+#
+# MASKING DATA TO REMOVE IDENTIFYING CHARACTERISTICS
+#
+# MySQL provides general-purpose masking functions that mask arbitrary strings, and special-purpose masking functions
+# that mask specific types of values.
+#
+# GENERAL-PURPOSE MASKING FUNCTIONS
+#
+# mask_inner() and mask_outer() are general-purpose functions that mask parts of arbitrary strings based
+# on positions within the string:
+#
+# 		) mask_inner() masks the interior of its string argument, leaving the ends unmasked.
+# 			Other arguments specify the sizes of the unmasked ends.
+#
+# 			SELECT mask_inner('This is a string', 5, 1); #Leave 5 first and last 1 unmasked
+# 			+------------------------------------------+
+# 			| mask_inner('This is a string', 5, 1) 	 |
+# 			+------------------------------------------+
+# 			| This XXXXXXXXXXXXXXg 						 	 |
+# 			+------------------------------------------+
+#
+# 			SELECT mask_inner('This is a string', 1, 5); #leave first and  5 last unmasked
+# 	
+# 			+------------------------------------------+
+# 			| mask_inner('This is a string', 1, 5) 	 |
+# 			+------------------------------------------+
+# 			| Txxxxxxxxxxxxxxxxxxtring 					 |
+# 			+------------------------------------------+
+#
+# 		) mask_outer() does the reverse, masking the ends of its string argument, leaving the interior unmasked.
+# 			Other arguments specify the sizes of the masked ends.
+#
+# 			SELECT mask_outer('This is a string', 5, 1); #Mask first 5 and last
+# 			+-------------------------------------------+
+# 			| mask_outer('This is a string', 5, 1) 	  |
+# 			+-------------------------------------------+
+# 			| XXXXXXis a strinX 								  |
+# 			+-------------------------------------------+
+#
+# 			SELECT mask_outer('This is a string', 1, 5); #Mask first and 5 last
+# 			+-------------------------------------------+
+# 			| mask_outer('This is a string', 1, 5) 	  |
+# 			+-------------------------------------------+
+# 			| Xhis is a sXXXXX 								  |
+# 			+-------------------------------------------+
+#
+# By default, mask_inner() and mask_outer() use 'X' as the masking character, but permit an optional
+# masking-character argument:
+#
+# 			SELECT mask_inner('This is a string', 5, 1, '*'); #Mask with * char instead
+# 			+------------------------------------------------+
+# 			| mask_inner('This is a string', 5, 1, '*') 		 |
+# 			+------------------------------------------------+
+# 			| This ****************g 								 |
+# 			+------------------------------------------------+
+#
+# 			SELECT mask_outer('This is a string', 5, 1, '#');
+# 			+------------------------------------------------+
+# 			| mask_outer('This is a string', 5, 1, '#') 		 |
+# 			+------------------------------------------------+
+# 			| #####is a strin# 										 |
+# 			+------------------------------------------------+
+#
+# SPECIAL-PURPOSE MASKING FUNCTIONS
+#
+# Other masking functions expect a string argument representing a specific type of value and mask
+# it to remove identifying characteristics.
+#
+# NOTE:
+#
+# 		The examples here supply function arguments using the random value generation functions that return the
+# 		appropriate type of value.
+#
+# 		More about generation functions later.
+#
+# PAYMENT CARD PRIMARY ACCOUNT NUMBER MASKING.
+#
+# Masking functions provide strict and relaxed masking of Primary Account Numbers.
+#
+# 		) mask_pan() masks all but the last four digits of the number:
+#
+# 			SELECT mask_pan(gen_rnd_pan());
+# 			+-------------------------------+
+# 			| mask_pan(gen_rnd_pan()) 		  |
+# 			+-------------------------------+
+# 			| XXXXXXXXXXXXXXXXXX2461 		  |
+# 			+-------------------------------+
+#
+# 		) mask_pan_relaxed() is similar but does not mask the first six digits that indicate the payment card issuer unmasked:
+#
+# 			SELECT mask_pan_relaxed(gen_rnd_pan());
+# 			+--------------------------------+
+# 			| mask_pan_relaxed(gen_rnd_pan())|
+# 			+--------------------------------+
+# 			| 770630XXXXXXXX0807 				|
+# 			+--------------------------------+
+#
+# U.S. SOCIAL SECURITY NUMBER MASKING.
+#
+# mask_ssn() masks all but the last four digits of the number:
+#
+# 		SELECT mask_ssn(gen_rnd_ssn());
+# 		+----------------------------------+
+# 		| mask_ssn(gen_rnd_ssn()) 			  |
+# 		+----------------------------------+
+# 		| XXX-XX-1723 							  |
+# 		+----------------------------------+
+#
+# GENERATING RANDOM DATA WITH SPECIFIC CHARACTERISTICS
+#
+# Several functions generate random values. These values can be used for testing,
+# simulation and so forth.
+#
+# gen_range() returns a random integer selected from a given range:
+#
+# 		SELECT gen_range(1, 10);
+# 		+-----------------------+
+# 		| gen_range(1, 10) 		|
+# 		+-----------------------+
+# 		| 						6 		|
+# 		+-----------------------+
+#
+# gen_rnd_email() returns a random email address in the example.com domain:
+#
+# 		SELECT gen_rnd_email();
+# 		+--------------------------+
+# 		| gen_rnd_email() 	  		|
+# 		+--------------------------+
+# 		|ayxnq.xmkpvvy@example.com |
+# 		+--------------------------+
+#
+# gen_rnd_pan() returns a payment card Primary ACcount Number:
+#
+# 		SELECT gen_rnd_pan();
+#
+# (The gen_rnd_pan() function result is not shown, because its return values should be used only for
+# testing, not for publication. It cannot be guaranteed that the number is not assigned to a legitimate payment account)
+#
+# gen_rnd_ssn() returns a random U.S. Social Security number with the first and second parts each chosen
+# from a range not used for legitimate numbers:
+#
+# 		SELECT gen_rnd_ssn();
+# 		+-------------------+
+# 		| gen_rnd_ssn() 	  |
+# 		+-------------------+
+# 		| 912-45-1615 		  |
+# 		+-------------------+
+#
+# gen_rnd_us_phone() returns a random U.S. phone number in the 555 area code not used for legitimate numbers:
+#
+# 		SELECT gen_rnd_us_phone();
+# 		+-------------------------+
+# 		| gen_rnd_us_phone() 	  |
+# 		+-------------------------+
+# 		| 1-555-747-5627 			  |
+# 		+-------------------------+
+#
+# GENERATING RANDOM DATA USING DICTIONARIES
+#
+# MySQL Enterprise Data Masking and De-identification enables dictionaries to be used as sources of random values.
+# To use a dictionary, it must first be loaded from a file and given a name.
+#
+# Each loaded dictionary becomes part of the dictionary registry.
+#
+# Items then can be selected from registered dictionaries and used as random values or as 
+# replacements for other values.
+#
+# A valid dictionary file has these characteristics:
+#
+# 		) The file contents are plain text, one term per line.
+#
+# 		) Empty lines are ignored.
+#
+# 		) The file must contain at least one term.
+#
+# Suppose that a file named de_cities.txt contains these city names in Germany:
+#
+# 	Berlin
+# 	Munich
+# 	Bremen
+#
+# Also suppose that a file named us_cities.txt contains these city names in the U.S:
+#
+# 	Chicago
+# 	Houston
+# 	Phoenix
+# 	El Paso
+# 	Detroit
+#
+# Assume that the secure_file_priv system variable is set to /usr/local/mysql/mysql-files.
+#
+# IN that case, copy the dictionary files to that directory so that the MySQL server can access them.
+#
+# Then use gen_dictionary_load() to load the dictionaries into the dictionary registry and assign
+# them names: 		
+#
+# SELECT gen_dictionary_load('/usr/local/mysql/mysql-files/de_cities.txt', 'DE_Cities');
+# +------------------------------------------------------------------------------------+
+# | gen_dictionary_load('/usr/local/mysql/mysql-files/de_cities.txt', 'DE_Cities') 		|
+# +------------------------------------------------------------------------------------+
+# | Dictionary load success 																				|
+# +------------------------------------------------------------------------------------+
+#
+# SELECT gen_dictionary_load('/usr/local/mysql/mysql-files/us_cities.txt', 'US_Cities');
+# +------------------------------------------------------------------------------------+
+# | gen_dictionary_load('/usr/local/mysql/mysql-files/us_cities.txt', 'US_Cities') 	   |
+# +------------------------------------------------------------------------------------+
+# | Dictionary load success 																				|
+# +------------------------------------------------------------------------------------+
+#
+# To select a random term from a dictionary, use gen_dictionary():
+#
+# 	SELECT gen_dictionary('DE_Cities');
+# 	+----------------------------------+
+# 	| gen_dictionary('DE_Cities') 	  |
+# 	+----------------------------------+
+# 	| Berlin 								  |
+#  +----------------------------------+
+#
+#  SELECT gen_dictionary('US_Cities');
+# 	+-----------------------------------+
+# 	| gen_dictionary('US_Cities') 		|
+# 	+-----------------------------------+
+# 	| Phoenix 									|
+# 	+-----------------------------------+
+#
+# To select a random term from multiple dictionaries, randomly select one of the dictionaries,
+# then select a term from it:
+#
+# SELECT gen_dictionary(ELT(gen_range(1,2), 'DE_Cities', 'US_Cities'));
+# +--------------------------------------------------------------------+
+# | gen_dictionary(ELT(gen_range(1,2), 'DE_Cities', 'US_Cities')) 	  |
+# +--------------------------------------------------------------------+
+# | Detroit 																			  |
+# +--------------------------------------------------------------------+
+#
+# SELECT gen_dictionary(ELT(gen_range(1,2), 'DE_Cities', 'US_Cities'));
+# +--------------------------------------------------------------------+
+# | gen_dictionary(ELT(gen_range(1,2), 'DE_Cities', 'US_Cities')) 	  |
+# +--------------------------------------------------------------------+
+# | Bremen 																				  |
+# +--------------------------------------------------------------------+
+#
+# The gen_blacklist() function enables a term from one dictionary to be replaced by a term from
+# another dictionary, which effects masking by substitution.
+#
+# Its arguments are the term to replace, the dictionary in which the term appears, and the dictionary
+# from which to choose a replacement.
+#
+# For example, to substitute a U.S. city for a German city, or vice versa, use gen_blacklist() like this:
+#
+# 		SELECT gen_blacklist('Munich', 'DE_Cities', 'US_Cities');
+# 		+------------------------------------------------------------+
+# 		| gen_blacklist('Munich', 'DE_Cities', 'US_Cities') 			 |
+# 		+------------------------------------------------------------+
+# 		| Houston 																	 |
+# 		+------------------------------------------------------------+
+#
+# 		SELECT gen_blacklist('El Paso', 'US_Cities', 'DE_Cities'); 
+# 		+------------------------------------------------------------+
+# 		| gen_blacklist('El Paso', 'US_Cities', 'DE_Cities') 			 |
+# 		+------------------------------------------------------------+
+# 		| Bremen 																	 |
+# 		+------------------------------------------------------------+
+#
+# If the term to replace is not in the first dictionary, gen_blacklist() returns it unchanged:
+#
+# 		SELECT gen_blacklist('Moscow', 'DE_Cities', 'US_Cities'); 	
+# 		+------------------------------------------------------------+
+# 		| gen_blacklist('Moscow', 'DE_Cities', 'US_Cities') 			 |
+# 		+------------------------------------------------------------+
+# 		| Moscow 																	 |
+# 		+------------------------------------------------------------+
+#
+# USING MASKED DATA FOR CUSTOMER IDENTIFICATION
+#
+# At customer-service call centers, one common identity verification technique is to ask customers
+# to provide their last four Social Security number (SSN) digits.
+#
+# For example, a customer might say her name is Joanna Bond and that her last four SSN digits are 0007.
+#
+# Suppose that a customer table containing customer records has these columns:
+#
+#		) id: Customer ID number.
+#
+# 		) first_name: Customer first name.
+#
+# 		) last_name: Customer last name.
+#
+# 		) ssn: Customer Social Security number.
+#
+# The application used by customer-service representatives to check the customer SSN might execute a query like this:
+#
+# 		SELECT id, ssn
+# 		FROM customer
+# 		WHERE first_name = 'Joanna' AND last_name = 'Bond';
+# 		+----+------------------+
+# 		| id | ssn 					|
+# 		+----+------------------+
+# 		|786 | 906-39-0007 		|
+# 		+----+------------------+
+#
+# However, that exposes the SSN to the customer-service representative, who has no need to see anything but the last
+# 4 digits.
+#
+# Instead, the application can use this query to display only the masked SSN:
+#
+# 		SELECT id, mask_ssn(CONVERT(ssn USING binary))
+# 		FROM customer
+# 		WHERE first_name = 'Joanna' AND last_name = 'Bond';
+# 		+----+---------------------------------------------+
+# 		| id | mask_ssn(CONVERT(ssn USING binary)) 			|
+# 		+----+---------------------------------------------+
+# 		|786 | XXX-XX-0007 											|
+# 		+----+---------------------------------------------+
+#
+# Now the representative sees only what is necessary, and customer privacy is preserved.
+#
+# Why was the CONVERT() function used for the argument to mask_ssn()?
+#
+# Because mask_ssn() requires an argument of length 11, and because UDFs treat string arguments
+# as binary strings, with one byte par char.
+#
+# Thus, even though ssn is defined as VARCHAR(11), if the ssn column has a multibyte character set,
+# it appears ot be longer than 11 bytes when passed to a UDF, and an error occurs.
+#
+# Converting the value to a binary string ensures that hte UDF sees an argument of length 11.
+#
+# A similar technique may be needed for other data masking functions when string arguments do
+# not have a single-byte character set.
+#
+# CREATING VIEWS THAT DISPLAY MASKED DATA
+#
+# If masked data from a table is used for multiple queries, it may be convenient to define a view that
+# produces masked data.
+#
+# That way, applications can select from the view without performing masking in individual queries.
+#
+# For example, a masking view on the customer table from the previous section can be defined like this:
+#
+# 		CREATE VIEW masked_customer AS
+# 		SELECT id, first_name, last_name, mask_ssn(CONVERT(ssn USING binary)) AS ssn
+# 		FROM customer;
+#
+# Then the query to look up a customer becomes simpler but still returns masked data:
+#
+# 		SELECT id, ssn
+# 		FROM masked_customer
+# 		WHERE first_name = 'Joanna' AND last_name = 'Bond';
+# 		+----+---------------------+
+# 		| id | ssn 						|
+# 		+----+---------------------+
+# 		|786 | XXX-XX-0007 			|
+# 		+----+---------------------+
+#
+# MySQL ENTERPRISE DATA MASKING AND DE-IDENTIFICATION USER-DEFINED FUNCTION REFERENCE
+#
+# The MySQL Enterprise Data Masking and De-Identification plugin library includes several user-defined
+# (UDFs), which may be grouped into these categories:
+#
+# 		) Data Masking Functions
+#
+# 		) Random Data Generation Functions
+#
+# 		) Random Data Dictionary-Based Functions
+#
+# These UDF's treat string arguments as binary strings, which means they are implicitly case sensitive.
+# In addition, string UDF return values are binary strings.
+#
+# If a string return value should be in a different character set, convert it.
+# 
+# The following example shows how to convert the result of gen_rnd_email() to the utf8mb4 character set:
+#
+# 		SET @email = CONVERT(gen_rnd_email() USING utf8mb4);
+#
+# It may also be necessary to convertt string arguments.
+#
+# DATA MASKING FUNCTIONS
+#
+# Each function in this section performs a masking operation on its string argument and returns the masked result.
+#
+# 		) mask_inner(str, margin1, margin2 [, mask char])
+#
+# 			Masks the interior part of a string, leaving the ends untouched, and returns the result.
+#
+# 			An optional masking character can be specified.
+#
+# 				) Str: The string to mask.
+#
+# 				) margin1: A nonnegative integer that specifies the number of characters on the left end of the string to remain unmasked.
+# 								If 0, no left end chars remain unmasked.
+#
+# 				) margin2: A nonnegative integer that specifies the number of characters on teh right end of the string to remain unmasked.
+# 								If 0, no right end chars remain unmasked.
+#
+# 				) mask_char: (Optional) The single character to use for masking. The default is 'X', if mask_char is not given.
+#
+# 								Because UDF string arguments are treated as binary strings, the masking character must be a single-byte character.
+# 								Attempts to use a multibyte character produce an error.
+#
+# Return value:
+#
+# The masked string or NULL if either margin is negative.
+#
+# If the sum of the margin values is larger than the argument length, no masking occurs
+# and the argument is returned unchanged.
+#
+# Example:
+#
+# 		SELECT mask_inner('abcdef', 1, 2), mask_inner('abcdef', 0, 5);
+# 		+-----------------------------+------------------------------+
+# 		| mask_inner('abcdef', 1, 2) 	| mask_inner('abcdef', 0, 5) 	 |
+# 		+-----------------------------+------------------------------+
+# 		| aXXXef 							| Xbcdef 							 |
+# 		+-----------------------------+------------------------------+
+#
+# 		SELECT mask_inner('abcdef', 1, 2, '*'), mask_inner('abcdef', 0, 5, '#');
+# 		+---------------------------------+------------------------------+
+# 		| mask_inner('abcdef', 1, 2, '*') | mask_inner('abcdef',0,5,'#') |
+# 		+---------------------------------+------------------------------+
+# 		| a***ef 								 | #bcdef 							  |
+# 		+---------------------------------+------------------------------+
+#
+# ) mask_outer(str, margin1, margin2 [, mask char])
+#
+# 		Masks the left and right ends of a string, leaving the interor unmasked, and returns the result.
+# 		An optional masking character can be specified.
+#
+# 		arguments:
+#
+# 			) str: The string to mask
+#
+# 			) margin1: A nonnegative integer that specifies the number of characters on the left end of the string to mask.
+# 							If the value is 0, no left end characters are masked.
+#
+# 			) margin2: A nonnegative integer that specifies the number of characters on the right end of the string to mask.
+# 							If the value is 0, no right end chars are masked.
+#
+# 			) mask_char: (Optional) The single character to use for masking. Default is 'X' if mask_char is not given.
+#
+# 				Because UDF string arguments are treated as binary strings, the masking character must be a single-byte character.
+# 				Attempts to use a multibyte character produce an error.
+#
+# 	Return value:
+#
+# 	The masked string, or NULL if either margin is negative.
+#
+# 	If the sum of the margin values is larger than the argument length, the entire argument is masked.
+#
+# 	Example:
+#
+# 		SELECT mask_outer('abcdef', 1, 2), mask_outer('abcdef', 0, 5);
+# 		+-----------------------------+-------------------------------+
+# 		| mask_outer('abcdef', 1, 2)  | mask_outer('abcdef', 0, 5) 	  |
+# 		+-----------------------------+-------------------------------+
+# 		| XbcdXX 							| aXXXXX 							  |
+# 		+-----------------------------+-------------------------------+
+#
+# 		SELECT mask_outer('abcdef', 1, 2, '*'), mask_outer('abcdef', 0, 5, '#');
+# 		+---------------------------------+--------------------------------+
+# 		| mask_outer('abcdef', 1, 2, '*') | mask_outer('abcdef', 0, 5, '#' |
+# 		+---------------------------------+--------------------------------+
+# 		| *bcd** 								 | a##### 								 |
+# 		+---------------------------------+--------------------------------+
+#
+# ) mask_pan(str)
+#
+# 		Masks a payment card Primary Account Number and returns the number with all but the last four digits
+# 		replaced by 'X' characters.
+#
+# 		Arguments:
+#
+# 			) str: The string to mask. The string must be a suitable length for the Primary Account Number, but is not otherwise checked.
+#
+# 		Return value:
+#
+# 		The masked payment number as a string. If the argument is shorter than required, it is returned unchanged.
+#
+# 		Example:
+#
+# 			SELECT mask_pan(gen_rng_pan());
+# 			+------------------------------+
+# 			| mask_pan(gen_rnd_pan()) 		 |
+# 			+------------------------------+
+# 			| XXXXXXXXXXXXXXXXXXX9102 		 |
+# 			+------------------------------+
+#
+# 			SELECT mask_pan(gen_rnd_pan(19));
+# 			+------------------------------+
+# 			| mask_pan(gen_rnd_pan(19)) 	 |
+# 			+------------------------------+
+# 			| XXXXXXXXXXXXXXXXXXX8268 		 |
+# 			+------------------------------+
+#
+# 			SELECT mask_pan('a*Z');
+# 			+----------------------+
+# 			| mask_pan('a*Z') 	  |
+# 			+----------------------+
+# 			| a*Z 					  |
+# 			+----------------------+
+#
+# ) mask_pan_relaxed(str)
+#
+# 		Masks a payment card Primary Account Number and returns the number with all but the first six and last four digits
+# 		replaced by 'X' characters.
+#
+# 		the first six digits indicate the payment card issuer.
+#
+# 		Arguments:
+#
+# 			) str: The string to mask. The string must be a suitable length for the Primary Account Number, but is not otherwise checked.
+#
+# 		Return value:
+#
+# 			The masked payment number as a string. If the argument is shorter than required, it is returned unchanged.
+#
+# 		Example:
+#
+# 			SELECT mask_pan_relaxed(gen_rnd_pan());
+# 			+--------------------------------------+
+# 			| mask_pan_relaxed(gen_rnd_pan()) 		|
+# 			+--------------------------------------+
+# 			| 551279xxxxxxxxxxxxxx3108 				|
+# 			+--------------------------------------+
+#
+# 			SELECT mask_pan_relaxed(gen_rnd_pan(19));
+# 			+--------------------------------------+
+# 			| mask_pan_relaxed(gen_rnd_pan(19)) 	|
+# 			+--------------------------------------+
+# 			| 462634XXXXXXXXXXXXXX6739 				|
+# 			+--------------------------------------+
+# 		
+# 			SELECT mask_pan_relaxed('a*Z');
+# 			+------------------------------+
+# 			| mask_pan_relaxed('a*Z') 		 |
+# 			+------------------------------+
+# 			| a*Z 								 |
+# 			+------------------------------+
+#
+# 	) mask_ssn(str)
+#
+# 		Masks a U.S. Social Security number and returns the number with all but the last four digits replaced by 'X' characters.
+#
+# 		Arguments:
+#
+# 			) str: The string to mask. The string must be 11 chars long, but is not otherwise checked.
+#
+# 		Return value:
+#
+# 		The masked Social Security number as a string, or NULL if the argument is not the correct length.
+#
+# 		Example:
+#
+# 		SELECT mask_ssn('909-63-6922'), mask_ssn('abcdefghijk');
+# 		+----------------------------+--------------------------+
+# 		| mask_ssn('909-63-6922') 	  | mask_ssn('abcdefghijk')  |
+# 		+----------------------------+--------------------------+
+# 		| XXX-XX-6922 					  | XXX-XX-hijk 			     |
+# 		+----------------------------+--------------------------+
+#
+# 		SELECT mask_ssn('909');
+# 		+---------------------+
+# 		| mask_ssn('909') 	 |
+# 		+---------------------+
+# 		| NULL 					 |
+# 		+---------------------+
+#
+# RANDOM DATA GENERATION FUNCTIONS
+#
+# The functions in this section generate random values for different types of data.
+#
+# When possible, generated values have characteristics reserved for demonstration or test values,
+# to avoid having them mistaken for legitimate data.
+#
+# For example, gen_rnd_us_phone() returns a U.S. phone number that uses the 555 area code, which is not
+# assigned to phone numbers in actual use.
+#
+# INdividual function descriptions describe any exceptions to this principle.
+#
+# 		) gen_range(lower, upper)
+#
+# 			Generates a random number chosen from a specified range.
+#
+# 			Arguments:
+#
+# 				) lower: An integer that specifies the lower boundary of the range.
+#
+# 				) upper: An integer that specifies the upper boundary of the range, which must not be less than the lower boundary.
+#
+# 			Return value:
+#
+# 			A random integer in the range from lower to upper, inclusive or NULL if the upper argument is less than lower.
+#
+# 			Example:
+#
+# 				SELECT gen_range(100, 200), gen_range(-1000, -800);
+# 				+------------------------+-------------------------+
+# 				| gen_range(100,200) 	 | gen_range(-1000, -800)  |
+# 				+------------------------+-------------------------+
+# 				| 					177 		 | 						-917  |
+# 				+------------------------+-------------------------+
+##
+# 				SELECT gen_range(1, 0);
+# 				+----------------------+
+# 				| gen_range(1, 0) 	  |
+# 				+----------------------+
+# 				| 					NULL    |
+# 				+----------------------+
+#
+# 		) gen_rnd_email()
+#
+# 			Generates a random email address in the example.com domain.
+#
+# 			Arguments: None.
+#
+# 			Return value: A random email address as a string.
+#
+# 			Example:
+#
+# 				SELECT gen_rnd_email();
+# 				+--------------------------+
+# 				| gen_rnd_email() 			|
+# 				+--------------------------+
+# 				| ijocv.mwvhhuf@example.com|
+# 				+--------------------------+
+#
+# 		) gen_rnd_pan([size])
+#
+# 			Generates a random payment card Primary Account Number.
+# 			The number passes the Luhn check (an algorithm that performs a checksum verification against 
+# 														a check digit)
+#
+# 			WARNING:
+#
+# 				Values returned from gen_rnd_pan() should be used only for test purposes, and are not suitable for publication.
+# 				There is no way to guarantee that a given return value is not assigned to a legitimate payment account.
+#
+# 				Should it be necessary to publish a gen_rnd_pan() result, consider masking it with mask_pan() or mask_pan_relaxed()
+#
+# 			Argumnents:
+#
+# 				)size: (Optional) An integer that specifies the size of the result. The default is 16 if size is not given.
+# 							If given, size must be an integer in the range from 12 to 19.
+#
+# 			Return value:
+#
+# 			A random payment number as a string, or NULL if a size argument outside the permitted range is given.
+#
+# 			Example:
+#
+# 				SELECT mask_pan(gen_rnd_pan());
+# 				+------------------------------+
+# 				| mask_pan(gen_rnd_pan()) 		 |
+# 				+------------------------------+
+# 				| XXXXXXXXXXXXXXXXX5805 		 |
+# 				+------------------------------+
+#
+# 				SELECT mask_pan(gen_rnd_pan(19));
+# 				+------------------------------+
+# 				| mask_pan(gen_rnd_pan(19)) 	 |
+# 				+------------------------------+
+# 				| XXXXXXXXXXXXXXXXXX5067 		 |
+# 				+------------------------------+
+#
+# 				SELECT mask_pan_relaxed(gen_rnd_pan());
+# 				+-----------------------------------+
+# 				| mask_pan_relaxed(gen_rnd_pan())	|
+# 				+-----------------------------------+
+# 				| 398403XXXXXXXXXXX9547 				|
+# 				+-----------------------------------+
+#
+# 				SELECT mask_pan_relaxed(gen_rnd_pan(19));
+# 				+-----------------------------------+
+# 				| mask_pan_relaxed(gen_rnd_pan(19)) |
+# 				+-----------------------------------+
+# 				| 578416XXXXXXXXXXX6509 				|
+# 				+-----------------------------------+
+#
+# 				SELECT gen_rnd_pan(11), gen_rnd_pan(20);
+# 				+-----------------+----------------+
+# 				| gen_rnd_pan(11) | gen_rnd_pan(20)|
+# 				+-----------------+----------------+
+# 				| NULL 				| NULL 			  |
+# 				+-----------------+----------------+
+#
+# ) gen_rnd_ssn()
+#
+# 		Generates a random U.S. Social Security number in AAA-BB-CCCC format.
+#
+# 		The AAA part is greater than 900 and the BB part is less than 70, which are characteristics
+# 		not used for legitimate Social Security numbers:
+#
+# 		Arguments: None.
+#
+# 		Return value: A random Social Security number as a string.
+#
+# 		Example:
+#
+# 			SELECT gen_rnd_ssn();
+# 			+--------------------+
+# 			| gen_rnd_ssn() 		|
+# 			+--------------------+
+# 			| 951-26-0058 			|
+# 			+--------------------+
+#
+# ) gen_rnd_us_phone()
+#
+# 		Generates a random U.S. phone number in 1-555-AAA-BBBB format.
+# 		The 555 area code is not used for legitimate phone numbers.
+#
+# 		Arguments: None
+#
+# 		Return value: A random U.S phone number as a string.
+#
+# 		Example:
+#
+# 			SELECT gen_rnd_us_phone();
+# 			+-------------------------+
+# 			| gen_rnd_us_phone() 	  |
+# 			+-------------------------+
+# 			| 1-555-682-5423 			  |
+# 			+-------------------------+
+#
+# RANDOM DATA DICTIONARY-BASED FUNCTIONS
+#
+# The functions in this section manipulate dictionaries of terms and perform generation and masking operations
+# based on them.
+#
+# Some of these functions require the SUPER privilege.
+#
+# When a dictionary is loaded, it becomes part of the dictionary registry and is assigned a name to be used by other
+# dictionary functions.
+#
+# Dictionaries are loaded from plain text files containing one term per line.
+#
+# Empty lines are ignored.
+#
+# To be valid, a dictionary file must contain at least one nonempty line.
+#
+# ) gen_blacklist(str, dictionary name, replacement dictionary name)
+#
+# 		Replaces a term present in one dictionary with a term from a second dictionary and returns the replacement term.
+#
+# 		This masks the original term by substitution.
+#
+# 		Arguments:
+#
+# 			) str: A string that indicates the term to replace.
+#
+# 			) dictionary_name: A string that names the dictionary containing the term to replace.
+#
+# 			) replacement_dictionary_name: A string that names the dictionary from which to choose the replacement term.
+#
+# 		Return value:
+#
+# 		a string randomly chosen from replacement_dictionary_name as a replacement for str, or str if it does not appear in dictionary_name,
+# 		or NULL if either dictionary name is not in the dictionary registry.
+#
+# 		If the term to replace appears in both dictionaries, it is possible for the return value to be the same term.
+#
+# 		Example:
+#
+# 			SELECT gen_blacklist('Berlin', 'DE_Cities', 'US_Cities');
+# 			+--------------------------------------------------------+
+# 			| gen_blacklist('Berlin', 'DE_Cities', 'US_Cities') 		|
+# 			+--------------------------------------------------------+
+# 			| Phoenix 																|
+# 			+--------------------------------------------------------+
+#
+# ) gen_dictionary(dictionary name)
+#
+# 		Returns a random term from a dictionary.
+#
+# 		Arguments:
+#
+# 			) dictionary_name: A string that names the dictionary from which to choose the term.
+#
+# 		Return value:
+#
+# 			a random term from teh dictionary as a string, or NULL if the dictionary name is not in the dictionary
+# 			registry.
+#
+# 		Example:
+#
+# 			SELECT gen_dictionary('mydict');
+# 			+--------------------------------+
+# 			| gen_dictionary('mydict') 		|
+# 			+--------------------------------+
+# 			| My term 								|
+# 			+--------------------------------+
+#
+# 			SELECT gen_dictionary('no-such-dict');
+# 			+------------------------------------+
+# 			| gen_dictionary('no-such-dict') 	 |
+# 			+------------------------------------+
+# 			| NULL 										 |
+# 			+------------------------------------+
+#
+# ) gen_dictionary_drop(dictionary_name)
+#
+# 		Removes a dictionary from the dictionary registry.
+#
+# 		This function requires the SUPER privilege.
+#
+# 		Arguments:
+#
+# 			) dictionary_name: A string that names the dictionary to remove from the dictionary registry.
+#
+# 		Return values:
+#
+# 			a string that indicates whether the drop operation succeeded.
+# 			Dictionary removed indicates success.
+#
+# 			Dictionary removal error indicates failure.
+#
+# 			Example:
+#
+# 				SELECT gen_dictionary_drop('mydict');
+# 				+------------------------------------------------+
+# 				| gen_dictionary_drop('mydict') 						 |
+# 				+------------------------------------------------+
+# 				| Dictionary removed 									 |
+# 				+------------------------------------------------+
+#
+# 				SELECT gen_dictionary_drop('no-such-dict');
+# 				+------------------------------------------------+
+# 				| gen_dictionary_drop('no-such-dict') 				 |
+# 				+------------------------------------------------+
+# 				| Dictionary removal error 							 |
+# 				+------------------------------------------------+
+#
+# ) gen_dictionary_load(dictionary path, dictionary name)
+#
+# 		Loads a file into the dictionary registry and assigns the dictionary a name to be used with other functions
+# 		that require a dictionary name argument.
+#
+# 		This function requires the SUPER privilege.
+#
+# 		IMPORTANT: Dictionaries are not persistent. Any dictionary used by applications must be loaded for each server startup.
+#
+# 		Once loaded into the registry, a dictionary is used as is, even if the underlying directory file changes.
+#
+# 		To reload a dictionary, first drop it with gen_dictionary_drop(), then load it again with
+# 		with gen_dictionary_load()
+#
+# 		Arguments:
+#
+# 			) Dictionary_path: a string that specifies the path name of the dictionary file.
+#
+# 			) Dictionary_name: A string that provides a name for the dictionary.
+#
+# 		Return value:
+#
+# 		a string that indicates whether the load operation succeeded.
+#
+# 		Dictionary load success indicates success.
+#
+# 		Dictionary load error indicates failure.
+#
+# 		Dictionary load failure can occur for several reasons, including:
+#
+# 			 ) A dictionary with the given name is already loaded.
+#
+# 			) The dictionary file is not found
+#
+# 			) The dictionary file contains no terms
+#
+# 			) THe secure_file_priv system variable is set and teh dictionary file is not located in the directory named by the variable.
+#
+# 		Example:
+#
+# 			SELECT gen_dictionary_load('/usr/local/mysql/mysql-files/mydict', 'mydict');
+# 			+---------------------------------------------------------------------------+
+# 			| gen_dictionary_load('/usr/local/mysql/mysql-files/mydict', 'mydict') 		 |
+# 			+---------------------------------------------------------------------------+
+# 			| Dictionary load success 																	 |
+# 			+---------------------------------------------------------------------------+
+#
+# 			SELECT gen_dictionary_load('/dev/null', 'null');
+# 			+------------------------------------------------+
+# 			| gen_dictionary_load('/dev/null', 'null') 		 |
+# 			+------------------------------------------------+
+# 			| Dictionary load error 								 |
+# 			+------------------------------------------------+
+#
+# FIPS SUPPORT
+#
+# MySQL supports FIPS mode, if compiled using OpenSSL, and an OpenSSL library and FIPS Object Module are available at runtime.
+#
+# FIPS mode on the server side applies to cryptographic operations performed by the server.
+#
+# This includes replication (master/slave and Group Replication) and X Plugin,
+# which run within the server.
+#
+# FIPS mode also applies to attempts by clients to connect to the server.
+#
+# FIPS OVERVIEW
+#
+# Federal Information Processing Standards 140-2 (FIPS 140-2) describes a security standard
+# that can be required by Federal (US Government) agencies for cryptographic modules used
+# to protect sensitive or valuable information.
+#
+# To be considered acceptable for such Federal Use, a cryptographic module must be certified
+# for FIPS 140-2.
+#
+# If a system intended to protect sensitive data lacks the proper FIPS 140-2 certificate, Federal
+# agencies cannot purchase it.
+#
+# Products such as OpenSSL can be used in FIPS mode, although the OpenSSL library itself is not validated
+# for FIPS.
+#
+# Instead, the OpenSSL library is used with the OpenSSL FIPS Object Module to enable OpenSSL based apps to operate in FIPS mode.
+#
+# IMPORTANT: FIPS mode imposes conditions on cryptographic operations such as restrictions on acceptable encryption
+# algorithms or requirements for longer key lengths.
+#
+# For OpenSSL, the exact FIPS behavior depends on the OpenSSL version. For details, refer to the OpenSSL FIPS user guide.
+#
+# SYSTEM REQUIREMENTS FOR FIPS MODE IN MYSQL
+#
+# For MySQL to support FIPS mode, these system requirements must be satisfied:
+#
+# 		) At build time, MySQl must be compiled using OpenSSL. FIPS mode cannot be used in MySQL if compilation uses a different SSL lib.
+#
+# 		) at runtime, the OpenSSL library and OpenSSL FIPS Object Module must be available as shared (dynamically linked) objects.
+# 			It is possible to build statically linked OpenSSL objects, but MysQL will not use them.
+#
+# FIPS mode has been tested for MySQL on EL7, but may work on other systems.
+#
+# If your platform or OS provides the OpenSSL FIPS Object Module, you can use it.
+#
+# Otherwise, you can build the OpenSSL library and FIPS Object MOdule from source.
+#
+# Use the instructions in the OpenSSL FIPS User Guide (more later)
+#
+# CONFIGURING FIPS MODE in MySQL
+#
+# MySQL enables control of FIPS mode on the server side and the client side:
+#
+# 		) The ssl_fips_mode system variable controls whether the server operates in FIPS mode.
+#
+# 		) The --ssl-fips-mode client option controls whether a given MySQL client operates in FIPS mode.
+#
+# The ssl_fips_mode system variable and --ssl-fips-mode client option permit these values:
+#
+# 		) OFF : Disables FIPS mode.
+#
+# 		) ON : Enables FIPS mode.
+#
+# 		) STRICT : Enables "strict" FIPS mode.
+#
+# On the server side, numeric ssl_fips_mode values of 0, 1, 2 are equivalent to OFF, ON and STRICT.
+#
+# IMPORTANT:
+#
+# 		In general, STRICT imposes more restrictions than ON, But MySQL itself has no FIPS-specific code other than
+# 		to specify to OpenSSL the FIPS mode value.
+#
+# 		The exact behavior of FIPS mode for ON or STRICT depends on the OpenSSL version.
+#
+# 		For details, refer to the OpenSSL FIPS USer guide.
+#
+# NOTE:
+#
+# 		If the OpenSSL FIPS Object Module is not available, the only permitted value for ssl_fips_mode
+# 		and --ssl-fips-mode is OFF.
+#
+# 		an error occurs for attempts to set the FIPS mode to a different value.
+#
+# FIPS Mode on the server side applies to cryptographic operations performed by the server.
+# This includes replication (master/slave and Group Replication) and X plugin, which run within the server.
+#
+# FIPS mode also applies to attempts by clients to connect to the server.
+#
+# WHen enabled, on either the client or server side, it restricts which of the supported encryption
+# ciphers can be chosen.
+#
+# However, enabling FIPS mode does not require that an encrypted connection must be used, or that user
+# credentials must be encrypted.
+#
+# For example, if FIPS mode is enabled, stronger cryptographic algorithms are required.
+#
+# IN particular, MD5 is restricted, so trying to establish an encrypted connection using an
+# encryption cipher such as RC4-MD5 does not work.
+#
+# But there is nothing about FIPS mode that prevents establishing an uencrypted connection.
+#
+# (To do that, you can use the REQUIRE clause for CREATE_USER or ALTER_USER for specific user accounts,
+# or set the require_secure_transport system variable to affect all accounts).
+#
+# BACKUP AND RECOVERY
+#
+# It is important to back up your databases so that you can recover your data and be up and running again in case
+# problems occur.
+#
+# Such as system crashes, hardware failures or users deleting data by mistake.
+#
+# Backups are also essential as a safeguard before upgrading a MySQL installation, and they can be used to transfer
+# a MySQL installation to another system or to set up replication slave servers.
+#
+# MySQL offers a variety of backup strats from which you can choose the methods that best suti
+# the requirements for your installation:
+#
+# This chapter discusses several backup and recovery topics with which you should be familiar:
+#
+# 		) Types of Backups -> Logical versus physical, full versus incremental, and so froth.
+#
+# 		) Methods for creating backups.
+#
+# 		) Recovery methods, including point-in-time recovery
+#
+# 		) Backup scheduling, compression and encryption
+#
+# 		) Table maintenance, to enable recovery of corrupt tables
+#
+# ADDITIONAL RESOURCES
+#
+# Resources related to backup or to maintaining data availability include the following:
+#
+# 		) Customers of MySQL Enterprise Edition can use MysQL Enterprise Backup product for backups.
+# 			For an overview of this, see later.
+#
+# 		) Details for mysqldump can be found earlier.
+#
+# 		) The syntax of the SQL statements described here is given later.
+#
+# 		) For additional information about InnoDB backup procedures, see later.
+#
+# 		) Replication enables you to maintain identical data on multiple servers.
+#
+# 			This has several benefits, such as eanbling client query load to be distributed
+# 			over servers, availability of data even if a given server is taken offline or fails
+#
+# 			and the ability to make backups with no impact on the master by using a slave server. See more later.
+#
+# 		) MysQL InnoDB cluster is a collection of products that work together to provide a high availability solution.
+#
+# 			A group of MySQL servers can be configured to create a cluster using MySQL Shell.
+#
+# 			The cluster of servers has a single master, called the primary, which acts as the read-write master.
+#
+# 			Multiple secondary servers are replicas of the master.
+#
+# 			A minimum of three servers are required to create a high availability cluster.
+# 			A client application is connected to the primary via MySQL Router.
+#
+# 			If the primary fails, a secondary is automatically promoted to the role of primary,
+# 			and MySQL Router routes requests to the new primary.
+#
+# 		) NDB Cluster provides a high-availability, high-redundancy version of MySQL adapted for the distributed
+# 			computing environment.
+#
+# 			See more later.
+#
+# BACKUP AND RECOVERY TYPES
+#
+# Physical (RAW) vs. Logical Backups
+#
+# Physical backups consists of raw copies of the directories and files that store database contents.
+#
+# This type of backup is suitable for large, important databases that need to be recovered quickly
+# when problems occur.
+#
+# Logical backups save information represented as logical database structure (CREATE_DATABASE, CREATE_TABLE statements)
+# and content (INSERT statements or delimited text files).
+#
+# This type of backup is suitable for smaller amounts of data, where you might edit the values or table structure,
+# or recreate the data on a different machine architechture.
+#
+# Physical backup methods have these characteristics:
+#
+# 		) The backup consists of exact copies of database directories and files.
+#
+# 			Typically this is a copy of all or part of the MySQL data directory.
+#
+# 		) Physical backup methods are faster than logical because they involve only file copying without conversion.
+#
+# 		) Output is more compact than for logical backup.
+#
+# 		) Because backup speed and compactness are important for busy, important DBs, The MySQL Enterprise Backup product
+# 			performs physical backups.
+#
+# 			For an overview of the MySQL Enterprise Backup product, see later.
+#
+# 		) Backup and restore granularity ranges from the level of the entire data directory down to
+# 			the level of individual files.
+#
+# 			This may or may not provide for table-level granularity, depending on storage engine.
+#
+# 			For example, InnoDB tables can each be in a separate file, or share file storage with other
+# 			InnoDB tables; each MyISAM table corresponds uniquely to a set of files.
+#
+# 		) In addition to Databases, the backup can include any related files such as log or configuration files.
+#
+# 		) Data from MEMORY tables is tricky to back up this way because their contents are not stored on disk.
+# 			(The MySQL Enterprise Backup product has a feature where you can retrieve data from MEMORY tables during a backup)
+#
+# 		) Backups are portable only to other machines that have identical or similar hardware characteristics.
+#
+# 		) Backups can be performed while the MySQL server is not running.
+#
+# 			If the server is running, it is necessary to perform appropriate locking so that the server
+# 			does not change DB contents during the backup.
+#
+# 			MySQL Enterprise Backup does this locking automatically for tables that require it.
+#
+# 		) Physical backup tools include the mysqlbackup of MySQL Enterprise Backup for InnoDB or any other tables,
+# 			or file system-level commands (such as cp, scp, tar, rsync) for MyISAM tables.
+#
+# 		) For restore:
+#
+# 			) MySQL Enterprise Backup restores InnoDB and other tables that it backed up.
+#
+# 			) ndb_restore restores NDB tables.
+#
+# 			) Files copied at the file system level can be copied back to the original locations with file system commands.
+#
+# Logical backup methods have these characteristics:
+#
+# 		) The backup is done by querying the MySQL server to obtain DB structure and content information.
+#
+# 		) Backup is slower than physical methods because the server must access DB information and convert it to logical format.
+# 			If the output is written on the client side, the server must also send it to the backup program.
+#
+# 		) Output is larger than for physical backup, particularly when saved in text format.
+#
+# 		) Backup and restore granularity is available at the server level (all databases), database level 
+# 			(all taböles in a particular DB), or table level.
+#
+# 			This is true regardless of storage engine.
+#
+# 		) The backup does not include log or configuration files, or other database-related files that are not part of databases.
+#
+# 		) Backups stored in logical format are machine independent and highly portable.
+#
+# 		) Logical backups are performed with the MySQL server running. The server is not taken offline.
+#
+# 		) Logical backup tools include the mysqldump program and the SELECT_..._INTO_OUTFILE statement.
+#
+# 			These work for any storage engine, even MEMORY.
+#
+# 		) To restore logical backups, SQL-format dump files can be processed using the mysql client.
+#
+# 			TO load delimited-text files, use the LOAD_DATA_INFILE statement or the mysqlimport client.
+#
+# ONLINE VERSUS OFFLINE BACKUPS
+#
+# Online backups take place while the MySQL is running so that the DB information can be obtained from the server.
+# Offline backups tkae place while the server is stopped.
+#
+# This distinction can also be described as "hot" vs "cold" backups; a "warm" backup is one where the server
+# remains running but locked against modifying data while you access database files externally.
+#
+# Online backup methods have these characteristics:
+#
+# 		) The backup is less intrusive to other clients, which can connect to the MySQL server during the backup
+# 			and may be able to access data depending on what operations they need to perform.
+#
+# 		) Care must be taken to impose appropriate locking so that data modifications do not take place that would 
+# 			compromise backup integrity.
+#
+# 			The MySQL Enterprise Backup product does such locking automatically.
+#
+# Offline backup methods have these characteristics:
+#
+# 		) Clients can be affected adversely because the server is unavailable during backup.
+#
+# 			For that reason, such backups are often taken from a replication slave server that
+# 			can be taken offline without harming availability.
+#
+# 		) The backup procedure is simpler because there is no possibility of interference from client activity.
+#
+# A similar distinction between online and offline applies for recovery operations, and similar characteristics apply.
+#
+# However, it is more likely that clients will be affected for online recovery than for online backup because recovery
+# requires stronger locking.
+#
+# During backup, clients might be able to read data while it is being backed up.
+#
+# Recovery modifies data and does not just read it, so clients must be prevented from accessing data while it
+# is being restored.
+#
+# LOCAL VERSUS REMOTE BACKUPS
+#
+# A local backup is performed on the same host where the MySQL server runs, whereas remote backup is
+# done from a different host.
+#
+# For some types of backups, the backup can be initiated from a remote host even if the output is written
+# locally on the server host.
+#
+# 		) mysqldump can connect to local or remote servers. For SQL output (CREATE and INSERT statements),
+# 			local or remote dumps can be done and generate output on the client.
+#
+# 			For delimited text output (with the --tab option), data files are created on the server host.
+#
+# 		) SELECT_..._INTO_OUTFILE can be initiated from a local or remote client host, but the output file is created on the server host.
+#
+# 		) Physical backup methods typically are initiated locally on the MysQL server host so taht the server can be taken offline,
+# 			although the destination for copied files might be remote.
+# 		
+#
+# SNAPSHOT BACKUPS
+#
+# Some file system implementations enable "snapshots" to be taken.
+#
+# these provide logical copies of the file system at a given point in time, without requiring a physical
+# copy of the entire file system.
+#
+# (For example, the implementation may use copy-on-write techniques so that only parts of the file system modified
+# 	after the snapshot time need be copied)
+#
+# MySQL itself does not provide the capability of taking file system snapshots.
+#
+# IT is available through third-party solutions suhc as Veritas, LVM or ZFS.
+#
+# FULL VERSUS INCREMENTAL BACKUPS
+#
+# A full backup includes all data managed by a MySQL server at a given point in time.
+#
+# An incremental backup consists of the changes made to the data during a given time
+# span (from one time point to another)
+#
+# Mysql has different ways of performing full backups, such as those described earlier
+# in this section.
+#
+# INcremental backups are made possible by enabling the server's Binary log, which the server
+# used to record data changes.
+#
+# FULL VERSUS POINT IN TIME (INCREMENTAL) RECOVERY
+#
+# A full recovery restores all data from a full backup.
+#
+# This restores the server instance to the state that it had when the backup was made.
+#
+# If that sate is not sufficiently currently, a full recovery can be followed by recovery
+# of incremental backups made since the full backup, to bring hte server to a more up-to-date state.
+#
+# Incremental recovery is recovery of changes made during a given time span.
+# This is also called point-in-time recovery, because it makes a server's state current up to
+# a given time.
+#
+# Point in time recovery is based on the binary log and typically follows a full recovery from the
+# backup files that restores the server to its state when the backup was made.
+#
+# Then the data changes written in the binary log files are applied as incremental recovery to redo data
+# modifications and bring the server up to the desired point in time.
+#
+# TABLE MAINTENANCE
+#
+# Data integrity can be compromised if tables become corrupt.
+#
+# For InnoDB tables, this is not a typical issue. For programs to check MyISAM
+# tables and repair them if problems are found, see earlier.
+#
+# BACKUP SCHEDULING, COMPRESSION AND ENCRYPTION
+#
+# Backup scheduling is valuable for automating backup procedures.
+#
+# Compression of backup output reduces space requirements, and encryption of
+# the output provides better security against unauthorized access of backed-up data.
+#
+# MySQL itself does not provide these capabilities.
+#
+# The MySQL Enterprise Backup product can compress InnoDB backups,
+# and compress or encryption of backup output can be acheived by using file system utilities.
+#
+# Other third-party solutions may be available.
+#
+# DATABASE BACKUP METHODS
+#
+# This section summarizes some general methods for making backups.
+#
+# MAKING A HOT BACKUP WITH MYSQL ENTERPRISE BACKUP
+#
+# Customers of MySQL Enterprise Edition can use the MySQL Enterprise Backup product to
+# do physical backups of entire instances or selected DBs, tables or both.
+#
+# This product includes features for incremental and compressed backups.
+#
+# Backing up the physical database files makes restoring much faster than logical techniques
+# such as the mysqldump command.
+#
+# InnoDB tables are copied using a hot backup mechanism.
+#
+# (ideally, the InnoDB tables should represent a substansial majority of the data)
+#
+# Tables from other storage engines are copied using a warm backup mechanism.
+#
+# More on this later.
+#
+# MAKING BACKUPS WITH MYSQLDUMP
+#
+# The mysqldump program can make backups. It can back up all kinds of tables.
+#
+# For InnoDB tables, it is possible to perform an online backup that takes no locks on tables using the
+# --single-transaction option to mysqldump. More on this later.
+#
+# MAKING BACKUPS BY COPYING TABLE FILES
+#
+# MyISAM tables can be backed up by copying table files (*.MYD, *MYI files, and associated *.sdi files)
+# To get a consistent backup, stop the server or lock and flush the relevant tables:
+#
+# 		FLUSH TABLES tbl_list WITH READ LOCK;
+#
+# You need only a read lock; this enables other clients to continue to query the tables while you are making
+# a copy of the files in the database directory.
+#
+# The flush is needed to ensure that all active index pages are written to disk before you start the backup.
+# See more on this later.
+#
+# You can also create a binary backup simply by copying the table files, as long as the server is not updating
+# anything.
+#
+# (But note that hte file copying methods od not work if your DB contains InnoDB tables. Also, even if the server
+# is not actively updating data, InnoDB may still have modified data cached in memory and not flushed to disk.)
+#
+# FOr an example of this backup method, see later.
+#
+# MAKING DELIMITED-TEXT FILE BACKUPS
+#
+# To create a text file containing a table's data, you can use SELECT_*_INTO_OUTFILE_'file_name'_FROM_table_name.
+#
+# The file is created on the MySQL server host, not the client host.
+#
+# FOr this statement,, the output file cannot already exist, because permitrting files to be overwritten
+# constitutes security risks.
+#
+# This method works for any kind of data file, but saves only the table data, not the table structure.
+#
+# ANother way to create text data files (along with files containing CREATE_TABLE statements for hte backed up tables)
+# is to use mysqldump with the --tab option.
+#
+# See more on this , later.
+#
+# To reload a delimited-text data file, use LOAD_DATA_INFILE or mysqlimport
+#
+# MAKING INCREMENTAL BACKUPS BY ENABLING THE BINARY LOG
+#
+# MySQL supports incremental backups.
+#
+# You must start the server with the --log-bin option to enable binary logging.
+#
+# The binary log files provide you with the information you need to replicate changes to the DB that
+# are made subsequent to the point at which you performed a backup.
+#
+# At the moment you want to make a incremental backup (containing all changes that happened since the last full
+# or incremental backup), you should rotate the binary log by using FLUSH_LOGS.
+#
+# THis done, you need to copy to the backup location all binary logs which range from the one 
+# of the moment of the last full or incremental backup to the last one.
+#
+# These binary logs are the incremental backup; at restore time, you apply them as explained later.
+#
+# The next time you do a full backup, also rotate the binary log using FLUSH_LOGS or mysqldump --flush-logs
+#
+# MAKING BACKUPS USING REPLICATION SLAVES
+#
+# If you have performance problems with your master server while making backups, one strategy that cna help
+# is to set up replication and perform backups on the slave rather than on the master.
+#
+# See more on this later.
+#
+# IF you are backing up a slave replication server, you should back up its master info and relay log info repositories (more later),
+# when you back up the slave's DB, regardless of the backup method you choose.
+#
+# This information is always needed to resume replication after you restore the slave's data.
+#
+# If your slave is replicating LOAD_DATA_INFILE statements, you should also back up any SQL_LOAD-*
+# files that exist in the directory that the slave uses for this purpose.
+#
+# The slave needs these files to resume replication of any interuppted LOAD_DATA_INFILE operations.
+#
+# The location of this directory is the value of the --slave-load-tmpdir option.
+#
+# IF the server was not started with that option, the directory location is the value of the tmpdir system variable.
+#
+# RECOVERING CORRUPT TABLES
+#
+# IF you have to restore MyISAM tables that have become corrupt, try to recover them using
+# REPAIR_TABLE or myisamchk -r first.
+#
+# That should work for the most part.
+#
+# If it fails, see later.
+#
+# MAKING BACKUPS USING A FILE SYSTEM SNAPSHOT
+#
+# If you are using a Veritas file system, you can make a backup like this:
+#
+# 	1. From a client program, execute FLUSH_TABLES_WITH_READ_LOCK
+#
+# 	2. From another shell, execute mount vxfs snapshot
+#
+# 	3. From the first client,, execute UNLOCK_TABLES
+#
+# 	4. Copy files from the snapshot
+#
+# 	.5 Unmount the snapshot
+#
+# Similar snaphot capacities ma yeb avialable in other file systems, such as LVM or ZFS.
+#
+# EXAMPLE BACKUP AND RECOVERY STRATEGY
+#
+# This section disscuses a procedure for performing backups taht enables you to recover the data
+# after several types of crashes:
+#
+# 		) Operating System crash
+#
+# 		) Power failure
+#
+# 		) File system carsh
+#
+# 		) Hardware problem (hard drive, motherboard, and so forth)
+#
+# THe example commands do not include options such as --user and --password for the mysqldump and mysql client programs.
+# You should include such options as necessary to enable client programs to connect to the MySQL server.
+#
+# ASsume that data is stoed in teh InnoDB storage engine, which has support or transactions and automatic crash recovery.
+# Assume also that the MySQL is under load at hte time of the crash.
+#
+# If it were not, no recovery would ever be needed.
+#
+# FOr cases of operating system crashes or power failures, we can assume that the MySQL disk data is available after a restart.
+#
+# The INnoDB files might not contain consistent data due to the crash, but InnoDB reads its logs and finds in them
+# the list of pending committed and non committed transactions that have not been flushed to the data files.
+#
+# InnoDB automatically rolls back those transactions that were not committed, and flushes to its data files
+# those that were committed.
+#
+# Information about this recovery process is conveyed to the user through the MySQL error log.
+#
+# The following is an example log excerpt:
+#
+# 	InnoDB: Database was not shut down normally.
+# 	InnoDB: Starting recovery from log files...
+# 	InnoDB: Starting log scan based on checkpoint at
+# 	InnoDB: log sequence number 0 13674004
+# 	InnoDB: Doing recovery: scanned up to log sequence number 0 13739520
+# 	InnoDB: etc.
+# 	InnoDB: 1 uncommitted transaction(s) which must be rolled back
+# 	InnoDB: Starting rollback of uncommitted transactions
+# 	InnoDB: Rolling back trx no 16745
+# 	InnoDB: Rolling back of trx no 16745 completed
+# 	InnoDB: Rollback of uncomitted transactions completed
+# 	InnoDB: Starting an apply batch of log records to the database.
+# 	InnoDB: Apply batch completed
+# 	InnoDB: Started
+# 	mysqld: ready for connections
+#
+# For the case of file system crashes or hardware problems, we can assume that hte MySQL disk data is NOT available after a restart.
+#
+# THis means that MySQL fails to start successfully because some blocks of disk data are no longer readable.
+#
+# IN this case, it is necessary to reformat the disk, install a new one, or otherwise correct the underlying
+# problem.
+#
+# Then it is necessary to recover our MySQL data from backups, which means that backups must
+# already have been made.
+#
+# To make sure that is the case, design and implement a backup policy.
+#
+# ESTABLISHING A BACKUP POLICY
+#
+# To be useful, backups must be scheduled regularly.
+#
+# A full backup (a snapshot of the data at a point in time) can be done in MySQL with several tools.
+#
+# For example, MySQL Enterprise Backup can perform a physical backup of an entire instance, with optimizations
+# to minimize overhead and avoid disruption when backing up InnoDB data files:
+# 
+# mysqldump provides online logical backups. THis discussion uses mysqldump.
+#
+# Assume that we make a full backup of all our InnoDB tables in all databases using the following
+# command on Sundat at 1 p.m., when load is low:
+#
+# 		mysqldump --all-databases --master-data --single-transactions > backup_sunday_1_PM.sql
+#
+# The resulting .sql file produced by mysqldump contains a set of SQL INSERT statements that can be used 
+# to reload the dumped tables at a later time.
+#
+# THis backup operation acquires a global read lock on all tables at the beginning of the dump
+# (using FLUSH_TABLES_WITH_READ_LOCK).
+#
+# As soon as this lock has been acquired, the binary log coordinates are read and the lock is released.
+#
+# If long updating statements are running when the FLUSH statement is issued, the backup operation
+# may stall until those statements finish.
+#
+# After that, the dump becomes lock-free and does not disturb reads and writes on the tables.
+#
+# It was assumed earliar the the tables to back up are InnoDB tables, so --single-transaction uses
+# a consistent read and guarantees that data seen by mysqldump does not change.
+#
+# (Changes made by other clients to InnoDB tables are not seen by the mysqldump process)
+#
+# If the backup operation includes nontransactional tables, consistency requires that htey do not
+# change during the backup.
+#
+# For example, for the MyISAM tables in the mysql database, there must be no administrative changes to
+# MySQL accounts during the backup.
+#
+# Full backups are necessary, but it is not always convenient to create them.
+# They produce large backup files and take time to generate.
+#
+# They are not optimal in the sense that each successive full backup includes all data, even that
+# part that has not changed since the previous full backup.
+#
+# IT is more efficient to make an initial full backup and then to make incremental backups.
+#
+# The incremental backups are smaller and take less time to produce.
+# The tradeoff is that, at recovery time, you cannot restore your data just by reloading the full backup.
+#
+# You must also process the incremental backups to recover the incremental changes.
+#
+# TO make incremental backups, we need to save the incremental changes.
+#
+# In MySQL, these changes are represented in the binary log, so the MySQL server should always be
+# started with the --log-bin option to enable that log.
+#
+# With binary logging enabled, teh server writes the data change into a file while it updates data.
+#
+# Looking at hte data directory of a MySQL server that was started with the --log-bin option and
+# that has been running for some days, we find these MySQL binary log files:
+#
+# -rw-rw---- 1 guilhem guilhem  	1277324 Nov 10 23:59 gbichot2-bin.000001
+# -rw-rw---- 1 guilhem guilhem 			4 Nov 10 23:59 gbichot2-bin.000002
+# |
+# V etc, until last is Index
+#
+# 
+# Each time it restarts, the MySQL server creates a new binary log file using the next number
+# in the sequence.
+#
+# While the server is running, you can also tell it to close the current binary log file
+# and begin a new one manually by issuing a FLUSH_LOGS SQL statement or with a mysqladmin flush-logs command.
+#
+# Mysqldump also has an option to flush the logs.
+#
+# The .index file in the data directory contains the list of all MySQL binary logs in the directory.
+#
+# The MySQL binary logs are important for recovery because they form the set of incremental backups.
+#
+# If you make sure to flush the logs when you make your full backup, the binary log files created
+# afterwards contain all the data changes made since the backup.
+#
+# Let's modify the previous mysqldump command a bit so that it flushes the MySQL binary logs
+# at the moment of the full backup, and so that the dump file contains the name of the
+# new current binary log:
+#
+# mysqldump --single-transaction --flush-logs --master-data=2 \
+#  --all-databases > backup_sunday_1_PM.sql
+#
+# After executing this command, the data directory contains a new binary log file,
+# gbichot2-bin.000007,, because the --flush-logs option causes the server to flush its
+# logs.
+#
+# The --master-data option causes mysqldump to write binary log information to its output,
+# so the resulting .sql dump file includes these lines:
+#
+# 	-- Position to start replication or point-in-time recovery from
+# 	-- CHANGE MASTER TO MASTER_LOG_FILE='gbichot2-bin.000007',MASTER_LOG_POS=4;
+#
+# Because the MySQldump command made a full backup, those lines mean two things:
+#
+#		) The dump file contains all changes made before nay changes written to the gbichot2-bin.000007 binary log file or higher
+#
+#	 	) All data changes logged after the backup are not present in the dump file, but are present in the gbichot2-bin.000007 binary log file or higher.
+#
+# On Monday at 1 p.m, we can create an incremental backup by flushing the logs to begin a new binary log file.
+#
+# For example, executing a mysqladmin flush-logs command creates gbichot2-bin.000008 
+#
+# All changes between the Sunday 1 p.m full backup and Monday 1 p.m will be in the gbichot2-bin.000007 file.
+#
+# This incremental backup is important ,so it is a good idea to copyt it to a safe place.
+#
+# (For example, back it up on tape or DVD, or copy it to another machine).
+#
+# On Tuesday 1 p.m, excute another mysqladmin flush-logs command.
+#
+# all Changes between the Monday 1 p.m and Tuesday 1 p.m, will be in teh gbicht2-bin.000008 file
+# (which also should be copied somewhere safe)
+#
+# THe MySQL binary logs take up disk space. To free up space, purge them from time ot time.
+#
+# One way to do this is by deleting the binary logs that are no longer needed, such as when
+# we make a full backup:
+#
+# 		mysqldump --single-transaction --flush-logs --master-data=2 \
+# 			--all-databases --delete-master-logs > backup_sunday_1_PM.sql
+#
+# NOTE:
+#
+# 		Deleting the MYSQL binary logs with mysqldump --delete-master-logs can be dangerous if your server is
+# 		a replication master server, because slave servers might not fully have processed the contents
+# 		of the binary log.
+#
+# 		The description for the PURGE_BINARY_LOGS statement explains what hsould be verified before deleting
+# 		the MySQL binary logs.
+#
+# More on purging binary logs later.
+#
+# USING BACKUPS FOR RECOVERY
+#
+# Now suppose that we have a catastrophic crash on Wednesday at 8 a.m, taht requires recovery from backups.
+#
+# TO recover, first we restore the last full backup we have (the one from Sunday 1 p.m.)
+#
+# The full backup file is just a set of SQL statements, so restoring it is very easy:
+#
+# 		mysql < backup_sunday_1_PM.sql
+#
+# At this point, the data is restored to its state as of Sunday 1 p.m..
+#
+# TO restore the changes made since then, we must use incremental backups.
+#
+# That is, the gbichot2-bin.000007 and gbichot2-bin.000008 binary log files.
+#
+# Fetch the files if neceesary from where you ahve them, and then process their contents as follows:
+#
+# 		mysqlbinlog gbichot2-bin.000007 gbichot2-bin.000008 | mysql
+#
+# We now have recover the data to its state as of Tuesday 1 p.m, but still are missing teh changes
+# from that date to the date of the crash.
+#
+# To not lose them, we would have needed to have the MySQL server store its MySQL binary logs
+# into a safe location (RAID disks, SAN, etc.) different from the place where it stores its data files,
+# so taht htese logs were not on the destroyed disk.
+#
+# (That is, we can start the server with a --log-bin option that specifies a location on a different
+# physical device from the one on which the data directory resides.
+#
+# That way, the logs are safe even if the device contianing the directory is lost)
+#
+# If we had done this, we would have the gbichot2-bin.000009 file (and any subsequent files) at hand,
+# and we could apply them using mysqlbinlog and mysql to restore the most recent data changes with no
+# loss up to hte moment of the crash:
+#
+# 		mysqlbinlog gbichot-bin.0000009 ... | mysql
+#
+# For more information about mysqlbinlog to process binary log files, see later.
+#
+# BACKUP STRATEGY SUMMARY
+#
+# IN case of an operating system crash or power fialure, InnoDB does all the job of recovering the data.
+# but to make sure that you can sleep well, observe the following guidelines:
+#
+# 		) Always run the MySQL server with the --log-bin option, or even --log-bin=log_name, where the log file name
+# 			is located on some safe media different from the drive on which the data directory is located.
+#
+# 			If you have such safe media, this technique can also be good for disk load balancing (which results in a performaance improvement)
+#
+# 		) Make periodic full backups, using the mysqldump command shown earlier, that makes an online, nonblocking backup.
+#
+# 		) Make periodic incremental backups by flushing the logs with FLUSH_LOGS or mysqladmin flush-logs
+#
+# USING MYSQLDUMP FOR BACKUPS
+#
+# This section describes how to use mysqldump to produce dump files, and how to reload dump files.
+# A dump file can be used in several ways:
+#
+# 	) As a backup to enable data recovery in case of data loss.
+#
+# 	) As a source of data for setting up replication slaves
+#
+# 	) As a source of data for experimentation:
+#
+# 		) To make a copy of a database that you can use without changing the original data.
+#
+# 		) TO test potentional upgrade incompatibilities
+#
+# mysqldump produces two types of output, depending on whether the --tab option is given:
+#
+# 	) Without --tab, mysqldump writes SQL statements to the standard output.
+#
+# 		This output consists of CREATE statements to create dumped objects (databases, tables, stored routines,
+# 		and so forth) and INSERT statements to load data into tables.
+#
+# 		The output can be saved in a file and reloaded later using mysql to recreate the dumped objects.
+#
+# 		Options are available to modify the format of the SQL statements, and to control which objects are dumped.
+#
+# 	) With --tab, mysqldump produces two output files for each dumped table.
+#
+# 		The server writes one file as tab-delimited text, one line per table row.
+# 		This file is named tbl_name.txt in the output directory.
+#
+# 		The server also sends a CREATE_TABLE statement for the table to mysqldump, which writes
+# 		it as a file named tbl_name.sql in the output directory.
+#
+# DUMPING DATA IN SQL FORMAT WITH MYSQLDUMP
+#
+# This section describes how ot use mysqldump to create SQL-format dump files.
+#
+# For information about reloading such dump files, see later.
+#
+# By default, mysqldump writes information as SQL statements to the standard output.
+# You can save the output in a file:
+#
+# 		mysqldump [arguments] > file_name
+#
+# TO dump all databases, invoke mysqldump with the --all-databases option:
+#
+# 		mysqldump --all-databases > dump.sql
+#
+# To dump only specific databases, name them on teh command line and use the --databases option:
+#
+# 		mysqldump --databases db1 db2 db3 > dump.sql
+#
+# The --databases option causes all names on the cmd line to be treated as DB names.
+# WIthout htis option, mysqldump treats the first name as a DB name and the following as table names.
+#
+# WIth --all-databases or --databases, mysqldump writes CREATE_DATABASE and USE statements prior ot hte dump
+# output for each databse.
+#
+# This ensures that when the dump file is reloaded, it creates each database if it does not exist and makes it hte default DB,
+# so DB contents are loaded into the same database from which they came.
+#
+# If you want to cause the dump file to force a drop of each database before recreating it, use the --add-drop-database option
+# as well.
+#
+# IN this scase, mysqldump writes a DROP_DATABASE statement preceding to the CREATE_DATABASE statement.
+#
+# To dump a single database, name it on teh command line:
+#
+# mysqldump --databases test > dump.sql
+#
+# In the single-database case, it is permissible to omit the --databases option:
+#
+# 		mysqldump test > dump.sql
+#
+# The difference between the two preceding commands is that without --databases, the dump output
+# contains no CREATE_DATABASE or USE statements.
+#
+# This has several implications:
+#
+# 	) WHen you reload the dump file, you must specify a default DB name so that the server knows which DB to reload
+#
+# 	) For reloading, you can specify a DB name different from the original name, which enables you to reload the data
+# 		into a different DB.
+#
+# 	) If the database to be reloade does not exist, you must create it first.
+#
+# 	) Because the output will contain no CREATE_DATABASE statement, the --add-drop-database option has no effect.
+# 		If you use it, it produces no DROP_DATABASE statement.
+#
+# To dump only specific tables from a database, name them on the command line following the DB name:
+#
+# 		mysqldump test t1 t3 t7 > dump.sql
+#
+# RELOADING SQL-FORMAT BACKUPS
+#
+# To reload a dump file written by mysqldump that consists of SQL statements, use it as input to the mysql client.
+#
+# If the dump file was created by mysqldump with the --all-databases, or --databases option, it contains
+# CREATE_DATABASE and USE statements and it is not necessary to specify a Default DB into which to load the data:
+#
+# 		mysql < dump.sql
+#
+# Alternatively, from within mysql, ,use a source command:
+#
+# 		source dump.sql
+#
+# If the file is a single-database dump not containing CREATE_DATABASE and USE statements, create the database first (if necessary):
+#
+# 		mysqladmin create  db1
+#
+# Then specify the database name when you load the dump file:
+#
+# 		mysql db1 < dump.sql
+#
+# Alternatively, from within mysql, create the database, select it as the default database, and load the dump file:
+#
+# 		CREATE DATABASE IF NOT EXISTS db1;
+# 		USE db1;
+# 		source dump.sql
+#
+# NOTE:
+#
+# 		For Windows Powershell users: Because the "<" char is reserved for future use in PowerHSelll, an alternative paproach is
+# 		required, such as using quotes cmd.exe /c "mysql < dump.sql"
+#
+# DUMPING DATA IN DELIMIETED-TEXT FORMAT WITH MYSQLDUMP
+#
+# This section describes how to use mysqldump to create delimieted-text dump files.
+# For information about reloading such dump files, see later.
+#
+# If you invoke mysqldump with the --tab=dir_name option, it uses dir_name as the output directory
+# and dumps tables individually in that directory using two files for each table.
+#
+# The table name is the base name for these files. FOr a table named t1, the files are named t1.sql and t1.txt 
+#
+# The .sql file contains a CREATE TABLE statement for the table.
+#
+# The .txt file contains the table data, one line per table row
+#
+# The following command dumps the contents of the db1 database to files in the /tmp database:
+#
+# mysqldump --tab=/tmp db1
+#
+# The .txt files containing table data are written by the server, so they are owned by the system account used
+# for running the server.
+#
+# The server uses SELECT_..._INTO_OUTFILE to write the files, so you must have the FILE privilege to perform this operation,
+# and an error occurs if a given .txt file already exists.
+#
+# The server sends the CREATE definitions for dumped tables to mysqldump, which writes them to .sql files.
+# These files therefore are owned by the user who executes mysqldump.
+#
+# It is best that --tab be used only for dumping a local server.
+#
+# If you use it with a remote server, the --tab directory must exist on both the local and remote hosts, and the
+# .txt files will be written by the server in teh remote directory (on the server host), whereas the .sql files
+# will be written by mysqldump in the local directory (on the client host).
+#
+#  		
+# https://dev.mysql.com/doc/refman/8.0/en/mysqldump-delimited-text.html
