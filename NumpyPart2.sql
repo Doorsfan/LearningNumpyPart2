@@ -45466,5 +45466,2010 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # .txt files will be written by the server in teh remote directory (on the server host), whereas the .sql files
 # will be written by mysqldump in the local directory (on the client host).
 #
-#  		
-# https://dev.mysql.com/doc/refman/8.0/en/mysqldump-delimited-text.html
+# For mysqldump --tab, the server by default writes table data to .txt files one line per row with tabs between
+# column values, no quotation marks around column values, and newlines as the line terminator.
+#
+# (These are the same defaults as for SELECT_..._INTO_OUTFILE)
+#
+# To enable data files to be written using a different format, mysqldump supports these options:
+#
+# 		) --fields-terminated-by=str
+#
+# 				The string for separating column values (default: tab)
+#
+# 		) --fields-enclosed-by=char
+#
+# 				The character within which to enclose column values (default: no character)
+#
+# 		) --fields-optionally-enclosed-by=char
+#
+# 				The character within which to enclose non-numeric column values (default: no character)
+#
+# 		) --fields-escaped-by=char
+#
+# 				The character for escaping special characters (default: no escaping)
+#
+# 		) --lines-terminated-by=str
+#
+# 				The line-termination string (default: newline)
+#
+# Depending on the value you specify for any of these options, it might be necessary on the command
+# line to quote or escape the value appropriately for your command interpreter.
+#
+# Alternatively, specify the value using hex notation. Suppose that you want mysqldump to quote
+# column values within double quotation marks.
+#
+# To do so, specify double quote as the value for the --fields-enclosed-by option.
+#
+# But this character is often special to command interpreters and msut be treated specially.
+# 
+# For example, on Unix, you must quote the quote notation:
+#
+# 		--fields-enclosed-by='"'
+#
+# Or, you can define it in hexadecimal
+#
+# 		--fields-enclosed-by=0x22
+#
+# It is common to use several of the data-formatting options together.
+# For example, to dump tables in comma-separated values format with lines terminated by carriage return
+# /newline pairs (\r\n), use this command on a single line:
+#
+# 		mysqldump --tab=/tmp --fields-terminated-by=, --fields-enclosed-by='"' --lines-terminated-by=0x0d0a db1
+#
+# Should you use any of the data-formatting options to dump table data, you will need to specify the same
+# format when you reload data files later, to ensure proper interpretaion of the file contents.
+#
+# RELOADING DELIMITED-TEXT FORMAT BACKUPS
+#
+# For backups produced with mysqldump --tab, each table is represented in the output directory by an .sql file
+# containing the CREATE_TABLE statement for the table, and a .txt file containing the table data.
+#
+# To reload a table, first change location into the output directory. Then process the .sql file with
+# mysql to create an empty table and process the .txt file to load the data into the table:
+#
+# 		mysql db1 < t1.sql
+# 		mysqlimport db1 t1.txt
+#
+# An alternetive to using mysqlimport to load the data file is to use the LOAD_DATA_INFILE statement
+# from within the mysql client:
+#
+# 		USE db1;
+# 		LOAD DATA INFILE 't1.txt' INTO TABLE t1;
+#
+# If you used any data-formatting options with mysqldump when you initially dumped the table,
+# you must use the same options with mysqlimport or LOAD_DATA_INFILE to ensure proper interpretation
+# of the data file contents:
+#
+# mysqlimport --fields-terminated-by=, --fields-enclosed-by="'" --lines-terminated-by=0x0d0a db1 t1.txt
+#
+# OR
+#
+# USE db1;
+# LOAD DATA INFILE 't1.txt' INTO TABLE t1 FIELDS TERMINATED BY ','
+# FIELDS ENCLOSED BY '"' LINES TERMINATED BY '\r\n';
+#
+# MYSQLDUMP TIPS
+#
+# This section surveys techniques that enable you to use mysqldump to solve specific problems:
+#
+# 		) How to make a copy of a Database
+#
+# 		) How to copy a database from one server to another
+#
+# 		) How to dump stored programs (stored procedures and functions, triggers and events)
+#
+# 		) How to dump definitions and data separately 
+#
+# MAKING A COPY OF A DATABASE
+#
+# mysqldump db1 > dump.sql
+# mysqladmin create db2
+# mysql db2 < dump.sql
+#
+# Do not use --databases on the mysqldump command line because that causes USE db1 to be included in the dump file,
+# which overrides the effect of naming db2 on the mysql command line.
+#
+# COPY A DATABASE FROM ONE SERVER TO ANOTHER
+#
+# On Server 1:
+#
+# 		mysqldump --databases db1 > dump.sql
+#
+# Copy the dump file from Server 1 to Server 2.
+#
+# On Server 2:
+#
+# 		mysql < dump.sql
+#
+# Use of --databases with the mysqldump command line causes the dump file to include CREATE_DATABASE
+# and USE statements that create the database if it does exist and make it the default database for
+# the reloaded data.
+#
+# Alternatively, you can omit --databases from the mysqldump command.
+#
+# Then you will need to create the database on server 2 (if necessary) and specify it
+# as the default database when you reload the dump file.
+#
+# On Server 1:
+#
+# 		mysqldump db1 > dump.sql
+#
+# On Server 2:
+#
+# 		mysqladmin create db1
+# 		mysql db1 < dump.sql
+#
+# You can specify a different database name in this case, so omitting --databases from the mysqldump
+# command enables you to dump data from one database and load it into another.
+#
+# DUMPING STORED PROGRAMS
+#
+# Several options control how mysqldump handles stored programs (stored procedures and functions, triggers and events):
+#
+# 		) --events: Dump Event Scheduler events
+#
+# 		) --routines: Dump stored procedures and functions
+#
+# 		) --triggers: Dump triggers for tables
+#
+# The --triggers option is enabled by default so that when tables are dumped, they are accompanied
+# by any triggers they have.
+#
+# The other options are disabled by default and must be specified explicitly to dump the corresponding objects.
+#
+# To disable any of these options explicitly, use its skip form: --skip-events, --skip-routines or --skip-triggers.
+#
+# DUMPING TABLE DEFINITIONS AND CONTENT SEPARATELY
+#
+# The --no-data option tells mysqldump not to dump table data, resulting in the udmp file containg only statements
+# to create the tables.
+#
+# Conversely, teh --no-create-info option tells mysqldump to suppress CREATE statements from the output, so that
+# the dump file contains only table data.
+#
+# For example, to dump table definitions and data separately for the test database, use these commands:
+#
+# 		mysqldump --no-data test > dump-defs.sql
+# 		mysqldump --no-create-info test > dump-data.sql
+#
+# For a definition-only dump, add the --routines and --events options to also include stored routine and event definitions:
+#
+# 		mysqldump --no-data --routines --events test > dump-defs.sql
+#
+# USING MYSQLDUMP TO TEST FOR UPGRADE INCOMPATIBILITIES
+#
+# When contemplating a MySQL upgrade, it is prudent to install the newer version separately from your current product version.
+#
+# Then you can dump the database and database object definitions from the production server and load them into
+# the new server to verify that they are handled proeprly.
+#
+# (This is also useful for testing downgrades)
+#
+# On the production server:
+#
+# 		mysqldump --all-databases --no-data --routines --events > dump-defs.sql
+#
+# On the upgraded server:
+#
+# 		mysql < dump-defs.sql
+#
+# Because the dump file does not contain table data, it can be processed quickly.
+#
+# This enables you to spot potentional incompatibilities without waiting for lengthy
+# data-loading operations.
+#
+# Look for warnings or errors while the dump file is being processed.
+#
+# After you have verified that the definitions are handled properly, dump the data 
+# and try to load it into the upgraded server.
+#
+# On the production server:
+#
+# 		mysqldump --all-databases --no-create-info > dump-data.sql
+#
+# On the upgraded server:
+#
+# mysql < dump-data.sql
+#
+# Now check the table contents and run some test queries.
+#
+# POINT-IN-TIME (INCREMENTAL) RECOVERY USING THE BINARY LOG
+#
+# Point-in-time recovery refers to recovery of data changes made since a given point in time.
+#
+# Typically, this type of recovery is performed after restoring a full backup that brings
+# the server to its state as of the time that the backup was made.
+#
+# (The full backup can be made in several ways, such as those listed earlier)
+#
+# Point-in-time recovery then brings the server up to date incrementally from the time of the
+# full backup to a more recent time.
+#
+# NOTE:
+#
+# 		Many of the examples here use the mysql client to process binary log output produced by mysqlbinlog.
+#
+# 		If your binary log contains \0 (null) characters, that output cannot be parsed by mysql unless you
+# 		invoke it with the --binary-mode option. 
+#
+# Point-in-time recovery is based on these principles:
+#
+# 		) The source of information for point-in-time recovery is the set of incremental backups represented
+# 			by the binary log files generated subsequent to the full backup operaiton.
+#
+# 			Therefore, the server must be started with the --log-bin option to enable binary logging
+#
+# 			To restore data from the binary log, you must know the name and location of the current binary log files.
+#
+# 			By default, the server creates binary log files in the data directory, but a path name can be
+# 			specified with the --log-bin option to place the files in a different location.  		
+# 
+#  		To see a listing of all binary log files, use this statement:
+#
+# 				SHOW BINARY LOGS;
+#
+# 			To determine the name of the current binary log file, issue the following statement:
+#
+# 				SHOW MASTER STATUS;
+#
+# 		) The mysqlbinlog utility converts the events in the binary log files from binary format to text so that they can be
+# 			executed or viewed.
+#
+# 			mysqlbinlog has options for selecting sections of the binary log based on event times or position of events within the log.
+#
+# 		) Executing events from the binary log causes the data modifications they represent to be redone.
+#
+# 			This enables recovery of data changes for a given span of time.
+#  		To execute events from the binary log, process mysqlbinlog output using the mysql client:
+#
+# 			mysqlbinlog binlog_files | mysql -u root -p
+#
+# 		) Viewing log contents can be useful when you need to determine event times or positions to select partial
+# 			log contents prior to executing events.
+#
+# 			To view events from the log, send mysqlbinlog output into a paging program:
+#
+# 			mysqlbinlog binlog_files | more
+#
+# 			Alternatively, save the output in a file and view the file in a text editor:
+#
+# 			mysqlbinlog binlog_files > tmpfile
+# 			--- edit tmpfile ---
+#
+# 		) Saving the output in a file is useful as a preliminary to executing the log contents with certain events
+# 			removed, such as an accidental DROP_DATABASE.
+#
+# 			You can delete from the file any statements not to be executed before executing its contents.
+# 			After editing the file, execute the contents as follows:
+#
+# 				mysql -u root -p < tmpfile
+#
+# If you have more than one binary log to execute on the MySQL server, the safe method is to process them all
+# using a single connection to the server.
+#
+# Here is an example that demonstrates what may be unsafe:
+#
+# mysqlbinlog binlog.000001 | mysql -u root -p # dangerous to write to 2 separate connections
+# mysqlbinlog binlog.000002 | mysql -u root -p # ^
+#
+# Processing binary logs this way using different connections to the server causes problems if the first
+# log file contains a CREATE_TEMPORARY_TABLE statement and the second log contains a statement that uses the
+# temporary table.
+#
+# When the first connection terminates, the server drops the temporary table.
+#
+# WHen the second mysql process attempts to access it, it will be attempting to referencing a unknown table.
+#
+# To avoid problems like this, use a single ceonnection to execute the contents of all binary logs that you want
+# to process.
+#
+# Here is one way to do so:
+#
+# 		mysqlbinlog binlog.000001 binlog.000002 | mysql -u root -p
+#
+# Another approach is to write all the logs to a single file and then process the file:
+#
+# 		mysqlbinlog binlog.000001 > /tmp/statements.sql
+# 		mysqlbinlog binlog.000002 >> /tmp/statements.sql
+# 		mysql -u root -p -e "source /tmp/statements.sql"
+#
+# When writing to a dump file while reading back from a binary log containing GTIDS (more later on global transaction identifiers),
+# use the --skip-gtids option with mysqlbinlog like this:
+#
+# 		mysqlbinlog --skip-gtids binlog.000001 > /tmp/dump.sql
+# 		mysqlbinlog --skip-gtids binlog.000002 >> /tmp/dump.sql
+# 		mysql -u root -p -e "source /tmp/dump.sql"
+#
+# POINT IN TIME RECOVERY USING EVENT TIMES
+#
+# To indicate the start and end times for recovery, specify the --start-datetime and --stop-datetime options
+# for mysqlbinlog, in DATETIME format.
+#
+# As an example, suppose that exactly at 10:00 a.m on April 20, 2005 - a SQL statement was executed that deleted
+# a large table.
+#
+# To restore the table and data, you could restore the previous nights backup, and then execute the following command:
+#
+# 		mysqlbinlog --stop-datetime="2005-04-20 9:59:59" \
+# 			/var/log/mysql/bin.123456 | mysql -u root -p
+#
+# This command recovers all of the data up until the date and time given by the --stop-datetime option.
+#
+# If you did not detect the errorneous SQL statement that was entered until hours later,
+# you will probably also want to recover the activity that occured afterwards.
+#
+# Based on this, you could run mysqlbinlog again with a start date and time, like so:
+#
+# 		mysqlbinlog --start-datetime="2005-04-20 10:01:00" \
+# 			/var/log/mysql/bin.123456 | mysql -u root -p
+#
+# In this command, the SQL statements logged from 10:01 a.m. on will be re-executed.
+#
+# The combination of restoring the previous night's dump file and the two mysqlbinlog
+# commands, restore everything up until one second before 10:00 a.m, and everything from 10:01 a.m on.
+#
+# To use this method of point-in-time recovery, you should examine the log to be sure of the exact
+# times to specify for the commands.
+#
+# To display the log file contents without executing them, use this command:
+#
+# 		mysqlbinlog /var/log/mysql/bin.123456 > /tmp/mysql_restore.sql
+#
+# Then open the /tmp/mysql_restore.sql file with a text editor to examine it.
+#
+# Excluding specific changes by specifying times for mysqlbinlog does not work well if multiple
+# statements executed at the same time as the one to be excluded.
+#
+# POINT-IN-TIME RECOVERY USING EVENT POSITIONS
+#
+# Instead of specifying dates and times, the --start-position and --stop-position options for mysqlbinlog
+# can be used for specifying log positions.
+#
+# They work the same as the start and stop date options, except that you specify log position numbers rather
+# than dates.
+#
+# Using positions may enable you to be more precise about which part of the log to recover, especially if many
+# transactions occurred around the same time as a damaging SQL statement.
+#
+# To determine the position numbers, run mysqlbinlog for a range of times near the time when the unwanted
+# transaction was executed, but redirect the results to a text file for examination.
+#
+# This can be done like so:
+#
+# 		mysqlbinlog --start-datetime="2005-04-20 9:55:00" \
+# 			--stop-datetime="2005-04-20 10:05:00" \
+# 			/var/log/mysql/bin.123456 > /tmp/mysql_restore.sql
+#
+# This command creates a small text file in the /tmp directory that contains the SQL statements
+# around the time that the deleterious SQL statement was executed.
+#
+# Open this file with a text editor and look for the statement that you do not want to repeat.
+#
+# Determine the positions in the binary log for stopping and resuming the recovery and make
+# note of them.
+#
+# Positions are labeled as log_pos followed by a number.
+#
+# After restoring the previous backup file, use the position number to process the binary log file.
+# For example, you would use commands something like these:
+#
+# 		mysqlbinlog --stop-position=368312 /var/log/mysql/bin.123456 \
+# 			| mysql -u root -p
+#		mysqlbinlog --start-position=368315 /var/log/mysql/bin.123456 \
+# 			| mysql -u root -p
+#
+# The first command recovers all the transactions up until the stop position given.
+#
+# The second command recovers all transactions from the starting position given until the
+# end of the binary log.
+#
+# Because the output of mysqlbinlog includes SET TIMESTAMP statements before each SQL statement recorded,
+# the recovered data and related MySQL logs will reflect the original times at which the transactions
+# were executed.
+#
+# MyISAM TABLE MAINTENANCE AND CRASH RECOVERY
+#
+# This section discusses how to use myisamchk to check or repair MyISAM tables (tables that have .MYD and .MYI files for
+# storing data and indexes)
+#
+# For general myisamchk background, see earlier.
+#
+# Other table-repair information can be found earlier.
+#
+# You can use myisamchk to check, repair or optimize database tables.
+#
+# The following sections describes how to perform these operations and how to set up a table
+# maintenance schedule.
+#
+# For information about using myisamchk to get information about your tables, see earlier.
+#
+# Even though table repair with myisamchk is quite secure, it is always a good idea to make a backup
+# before doing a repair or any maintenance operation that could make a lot of changes to a table.
+#
+# myisamchk operations that affect indexes can cause MyISAM FULLTEXT indexes to be rebuilt with
+# full-text parameters that are incompatible with the values used by the MySQL server.
+#
+# To avoid this problem, see earlier.
+#
+# MyISAM table maintenance can also be done using the SQL statements that perform operations
+# similar to what myisamchk can do:
+#
+# 		) To check MyISAM tables, use CHECK_TABLE
+#
+# 		) To repair MyISAM tables, use REPAIR_TABLE
+#
+# 		) To optimize MyISAM tables, use OPTIMIZE_TABLE
+#
+# 		) To analyze MyISAM tables, use ANALYZE_TABLE
+#
+# For additional information about these statements, see later.
+#
+# These statements can be used directly or by means of the mysqlcheck client program.
+#
+# One advantage of these statements over myisamchk is that the server does all the work.
+#
+# With myisamchk, you must make sure that the server does not use the tables at the same time
+# so that there is no unwanted interaction between myisamchk and the server.
+#
+# USING MYISAMCHK FOR CRASH RECOVERY
+#
+# This section describes how to check for and deal with data corruption in MySQL databases.
+# If your tables become corrupted frequently, you should try to find the reason why. 
+#
+# For an explonation of how MyISAM tables can become corrupted, see later.
+#
+# If you run mysqld with external locking disabled (which is the default), you cannot reliably use 
+# myisamchk to check a table when mysqld is using the same table.
+#
+# If you can be certain that no one will access the tables through mysqld while you run
+# myisamchk, you only have to execute mysqladmin flush-tables before you start checking the tables.
+#
+# If you cannot guarantee this, you must stop mysqld while you check the tables.
+#
+# If you run myisamchk to check tables that mysqld is updating at the same time,
+# you may get a warning that a table is corrupt even when it is not.
+#
+# If the server is run with external locking enabled, you can use myisamchk to check tables at any time.
+#
+# IN this case, if the server tries to update a table that myisamchk is using, the server will wait 
+# for myisamchk to finish before it continues.
+#
+# If you use myisamchk to repair or optimize tables, you must always ensure that the mysqld server is
+# not using the table (this also applies if external locking is disabled).
+#
+# If you do not stop mysqld, you should at least do a mysqladmin flush-tables before you run myisamchk.
+# Your tables may become corrupted if the server and myisamchk access the tables simultaneously.
+#
+# When performing a crash recovery, it is important to understand that each MyISAM table tbl_name in
+# a database corresponds to the three files in the database directory shown in teh following table.
+#
+# FIle 					Purpose
+#
+# tbl_name.MYD 		Data file
+# tbl_name.MYI 		index file
+#
+# Each of these three file types is subject to corruption in various ways, but problems occur most often
+# in data files and index files.
+#
+# myisamchk works by creating a copy of the .MYD data file row by row.
+#
+# It ends the repair stage by removing the old .MYD file and renaming the new file to the original file
+# name.
+#
+# If you use --quick, myisamchk does not create a temporary .MYD file, but instead assumes that the .MYD file
+# is correct and generates only a new index file without touching the .MYD file.
+#
+# This is safe, because myisamchk automatically detects whether the .MYD file is corrupt and aborts the repair
+# if it is.
+#
+# You can also specify the --quick option twice to myisamchk.
+#
+# In this case, myisamchk does not abort on some errors (such as duplicate-key errors) but instead
+# tries to resolve them by modifying the .MYD file.
+#
+# Normally, the use of two --quick options is useful only if you have too little free disk space to perform
+# a normal repair.
+#
+# In this case, you should at least make a backup of the table before running myisamchk.
+#
+# HOW TO CHECK MYISAM TABLES FOR ERRORS
+#
+# To check a MyISAM table, use the following commands:
+#
+# 	) myisamchk tbl_name
+#
+# 		This finds most errors. What it cannot find is corruption that involves ONLY the data file (unusual).
+# 		If you want to check a table, you should normally run myisamchk without options or with the -s (silent) option.
+#
+# 	) myisamchk -m tbl_name
+#
+# 		This finds most errors. First checks all index entries for errors and then reads through all rows.
+#
+# 		It calculates a checksum for all key values in the rows and verifies that the checksum matches
+# 		the checksum for the keys in the index tree.
+#
+# 	) myisamchk -e tbl_name
+#
+# 		This does a complete and throrough check of all data (-e means "extended").
+#
+# 		It does a check-read of every key for each row to verify that they indeed point to the
+# 		correct row.
+#
+# 		This may take a long time for a large table that has many indexes.
+#
+# 		Normally, myisamchk stops after the first error it finds.
+#
+# 		If you want to obtain more information, add the -v (verbose) option. This causes myisamchk to keep going, up to a max of 20 errors.
+#
+# 	) myisamchk -e -i tbl_name
+#
+# 		Like extensive, but the -i is to print additional statistical information.
+#
+# In most cases, a simple myisamchk command with no arguments other than the table name is sufficient
+# to check a table.
+#
+# HOW TO REPAIR MYISAM TABLES
+#
+# The discussion in this section describes how to use myisamchk on MyISAM tables (extensions .MYI and .MYD)
+#
+# You can also use the CHECK_TABLE and REPAIR_TABLE statements to check and repair MyISAM tables.
+# See later for more info.
+#
+# Symptoms of corrupted tables include queries that abort unexpectedly and observable errors such as these:
+#
+# 		) Can't find file tbl_name.MYI (Errorcode: nnn)
+#
+# 		) unexpected end of file
+#
+# 		) Record file is crashed
+#
+# 		) Got error nnn from table handler
+#
+# To get more information about the error, run perror nnn, where nnn is the error number.
+#
+# The following example shows how to use perror to find the meanings for the most common error
+# numbers that indicate a problem with a table:
+#
+# 		perror 126 127 132 134 135 136 141 144 145
+# 		MySQL error code 126 = Index file is crashed
+# 		MySQL error code 127 = record-file is crashed
+# 		MySQL error code 132 = Old database file
+# 		MySQL error code 134 = Record was already deleted (or record file crashed)
+#
+# 		MySQL error code 135 = No more room in record file
+# 		MySQL error code 136 = No more room in index file
+# 		MySQL error code 141 = Duplicate unique key or constraint on write or update
+# 		MySQL error code 144 = Table is crashed and last repair failed
+# 		MySQL error code 145 = Table was marked as crashed and should be repaired
+#
+# Note that error 135 (no more room in record file) and error 136 (no more room in index file) are not errors
+# that can be fixed by a simple repair.
+#
+# In this case, you must use ALTER_TABLE to increase the MAX_ROWS and AVG_ROW_LENGTH table option values:
+#
+# 		ALTER TABLE tbl_name MAX_ROWS=xxx AVG_ROW_LENGTH=yyy;
+#
+# If you do not know the current table option values, use SHOW_CREATE_TABLE.
+#
+# For the other errors, you must repair your tables. myisamchk can usually detect and fix most problems
+# that occur.
+#
+# The repair process involves up to three stages, described here.
+#
+# Before you begin, you should change location to the database directory and check the permissions
+# of the table files.
+#
+# On Unix, make sure that they are readable by the user that mysqld runs as (and to you, because you need
+# to access the files you are checking).
+#
+# If it turns out you need to modify files, they must also be writable by you.
+#
+# This section is for cases where a table check fails (such as those described earlier), or you want
+# to use the extended features that myisamchk provides.
+#
+# The myisamchk options used for table maintenance are described earlier.
+#
+# Note that when you do mysqladmin shutdown on a remote server, the mysqld server is still available
+# for a while after mysqladmin returns, until all statement-processing has stopped and all index
+# changes have been flushed to disk.
+#
+# STAGE 1: Checking your tables
+#
+# Run myisamchk *.MYI or myisamchk -e *.MYI if you have more time. Use the -s (silent) option to suppress uncalled for information.
+#
+# If the mysqld server is stopped, you should use the --update-state option to tell myisamchk to mark the table as "checked".
+#
+# You have to repair only those tables for which myisamchk announces an error. for such tables, go to step 2.
+#
+# If you get unexpected errors when checking (such as out of memory errors), or if myisamchk crashes, go to Stage 3.
+#
+# STAGE 2: Easy safe repair
+#
+# First, try myisamchk -r -q tbl_name (-r -q means "quick recovery mode"):
+#
+# This attempts to repair the index file without touching the data file. 
+#
+# If the data file contains everything that it should and the delete links
+#  point at the correct locations within the data file, this should work - and teh table is fixed.
+#
+# Thus, you can go to the next table.
+#
+# Otherwise, use the following procedure:
+#
+# 		1. Make a backup of the data file before continuing.
+#
+# 		2. Use myisamchk -r tbl_name (-r means "recovery mode"). This removes incorrect rows and deleted rows from teh data file and reconstructs the index file.
+#
+# 		3. If the preceding steps fail, use myisamchk --safe-recover tbl_name.
+#
+# 			Safe recovery mode uses an old recovery method that handles a few cases that regular recovery mode
+# 			mode does not (but is slower).
+# 
+# 			NOTE:
+# 				If you want a repair operation to go much faster, you should set the values of the sort_buffer_size and key_buffer_size variables each to about
+# 				25% of your available memory when running myisamchk.
+#
+# 			If you get unexpected errors when repairing (such as out of memory errors), or if myisamchk crashes, go to Stage 3.
+#
+# STAGE 3: Difficult Repair
+#
+# You should reach this stage only if the first 16 kb block in the index file is destroyed or contains incorrect information,
+# 	or if the index file is missing.
+#
+# In this case, it is necessary to create a new index file.
+#
+# Do as follows:
+#
+# 		1. Move the data to a safe place.
+#
+# 		2. Use the table desc. file to create new (empty) data and index files:
+#
+# 				mysql db_name
+#
+# 				SET autocommit=1;
+# 				TRUNCATE TABLE tbl_name;
+# 				quit
+#
+# 		3. Copy the old data file back onto the newly created data file.
+# 			(Do not just move the old file back onto the new file. You want to retain a copy in case something goes wrong)
+#
+# 			IMPORTANT:
+#
+# 				If you are using replication, you should stop it prior to performing the above procedure, since it involves
+# 				file system operations, and these are not logged by MySQL.
+#
+# 	Go back to Stage 2. myisamchk -r -q should work (This should not be an endless loop)
+#
+# You can also use the REPAIR TABLE tbl_name USE_FRM SQL statement, which performs the whole procedure automatically.
+#
+# There is also no possibility of unwanted interaction between a utility and the server, because the server does all
+# the work when you use REPAIR_TABLE. More on REPAIR_TABLE later.
+#
+# MyISAM TABLE OPTIMIZATION
+#
+# To coalesce fragmented rows and eliminate wasted space that results from deleting or updating rows, run myisamchk in recovery mode:
+#
+# 		myisamchk -r tbl_name
+#
+# You can optimize a table in the same way by using the OPTIMIZE_TABLE SQL statement.
+#
+# OPTIMIZE_TABLE does a table repair and a key analysis, and also sorts the index tree so that
+# key lookups are faster.
+#
+# There is also no possibility of unwanted interaction between a utility and the server, because the server
+# does all the work when you use OPTIMIZE_TABLE. More on this later.
+#
+# myisamchk has a number of other options that you can use to improve the performance of a table:
+#
+# 		) --analyze or -a: Perform key distribution analysis. This improves join performance by enabling the join optimizer
+# 									to better choose the order in which to join the tables and which indexes it should use.
+#
+# 		) --sort-index or -S: Sort the index blocks. This optimizes seeks and makes table scans that use indexes faster.
+#
+# 		) --sort-records=index_num or -R index_num: Sort data rows according to a given index. This makes your data much more
+# 																	localized and may speed up range-based SELECT and ORDER BY operations that use this index.
+#
+# For a full description of all available options, see earlier.
+#
+# SETTING UP A MYISAM TABLE MAINTENANCE SCHEDULE
+#
+# It is a good idea to perform table checks on a regular basis rather than waiting for problems to occur.
+# One way to check and repair MyISAM tables is with the CHECK_TABLE and REPAIR_TABLE statements. See later.
+#
+# Another way to check tables is to use myisamchk. For maintenance purposes, you can use myisamchk -s.
+# THe -s (silent) causes myisamchk to run in silent mode, printing messages only when errors occur.
+#
+# It is also a good idea to enable automatic MyISAM table checking.
+#
+# For example, whenever the machine has done a restart in the middle of an update, you usually need to check
+# each table that could have been affected before it is used further.
+#
+# (These are "expected crashed tables")
+#
+# To cause the server to check MyISAM tables automatically, start it with the --myisam-recover-options
+# option. See earlier.
+#
+# You should also check your tables regularly during normal system operation.
+# For example, you can run a cron job to check important tables once a week, using
+# a line like this in a crontab file:
+#
+# 		35 0 * * 0 /path/to/myisamchk --fast --silent /path/to/datadir/*/*.MYI
+#
+# THis prints out information about crashed tables so that you can examine and repair them as called for.
+#
+# To start with, execute myisamchk -s each night on all tables that have been updated during the last 24 hours.
+# AS you see that problems occur infrequently, you can back off the checking frequency to once a week or so.
+#
+# Normally, MySQL tables need little maintenance. If you are performing many updates to MyISAM tables with
+# dynamic-sized rows (tables with VARCHAR, BLOB or TEXT columns)
+#
+# or have tables with many deleted rows you may want to defragment/reclaim space from the tables
+# from time to time.
+#
+# You can do this by using OPTIMIZE_TABLE on the tables in question.
+#
+# Alternatively, if you can stop the mysqld server for a while, change location into the data directory
+# and use this command while the server is stopped:
+#
+# 		myisamchk -r -s --sort-index --myisam_sort_buffer_size=16M */*.MYI
+#
+# OPTIMIZATION
+#
+# This chapter explains how to optimize MySQL performance and provides examples.
+#
+# Optimization involves configuring, tuning and measuring performance, at several levels.
+#
+# Depending on your job role (developer, DBA or a combination), you might optimize at the level of individual
+# SQL statements, entire applications, a single DB server or multiple networked DB servers.
+#
+# Sometimes you can be proactive and plan in advance for performance, while other times you might troubleshoot
+# a configuration or code issue after a problem occurs.
+#
+# Optimizing CPU and memory usage can also improve scalability, allowing the DB to handle more load without
+# slowing down.
+#
+# OPTIMIZATION OVERVIEW
+#
+# Database performance depends on several factors at the DB level, such as tables, queries and configuration settings.
+#
+# These software constructs result in CPU and I/O operations at the hardware level, which you must minimize and make
+# as efficient as possible.
+#
+# As you work on DB performance, you start by learning the high-level rules and guidelines for the software side,
+# and measuring performance using wall-clock time.
+#
+# As you get better, you learn m,ore about what happens internally, and start measuring things like CPU cycles and I/O operations.
+#
+# Typical users aim to get the best DB performance out of their existing software and hardware configurations.
+#
+# Advanced users look for oppurtounities to improve MySQL itself, or develop their own storage engines and hardware
+# applicances to expand the MySQL ecosystem.
+#
+# OPTIMIZING AT THE DATABASE LEVEL
+#
+# The most important factor in making a database application fast is its basic design:
+#
+# 		) Are the tables structured properly? In particular, do the columns have the right data types and does each
+# 			table have the appropriate columns for the type of work?
+#
+# 			For example, applications that perform frequent updates often have many tables with few columns,
+# 			while applications that analyze large amounts of data often have few tables with many columns.
+#
+# 		) Are the right indexes in place to make queries efficient?
+#
+# 		) Are you using the appropriate storage engine for each table, and taking advantage of the strengths
+# 			and features of each storage engine you use?
+#
+# 			In particular, the choice of a transactional engine such as InnoDB or a nontransactional one such as MyISAM
+# 			can be very important for performance and scalability.
+#
+# 			NOTE:
+#
+# 				InnoDB is the default storage engine for new tables. In practice, the advanced InnoDB performance
+# 				features mean that InnoDB tables often outperform the simpler MyISAM tables, esp. for a busy DB.
+#
+# 		) Does each table use an appropriate row format?
+#
+# 			This choice also depends on the storage engine used for the table. 
+#
+# 			IN particular, compressed tables use less disk space and so require less disk
+# 			I/O to read and write the data.
+#
+# 			Compression is available for all kinds of workloads with InnoDB tables, and for read-only MyISAM tables.
+#
+# 		) Does the application use an appropriate locking strategy?
+#
+# 			For example, by allowing shared access when possible so that database operations can
+# 			run concurrently, and requesting exclusive access when appropriate so that critical operations
+# 			get top priority.
+#
+# 			Again, the choice of storage engine is significant.
+#
+# 			The InnoDB storage engine handles most locking issues without involvement from you, allowing
+# 			for better concurrency in the database and reducing the amount of experimentation and tuning for
+# 			your code.
+#
+# 		) Are all memory areas used for caching sized correctly?
+#
+# 			That is, large enough to hold frequently accessed data, but not so large that they overload
+# 			physical memory and cause paging.
+#
+# 			The main memory areas to configure are the InnoDB buffer pool and the MyISAM key cache.
+#
+# OPTIMIZING AT THE HARDWARE LEVEL
+#
+# Any database application eventually hits hardware limits as the DB becomes more and more busy.
+#
+# A DBA must evaluate whether it is possible to tune the application or reconfigure the server to
+# avoid these bottlenecks, or whether more hardware resources are required.
+#
+# System bottlenecks typically arise from these sources:
+#
+# 		) Disk seeks. It takes time for the disk to find a piece of data.
+#
+# 		With modern disks, the mean time for this is usually lower than 10ms, so we can in theory
+# 		do about 100 seeks a second.
+#
+# 		this time improves slowly with new disks and is very hard to optimize for a single table.
+#
+# 		The way to optimize seek time is to distribute the data onto more than one disk.
+#
+# 		) Disk reading and writing.
+#
+# 			When the disk is at the correct position, we need to read or write the data.
+#
+# 			With modern disks, one disk delivers at least 10-20MB/s throughput.
+#
+# 			this is easier to optimize than seeks, because you can read in parallel from multiple disks.
+#
+# 		) CPU cycles. When the data is in main memory, we must process it to get our result.
+#
+# 			Having large tables compared to the amount of memory is the most common limit factor.
+#
+# 			But with small tables, speed is usually not the problem.
+#
+# 		) Memory bandwidth. When the CPU needs more data than can fit in the CPU cache, the main memory bandwidth
+# 			becomes a bottleneck.
+#
+# 			This is an uncommon bottleneck for most systems, but one to be aware of.
+#
+# BALANCING PORTABILITY AND PERFORMANCE
+#
+# To use performance-oriented SQL extensions in a portable MySQL program, you can wrap
+# MySQL-specific keywords in a statement within /*! or */ comment delimiters.
+#
+# Other SQL servers ignore the command keywords. More on comments later.
+#
+# OPTIMIZING SQL STATEMENTS
+#
+# The core logic of a database application is performed through SQL statements, whether issued directly through
+# an interpreter or submitted behind the scenes through an API.
+#
+# The tuning guidelines in this section helps to speed up all kinds of MySQL applications.
+#
+# The guidelines cover SQL operations that read and write data, the behind-the-scenes overhead for
+# SQL operations in general, and operations used in specific scenarios such as database monitoring.
+#
+# OPTIMIZING SELECT STATEMENTS
+#
+# Queries, in teh form of SELECT statements, perform all teh lookup operations in the DB.
+#
+# Tuning these statements is a top priority, whether to achieve sub-second response times for dynamic web pages,
+# or to chop hours off the time to generate huge overnight reports.
+#
+# Besides SELECT statements, the tuning techniques for queries also apply to constructs such as CREATE_TABLE---AS_SELECT,
+# INSERT_INTO---SELECT, and WHERE clauses in DELETE statements.
+#
+# Those statements have additional performance considerations because they combine write operations with the read-oriented
+# query operations.
+#
+# NDB Cluster supports a join pushdown optimization whereby a qualifying join is sent in its entirety to NDB Cluster data nodes,
+# where it can be distributed among them and executed in parallel.
+#
+# For more information about this optimization, see Conditions for NDB pushdown joins.
+#
+# The main consideration for optimizing queries are:
+#
+# 		) To make a slow SELECT_---_WHERE query faster, the first thing to check is whether you can add an index.
+#
+# 			Set up indexes on columns used in the WHERE clause, to speed up evaluation, filtering and the final retrieval of results.
+#
+# 			To avoid wasted disk space, construct a small set of indexes that speed up many related queries used in your
+# 			application.
+#
+# 			Indexes are especially important for queries that reference different tables, using features such as joins and foreign keys.
+# 			You can use the EXPLAIN statement to determine which indexes are used for a SELECT.
+#
+# 			See more later on indexes and EXPLAIN optimizations.
+#
+# 		) Isolate and tune any part of the query, such as a function call, that takes excessive time.
+#
+# 			Depending on how the query is structured, a function could be called once for every row in
+# 			in the result set, or even once for every row in the table, greatly magnifying any inefficiency.
+#
+# 		) Minimize the number of full table scans in your queries, particularly for big tables.
+#
+# 		) Keep table statistics up to date by using the ANALYZE_TABLE statement periodically, so the optimizer
+# 			has the information needed to construct an efficient execution plan.
+#
+# 		) Learn the tuning techniques, indexing techniques and configuration parameters that are specific to the storage
+# 			engine for each table.
+#
+# 			Both InnoDB and MyISAM have sets of guidelines for enabling and sustaining high performance in queries.
+#
+# 			MOre details on InnoDB Queries and MyISAM queries, later.
+#
+# 		) You can optimize single-query transactions for InnoDB tables, using the technique outlayed later in optimizing InnoDB Read-Only transactions
+#
+# 		) Avoid transforming the query in ways that make it hard to understand, especially if the optimizer does some of the same transformations automatically.
+#
+# 		) If a performance issue is not easily solved by one of the basic guidelines, investigate the internal details of the specific Query
+# 			by reading the EXPLAIN plan and adjusting your indexes, WHERE clauses, join clauses, and so on.
+#
+# 			(When you reach a certain level of expertise, reading the EXPLAIN plan might be your first step for every query)
+#
+# 		) Adjust the size and properties of the memory areas that MySQL uses for caching.
+#
+# 			With efficient use of the InnoDB buffer pool, MyISAM key cache and the MysQL query cache,
+# 			repeated queries run faster because the results are retrieved from memory the second and subsequent times.
+#
+# 		) Even for a query that runs fast using the cache memory areas, you might still optimize further so that they require
+# 			less cache memory, making your application more scalable.
+#
+# 			Scalability means that your application can handle more simultaneous users, large requests, and so on, without
+# 			experiencing a big drop in performance.
+#
+# 		) Deal with locking issues, where the speed of your query might be affected by other sesisons accessing the tables
+# 			at the same time.
+#
+# WHERE CLAUSE OPTIMIZATION
+#
+# This section discusses optimizations that can be made for processing WHERE Clauses.
+#
+# The examples use SELECT statements, but the same optimizations apply for WHERE clauses in DELETE
+# and UPDATE statements.
+#
+# NOTE:
+# 		BEcause work on the MySQL optimizer is ongoing, not all of the optimizations that MySQL performs are documented here.
+#
+# You might be tempted to rewrite your queries to make arithemtic operations faster, while sacrificing readability.
+# 
+# Because MySQL does similar optimizations automatically, you can often avoid this work, and leave the query in a
+# more understandable and maintainable form.
+#
+# Some of the optimizations performed by MySQL follow:
+#
+# 		) Removal of unnecessary parantheses:
+#
+# 			((a AND b) AND c OR ((a AND b) AND (c AND d))))
+#
+# 				Becomes
+#
+#
+# 			(a AND b AND c) OR (a AND b AND c AND d)
+#
+# 		) Constant folding
+#
+# 			(a<b AND b=c) AND a=5
+#
+# 				Becomes
+#
+# 			b>5 AND b=c AND a=5
+#
+# 		) Constant condition removal (needed because of constant folding):
+#
+# 			(B>=5 AND B=5) OR (B=6 AND 5=5) OR (B=7 AND 5=6)
+# 			
+# 				Becomes
+#
+# 			B=5 OR B=6
+#
+# 		) Constant expressions used by indexes are evaluated only once.
+#
+# 		) COUNT(*) on a single tab without a WHERE is retrieved directly from the table information for MyISAM and MEMORY tables.
+# 			This is also done for any NOT NULL expression when used with only one table.
+#
+# 		) Early detection of invalid constant expressions. MySQL quickly detects that some SELECT statements are impossible and returns no rows.
+#
+# 		) HAVING is merged with WHERE if you do not use GROUP BY or aggreggate functions (COUNT(), MIN() and so on)
+#
+# 		) For each table in a join, a simpler WHERE is constructed to get a faster WHERE evaluation for the table and also to skip
+# 			rows as soon as possible.
+#
+# 		) All constant tables are read first before any other tables in the query. A constant table is any of the following:
+#
+# 			) An empty table or a table with one row.
+#
+# 			) A table that is used with a WHERE clause on a PRIMARY KEY or a UNIQUE index, where all index parts are compared to
+# 				constant expressions and are defined as NOT NULL.
+#
+# 			All of the following tables are used as constant tables:
+#
+# 				SELECT * FROM t WHERE primary_key=1;
+# 				SELECT * FROM t1,t2
+# 					WHERE t1.primary_key=1 AND t2.primary_key=t1.id;
+#
+# 		) The best join combination for joining the tables is found by trying all possibilities.
+#
+# 			If all columns in ORDER BY and GROUP BY clauses come from the same table, that table is
+# 			preferred first when joining.
+#
+# 		) If there is an ORDER BY clause and a different GROUP BY clause, or if the ORDER BY or GROUP BY
+# 			contains columns from tables other than the first table in the join queue, a temporary table is created.  			
+#
+# 		) If you use the SQL_SMALL_RESULT modifier, MySQL uses an in-memory temporary table.
+#
+# 		) Each table index is queried, and the best index is used unless the optimizer believes that it is more efficient
+# 			to use a table scan.
+#
+# 			At one time, a scan was used based on whether the best index spanned more than 30% of the table, but a fixed
+# 			% no longer determines the choice between using an index or a scan.
+#
+# 			The optimizer now is more complex and bases its estimate on additional factors such as table size, number of rows,
+# 			and I/O block size.
+#
+# 		) In some cases, MySQL can read rows from the index without even consulting the data file.
+#
+# 			If all columns used from the index are numeric, only the index tree is used to resolve the query.
+#
+# 		) Before each row is output, those that do not match the HAVING clause are skipped.
+#
+# Some examples of queries that are very fast:
+#
+# 		SELECT COUNT(*) FROM tbl_name;
+#
+# 		SELECT MIN(key_part1), MAX(key_part1) FROM tbl_name;
+#
+# 		SELECT MAX(key_part2) FROM tbl_name WHERE key_part1=constant;
+#
+# 		SELECT_---_FROM tbl_name ORDER BY key_part1, key_part2,___ LIMIT 10;
+#
+# 		SELECT_---_FROM tbl_name ORDER BY key_part1 DESC, key_part2 DESC, ___ LIMIT 10;
+#
+# MySQL resolves the following queries using only the index tree, assuming that the indexed columns
+# are numeric:
+#
+# 		SELECT key_part1, key_part2 FROM tbl_name WHERE key_part1=val;
+#
+# 		SELECT COUNT(*) FROM tbl_name WHERE key_part1=val1 AND key_part2=val2;
+#
+# 		SELECT key_part2 FROM tbl_name GROUP BY key_part1;
+#
+# The following queries use indexing to retrieve the rows in sorted order without a separate sorting pass:
+#
+# 		SELECT_---_FROM tbl_name ORDER BY key_part1, key_part2, ---;
+#
+# 		SELECT_---_FROM tbl_name ORDER BY key_part1 DESC, key_part2 DESC, ---;
+#
+# 	Note: The --- are the triple dots, synonym for "etc.", i cannot write the triple dots in this document due to unnessecary querying.
+#
+# RANGE OPTIMIZATION
+#
+# The range access method uses a single index to retrieve a subset of table rows that are contained within
+# one or several index value intervals.
+#
+# It can be used for single-part or multi-part index. The following section describes conditions under which
+# the optimizer uses range access.
+#
+# 	) Range Access Method for Single-part indexes
+#
+# 	) Range ACcess Method for Multiple-part indexes
+#
+# 	) Equality Range Optimization of Many-Valued Comparisons
+#
+# 	) Skin Scan Range Access Method
+#
+# 	) Range Optimization of Row Constructor Expressions
+#
+# 	) Limiting Memory Use for Range Optimization
+#
+# RANGE ACCESS METHOD FOR SINGLE-PART INDEXES
+#
+# For a single-part index, index value intervals can be conveniently represented by corresponding conditions in the
+# WHERE clause, denoted as range conditions rather than "intervals".
+#
+# The definition of a range condition for a single-part index is as follows:
+#
+# 		) For both BTREE and HASH indexes, comparisons of a key part with a constant value is a range condition when using the
+# 			=, <=>, IN(), IS_NULL, or IS_NOT_NULL operators.
+#
+# 		) Additionally, for BTREE indexes, comparisons of a key part with a constant value is a range condition when using
+# 			the >, <, >=, <=, BETWEEN, !=, or <> operators, or LIKE comparisons if the argument to LIKE is a 
+# 			constant string that does not start with a wildcard character.
+#
+# 		) for all index types, multiple range conditions combined with OR or AND form a range condition.
+#
+# "Constant value" in the preceding descriptions means one of the following:
+#
+# 		) A constant from the query string
+#
+# 		) A column of a const or system table from teh same join
+#
+# 		) The result of an uncorrelated subquery
+#
+# 		) Any expression composed entirely from subexpressions of the preceding types.
+#
+# Here are some examples of Queries with range conditions in the WHERE clause:
+#
+# 		SELECT * FROM t1
+# 			WHERE key_col > 1
+# 			AND key_col < 10;
+#
+# 		SELECT * FROM t1
+# 			WHERE key_col = 1
+# 			OR key_col IN (15,18,20);
+#
+# 		SELECT * FROM t1
+# 			WHERE key_col LIKE 'ab%'
+# 			OR key_col BETWEEN 'bar' AND 'foo';
+#
+# Some nonconstant values may be converted to constants during the optimizer constant propagation phase.
+#
+# MySQl tries to extract the range conditions from the WHERE clause for each of the possible indexes.
+#
+# During the extraction process, conditions that cannot be used for constructing the range condition are dropped,
+# conditions that produce overlapping ranges are combined, and conditions that produce empty ranges are removed.
+#
+# Consider the following statement, where key1 is an indexed column and nonkey is not indexed:
+#
+# 		SELECT * FROM t1 WHERE
+# 			(key1 < 'abc' AND (key1 LIKE 'abcde%' OR key1 LIKE '%b')) OR
+# 			(key1 < 'bar' AND nonkey = 4) OR
+# 			(key1 < 'uux' AND key1 > 'z');
+#
+# The extraction process for key key1 is as follows:
+#
+# 		1. Start with the original WHERE clause:
+#
+# 			(key1 < 'abc' AND (key1 LIKE 'abcde%' OR key1 LIKE '%b')) OR
+# 			(key1 < 'bar' AND nonkey = 4) OR
+# 			(key1 < 'uux' AND key1 > 'z')
+#
+# 		2. Remove nonkey = 4 and key1 LIKE '%b' because they cannot be used for a range scan.
+#
+# 			The correct way to remove them is to replace them with TRUE, so that we do not miss any matching rows
+# 			when doing the range scan.
+#
+# 			Replacing them with TRUE yields:
+#
+# 				(key1 < 'abc' AND (key1 LIKE 'abcde%' OR TRUE)) OR
+# 				(key1 < 'bar' AND TRUE) OR
+# 				(key1 < 'uux' AND key1 > 'z')
+#
+# 		3. Collapse conditions that are always true or false:
+#
+# 				(key1 LIKE 'abcde%' OR TRUE) is always true
+#
+# 				(key1 < 'uux' AND key1 > 'z') is always false
+#
+# 			Replacing these conditions with constants yields:
+#
+# 				(key1 < 'abc' AND TRUE) OR (key1 < 'bar' AND TRUE) OR (FALSE)
+#
+# 			Removing unnecessary TRUE and FALSE constants yields:
+#
+# 				(key1 < 'abc') OR (key1 < 'bar')
+#
+# 		4. Combining overlapping intervals into one yields the final condition to be used for hte range scan:
+#
+# 			(key1 < 'bar')
+#
+# In general (and as demonstrated by the preceding example), the condition used for a range scan is less restrictive
+# than the WHERE clause.
+#
+# Mysql performs an additional check to filter out rows that satisfy the range condition but not the full WHERE clause.
+#
+# The range condition extraction algorithm can handle nested AND/OR constructs of arbitrary depth, and its output does
+# not depend on the order in which conditions appear in WHERE clause.
+#
+# MySQL does not support merging multiple ranges for the range access method for spatial indexes.
+#
+# To work around this limitation, you can use a UNION with identical SELECT statements, except that
+# you put each spatial predicate in a different SELECT.
+#
+# RANGE ACCESS METHOD FOR MULTIPLE-PART INDEXES
+#
+# Range conditions on a multiple-part index are an extension of range conditions for a single-part index.
+#
+# A range condition on a multiple-part index restricts index rows to lie within one or several key tuple intervals. 
+#
+# Key tuple intervals are defined over a set of key tuples, using ordering from the index.
+#
+# For example, consider a multiple-part index defined as key1(key_part1, key_part2, key_part3), and the following
+# set of key tuples listed in key order:
+#
+# 		key_part1 		key_part2 		key_part3
+# 			NULL 				1 					'abc'
+# 			NULL 				1 					'xyz'
+# 			NULL 				2 					'foo'
+# 			1 					1 					'abc'
+# 			1 					1 					'xyz'
+# 			1 					2 					'abc'
+# 			2 					1 					'aaa'
+#
+# The condition key_part1 = 1 defines this inteval:
+#
+# (1, -inf, -inf) <= (key_part1, key_part2, key_part3) < (1, +inf, +inf)
+#
+# The interval converts the 4th and 5th and 6th tuples in the preceding data set and can be used by the range
+# access method.
+#
+# By contrast, the condition key_part3 = 'abc' does not define a single interval and cannot be used by the range access method.
+#
+# The following descriptions indicate how range conditions work for multiple-part indexes in greater detail.
+#
+# 		) For HASH indexes, each interval containing identical values can be used.
+#
+# 		This means that the interval can be produced only for conditions in the following form:
+#
+# 			key_part1 cmp const1
+# 		AND key_part2.cmp const2
+# 		AND ---
+# 		AND key_partN cmp constN
+#
+# Here, const1, const2, --- are constants, cmp is one of the =,<=>, or IS_NULL comparison operators, and the conditions
+# cover all index parts.
+#
+# (That is, there are N conditions, one for each part of an N-part index). For example, the following is a range condition
+# for a three-part HASH index:
+#
+# 		key_part1 = 1 AND key_part2 IS NULL AND key_part3 = 'foo'
+#
+# FOr the definition of what is considered to be a constant, see Range Access Methods ofr Single-part indexes.
+#
+# ) For a BTREE index, an interval might be usable for conditions combined with AND, where each condition compares a key part with a 
+# 		constant value using =, <=>, IS_NULL, >, <, >=, <=, !=, <>, BETWEEN, or LIKE_'pattern' (where 'pattern' does not start with a %).
+#
+# 	An interval can be used as long as it is possible to determine a single key tuple containing all rows that match the condition
+# 	(or two intervals if <> or != is used)
+#
+# 	The optimizer attempts ot use additional key parts to determine the interval as long as the comparison operator is =, <=>, or IS_NULL.
+# 	If the operator is >, <, >=, <=, !=, <>, BETWEEN or LIKE, the optimizer uses it but considers no more key parts.
+#
+# 	For the following expression, the optimizer uses = from the first comparison.
+#
+# 	It also uses >= from the second comparison but considers no further key pats and does not use the htird comparison
+# 	for interval construction:
+#
+# 		key_part1 = 'foo' AND key_part2 >= 10 and key_part3 > 10
+#
+# 	The single interval is:
+#
+# 		('foo',10,-inf) < (key_part1, key_part2, key_part3) < ('foo',+inf,+inf)
+#
+# 	It is possible that the created interval contains more rows than the intiail condition.
+#
+# 	For example, the preceding interval includes the value ('foo', 11, 0) which does not satisfy the original condition.
+#
+# ) If conditions that cover sets of rows contained within intervals are combined with OR, they form a condition taht covers
+# 		a set of rows contained within the union of their intervals.
+#
+# 		If the conditions are combined with AND, they form a condition that covers a set of rows contained within the intersection
+# 		of their intervals.
+#
+# 		For example, for this condition on a two-part index:
+#
+# 			(key_part1 = 1 AND key_part2 < 2) OR (key_part1 > 5)
+#
+# 		The intervals are:
+#
+# 			(1, -inf) < (key_part1, key_part2) < (1,2)
+# 			(5, -inf) < (key_part1, key_part2)
+#
+# 		IN this example, the interval of the first line uses one key part for the left bound and two key parts for the right bound.
+#
+# 		The interval on the second line uses only one key part.
+#
+# 		The key_len column in the EXPLAIN output indicates the max length of the key prefixed used.
+#
+# 		In some cases, key_len may indicate that a key part was used, but that might be not what you would expect.
+#
+# 		SUppose that key_part1 and key_part2 can be NULL.
+#
+# 		THen the key_len column displays two key part lengths for the following condition:
+#
+# 			key_part1 >= 1 AND key_part2 < 2
+#
+# 		But in fact, the condition is converted to this:
+#
+# 			key_part1 >= 1 AND key_part2 IS NOT NULL
+#
+# 		For a description of how optimizations are performed to combine or eliminate intervals for range conditions on a single-part index,
+# 		see Range Access method for Single-part indexes.
+#
+# 		Analogous steps are perforemd for range conditions on multiple-part indexes.
+#
+# EQUALITY RANGE OPTIMIZATION OF MANY-VALUED COMPARISONS
+#
+# Consider these expressions, where col_name is an indexed column:
+#
+# 		col_name IN(val1, ---, valN)
+# 		col_name = val1 OR --- OR col_name = valN
+#
+# Each expression is true if col_name is equal to any of several values.
+#
+# These comparisons are equality range comparisons (where the "range" is a single value).
+# The optimizer estimates the cost of reading qualifying rows for equality range comparisons as follows:
+#
+# 		) If there is a unique index on col_name, the row estimate for each range is 1 because at most one row can ahve the given value
+#
+# 		) Otherwise, any index on col_name is a nonunique and the optimizer can estimate the row count for eaach range using dives into
+# 			the index or index statistics.
+#
+# With index dives, the optimizer makes a dive at each end of a range and uses the number of rows in the range as the estimate.
+#
+# FOr example, the expression col_name IN (10, 20, 30) has three equality ranges and teh optimizer makes two dives per range to generate a row estimate.
+#
+# Each pair of dives yields an estimate of the number of rows that have the given value.
+#
+# Index dives provide accurate row estimates, but as the number of comparison values in the expression increases, the optimizer
+# takes longer to genrate a row estimate.
+#
+# Use of index statitics is elss accurate than index dives but permits faster row estimation for large value lists.
+#
+# The eq_range_index_dive_limit system variable enables you to configure the number of values at which the optimizer switches
+# from one row estimation strategy to the other.
+#
+# To permit use of index dives for comparisons of up to N equality ranges, set eq_range_index_dive_limit to N + 1.
+#
+# To disable use of statistics and always use index dives regardless of N, set eq_range_index_dive_limit to 0.
+#
+# TO update table index statistics for best estimates, use ANALYZE_TABLE
+#
+# Prior to MysQL 8.0, there is no way of skipping that use of index dives to estimate index usefulness, except by using the eq_range_index_dive_limit system variable.
+#
+# In > 8.0, index dive skipping is possible for queries that satisfy all of these conditions:
+#
+# 		) The query is for a single table, not a join on multiple tables.
+#
+# 		) A single-index FORCE INDEX index hint is present. 
+#
+# 			The idea is that if index use is forced, there is nothing to be gained from the additional
+# 			overhead of performing dives into the index.
+#
+# 		) The index is nonunique and not a FULLTEXT index.
+#
+# 		) No subquery is present.
+#
+# 		) No DISTINCT, GROUP BY or ORDER BY clause is present.
+#
+# For EXPLAIN_FOR_CONNECTION, the output changes as follows if index dives are skipped:
+#
+# 		) For traditional output, the rows and filtered values are NULL.
+#
+# 		) For JSON output, rows_examined_per_scan and rows_produced_per_join do not appear, skip_index_dive_due_to_force is true, and cost calculations
+# 			are not accurate.
+#
+# Without FOR CONNECTION, EXPLAIN output does not change when index dives are skipped.
+#
+# After execution of a query for which index dives are skipped, the corrsponding row in the INFORMATION_SCHEMA.OPTIMIZER_TRACE table
+# contains an index_dives_for_range_access value of skipped_due_to_force_index
+#
+# SKIP SCAN RANGE ACCESS METHOD
+#
+# Consider the following scenario:
+#
+# 		CREATE TABLE t1 (f1 INT NOT NULL, f2 INT NOT NULL, PRIMARY KEY(f1, f2));
+# 		INSERT INTO t1 VALUES
+# 			(1,1), (1,2), (1,3), (1,4), (1,5),
+# 			(2,1), (2,2), (2,3), (2,4), (2,5);
+#
+# 		INSERT INTO t1 SELECT f1, f2 + 5 FROM t1;
+# 		INSERT INTO t1 SELECT f1, f2 + 10 FROM t1;
+# 		INSERT INTO t1 SELECT f1, f2 + 20 FROM t1;
+#
+# 		INSERT INTO t1 SELECT f1, f2 + 40 FROM t1;
+#
+# 		ANALYZE TABLE t1;
+#
+# 		EXPLAIN SELECT f1, f2 FROM t1 WHERE f2 > 40;
+#
+# To execute this query, MySQL can choose an index scan to fetch all rows (the index includes all columns to be selected),
+# then apply the f2 > 40 condition from the WHERE clause to produce the final result set.
+#
+# A range scan is more efficient than a full index scan, but cannot be used in this case because there is no condition
+# on f1, the first index column.
+#
+# However, as of MySQL 8.0.13, the optimizer can perform multiple range scans, one for each value of 1, using a method
+# called Skip Scan that is similar to Loose Index Scan (see later under GROUP BY optimization)
+#
+# 	1. Skip between distinct values of the first index part, f1 (the index prefix)
+#
+# 	2. Perform a subrange scan on eahc distinct prefix value for the f2 > 40 condition on the remaining index part.
+#
+# For the data set shown earlier, the algorithm operates like this:
+#
+# 	1. Get the first distinct value of the first key part (f1 = 1)
+#
+# 	2. Construct the range based on the first and second key parts (f1 = 1 AND f2 > 40)
+#
+# 	3. Perform a range scan
+#
+# 	4. Get the next distinct value of the key first part (f1 = 2)
+#
+# 	5. Construct the range based on the first and second key parts (f1 = 2 AND f2 > 40)
+#
+# 	6. Perform a range scan
+#
+# Using this strategy decreases the number of accessed rows because MySQL skips the rows that do not qualify
+# for each constructed range.
+#
+# THe SKip Scan method is applicable under the following conditions:
+#
+# ) Table T has at least one compound index with key parts of the form ([A_1, ---, A_k,] B_1, ---, B_m, C[,D_1,---,D_n])
+#
+# Key parts A and D may be empty, but B and C must be nonempty.
+#
+# ) The query references onl one table
+#
+# ) The query does not use GROUP BY or DISTINCT
+#
+# ) The query references only columns in teh index
+#
+# ) The predicates on A_1, ---, A_k must be equality predicates and they must be constants. This includes the IN() operator.
+#
+# ) The query must be a conjunctive query; that is, an AND of OR conditions: (cond1(key_part1) OR cond2(key_part1)) AND (cond1(key_part2) OR ---) AND ---
+#
+# ) There must be a range condition on C
+#
+# ) Conditions on D columns are permitted. Conditions on D must be in conjunction with the range condition on C.
+#
+# Use of Skip Scan is indicated in EXPLAIN output as follows:
+#
+# 		) Using index for skip scan in the Extra column indicates that hte loose index Skip Scan access method is used.
+#
+# 		) If teh index can be used for Skip Scan, the index should be visible in the possible_keys column.
+#
+# Use of SKip scan is indicated in the optimizer trace output by a "skip scan" element of this form:
+#
+# "skip_scan_range": {
+# 		"type": "skip_scan",
+# 		"index": index_used_for_skip_scan,
+# 		"key_parts_used_for_access": [key_parts_used_for_access],
+# 		"range": [range]
+# }
+#
+# You may also see a "best_skip_scan_summary" element.
+#
+# If Skip Scan is chosen as the best range access variant, a "chosen_range_access_summary" is written.
+# If SKip Scan is chosen as the overall best access method, a "best_access_path" element is present.
+#
+# Use of Skip Scan is subject to the value of the skip_scan flag of the optimizer_switch system variable.
+#
+# More later in regards to Switchable Optimizations.
+#
+# By default, this flag is on. To disable it, set skip_scan to off.
+#
+# In addition to using the optimizer_switch system variable to control optimizer use of Skip Scan session-wide,
+# MySQL supports optimizer hints to influence the optimizer on a per-statement basis. 
+#
+# More on optimizer hints later.
+#
+# RANGE OPTIMIZATION OF ROW CONSTRUCTOR EXPRESSIONS
+#
+# The optimizer is able to apply the range scan access method to queries of this form:
+#
+# 		SELECT --- FROM t1 WHERE ( col_1, col_2 ) IN (( 'a', 'b' ), ( 'c', 'd' ));
+#
+# Previously, for range scans to be used, it was necessary to write the query as:
+#
+# 		SELECT --- FROM t1 WHERE ( col_1 = 'a' AND col_2 = 'b' ) OR ( col_1 = 'c' AND col_2 = 'd');
+#
+# For the optimizer to use a range scan, queries must satisfy these conditions:
+#
+# 		) Only IN() predicates are used, not NOT_IN()
+#
+# 		) On the left side of the IN() predicate, the row constructor contains only column references.
+#
+# 		) On the right side of the IN() predicate, row constructors contain only runtime constants, which are either
+# 			literals or local column references that are bound to constants during execution.
+#
+# 		) On the right side of the IN() predicate, there is more than one row constructor.
+# 		
+# For more information about the optimizer and row constructors, see later under ROW CONSTRUCTOR EXPRESSION OPTIMIZATION
+#
+# LIMIT MEMORY USE FOR RANGE OPTIMIZATION
+#
+# TO control the memory available to the range optimizer, use teh range_optimizer_max_mem_size system variable.
+#
+# ) A value of 0 means "no limit"
+#
+# ) With a value of > 0, the optimizer tracks the memory consumed when considering the range access method.
+#
+# 		IF the specified limit is about to be exceeded, the range access method is abandoned and other methods,
+# 		including a full table scan, are considered instead.
+#
+# 		This could be less optimal.
+#
+# 		If this happens, the following warning occurs (where N is the current range_optimizer_max_mem_size value):
+#
+# 			Warning 3170 Memory capacity of N bytes for 'range_optimizer_max_mem_size' exceeded.
+# 							 Range optimization was not done for this query.
+#
+# ) For UPDATE and DELETE statements, if the optimizer falls back to a full table scan and the sql_safe_updates system variable
+# 		is enabled, an error occurs rather than a warning, because in effect - no key is used to determine which rows to modify.
+#
+# 		For more information, see earlier.
+#
+# For individual queries that exceed the available range optimization memory and for which the optimizer falls back
+# to less optimal plans, increasing the range_optimizer_max_mem_size value may improve performance.
+#
+# To estimate the amount of memory needed to process a range expression, use these guidelines:
+#
+# 		) For a simple query such as the following, where there is one candidate key for the range access method,
+# 			each predicate combined with OR uses approximately 230 bytes:
+#
+# 			SELECT COUNT(*) FROM t
+# 			WHERE a=1 OR a=2 OR a=3 OR --- a=N;
+#
+# 		) Similarly for a query such as the following, each predicate combined with AND uses approximately 125 bytes:
+#
+# 			SELECT COUNT(*) FROM t
+# 			WHERE a=1 AND b=1 AND c=1 --- N;
+#
+# 		) For a query with IN() predicates:
+#
+# 			SELECT COUNT(*) FROM t
+# 			WHERE a IN (1,2, ---, M) AND b IN (1,2, ---, N);
+#
+# 			Each literal value in an IN() list countsas a predicate combined with OR.
+#
+# 			If there are two IN() lists, the number of predicates combined with OR is the product of the number of
+# 			literal values in each list.
+#
+# 			Thus, the number of predicates combined with OR in the preceding case is M x N
+#
+# INDEX MERGE OPTIMIZATION
+#
+# The Index Merge access method retrieves rows with multiple range scans and merges their results into one.
+#
+# This access method merges index scans from a single table only, not scans across multiple tables.
+#
+# The merge can produce unions, intersections, or unions-of-intersections of its underlying scans.
+#
+# Example queries for which Index Merge may be used:
+#
+# 		SELECT * FROM tbl_name WHERE key1 = 10 OR key2 = 20;
+#
+# 		SELECT * FROM tbl_name
+# 			WHERE (key1 = 10 OR key2 = 20) AND non_key = 30;
+#
+# 		SELECT * FROM t1, t2
+# 			WHERE (t1.key1 IN (1,2) OR t1.key2 LIKE 'value%')
+# 			AND t2.key1 = t1.some_col;
+#
+# 		SELECT * FROM t1, t2
+# 			WHERE t1.key1 = 1
+# 			AND (t2.key1 = t1.some_col OR t2.key2 = t1.some_col2);
+#
+# Note:
+#
+# 		The Index Merge optimization algorithm ahs the following limitations:
+#
+# 			) If your query has a complex WHERE clause with deep AND/OR nesting and MySQL does not choose
+# 				the optimal plan, try distributing terms using the following identity transformations:
+#
+# 				(x AND y) OR z => (x OR z) AND (y OR z)
+# 				(x OR y) AND z => (x AND z) OR (y AND z)
+#
+# 			) Index Merge is not applicable to full-text indexes.
+#
+# In EXPLAIN output, the Index Merge method appears as index_merge in the type column.
+#
+# In this case, the key column contains a list of indexes used, and key_len contains
+# a list of the longest key parts of those indexes.
+#
+# The Index Merge access method has several algorithms, which are displayed in the Extra field of EXPLAIN output:
+#
+# 		) Using intersect(---)
+#
+# 		) Using union(---)
+#
+# 		) Using sort_union(---)
+#
+# The following sections describe these algorithms in greater detail.
+#
+# THe optimizer chooses between different possible Index Merge algorithms and other access
+# methods based on cost estimates of the various available options. 
+#
+# INDEX MERGE INTERSECTION ACCESS ALGORITHM
+#
+# This access algorithm is applicable where a WHERE clause is converted to several range conditions
+# on different keys combined with AND and each condition is one of the following:
+#
+# 		) An N-part expression of this form, where the index has exactly N parts (that is, all index parts are covered):
+#
+# 			key_part1 = const1 AND key_part2 = const2 --- AND key_partN = constN
+#
+# 		) Any range condition over the primary key of an InnoDB table.
+#
+# Examples:
+#
+# 		SELECT * FROM innodb_table
+# 			WHERE primary_key < 10 AND key_col1 = 20;
+#
+# 		SELECT * FROM tbl_name
+# 			WHERE key1_part1 = 1 AND key1_part2 = 2 AND key2 = 2;
+#
+# The Index Merge intersection algorithm performs simultaneous scans on all used indexes and produces
+# the intersection of row sequences that it receives from the merged index scans.
+#
+# If all columns used in teh query are covered by the used indexes, full table rows are not retreived 
+# (EXPLAIN output contains Using index in Extra field in this case).
+#
+# Here is an example of such a query:
+#
+# 		SELECT COUNT(*) FROM t1 WHERE key1 = 1 AND key2 = 1;
+#
+# If the used indexes do not cover all columns used in the query, full rows are retrieved only
+# when the range conditions for all used keys are satisfied.
+#
+# If one of the merged conditions is a condition over the primary key of an InnoDB table, it is not 
+# used for row retrieval, but is used to filter out rows retrieved using other
+# conditions.
+#
+# INDEX MERGE UNION ACCESS ALGORITHM
+#
+# The criteria for this algorithm are similar to those for the Index Merge intersection algorithm.
+#
+# The aplgorithm is applicable where the tables WHERE clause is converted to several range conditions
+# on different keys combined with OR, and each condition is one of the following:
+#
+# 		) An N-part expression of this form, where the index has exactly N parts (that is, all index parts are covered):
+#
+# 			key_part1 = const1 AND key_part2 = const2 --- AND key_partN = constN
+#
+# 		) Any range condition over a primary key of an InnoDB table
+#
+# 		) A condition for which the Index Merge intersection algorithm is applicable
+#
+# Examples:
+#
+# 		SELECT * FROM t1
+# 			WHERE key1 = 1 OR key2 = 2 OR key3 = 3;
+#
+# 		SELECT * FROM innodb_table
+# 			WHERE (key1 = 1 AND key2 = 2)
+# 				OR (key3 = 'foo' AND key4 = 'bar') AND key5 = 5;
+#
+# INDEX MERGE SORT-UNION ACCESS ALGORITHM
+#
+# This access algorithm is applicable when the WHERE Clause is converted to several range conditions
+# combined by OR, but the Index Merge union algorithm is not applicable.
+#
+# Example:
+#
+# 		SELECT * FROM tbl_name
+# 			WHERE key_col1 < 10 OR key_col2 < 20;
+#
+# 		SELECT * FROM tbl_name
+# 			WHERE (key_col1 > 10 OR key_col2 = 20) AND nonkey_col = 30;
+#
+# The difference between the sort-union algorithm and the union algorithm is that the sort-algorithm must first
+# fetch row IDs for all rows and sort them before returning any rows.
+#
+# INFLUENCING INDEX MERGE OPTIMIZATION
+#
+# Use of Index Merge is subject to the value of the index_merge, index_merge_intersection,
+# index_merge_union, and index_merge_sort_union flags of the optimizer_switch system variable.
+#
+# More on this later.
+#
+# By default, all those flags are on.
+#
+# To enable only certain algorithms, set index_merge to off, and enable only such of the others as should be permitted.
+#
+# In addition to using the optimizer_switch system variable to control optimizer use of the Index Merge algorithm
+# session-wide, MySQL supports optimizer hints to influence the optimizer on a per-statement basis.
+#
+# See more under Optimizer Hints sections.
+#
+# ENGINE CONDITION PUSHDOWN OPTIMIZATION
+#
+# This optimization improves the efficiency of direct comparisons between a nonindexed column and a constant.
+# In such cases, the condition is "pushed down" to the storage engine for evaluation.
+#
+# This optimization can be used only by the NDB storage engine.
+#
+# NOTE:
+#
+# 		The NDB storage engine is currently not available in MySQL 8.0.
+#
+# 		If you are interested in using NDB cluster, see MySQL NDB Cluster 7.5 and NDB cluster
+# 		7.6, which provides information about MySQL cluster NDB 7.5 (based on MySQL 5.7, but containing
+# 		the latest improvements and fixes for the NDBCLUSTER storage engine)
+#
+# INDEX CONDITION PUSHDOWN OPTIMIZATION
+#
+# Index Condition Pushdown (ICP) is an optimization for the case where MySQL retrieves rows from a table using an index.
+#
+# Without ICR, the storage engine traverses the index to locate rows in teh base table and returns them to the MySQL
+# server which evaluates the WHERE condition for the rows.
+#
+# WIth ICP enabled, and if parts of the WHERE condition can be evaluated by using only columns from the index,
+# teh MySQL server pushes this part of the WHERE condition down to the storage engine.
+#
+# The storage engine then evaluates the pushed index condition by using the index entry and only if this is satisfied,
+#  is the row read from the table.
+#
+# ICP can reduce the number of times the storage engine must access the base table and the number of times the
+# MySQL server must access the storage engine.
+#
+# Applicability of the Index Condition Pushdown optimization is subject to these conditions:
+#
+# ) ICP is used for the range, ref, eq_ref, and ref_or_null access methods, when there is a need to access full table rows.
+#
+# ) ICP can be used for InnoDB and MyISAM tables, including partitioned InnoDB and MyISAM tables.
+#
+# ) For InnoDB tables, ICP is used only for secondary indexes.
+#
+# 		The goal of ICP is to reduce the number of full-row reads and thereby reduce number of I/O operations.
+#
+# 		For InnoDB clustered indexes, the complete record is already read into the InnoDB buffer.
+#
+# 		Using ICp in this case does not reduce the I/O.
+#
+# ) ICP is not supported with secondary indexes created on virtual generated columns. InnoDB supports secondary indexes
+# 		on virtual generated columns.
+#
+# ) Conditions that refer to subqueries cannot be pushed down
+#
+# ) COndition taht refer to stored functions cannot be pushed down. Storage engines cannot invoke stored functions.
+#
+# ) Triggered conditions cannot be pushed down. (For information about triggered conditions, see Optimizing Subqueries with the EXISTS Strategy)
+#
+# To understand how this optimization works, first consider how an index scan proceeds when Index Condition Pushdown is not used:
+#
+#  	1. Get hte next row, first by reading the index tuple and then by using the index tuple to locate and read the full table row.
+#
+# 		2. Test the part of the WHERE condition that applies to this table. Accept or Reject the row based on the test result.
+#
+# Using Index Condition Pushdown, the scan proceeds like this insteaqd:
+#
+# 		1. Get hte next row's index tuple (but not the full table row)
+#
+# 		2. Test the part of the WHERE condition that applies to this table and can be checked using only indexed columns.
+# 			If the condition is not satisfied, proceed to the index tuple for the next row.
+#
+# 		3. If the condition is satisfied, use the index tuple to locate and read the full table row.
+#
+# 		4. Test the remaining part of the WHERE condition that applies to this table. Accept or reject the row based on teh test result.
+#
+# EXPLAIN output shows Using index condition in teh Extra column when Index Condition Pushdown is used.
+# It does not show Using Index because that does not apply when the full table rows must be read.
+#
+# Suppose that a table contains information about people and their addresses and that the table has an index defined as INDEX
+# (zipcode, lastname, firstname).
+#
+# If we know a person's zipcode value but are not sure about the last name, we can search like this:
+#
+# 		SELECT * FROM people
+# 			WHERE zipcode='95054'
+# 			AND lastname LIKE '%etrunia%'
+# 			AND address LIKE '%Main Street%';
+#
+# MySQL cna use the index to scan through people with zipcode='9504'
+#
+# THe second part (lastname lIKE '%etrunia%') cannot be used to limit the number of rows that must be scanned,
+# so without Index Condition Pushdown, this query must retrieve full table rows for all people who have zipcode '95054'
+#
+# With Index Condition Pushdown, MySQL checks the lastname LIKE '%etrunia%' part before reading the full table row.
+# This avoids reading full rows corresponding to index tuples that match the zipcode condition but not the lastname condition.
+#
+# Index Condition Pushdown is enabled by default. It can be controlled with the optimizer_switch system variable by setting the
+# index_condition_pushdown flag:
+#
+# 		SET optimizer_switch = 'index_condition_pushdown=off';
+# 		SET optimizer_siwtch = 'index_condition_pushdown=on';
+#
+# See later in Switchable Optimizations for more.
+#
+# NESTED-LOOP JOIN ALGORITHMS
+#
+# MySQL executes joins between tables using a nested-loop algorithm or variations on it.
+#
+# NESTED-LOOP JOIN ALGORITHM
+#
+# A simple nested-loop join (NLJ) algorithm reads rows from the first table in a loop one at a time,
+# passing each row to a nested loop that processes teh next table in the join.
+#
+# This process is repeated as many times as there remains tables to be joined.
+#
+# Assume that a join between three tables t1, t2 and t3 is to be executed using the following join types:
+#
+# 	Table 	JOin Type
+# 	t1 		range
+# 	t2 		ref
+# 	t3 		ALL
+#
+# If a simple NLJ algorithm is used, the join is processed like this:
+#
+# for each row in t1 matching range {
+# 		for each row in t2 matching reference key {
+# 			for each row in t3 {
+# 				if row satisfies join conditions, send to client
+# 			}
+# 		}
+# }
+#
+# Because the NLJ Algorithm passes rows one at a time from outer loops to inner loops, it typically reads
+# tables processed in the inner loops many times.
+#
+# Block Nested-Loop Join Algorithm
+#
+# A Block Nested-Loop (BNL) join algorithm uses buffering of rows read in outer loops to reduce the number of 
+# times that tables in inner loops must be read.
+#
+# For example, if 10 rows are read into a buffer and teh buffer is passed to the next inner loop,.
+# each row read in teh inner loop can be compared against 10 rows in the buffer.
+#
+# This reduces by an order of magnitude the number of times the inner table must be read.
+#
+# MySQL join buffering has these characteristics:
+#
+# 		) Join buffering can be used when the join is of type ALL or index (in other words, when no possible keys can be used, and a full scan
+# 			is done, of either the data or index rows, respectively), or range.
+#
+# 			Use of buffering is also applicable to outer joins, as described in BLOCK NESTED_LOOP AND BATCHED KEY ACCESS JOINS
+#
+# 		) A join buffer is never allocated for the first nonconstant table, even if it would be of type ALL or index.
+#
+# 		) Only columns of interest to a join are stored in its join buffer, not whole rows.
+#
+# 		) The join_buffer_size system variable determines the size of each join buffer used to process a query.
+#
+# 		) One buffer is allocated for each join that can be buffered, so a given query might be processed using multiple join buffers.
+#
+# 		) A join buffer is allocated prior to executing the join and freed after the query is done.
+#
+# For the example join described previously for the NLJ algorithm (without buffering), the join is done as follows using join buffering:
+#
+# 		for each row in t1 matching range {
+# 			for each row in t2 matching reference key {
+# 				store used columns from t1, t2 in join buffer
+# 				if buffer is full {
+# 					for each row in t3 {
+# 						for each t1, t2 combination in join buffer {
+# 							if row satisfies join conditions, send to client
+# 						}
+# 					}
+# 					empty join buffer
+# 				}
+# 			}
+# 		}
+# 		
+# 		if buffer is not empty {
+# 			for each row in t3 {
+# 				for each t1, t2 combination in join buffer {
+# 					if row satisfies join conditions, send to client
+# 				}
+# 			}
+# 		}
+#
+# If S is the size of each stored t1, t2 combination in the join buffer and C is the number of combinations in teh buffer,
+# the number of times table t3 is scanned is:
+#
+# 	(S * C)/join_buffer_size + 1
+#
+# The number of t3 scans decereases  as the value of join_buffer_size increases, up to the point when join_buffer_size
+# is large enough to hold all previous row combinations.
+#
+# At that point, no speed is gained by making it larger.
+#
+# NESTED JOIN OPTIMIZATION
+#
+# The syntax for expressing joins permits nested joins. The following discussion refers to joins syntax described later.
+#
+# The syntax of table_factor is extended in comparison with the SQL standard.
+# The latter accepts only table_reference, not a list of them inside a pair of paranthesis.
+#
+# This is a conservative extension if we consider each comma in a list of table_referneces items as equivalent
+# to an inner join.
+#
+# For example:
+#
+# 		SELECT * FROM t1 LEFT JOIN (t2, t3, t4)
+# 								ON (t2.a=t1.a AND t3.b=t1.b AND t4.c=t1.c)
+#
+# is equvialent to:
+#
+# 		SELECT * FROM t1 LEFT JOIN (t2 CROSS JOIN t3 CROSS JOIN t4)
+# 								ON (t2.a=t1.a AND t3.b=t1.b AND t4.c=t1.c)
+#
+# In MySQL, CROSS JOIN is syntatically equivalen to INNER JOIN, they can replace each other.
+#
+# In stnadard SQL, they are not equivalent, INNER JOIN is used with an ON clause; CROSS JOIN is used otherwise.
+#
+# In general, parathenses can be ignored in join expressions containing only inner join operations.
+# Consider this join expression:
+#
+# t1 LEFT JOIN (t2 LEFT JOIN t3 ON t2.b=t3.b OR t2.b IS NULL) ON t1.a=t2.a
+#
+# After removing parathenses and grouping operations to the left, that join expression transforms
+# into this expression:
+#
+# (t1 LEFT JOIN t2 ON t1.a=t2.a) LEFT JOIN t3 ON t2.b=t3.b OR t2.b IS NULL
+#
+# Yet, the two expressions are not equivalent. To see this, suppose that the tables t1, t2, and t3 have the
+# following state:
+#
+# 		) Table t1 contains rows (1), (2)
+#
+# 		) Table t2 contains row (1, 101)
+# 		
+# 		) Table t3 contains row (101)
+#
+# In this case, teh first expression returns a result set including the rows (1, 1, 101, 101), (2, NULL, NULL, NULL), whereas the
+# second expression returns the rows (1, 1, 101, 101), (2,NULL,NULL,101):
+#
+# SELECT FROM t1 LEFT JOIN (t2 LEFT JOIN t3 on t2.b=t3.b OR t2.b IS NULL) ON t1.a=t2.a;
+# +-------------------------------+
+# | a 		| 	a 		| 	b´	| b 	 |
+# +-------------------------------+
+# | 		1  | 		1 	| 101 | 101  |
+# | 		2 	| 	NULL 	| NULL| 101  |
+# +-------------------------------+
+#
+# In the following example, an outer join operation is used together with an inner join operation:
+#
+# t1 LEFT JOIN (t2, t3) ON t1.a=t2.a
+#
+# That expression cannot be transformed into the following:
+#
+# t1 LEFT JOIN t2 ON t1.a=t2.a, t3
+#
+# FOr the given table states, the two expressions return different sets of rows:
+#
+# SELECT * FROM t1 LEFT JOIN (t2, t3) ON t1.a=t2.a;
+# +-----------------------------------------------+
+# | 	a 		| 		a 		| 		b 			|		b    |
+# +-----------------------------------------------+
+# | 	1 		| 		1 		| 	101 			| 101 	  |
+# |	2 		| 		NULL 	| 	NULL 			| NULL 	  |
+# +-----------------------------------------------+
+#
+# SELECT * FROM t1 LEFT JOIN t2 ON t1.a=t2.a, t3;
+# +-----------------------------------------+
+# | a 		| a 			| 		b 		| 		b |
+# +-----------------------------------------+
+# | 1 		| 1 			| 101 		| 101   |
+# | 2 		| NULL 		| NULL 		| 101   |
+# +-----------------------------------------+
+#
+# Therefore, If we omit parantheses in a join expression with outer join expressions, we might change the result set
+# for the original expression.
+#
+# More exactly, we cannot ignore parantheses in the right operand of the left outer join operation and in teh left operand
+# of a right join operation.
+#
+# IN other words, we cannot ignore parantheses for the inner table expressions of outer join operations.
+# Parantheses for the other operand (operand for the outer table) can be ignored.
+#
+# The following Expression:
+#
+# (t1,t2) LEFT JOIN t3 ON P(t2.b,t3.b)
+#
+# Is equivalent to this expression for any tables t1,t2,t3 and any condition P over attributes t2.b and t3.b:
+#
+# t1, t2 LEFT JOIN t3 ON P(t2.b, t3.b)
+#
+# WHenevr the order of execution of join operations in a join expression (join_table) is not from left to right,
+# we talk about nested joins. 
+#
+# Consider the following queries:
+#
+#  SELECT * FROM t1 LEFT JOIN (t2 LEFT JOIN t3 ON t2.b=t3.b) ON t1.a=t2.a WHERE t1.a > 1
+#
+# 	SELECT * FROM t1 LEFT JOIN (t2, t3) ON t1.a=t2.a WHERE (t2.b=t3.b OR t2.b IS NULL) AND t1.a > 1
+#
+# Those queries are considered to contain these nested joins:
+#
+# t2 LEFT JOIN t3 ON t2.b=t3.b
+# t2, t3
+#
+# In the first query, the nested join is formed with a left join operation. In teh second query, it is formed with an inner join operation.
+#
+# 
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/nested-join-optimization.html
