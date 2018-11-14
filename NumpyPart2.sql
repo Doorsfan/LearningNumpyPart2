@@ -49483,6 +49483,2011 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # The optimizer might rewrite this as an EXISTS correlated subquery:
 #
+# SELECT * FROM t1
+# WHERE EXISTS (SELECT t2.b FROM t2 WHERE where_condition AND t1.a=t2.b);
 #
+# Subquery materialization using a temporary table avoids such rewrites and makes it possible
+# to execute the subquery only once rather than once per row of the outer query.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/subquery-materialization.html
+# For subquery materialization to be used in MySQL, the optimizer_switch system variable materialization
+# flag must be enabled.
+#
+# (see more on this under Switchable Optimizations)
+#
+# With the materialization flag enabled, materialization applies to subquery predicates that appear anywhere
+# (in the select list, WHERE ON, GROUP BY, HAVING or ORDER BY), for predicates that fall into any of these use cases:
+#
+# 		) The predicate has this form, when no outer expression oe_i or inner expression ie_i is nullable.
+# 			N is 1 or larger.
+#
+# 			(oe_1, oe_2, ---, oe_N) [NOT] IN (SELECT ie_1, i_2, ---, ie_N ---)
+#
+# 		) The predicate has this form, when there is a single outer expression oe and inner expression ie.
+# 			The expression can be nullable.
+#
+# 			oe [NOT] IN (SELECT ie ---)
+#
+# 		) The predicate is IN or NOT IN and a result of UNKNOWN (NULL) has the same meaning as a result of FALSE.
+#
+# The following examples illustrate how the requirement for equivalence of UNKNOWN and FALSE predicate evaluation
+# affects whether subquery materialization can be used.
+#
+# Assume that where_condition involves columns only from t2 and not t1 so that the subquery is noncorrelated.
+#
+# This query is subject to materialization:
+#
+# 		SELECT * FROM t1
+# 		WHERE t1.a IN (SELECT t2.b FROM t2 WHERE where_condition);
+#
+# Here, it does not matter whether the IN predicate returns UNKNOWN or FALSE.
+# Either way, the row from t1 is not included in the query result
+#
+# An example where subquery materialization is not used is the following query, where t2.b is a nullable column:
+#
+# 		SELECT * FROM t1
+# 		WHERE (t1.a, t1.b) NOT IN (SELECT t2.a, t2.b FROM t2 WHERE where_condition);
+#
+# The following restrictions apply to the use of subquery materialization:
+#
+# 		) The types of the inner and outer expressions must match. 
+#
+# 			For example, the optimizer might be able to use materialization if both expressions
+# 			 are integer or both are decimal, but cannot if one expression is integer and the other is decimal.
+#
+# 		) The inner expression cannot be a BLOB
+#
+# use of EXPLAIN with a query provides some indication of whether the optimizer uses subquery materialization.
+#
+# Compared to query execution that does not use materialization, select_type may change from DEPENDENT SUBQUERY
+# to SUBQUERY.
+#
+# This indicates that, for a subquery that would be executed once per outer row, materialization enables the
+# subquery to be executed just once.
+#
+# In addition, for extended EXPLAIN output, the text displayed by a following SHOW_WARNINGS includes
+# materialize and materialized-subquery.
+#
+# OPTIMIZING DERIVED TABLES, VIEW REFERENCES, AND COMMON TABLE EXPRESSIONS
+#
+# The optimizer can handle derived table references using two strategies:
+#
+# 		) merge the derived table into the outer query block
+#
+# 		) Materialize the derived table to an internal temporary table
+#
+# The optimizer uses the same strategies to handle view references and common table expressions.
+#
+# Example 1:
+#
+# 			SELECT * FROM (SELECT * FROM t1) AS derived_t1;
+#
+# 			With merging, that query is executed similar to:
+#
+# 			SELECT * FROM t1;
+#
+# Example 2:
+#
+# 			SELECT *
+# 				FROM t1 JOIN (SELECT t2.f1 FROM t2) AS derived_t2 ON t1.f2=derived_t2.f1
+# 				WHERE t1.f1 > 0;
+#
+# 			With merging, that query is executed similar to:
+#
+# 			SELECT t1.*, t2.f1
+# 				FROM t1 JOIN t2 ON t1.f2=t2.f1
+# 				WHERE t1.f1 > 0;
+#
+# With materialization, derived_t1 and derived_t2 are treated as a separate table within their respective queries.
+#
+# The optimizer handles derived tables and view references the same way: it avoids unnecessary materializaton whenever
+# possible, which enables pushing down conditions from the outer query to derived tables and produces more efficient
+# execution plans.
+#
+# (For mroe on this, see earlier)
+#
+# If merging would result in an outer query block that references more than 61 base tables, the optimizer chooses materialization
+# instead.
+#
+# The optimizer propagates an ORDER BY clause in a derived table or view reference to the outer query block if these conditions
+# are all true:
+#
+# 		) The outer query is not grouped or aggregated
+#
+# 		) The outer query does not specify DISTINCT, HAVING or ORDER By
+#
+# 		) The outer query has this derived table or view reference as the only source in the FROM clause.
+#
+# Otherwise, the optimizer ignores the ORDER BY clause.
+#
+# The following means are available to influence whether the optimizer attempts to merge derived tables
+# and view references into the outer query block:
+#
+# 		) The MERGE and NO_MERGE optimizer hints can be used.
+#
+# 			They apply assuming that no other rule prevents merging. See more under optimizer hints.
+#
+# 		) Similarly, you can use the derived_merge flag of the optimizer_switch system variable.
+# 			More under switchable optimizations.
+#
+# 			By default, the flag is enabled to permit merging.
+#
+# 			Disabling the flag prevents merging and avoids ER_UPDATE_TABLE_USED errors.
+#
+# 			The derived_merge flag also applies to views that contain no ALGORITHM clause.
+#
+# 			Thus, if an ER_UPDATE_TABLE_USED error occurs for a view reference that uses an 
+# 			expression equivalent to the subquery, adding ALGORITHM=TEMPTABLE to the view 
+# 			definition prevents merging and takes precedence over the derived_merge value.
+#
+# 		) It is possible to disable merging by using in the subquery any constructs that prevent merging,
+# 			although these are not as explicit in their effect on materialization.
+#
+# 			Constructs that prevent merging are the same for derived tables, common table expressions,
+# 			and view references:
+#
+# 				) Aggregate functions or window functions (SUM(), MIN(), MAX(), COUNT() and so forth)
+#
+# 				) DISTINCT
+#
+# 				) GROUP BY
+#
+# 				) HAVING
+#
+# 				) LIMIT
+#
+# 				) UNION or UNION_ALL
+#
+# 				) Subqueries in the select list
+#
+# 				) Assignments to user variables
+#
+# 				) References only to literal values (in this case, there is no underlying table)
+#
+# If the optimizer choosses the materialization strategy rather than merging for a derived table,
+# it handles the query as follows:
+#
+# 		) The optimizer postpones derived table materialization until its contents are needed during query execution.
+#
+# 			This improves performance because delaying materialization may result in not having to do it at all.
+#
+# 			Consider a query that joins the result of a derived table to another table: 
+#
+# 				If the optimizer processes that other table first and finds that it returns no rows,
+# 				the join need not be carried out further and the optimizer can completely skip materializing
+# 				the derived table.
+#
+# 		) During query execution, the optimizer may add an index to a derived table to speed up row retrieval from it.
+#
+# Consider the following EXPLAIN statement, for which a subquery appears in the FROM clause of a SELECT query:
+#
+# 		EXPLAIN SELECT * FROM (SELECT * FROM t1) AS derived_t1;
+#
+# The optimizer avoids materializing the subquery by delaying it until the result is needed during SELECT
+# execution.
+#
+# IN this case, the query is not executed (because it occurs in an EXPLAIN statement), so the result is never needed.
+#
+# Even for queries that are executed, delay of subquery materialization may enable the optimizer to avoid
+# materialization entirely.
+#
+# When this happens, query execution is quicker by the time needed to perform materialization.
+# Consider the following query, which joins the result of a subquery in the FROM clause to another table:
+#
+# 		SELECT *
+# 			FROM t1 JOIN (SELECT t2.f1 FROM t2) AS derived_t2
+# 					  ON t1.f2=derived_t2.f1
+# 			WHERE t1.f1 > 0;
+#
+# If the optimization processes t1 first and the WHERE clause produces an empty result,
+# the join must necessarily be empty and the subquery need not be materialized.
+#
+# For cases when a derived table requires materialization, the optimizer may add an index
+# to the materialized table to speed up access to it.
+#
+# If such an index enables ref access to the table, it can greatly reduce amount of data 
+# read during query execution.
+#
+# Consider the following query:
+#
+# 		SELECT *
+# 			FROM t1 JOIN (SELECT DISTINCT f1 FROM t2) AS derived_t2
+# 						ON t1.f1=derived_t2.f1;
+#
+# The optimizer constructs an index over column f1 from derived_t2 if doing so would enable use of
+# ref access for the lowest cost execution plan.
+#
+# After adding the index, the optimizer can treat the materialized derived table the same as a regular
+# table with an index, and it benefits similarly from the generated index.
+#
+# The overhead of index creation is negligble compared to the cost of query execution without the index.
+#
+# If ref access would result in higher cost than some other access method, the optimizer creates no index
+# and loses nothing.
+#
+# For optimizer trace output, a merged derived table or view reference is not shown as a node.
+#
+# Only its underlying tables appear in the top query's plan.
+#
+# What is true for materialization of derived tables is also true for common table expressions (CTEs).
+# In addition, the following considerations pertain specifically to CTEs.
+#
+# If a CTE is materialized by a query, it is materialized once for the query, even if the query references
+# it several times.
+#
+# A recursive CTE is always materialized.
+#
+# If a CTE is materialized, the optimizer automatically adds relevant indexes if it estimates that indexing will
+# speed up access by the top-level statement to the CTE.
+#
+# This is similar to automatic indexing of derived tables, except that if the CTE is referenced multiple times,
+# the optimizer may create multiple indexes to speed up access by each reference in the most appropriate way.
+#
+# THe MERGE and NO_MERGE optimizer hints can be applied to CTEs. Each CTE reference in the top-level statement
+# can have its own hint, permitting CTE references to be selectively merged or materialized.
+#
+# The following statement uses hints to indicate that cte1 should be merged and cte2 should be materialized:
+#
+# 		WITH
+# 			cte1 AS (SELECT a, b FROM table1),
+# 			cte2 AS (SELECT c, d FROM table2)
+# 		SELECT /*+ MERGE(cte1) NO_MERGE(cte2) */ cte1.b ,cte2.d
+# 		FROM cte1 JOIN cte2
+# 		WHERE cte1.a = cte2.c;
+#
+# The ALGORITHM clause for CREATE_VIEW does not affect materialization for any WITH clause preceding the SELECT
+# statement in the view definition.
+#
+# Consider this statement:
+#
+# 		CREATE ALGORITHM={TEMPTABLE|MERGE} VIEW v1 AS WITH --- SELECT ---
+#
+# The ALGORITHM value affects materialization only of the SELECT, not the WITH clause.
+#
+# For CTEs, the storage engine used for on-disk internal temp tables cannot be MyISAM.
+#
+# If internal_tmp_disk_storage_engine=MyISAM, an error occurs for any attempt to materialize a CTE
+# using an on-disk temporary table.
+#
+# As mentioned previously, a CTE, if materialized, is materialized once, even if referneced multiple times.
+#
+# To indicate one-time materialization, optimizer trace output contains an occurence
+# of creating_tmp_table plus one or more occurrences of reusing_tmp_table.
+#
+# CTEs are similar to derived tables, for which the materialized_from_subquery node follows the reference.
+#
+# This is true for a CTE that is referenced multiple times, so there is no duplication of materialized_from_subquery
+# nodes (which would give the impression that the subquery is executed multiple times, and produce unnecessarily
+# verbose output).
+#
+# Only one reference to the CTE has a complete materialized_from_subquery node with the description
+# of its subquery plan.
+#
+# Other references have a reduced materialized_from_subquery node.
+#
+# THe same idea applies to EXPLAIN output in TRADITIONAL format; Subqueries for other references
+# are not shown.
+#
+# OPTIMIZING SUBQUERIES WITH THE EXISTS STRATEGY
+#
+# Certain optimizations are applicable to comparisons that use IN (or =ANY) operator to test subquery results.
+#
+# This section discusses these optimizations, particularly with regards to the challenges that NULL values present.
+#
+# THe last part of the discussion suggests how you can help the optimizer.
+#
+# Consider the following subquery comparison:
+#
+# 		outer_expr IN (SELECT inner_expr FROM --- WHERE subquery_where)
+#
+# MySQL evaluates queries "from outside to inside".
+#
+# That is, it first otbains the values of the outer expression outer_expr, and then runs the subquery and captures the rows
+# that it produces.
+#
+# A very useful optimization is to "inform" the subquery that the only rows of interest are those where
+# the inner expression inner_expr is equal to outer_expr.
+#
+# THis is done by pushing down an appropriate equality into the subquery's WHERE clause to make it more restrictive.
+# The converted comparison looks like this:
+#
+# 		EXISTS (SELECT 1 FROM --- WHERE subquery_where AND outer_expr=inner_expr)
+#
+# After the conversion, MySQL can use the pushed-down equality to limit the number of rows it must examine
+# to evaluate the subquery.
+#
+# More generally, a comparison of N values to a subquery that returns N-value rows is subject to
+# the same conversion.
+#
+# If oe_i and ie_i represent corresponding outer and inner expression values, this subquery comparison:
+#
+# 		(oe_1, ---, oe_N) IN
+# 			(SELECT ie_1, ---, ie_N FROM --- WHERE subquery_where)
+#
+# Becomes:
+#
+# 		EXISTS (SELECT 1 FROM --- WHERE subquery_WHERE
+# 										  AND oe_1 = ie_1
+# 										  AND ---
+# 										  AND oe_N = ie_N)
+#
+# FOr simplicity, the following discussion assumes a single pair of outer and inner expression values.
+#
+# The conversion just described has its limitations. It is valid only if we ignore possible NULL values.
+# That is, the "Pushdown" strategy works as long as both of tehse conditions are true:
+#
+# 		) outer_expr and inner_expr CANNOT be NULL
+#
+# 		) You need not distinguish NULL from FALSE subquery results.
+#
+# 			If the subquery is a part of an OR or AND expression in the WHERE clause,
+# 			MySQL assumes that you do not care.
+#
+# 			Another instance where the optimizer notices that NULL and FALSE subquery results need not be
+# 			distinguished is this construct:
+#
+# 				--- WHERE outer_expr IN (subquery)
+#
+# 			IN this case, the WHERE clause rejects the row whether IN (subquery) returns NULL or FALSE
+#
+# When either or both of those conditions do not hold, optimization is more complex.
+#
+# Suppose that outer_expr is known to be a non-NULL value but the subquery does not produce a row such that
+# outer_expr = inner_expr 
+#
+# Then outer_expr IN (SELECT ---) evaluates as follows:
+#
+# 		) NULL, if the SELECT produces any row where inner_expr is NULL
+#
+# 		) FALSE, if the SELECT produces only non-NULL values or produces nothing
+#
+# In this situation, the approach of looking for rows with outer_expr = inner_expr is no longer valid.
+#
+# It is necessary to look for such rows, but if none are found, also look for rows where
+# inner_expr is NULL.
+#
+# Roughly speaking, the subquery can be converted to something like this:
+#
+# 		EXISTS (SELECT 1 FROM --- WHERE subquery_where AND 
+# 					(outer_expr=inner_expr OR inner_expr IS NULL))
+#
+# THe need to evaluate the extra IS_NULL condition is why MySQL has the ref_or_null access method:
+#
+# 		EXPLAIN
+# 		SELECT outer_expr IN (SELECT t2.maybe_null_key
+# 									 FROM t2, t3 WHERE ---)
+# 		FROM t1;
+#
+# 		****************** 1. row *******************************
+# 							id: 1
+# 				select_type: PRIMARY
+# 						table: t1
+# 		---
+# 		****************** 2. row *******************************
+# 							id: 2
+# 				select_type: DEPENDENT SUBQUERY
+#  					table: t2
+# 						 type: ref_or_null
+# 			 possible_keys: maybe_null_key
+# 						  key: maybe_null_key
+# 					key_len : 5
+# 						  ref: func
+# 						rows : 2
+# 					Extra   : Using where; Using index
+#
+# 	 	---
+#
+# The unique_subquery and index_subquery subquery-specific access methods also have "or NULL" variants.
+#
+# The additional OR --- IS NULL condition makes query execution slightly more complicated
+# (and some optimizations within the subquery become inapplicable), but generally this is tolerable.
+#
+# The situation is much worse when outer_expr can be NULL.
+#
+# According to the SQL interpretation of NULL as "unknown value", NULL IN (SELECT inner_expr ---)
+# should evaluate to:
+#
+# 		) NULL, if the SELECT produces any rows
+#
+# 		) FALSE, if the SELECT produces no rows
+#
+# For proper evaluation, it is necessary to be able to check whether the SELECT has produced any rows
+# at all, so outer_expr = inner_expr cannot be pushed down into the subquery.
+#
+# This is a problem because many real world subqueries become very slow unless the equality can be pushed down.
+#
+# Essentially, there must be different ways to execute the subquery depending on the value of outer_expr
+#
+# The optimizer chooses SQL compliance over speed, so it accounts for the possibility that outer_expr
+# might be NULL.
+#
+# 		) If outer_expr is NULL, to evaluate the following expression, it is necessary to execute the
+# 			SELECT to determine whether it produces any rows:
+#
+# 			NULL IN (SELECT inner_expr FROM --- WHERE subquery_where)
+#
+# 			It is necessary to execute the original SELECT here, without any pushed-down equalities
+# 			of the kind mentioned previously.
+#
+# 		) On the other hand, when outer_expr is not NULL, it is absolutely essential that this comparison:
+#
+# 			outer_expr IN (SELECT inner_expr FROM --- WHERE subquery_where)
+#
+# 			Be converted to this expression that uses a pushed-down condition:
+#
+# 			EXISTS (SELECT 1 FROM --- WHERE subquery_where AND outer_expr=inner_expr)
+#
+# 			Without this conversion, subqueries will be slow.
+#
+# To solve the dilemma of whether or not to push down conditions ino the subquery, the conditions
+# are wrapped within "trigger" functions.
+#
+# Thus, an expression of the following form:
+#
+# 		outer_expr IN (SELECT inner_expr FROM --- WHERE subquery_where)
+#
+# Is converted into:
+#
+# 		EXISTS (SELECT 1 FROM --- WHERE subquery_where
+# 										  AND trigcond(outer_expr=inner_expr))
+#
+# More generally, if the subquery comparison is based on several pairs of outer and inner
+# expressions, the conversion takes this comparison:
+#
+# 		(oe_1, ---, oe_N) IN (SELECT ie_1, ---, ie_N FROM --- WHERE subquery_where)
+#
+# And converts it to this expression:
+#
+# 		EXISTS (SELECT 1 FROM --- WHERE subquery_where
+# 										  AND trigcond(oe_1=ie_1)
+# 										  AND ---
+# 										  AND trigcond(oe_N=ie_N)
+# 					)
+#
+# Each trigcond(X) is a special function that evaluates to the following values:
+#
+# 		) X when the "linked" outer expression oe_i is not NULL
+#
+# 		) TRUE when the "linked" outer expression oe_i is NULL
+#
+# 		NOTE:
+# 			Trigger functions are NOT triggers of the kind that you create with CREATE_TRIGGER
+#
+# Equalities that are wrapped within trigcond() functions are not first class predicates for the query
+# optimizer.
+#
+# Most optimizations cannot deal with predicates that may be turned on and off at query execution time,
+# so they assume any trigcond(X) to be an unknown function and ignore it.
+#
+# Triggered equalities can be used by those optimizations:
+#
+# 		) Reference optimizations: trigcond(X=Y [OR Y IS NULL]) can be used to construct ref, eq_ref, or ref_or_null table accesses.
+#
+# 		) Index lookup-based subquery execution engines: trigcond(X=Y) can be used to construct unique_subquery or index_subquery accesses.
+#
+# 		) Table-condition generator: If the subquery is a join of several tables, the triggered condition is checked as soon as possible.
+#
+# When the optimizer uses a triggered condition to create some kind of index lookup-based access
+# (as for the first two items of the preceding list), it must have a fallback strategy for the case
+# when the condition is turned off.
+#
+# This fallback strategy is always the same: Do a full table scan.
+#
+# In EXPLAIN output, the fallback shows up as Full scan on NULL key in the Extra column:
+#
+# 		EXPLAIN SELECT t1.col1,
+# 		t1.col1 IN (SELECT t2.key1 FROM t2 WHERE t2.col2=t1.col2) FROM t1\G
+# 		********************* 1. row ***********************
+#
+# 							id: 1
+# 				select_type: PRIMARY
+# 						table: t1
+# 						---
+# 		********************* 2. row ************************
+#
+# 							id: 2
+# 				select_type: DEPENDENT SUBQUERY
+# 						table: t2
+# 						 type: index_subquery
+# 			 possible_keys: key1
+# 						  key: key1
+# 					key_len : 5
+# 						  ref: func
+# 						 rows: 2
+# 					   Extra: Using where; Full scan on NULL key
+#
+# If you run EXPLAIN followed by SHOW_WARNINGS, you can see the triggered condition:
+#
+# ******************************** 1. row ******************************
+# 			
+# 						Level: Note
+# 						 Code: 1003
+# 					Message : select `test`.`t1`.`col1` AS `col1`,
+# 								 <in_optimizer>(`test`.`t1`.`col1`,
+# 								 <exists>(<index_lookup>(<cache>(`test`.`t1`.`col1`) in t2
+# 								 on key1 checking NULL
+# 								 where (`test`.`t2`.`col2` = `test`.`t1`.`col2`) having
+# 								 trigcond(<is_not_null_test>(`test`.`t2`.`key1`))))) AS
+# 								 `t1.col1 IN (select t2.key1 from t2 where t2.col2=t1.col2)`
+# 								 from `test`.`t1`
+#
+# The use of triggered conditions has some performance implications.
+#
+# A NULL IN (SELECT ---) expression now may cause a full table scan (which is slow),
+# when it previously did not.
+#
+# This is the price paid for correct results (the goal of the trigger-condition strategy is to
+# improve compliance, not speed)
+#
+# For multiple-table subqueries, execution of NULL IN (SELECT ---) is particularly slow because
+# the join optimizer does not optimize for the case where the outer expression is NULL.
+#
+# It assumes that subquery evaluations with NULL on the left side are very rare, even if
+# there are statistics taht indicate otherwise.
+#
+# On the other hand, if the outer expression might be NULL but never actually is, there is no
+# performance penalty.
+#
+# To help the query optimizer better execute your queries, use these suggestions:
+#
+# 		) Declare a column as NOT NULL if it really is.
+#
+# 			This also helps other aspects of the optimizer by simplifying condition testing for the column.
+#
+# 		) If you need not distinguish a NULL from FALSE subquery result, you can easily avoid
+# 			the slow execution path.
+#
+# 			Replace a comparison that looks like this:
+#
+# 				outer_expr IN (SELECT inner_expr FROM ---)
+#
+# 			with this expression:
+#
+# 				(outer_expr IS NOT NULL) AND (outer_expr IN (SELECT inner_expr FROM ---))
+#
+# 			Then NULL IN (SELECT ---) is never evaluated because MySQL stops evaluating AND parts as soon
+# 			as the expression result is clear.
+#
+# 			Another possible rewrite:
+#
+# 				EXISTS (SELECT inner_expr FROM ---
+# 						  WHERE inner_expr=outer_expr)
+#
+# 			This would apply when you need not distinguish NULL from FALSE subquery results, in which case you may actually want EXISTS.
+#
+# The subquery_materialization_cost_based flag of the optimizer_switch system variable enables
+# control over the choice between subquery materialization and IN-to-EXISTS subquery transformations.
+#
+# OPTIMIZING INFORMATION_SCHEMA QUERIES
+#
+# Applications that monitor databases may make frequent use of INFORMATION_SCHEMA tables.
+# To write queries for these tables most efficiently, use the following general guidelines:
+#
+# 		) Try to query only INFORMATION_SCHEMA tables that are views on data dictionary tables
+#
+# 		) Try to query only for static metadata. Selecting columns or using retrieval conditions for dynamic metadata
+# 			along with static metadata adds overhead to process the dynamic metadata.
+#
+# 			NOTE: 
+# 				Comparison behavior for database and table names in INFORMATION_SCHEMA queries might differ from
+# 				what you expect. See later in USING COLLATION IN INFORMATION SCHEMA SEARCHES
+#
+# These INFORMATION_SCHEMA tables are implemented as views on data dictionary tables, so queries on them
+# retrieve information from the data dictionary:
+#
+# 		CHARACTER_SETS
+# 		COLLATIONS
+# 		COLLATION_CHARACTER_SET_APPLICABILITY
+# 		COLUMNS
+# 		EVENTS
+# 		FILES
+# 		INNODB_COLUMNS
+# 		INNODB_DATAFILES
+#
+# 		INNODB_FIELDS
+# 		INNODB_FOREIGN
+# 		INNODB_FOREIGN_COLS
+# 		INNODB_INDEXES
+#
+# 		INNODB_TABLES
+#  	INNODB_TABLESPACES
+# 		INNODB_TABLESPACES_BRIEF
+# 		INNODB_TABLESTATS
+#
+# 		KEY_COLUMN_USAGE
+# 		PARAMETERS
+# 		PARTITIONS
+# 		REFERENTIAL_CONSTRAINTS
+#
+# 		RESOURCE_GROUPS
+# 		ROUTINES
+# 		SCHEMATA
+# 		STATISTICS
+# 		TABLES
+# 
+# 		TABLE_CONSTRAINTS
+# 		TRIGGERS
+# 		VIEWS
+# 		VIEW_ROUTINE_USAGE
+# 		VIEW_TABLE_USAGE
+#
+# Some types of values, even for a non-view INFORMATION_SCHEMA table, are
+# retrieved by lookups from the data dictionary.
+#
+# This includes values such as database and table names, table types, and storage engines.
+#
+# Some INFORMATION_SCHEMA tables contain columns that provide table statitics:
+#
+# 		STATISTICS.CARDINALITY
+# 		TABLES.AUTO_INCREMENT
+# 		TABLES.AVG_ROW_LENGTH
+# 		TABLES.CHECKSUM
+# 
+# 		TABLES.CHECK_TIME
+# 		TABLES.CREATE_TIME
+# 		TABLES.DATA_FREE
+# 		TABLES.DATA_LENGTH
+#
+# 		TABLES.INDEX_LENGTH
+# 		TABLES.MAX_DATA_LENGTH
+# 		TABLES.TABLE_ROWS
+# 		TABLES.UPDATE_TIME
+#
+# Those columns represent dynamic table metadata; that is, information that changes as table contents change.
+#
+# By default, MySQL retrieves cached values for those columns from the mysql.index_stats and mysql.table_stats
+# dictionary tables when the columns are queried, which is more efficient than retrieving statistics directly
+# from the storage engine.
+#
+# If cached statistics are not available or have expired, MySQL retrieves teh latest statistics
+# from the storage engine and caches them in the mysql.index_stats and mysql.table_stats dictionary tables.
+#
+# Subsequent queries retrieve the cached statistics until the cached statistics expire.
+#
+# The information_schema_stats_expiry session variable defines the period of time before cached statistics expire.
+# The default is 86400 (24 hours), but the time period can be extended to as much as one year.
+#
+# To update cached values at any time for a given table, use ANALYZE_TABLE
+#
+# Querying statitics columns does not store or update statistics in the mysql.index_stats and
+# mysql.table_stats dictionary table under these circumstances:
+#
+# 		) When cached statistics have not expired
+#
+# 		) When information_schema_stats_expiry is set to 0
+#
+# 		) When the server is started in read_only, super_read_only, transaction_read_only or innodb_read_only mode.
+#
+# 		) When the query also fetches Performance Schema data
+#
+# information_schema_stats_expiry is a session variable, and each client session can define its own expiration value.
+# Statistics that are retrieved from the storage engine and cached by one session are available to other sessions.
+#
+# NOTE:
+#
+# 		If the innodb_read_only system variable is enabled, ANALYZE_TABLE may fail because it cannot update statistics tables
+# 		in the data dictionary, which use InnoDB.
+#
+# 		For ANALYZE_TABLE operations that update the key distribution, failure may occur even if the operation
+# 		updates the table itself (for example, if it is a MyISAM table)
+#
+# 		To obtain the updated distribution statistics, set information_schema_stats_expiry=0
+#
+# For INFORMATION_SCHEMA tables implemented as views on data dictionary tables, indexes on the underlying
+# data dictionary tables permit the optimizer to construct efficient query execution plans.
+#
+# To see the choices made by the optimizer, use EXPLAIN
+#
+# To also see the query used by the server to execute an INFORMATION_SCHEMA query,
+# use SHOW_WARNINGS immediately following EXPLAIN.
+#
+# Consider this statement, which identifies collations for the utf8mb4 character set:
+#
+# 		SELECT COLLATION_NAME
+# 		FROM INFORMATION_SCHEMA.COLLATION_CHARACTER_SET_APPLICABILITY
+# 		WHERE CHARACTER_SET_NAME = 'utf8mb4';
+# 		+--------------------------------------+
+# 		| COLLATION_NAME 							   |
+# 		+--------------------------------------+
+# 		| utf8mb4_general_ci 						|
+# 		| utf8mb4_bin 								   |
+# 		| utf8mb4_unicode_ci 						|
+# 		| utf8mb4_icelandic_ci 					   |
+# 		| utf8mb4_latvian_ci 						|
+# 		| utf8mb4_romanian_ci 						|
+# 		| utf8mb4_slovenian_ci 						|
+# 		---
+#
+# How does the server process that statement? To find out, use EXPLAIN
+#
+# EXPLAIN SELECT COLLATION_NAME
+# FROM INFORMATION_SCHEMA.COLLATION_CHARACTER_SET_APPLICABILITY
+# WHERE CHARACTER_SET_NAME = 'utf8mb4'\G
+# ********************************* 1. row **************************************
+# 		
+# 								id: 1 
+# 					select_type: SIMPLE
+# 							table: cs
+# 					partitions : NULL
+# 							 type: const
+# 				 possible_keys: PRIMARY, name
+# 				 			  key: name
+# 						key_len : 194
+# 							  ref: const
+# 							rows : 1
+# 						filtered: 100.00
+# 							Extra: Using index
+# ********************************* 2. row ***************************************
+#
+# 								id: 1
+# 					select_type: SIMPLE
+# 							table: col
+# 					partitions : NULL
+# 							type : ref
+# 				 possible_keys: character_set_id
+# 				 			  key: character_set_id
+# 						 key_len: 8
+# 							  ref: const
+# 						    rows: 68
+# 						filtered: 100.00
+# 							Extra: NULL
+# 2 rows in set, 1 warning (0.01 sec)
+#
+# To see the query used to satisfy that statement, use SHOW_WARNINGS:
+#
+# SHOW WARNINGS\G
+# ******************************** 1. row ******************************************
+#
+# 		Level: Note
+# 		Code : 1003
+# 	Message : /* select#1 */ select `mysql`.`col`.`name` AS `COLLATION_NAME`
+# 				 from `mysql`.`character_sets` `cs`
+# 				 join `mysql`.`collations` `col`
+# 				 where ((`mysql`.`col`.`character_set_id` = '45')
+# 				 and ('utf8mb4' = 'utf8mb4'))
+#
+# As indicated by SHOW_WARNINGS, the server handles the query on COLLATION_CHARACTER_SET_APPLICABILITY
+# as a query on the character_sets and collations data dictionary table in the mysql system database.
+#
+# OPTIMIZING PERFORMANCE SCHEMA QUERIES
+#
+# Applicatons that monitor databases may make frequent use of Performance Schema tables.
+# To write queries for these tables most efficiently, take advantage of their indexes.
+#
+# For example, include a WHERE clause that restricts retrieved rows based on comparison
+# to specific values in an indexed column.
+#
+# Most Performance Schema tables have indexes. Tables that do not are those that normally contain
+# few rows or are unlikely to be queried frequently.
+#
+# Performance Schema indexes give the optimizer access to execution plans otehr than full table scans.
+#
+# These indexes also improve performance for related objects, such as sys schema views that
+# use those tables.
+#
+# To see whether a given Performance Schema table has indexes and what they are, use SHOW_INDEX or
+# SHOW_CREATE_TABLE:
+#
+# 		SHOW INDEX FROM performance_schema.accounts\G
+# 		******************************** 1. row ****************************
+# 
+# 									Table: accounts
+# 							Non_unique : 0
+# 							 Key_name  : ACCOUNT
+# 						Seq_in_index  : 1
+# 							Column_name: USER
+# 							  Collation: NULL
+# 							Cardinality: NULL
+# 							  Sub_part : NULL
+# 							 	Packed  : NULL
+# 								  Null  : YES
+# 							Index_type : HASH
+# 							 	Comment :
+# 						 Index_comment:
+#  							Visible : YES
+#
+# 		******************************** 2. row *****************************
+#
+# 									Table: accounts
+# 							 Non_unique: 0
+#  						  Key_name : ACCOUNT
+# 						  Seq_in_index: 2
+# 							Column_name: HOST
+# 							  Collation: NULL
+# 							Cardinality: NULL
+# 								Sub_part: NULL
+# 								  Packed: NULL
+# 								    Null: YES
+# 							Index_type : HASH
+# 								Comment : 
+# 						 Index_comment: 
+# 								Visible : YES
+#
+# 		SHOW CREATE TABLE performance_schema.rwlock_instances\G
+# 		******************************* 1. row *******************************
+# 						
+# 									Table: rwlock_instances
+# 						  Create Table: CREATE TABLE `rwlock_instances` (
+# 							 `NAME` varchar(128) NOT NULL,
+# 							 `OBJECT_INSTANCE_BEGIN` bigint(20) unsigned NOT NULL,
+# 							 `WRITE_LOCKED_BY_THREAD_ID` bigint(20) unsigned DEFAULT NULL,
+# 							 `READ_LOCKED_BY_COUNT` int(10) unsigned NOT NULL,
+# 							PRIMARY KEY (`OBJECT_INSTANCE_BEGIN`),
+# 							KEY `NAME` (`NAME`),
+# 							KEY `WRITE_LOCKED_BY_THREAD_ID` (`WRITE_LOCKED_BY_THREAD_ID`)
+# 						) ENGINE=PERFORMANCE_SCHEMA DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+#
+# TO see the execution plan for a Performance Schema query and whether it uses any indexes, use EXPLAIN:
+#
+# EXPLAIN SELECT * FROM performance_schema.accounts WHERE (USER,HOST) = ('root', 'localhost')\G
+# ***************************** 1. row ***************************
+#
+# 							id: 1
+# 				select_type: SIMPLE
+# 						table: accounts
+# 				 partitions: NULL
+# 						type : const
+# 			possible_keys : ACCOUNT
+# 						 key : ACCOUNT
+# 					key_len : 278
+# 					     ref: const,const
+# 						 rows: 1
+# 					filtered: 100.00
+# 					Extra   : NULL
+#
+# The EXPLAIN output indicates that hte optimizer uses the accounts table ACCOUNT index that
+# comprises the USER and HOST columns.
+#
+# Performance Schema indexes are virtual: They are a construct of the Performance Schema storage engine
+# and use no memory or disk storage.
+#
+# The Performance Schema reports index information to the optimizer so that it can construct efficient 
+# execution plans.
+#
+# The Performance Schema in turn uses optimizer information about what to look for (for example, a particular key value)
+# , so that it can perform efficient lookups without building actual index structures.
+#
+# This implementation provides two important benefits:
+#
+# 		) It entirely avoids the maintenance cost normally incurred for tables that undergo frequent updates.
+#
+# 		) It reduces at an early stage of query execution the amount of data retrieved.
+#
+# 			For conditions on the indexed columns, the Performance Schema efficiently returns only
+# 			table rows that satisfy the query conditions.
+#
+# 			Without an index, the Performance Schema would return all rows in the table, requiring that
+# 			the optimizer later evaluate the conditions against each row to produce the final result.
+#
+# Performance Schema indexes are predefined and cannot be dropped, added or altered.
+#
+# Performance Schema indexes are similar to hash indexes. For example:
+#
+# 		) They are used only for equality comparisons that use the = or <=> operators.
+#
+# 		) They are unordered. If a query result must have specific row ordering characteristics, include an ORDER BY clause.
+#
+# For additional information about hash indexes, see later.
+#
+# OPTIMIZING DATA CHANGE STATEMENTS
+#
+# This section explains how to speed up data change statements: INSERT, UPDATE and DELETE.
+#
+# Traditional OLTP applications and modern web applications typically do many small data change operations,
+# where concurrency is vital.
+#
+# Data analysis and reporting applications typically run data change operations that affect many rows
+# at once, where the main consideration is the I/O to write large amounts of data and keep indexes up-to-date.
+#
+# For inserting and updating large volumes of data (known in teh industry as ETL, or "extract-transform-load"),
+# sometimes you use other SQL statements or external commands, that mimic the effects of INSERT, UPDATE and DELETE statements.
+#
+# OPTIMIZING INSERT STATEMENTS
+#
+# To optimize insert speed, combine many operations into a single large operation.
+#
+# Ideally, you make a single connection, send the data for many new rows at once, and
+# delay all index updates and consistency checking until the very end.
+#
+# The time required for inserting a row is determined by the following factors, where the numbers indicate
+# approximate proportions:
+#
+# 		) Connecting: (3)
+#
+# 		) Sending query to the server: (2)
+#
+# 		) Parsing query: (2)
+#
+# 		) Inserting row: (1 * size of row)
+#
+# 		) Inserting indexes: (1 * number of indexes)
+#
+# 		) Closing: (1)
+#
+# This does not take into consideration the initial overhead to open tables, which is done once for each
+# concurrently running query.
+#
+# The size of the table slows down the insertion if indexes by log N, assuming B-tree indexes.
+#
+# You can use the following methods to speed up inserts:
+#
+# 		) If you are inserting many rows from the same client at the same time, use INSERT statements with multiple
+# 			VALUES lists to insert several rows at a time.
+#
+# 			This is considerably faster (many times faster in some cases) than using separate single-row INSERT
+# 			statements.
+#
+# 			If you are adding data to a nonempty table, you can tune the bulk_insert_buffer_size variable to make
+# 			data insertion even faster. See earlier.
+#
+# 		) When loading a table from a text file, use LOAD_DATA_INFILE. This is usually 20x faster than using INSERT statements.
+# 			More later on the LOAD DATA INFILE syntax.
+#
+# 		) Take advantage of the fact that columns have default values.
+#
+# 			Insert values explicitly only when the value to be inserted differs from the default.
+# 			THis reduces the parsing that MySQL must do and improves the insert speed.
+#
+# 		) See more later for bulk inserts in relation to InnoDB and MyISAM tables.
+#
+# OPTIMIZING UPDATE STATEMENTS
+#
+# An update statement is optimized like a SELECT query with the additional overhead of a write.
+#
+# The speed of the write depends on teh amount of data being updated and the number of indexes
+# that are updated. Indexes that are not changed do not get updated.
+#
+# Another way to get fast updates is to delay updates and then do many updates in a row later.
+#
+# Performing multiple updates togetehr is much quicker than doing one at a time if you lock the table.
+#
+# For a MyISAM table that uses dynamic row format, updating a row to a longer total length may split the
+# row.
+#
+# If you do this often, it is very important to use OPTIMIZE_TABLE ocassionally. 
+#
+# See more on the syntax of OPTIMIZE TABLE later.
+#
+# OPTIMIZING DELETE STATEMENTS
+#
+# The time required to delete individual rows in a MyISAM table is exactly proportional 
+# to the number of indexes.
+#
+# To delete rows more quickly, you can increase the size of the key cache by increasing the
+# key_buffer_size system variable.
+#
+# To delete all rows from a MyISAM table, TRUNCATE TABLE tbl_name is faster than DELETE FROM tbl_name.
+#
+# Truncate operations are not transaction-safe; an error occurs when attempting one in the course
+# of an active transaction or active table lock.
+#
+# See more later on TRUNCATE TABLE syntax.
+#
+# OPTIMIZING DATABASE PRIVILEGES
+#
+# The more complex your privilege setup, the more overhead applies to all SQL statements.
+#
+# SImplifying the privileges established by GRANT statements enables MysQL to reduce permission-checking
+# overhead when clients execute statements.
+#
+# For example, if you do not grant any table-level or column-level privileges, the server need not
+# ever check the contents of the tables_priv and columns_priv tables.
+#
+# Similarly, if you place no resource limits on any accounts, the server does not have to
+# perform resource counting.
+#
+# If you have a very high statement-processing load, consider using a simplified grant structure
+# to reduce permission-checking overhead.
+#
+# OTHER OPTIMIZATION TIPS
+#
+# THis section lists a number of misc tips for improving query processing speed:
+#
+# 		) If your application makes several DB requests to perform related updates, combining
+# 			the statements into a stored routine can help performance.
+#
+# 			Similarly, if your application computes a single result based on several columns values
+# 			or large volumes of data, combining the computation into a UDF (user-defined function)
+# 			can help performance.
+#
+# 			The resulting fast DB operations are then available to be reused by other queries,
+# 			applications and even code written in different languages.
+#
+# 			More on this, USING STORED ROUTINES (PROCEDURES AND FUNCTIONS) and ADDING NEW FUNCTIONALITY TO MYSQL later.
+#
+# 		) To fix any compression issues that occur with ARCHIVE tables, use OPTIMIZE_TABLE. More later in THE ARCHIVE STORAGE ENGINE
+#
+# 		) If possible, classify reports as "live" or "statistical", where data needed for statistical reports is created
+# 			only from summary tables that are generated periodically from the live data.
+#
+# 		) If you have data that does not conform well to a rows-and-columns table structure, you can pack
+# 			and store data into a BLOB column.
+#
+# 			In this case, you must provide code in your application to pack and unpack information,
+# 			but this might save I/O operations to read and write the sets of related values
+#
+# 		) With Web servers, store images and other binary assets as files, with the path name stored
+# 			in the database rather than the file itself.
+#
+# 			Most web servers are better at caching files than DB contents, so using files is
+# 			generally faster. (Although you must handle backups and storage issues yourself
+# 			in this case)
+#
+# 		) If you need really high speed, look at the low-level MySQL interfaces.
+#
+# 			For example, by accessing the MySQL InnoDB or MyISAM storage engine directly,
+# 			you could get a substansial speed increase compared to using the SQL interface.
+#
+# 		) Replication can provide a performance benefit for some operations.
+#
+# 			You can distribute client retrievals among replication servers to
+# 			split up the load.
+#
+# 			To avoid slowing down the master while making backups, you can make
+# 			backups using a slave server. More later on REPLICATION.
+#
+# OPTIMIZATION AND INDEXES
+#
+# The best way to improve performance of SELECT operations is to create indexes
+# on one or more of the columns that are tested in the query.
+#
+# The index entries act like pointers to the table rows, allowing the query to
+# quickly determine which rows match a condition in the WHERE clause, and retrieve
+# the other column values for those rows.
+#
+# All MySQL data types can be indexed.
+#
+# although it can be tempting to create an index for every possible column used
+# in a query, unecessary indexes waste space and time for MySQL to determine which
+# indexes to use.
+#
+# Indexes also add to the cost of inserts, updates and deletes, because each index
+# must be updated.
+#
+# You must find the right balance to achieve fast queries using the optimal set of
+# indexes.
+#
+# HOW MYSQL USES INDEXES
+#
+# Indexes are used to find rows with specific column values quickly.
+#
+# Without an index, MySQL must begin with the first row and then read through
+# the entire table to find the relevant rows.
+#
+# The larger the table, the more this costs.
+#
+# If the table has an index for the columns in question, MySQL can quickly
+# determine the position to seek to in the middle of the data file
+# without having to look at all the data.
+#
+# This is much faster than reading every row sequentially.
+#
+# Most MySQL indexes (PRIMARY KEY, UNIQUE INDEX and FULLTEXT) are stored in B-trees.
+# (More on thoose later)
+#
+# Exceptions: Indexes on spatial data types use R-trees; MEMORY tables also support
+# hash indexes; InnoDB uses inverted lists for FULLTEXT indexes.
+#
+# In general, indexes are used as described in teh following discussion.
+#
+# Characteristics specific to hash indexes (as used in MEMORY tables) are described
+# in a later section, COMPARISON OF B-TREE AND HASH INDEXES
+#
+# MySQL uses indexes for these operations:
+#
+# 		) To find the rows matching a WHERE clause quickly.
+#
+# 		) TO eliminate rows from consideration. If there is a choice between
+# 			multiple indexes, MySQL normally uses the index that finds the smallest number of rows.
+# 			(The most slective index)
+#
+# 		) If the table has multiple-column index, any leftmost prefix of the index can be used by
+# 			the optimizer to look up rows.
+#
+# 			For example, if you have a three-column index on (col1, col2, col3), you have indexed 
+# 			search capabilities on (col1), (col1, col2), and (col1, col2, col3)
+#
+# 			For more info on this, it is covered later in MULTIPLE COLUMN INDEXES
+#
+# 		) TO retrieve rows from other tables when performing joins, MySQL can use indexes
+# 			on columns more effectively if they are declared as the same type and size.
+#
+# 			In this context, VARCHAR and CHAR are considered the same if they are declared
+# 			as the same size.
+#
+# 			For example, VARCHAR(10) and CHAR(10) are the same size, but VARCHAR(10)
+# 			and CHAR(15) are not.
+#
+# 			For comparisons between nonbinary string columns, both columns should use the same
+# 			character set.
+#
+# 			For example, comparing a utf8 column with a latin1 column precludes use of an index.
+#
+# 			Comparison of dissimilar columns (comparing a string column to a temporal or numeric column,
+# 			for example) - may prevent use of indexes if values cannot be compared directly
+# 			without conversion.
+#
+# 			For a given value such as 1 in the numeric column, it might compare equal to any number
+# 			of values in the string column such as '1', '1', '00001', or '01.e1'
+#
+# 			THis rules out use of any indexes for the string column.
+#
+# 		) To find the MIN() or MAX() value for a specified indexed column key_col.
+# 			This is optimized by a preprocessor that checks whether you are using WHERE
+# 			key_part_N = constant on all key parts that occur before key_col in the index.
+#
+# 			In this case, MysQL does a single key lookup for each MIN() or MAX() expression
+# 			and replaces it with a constant.
+#
+# 			If all expressions are replaced with constants, the query returns at once.
+#
+# 			For example:
+#
+# 			SELECT MIN(key_part2), MAX(key_part2)
+# 				FROM tbl_name WHERE key_part1=10;
+#
+# 		) To sort or group a table if the sorting or grouping is done on a leftmost prefix
+# 			of a usable index (for example, ORDER BY key_part1, key_part2)
+#
+# 			If all key parts are followed by DESC, the key is read in reverse order.
+#
+# 			(Or, if the index is a descending index, the key is read in forward order)
+#
+# 			see earlier optimizations and more later in DESCENDING INDEXES
+#
+# 		) In some cases, a query can be optimized to retrieve values without consulting the 
+# 			data rows. 
+#
+# 			(An index that provides all the necessary results for a query is called a
+# 			covering index).
+#
+# 			If a query uses from a table only columns that are included in some index,
+# 			the selected values can be retrieved from the index tree for greater speed:
+#
+# 				SELECT key_part3 FROM tbl_name
+# 					WHERE key_part1=1;
+#
+# Indexes are less important for queries on small tables, or big tables where report queries process most
+# or all of the rows.
+#
+# When a query needs to access most of the rows, reading sequentially is faster than working through an index.
+#
+# Sequential reads minimize disk seeks, even if not all the rows are needed for the query.
+#
+# SEe more in AVOIDING FULL TABLE SCANS
+#
+# PRIMARY KEY OPTIMIZATION
+#
+# The primary key for a table represents the column or set of columns that you use
+# in your most vital queries.
+#
+# It has an associated index, for fast query performance.
+#
+# Query performance benefits from the NOT NULL optimization, because it cannot include any
+# NULL values.
+#
+# With the InnoDB storage engine, the table data is physically organized to do ultra-fast
+# lookups and sorts based on the primary key column or columns.
+#
+# If your table is big n important, but does not have an obvious column or set of columns
+# to use as a primary key, you might create a separate column with auto-increment values to
+# use as the primary key.
+#
+# These unique IDs can serve as pointers to corresponding rows in other tables when you
+# join tables using foreign keys.
+#
+# SPATIAL INDEX OPTIMIZATION
+#
+# MySQL permits creation of SPATIAL indexes on NOT NULL geometry-valued columns (more later in CREATING SPATIAL INDEXES).
+# 
+# The optimizer checks the SRID attribute for indexed columns to determine which spatial reference system (SRS)
+# to use for comparisons, and uses calculations appropriate to the SRS.
+#
+# (< 8.0, the optimizer performs comparisons of SPATIAL index values using Cartesian calculations; the result of such
+# 	operations are undefined if the column contains values with non-Cartesian SRIDs)
+#
+# For comparisons to work properly, each column in a SPATIAL index must be SRID-restricted.
+#
+# That is, the column definition must include an explicit SRID attribute, and all column
+# values must have the same SRID.
+#
+# The optimizer considers SPATIAL indexes only for SRID-restricted columns:
+#
+# 		) Indexes on columns restricted to a Cartesian SRID enable Cartesian bounding box computations.
+#
+# 		) Indexes on columns restricted to a geographic SRID enable geographic bounding box computations.
+#
+# The optimizer ignores SPATIAL indexes on columns that have no SRID attribute (and thus are not SRID-restricted).
+# MySQL still maintains such indexes, as follows:
+#
+# 		) They are updated for table modifications (INSERT, UPDATE, DELETE and so forth).
+#
+# 			Updates occur as though the index was Cartesian, even though the column might contain
+# 			a mix of Cartesian and geographical values.
+#
+# 		) They exist only for backward compatibility; for example, the ability to perform a dump in MySQL
+# 			5.7 and restore in MySQL 8.0.
+#
+# 			Because SPATIAL indexes on columns that are not SRID-restricted are of no use to the optimizer,
+# 			each such column should be modified:
+#
+# 				) Verify that all values within the column have the same SRID.
+#
+# 					To determine the SRIDs contained in a geometry column col_name, use
+# 					the following query:
+#
+# 						SELECT DISTINCT ST_SRID(col_name) FROM tbl_name;
+#
+# 					If the query returns more than one row, the column contains a mix of SRIDs.
+# 					In that case, modify its contents so all values have the same SRID.
+#
+# 				) Redefine the column to have an explicit SRID attribute.
+#
+# 				) Recreate the SPATIAL index.
+#
+# FOREIGN KEY OPTIMIZATION
+#
+# If a table has many columns, and you query many different combinations of columns,
+# it might be efficient to split the less-frequently used data into separate tables
+# with a few columns each, and relate them back to the main table by duplicating the
+# numeric ID column from the main table.
+#
+# That way, each small table can have a primary key for fast lookups of its data,
+# and you can query just the set of columns that you need using a join operation.
+#
+# Depending on how the data is distributed, the queries might perform less I/O
+# and take up less cache memory because the relevant columns are packed together
+# on disk.
+#
+# (To maximize performance, queries try to read as few data blocks as possible
+# from disk; tables with only a few columns can fit more rows in each data block.)
+#
+# COLUMN INDEXES
+#
+# The most common type of index involves a single column, storing copies of the values from
+# that column in a data structure, allowing fast lookups for the rows with the corresponding
+# column values.
+#
+# The B-Tree data structure lets the index quickly find a specific value, a set of values,
+# or a range of values, corresponding to operators such as =, >, <, BETWEEN, IN and so on,
+# in a WHERE clause.
+#
+# THe maxium number of indexes per table and maximum index length is defiend per storage engine.
+#
+# See more in THE INNODB STORAGE ENGINE and ALTERNATIVE STORAGE ENGINES
+#
+# All storage engines support at least 16 indexes per table and a total index length
+# of at least 256 bytes.
+#
+# Most storage engines have higher limits.
+#
+# For more info on column indexes, more later in CREATE INDEX SYNTAX
+#
+# INDEX PREFIXES
+#
+# With col_name(N) syntax in a index specification for a string column, you can create
+# an index that uses only the first N characters of the column.
+#
+# INdexing only a prefix of column values in this way can make the index file much smaller.
+#
+# When you index a BLOB or TEXT column, you MUST specify a prefix length for the index.
+# For example:
+#
+# 		CREATE TABLE test (blob_col BLOB, INDEX(blob_col(10)));
+#
+# Prefixes can be up to  767 bytes long for InnoDB tables that use the REDUNDANT and COMPACT row format.
+#
+# The prefix length limit is 3072 bytes for InnoDB tables that use the DYNAMIC or COMPRESSED row format.
+# For MyISAM tables, the prefix length limit is 1000 bytes.
+#
+# NOTE:
+#
+# 		Prefix limits are measured in bytes, whereas the prefix length in CREATE_TABLE, ALTER_TABLE
+# 		and CREATE_INDEX statements is interpreted as number of characters for nonbinary string types
+# 		(CHAR, VARCHAR, TEXT) and number of bytes for binary string types (BINARY, VARBINARY, BLOB)
+#
+# 		Take this into account when speicfying a prefix length ofr a nonbinary string column
+# 		that uses a multibyte character set.
+#
+# For additional info about index prefixes, more later in CREATE INDEX SYNTAX
+#
+# FULLTEXT INDEXES
+#
+# FULLTEXT indexes are used for full-text searches. Only the InnoDB and MyISAM storage engines
+# support FULLTEXT indexes and only for CHAR, VARCHAR, and TEXT columns.
+#
+# Optimizations are applied to certain kinds of FULLTEXT queries against single InnoDB tables.
+# Queries with these characteristics are particularly efficient:
+#
+# 		) FULLTEXT queries that only return the document ID or the document ID and the search rank.
+#
+# 		) FULLTEXT queries that sort the matching rows in descending order of score and apply a LIMIT
+# 			clause to take the top N matching rows.
+#
+# 			For this optimization to apply, there must be no WHERE clauses and only a single ORDER BY
+# 			clause in desc. order
+#
+# 		) FULLTEXT queries that retrieve only the COUNT(*) value of rows matching a search term, with no additional
+# 			WHERE clauses.
+#
+# 			Code the WHERE clauses as WHERE MATCH(text) AGAINST ('other_text), without any > 0 comparison operator.
+#
+# For queries that contain full-text expressions, MySQL evluates those expressions during the optimization
+# phase of query execution.
+#
+# THe optimizer does not just look at full-text expressions and make estimates, it actually evaluates them
+# in the process of developing an execution plan.
+#
+# An implication of this behavior is that EXPLAIN for full-text queries is typically slower
+# than for non-full-text queries for which no expression evaluation occurs during the optimization phase.
+#
+# EXPLAIN for full-text queries may show Select tables optimized away in the Extra column due
+# to matching occurring during optimization, in this case, no table access need occur during
+# later execution.
+#
+# SPATIAL INDEXES
+#
+# You can create indexes on spatial data types.
+# MyISAM and InnoDB support R-Tree indexes on spatial types.
+#
+# Other storage engines use B-trees for indexing spatial types
+# (except for ARCHIVE, which does not support spatial type indexing)
+#
+# INDEXING IN THE MEMORY STORAGE ENGINE
+#
+# The MEMORY storage engine uses HASH indexes by default, but also supports
+# BTREE indexes.
+#
+# MULTIPLE-COLUMN INDEXES
+#
+# MySQL can create composite indexes (that is, indexes on multiple columns).
+#
+# An index may consist of up to 16 columns. For certain data types, you can index a prefix
+# of the column (see earlier)
+#
+# MySQL can use multiple-column indexes fore queries that test all the columns in teh index,
+# or queries that test just the first column, the first two columns, the first three
+# columns, etc.
+#
+# IF you specify the columns in the right order in the index definition, a single composite
+# index can speed up several kinds of queries on the same table.
+#
+# A multiple-column index can be considered a sorted array, the rows of which contain values
+# that are created by concatenating the values of the indexed columns.
+#
+# NOTE:
+#
+# 		As an alternative to a composite index, you can introduce a column that is "hashed" based
+# 		on information from other columns.
+#
+# 		If this column is short, reasonably unique and indexed, it might be faster than a "wide"
+# 		index on many columns.
+#
+# 		In MysQL, it is very easy to use this extra column:
+#
+# 			SELECT * FROM tbl_name
+# 				WHERE hash_col=MD5(CONCAT(val1,val2))
+# 				AND col1=val1 AND col2=val2;
+#
+# SUppose that a table has the following specification:
+#
+# 		CREATE TABLE test (
+# 			id 		INT NOT NULL,
+# 			last_name CHAR(30) NOT NULL,
+# 			first_name CHAR(30) NOT NULL,
+# 			PRIMARY KEY (id),
+# 			INDEX name (last_name, first_name)
+# 		);
+#
+# The name index is an index over the last name and first name columns.
+#
+# The index can be used for lookups in queries that specifies values in a known range for 			
+# combinations of last_name and first_name values.
+#
+# It can also be used for queries that specify just a last name value because the column
+# is a leftmost prefix of the index (as described later here).
+#
+# Therefore, teh name index is used for lookups in the following queries:
+#
+# 		SELECT * FROM test WHERE last_name='Widenius';
+#
+# 		SELECT * FROM test
+#			WHERE last_name='Widenius' AND first_name='Michael';
+#
+# 		SELECT * FROM test
+# 			WHERE last_name='Widenius'
+# 			AND (first_name='Michael' OR first_name='Monty');
+#
+# 		SELECT * FROM test
+# 			WHERE last_name='Widenius'
+# 			AND first_name >= 'M' AND first_name < 'N';
+#
+# However, the name index is NOT used for lookups in the following queries:
+#
+# 		SELECT * FROM test WHERE first_name='Michael';
+#
+# 		SELECT * FROM test
+# 			WHERE last_name='Widenius' OR first_name='Michael';
+#
+# Suppose that you issue the following SELECT statement:
+#
+# 		SELECT * FROM tbl_name
+# 			WHERE col1=val1 AND col2=val2;
+#
+# If a multiple-column index exists on col1 and col2, the appropriate rows can be fetched directly.
+#
+# If separate single-column indexes exist on col1 and col2, the optimizer attempts to use
+# the Index Merge optimization (SEE INDEX MERGE OPTIMIZATION), or attempts to find the most
+# restrictive index by deciding which index excludes more rows and using that index to 
+# fetch the rows.
+#
+# If the table has a multiple-column index, any leftmost prefix of the index can be used by the
+# optimizer to look up rows.
+#
+# For example, if you have a three-column index on (col1, col2, col3), you have indexed search
+# capabilities on (col1), (col1, col2) and (col1, col2, col3)
+#
+# MysQL cannot use the index to perform lookups if the columns do not form a leftmost prefix of the index.
+# Suppose that you have the SELECT statements shown here:
+#
+# 		SELECT * FROM tbl_name WHERE col1=val1;
+# 		SELECT * FROM tbl_name WHERE col1=val1 AND col2=val2;
+#
+# 		SELECT * FROM tbl_name WHERE col2=val2;
+# 		SELECT * FROM tbl_name WHERE col2=val2 AND col3=val3;
+#
+# If an index exists on (col1, col2, col3), only the first two queries use the index.
+#
+# The first and fourth queries do involve indexes columns, but do not use an index to
+# perform lookups because (col2) and (col2, col3) are not leftmost prefixes of (col1, col2, col3)
+#
+# VERIFYING INDEX USAGE
+#
+# Always check whether all your queries really use the indexes that you have created in the
+# tables.
+#
+# Use the EXPLAIN statement, as described in OPTIMIZING QUERIES WITH EXPLAIN
+#
+# INNODB AND MYISAM INDEX STATISTICS COLLECTION
+#
+# Storage engines collect statitics about tables for use by the optimizer.
+#
+# Table statistics are based on value groups, where a value group
+# is a set of rows with the same key prefix value.
+#
+# For optimizer purposes, an important statistic is the average value group size.
+#
+# MySQL uses the average value group size in the following ways:
+#
+# 		) To estimate how many rows must be read for each ref access.
+#
+# 		) To estimate how many rows a partial join will produce; that is,
+# 			the number of rows that an operation of this form will produce:
+#
+# 				(---) JOIN tbl_name ON tbl_name.key = expr
+#
+# As the average value group size for an index increases, the index is less useful
+# for those two purposes because the average number of rows per lookup increases:
+#
+# 		For the index to be good for optimization purposes, it is best that each index
+# 		value target a small number of rows in the table.
+#
+# When a given index value yields a large number of rows, the index is less useful and
+# MySQL is less likely to use it.
+#
+# The average value group size is related to the table cardinality, which is the number
+# of value groups.
+#
+# The SHOW_INDEX statement displays a cardinality value based on N/S, where N is the number
+# of rows in the table and S is the average value group size.
+#
+# That ratio yields the approximate number of value groups in the table.
+#
+# For a join based on the <=> comparison operator, NULL is not treated differently
+# from any other value:
+#
+# 	NULL <=> NULL, just as N <=> N for any other N.
+#
+# However, for a join based on the operator of =, NULL is different from non-NULL values:
+# 
+# 		expr1 = expr2 is not true when expr1 or expr2 (or both) are NULL.
+#
+# This affects ref accesses for comparisons of the form tbl_name.key = expr:
+# MySQL will not access the table if the current value of expr is NULL, because the comparison
+# cannot be true.
+#
+# FOr = comparisons, it does not matter how many NULL values are in the table.
+#
+# For optimizaton purposes, the relevant value is the average size of the non-NULL value
+# groups.
+#
+# However, MySQL does not currently enable that average size to be collected or used.
+#
+# For InnoDB and MyISAM tables, you have some control over collection of table stats by means
+# of the innodb_stats_method and myisam_stats_method system variables, respectively.
+#
+# These variables have three possible values, which differ as follows:
+#
+# 		) When the variable is set to nulls_equal, all NULL values are treated as identical
+# 			(that is, they all form a single value group)
+#
+# 			If the NULL value group size is much higher than the average non-NULL value group size,
+# 			this method skews the average value group size upwards.
+#
+# 			This makes index appear to be the optimizer to be less useful than it really is for joins
+# 			that look for non-NULL values.
+#
+# 			Consequently, the nulls_equal method may cause the optimizer not to use the index
+# 			for ref accesses when it should.
+#
+# 		) When the variable is set to nulls_unequal, NULL values are not considered the same.
+#
+# 			Instead, each NULL value forms a separate value group of size 1.
+#
+# 			If you have many NULL values, this method skews the avg. value group downwards.
+#
+# 			If the average non-null value group size is large, counting NULL values each as a 
+# 			group size of 1 causes the optimizer to overestimate the value of the index for joins
+# 			that look for non-NULL values.
+#
+# 			Conseuqently, the nulls_unequal method may cause the optimizer to use this index
+# 			for ref lookups when other methods may be beter.
+#
+# 		) When the variable is set to nulls_ignored, NULL values are ignored.
+#
+# If you tend to use many joins that use <=> rather than =, NULL values are not special
+# in comparisons and one NULL is equal to another.
+#
+# IN this case, nulls_equal is the appropriate statistics method.
+#
+# The innodb_stats_method system variable has a global value; the myisam_stats_method
+# system variable has both global and session values.
+#
+# Setting the global value affects statistics collection for tables from the corresponding
+# storage engine.
+#
+# Setting the sesison value affects statistics collection only for the current client connection.
+#
+# THis means that you can force a tables statistics to be regenerated with a given method without
+# affecting other clients by setting the session value of myisam_stats_method
+#
+# To regenerate MyISAM table statistics, you can use any of the following methods:
+#
+# 		) Execute myisamchk --stats_method=method_name --analyze
+#
+# 		) Change the table to cause its statistics to go out of date (for example, insert a row
+# 			and then delete it), and then set myisam_stats_method and issue an ANALYZE_TABLE statement.
+#
+# Some caveats regarding the use of innodb_stats_method and myisam_stats_method:
+#
+# 		) You can force table statistics to be collected explicitly, as just described.
+#
+# 			However, MysQL may also collect statistics autoamtically.
+#
+# 			FOr example, if during the course of executing statements for a table, some of
+# 			those statements modify teh table, MySQL may collect statistics.
+#
+# 		(This may occur for bulk inserts or deletes, or some ALTER_TABLE statements, for example)
+#
+# 			If this happens, the statistics are collected using whatever value innodb_stats_method
+# 			or myisam_stats_method has at the time.
+#
+# 			Thus, if you collect statistics using one method, but the system variable is set to
+# 			the other method when a table's statistics are collected automatically later, the other
+# 			method will be used.
+#
+# 		) There is no way to tell which method was used to generate statitics for a given table.
+#
+# 		) These variables apply only to InnoDB and MyISAM tables.
+#
+# 			Other storage engines have only one method for collecting table statistics.
+# 			Usually it is closer to the nulls_equal method.
+#
+# COMPARISON OF B-TREE AND HASH INDEXES
+#
+# Understanding the B-Tree and hash data structures can help predict how different queries perform
+# on different storage engines that use these data structures in their indexes, particularly
+# for the MEMORY storage engine that lets you choose B-tree or hash indexes.
+#
+# B-TREE INDEX CHARACTERISTICS
+#
+# A B-tree index can be used for column comparisons in expressions that use the =, >, >=, <=, or BETWEEN
+# operators.
+#
+# The index also can be used for LIKE comparisons if the argument to LIKE is a constant string that
+# does not start with a wildcard character.
+#
+# For example, the following SELECT statements use indexes:
+#
+# 		SELECT * FROM tbl_name WHERE key_col LIKE 'Patrick%';
+# 		SELECT * FROM tbl_name WHERE key_col LIKE 'Pat%_ck%';
+#
+# In the first statement, only rows with 'Patrick' <= key_col <= 'Patricl' are considered.
+# IN the second statement, only rows with 'Pat' <= key_col 'Pau' are considered.
+#
+# The following SELECT statements do NOT use indexes:
+#
+# 		SELECT * FROM tbl_name WHERE key_col LIKE '%Patrick%';
+# 		SELECT * FROM tbl_name WHERE key_col LIKE other_col;
+#
+# IN the first statement, the LIKE value begins with a wildcard char.
+# In the second statement, the LIKE value is not a constant.
+#
+# IF you use --- LIKE '%string%' and string is longer than 3 chars, MySQL uses the Turbo Boyer-Moore algorithm
+# to initialize the pattern for the string and then uses this pattern to perform the search more quickly.
+#
+# A search using col_name IS NULL employs indexes if col_name is indexed.
+#
+# Any index that does not span all AND levels in the WHERE clause is not used to optimize
+# the query.
+#
+# In other words, to be able to use an index, a prefix of the index must be used in every AND Group.
+#
+# The following WHERE clauses use indexes:
+#
+# 		--- WHERE index_part1=1 AND index_part2=2 AND other_column=3
+#
+# 		/* index = 1 OR index = 2 */
+# 	--- WHERE index=1 OR A=10 AND index=2
+# 		
+# 		/* optimized like "index_part1='hello'" */
+# 	--- WHERE index_part1='hello' AND index_part3=5
+#
+# 		/* Can use index on index1 but not on index2 or index3 */
+# 	--- WHERE index1=1 AND index2=2 OR index1=3 AND index3=3;
+#
+# These where clauses do NOT use indexes:
+#
+# 		/* index_part1 is not used */
+# 		--- WHERE index_part2=1 AND index_part3=2
+#
+# 		/* Index is not used in both parts of the WHERE clause */
+# 		--- WHERE index=1 OR A=10
+#
+# 		/* No index spans all rows */
+# 		--- WHERE index_part1=1 OR index_part2=10
+#
+# Sometimes MySQL does not use an index, even if one is available.
+#
+# One circumstance under which this occurs is when the optimizer estimates that using
+# the index would require MysQL to access a very large percentage of the orws in the table.
+#
+# (In this case, a table scan is likely to be much faster, because it requires fewer seeks)
+#
+# However, if such a query uses LIMIT to retrieve only some of the rows, MysQL uses an index anyway.
+# Because it can much more quickly find the few rows to return in the result.
+#
+# HASH INDEX CHARACTERISTICS
+#
+# Hash indexes have somewhat different characteristics from those just discussed:
+#
+# 		) They are used only for equality comparisons that use the = or <=> operators (but they are very fast).
+#
+# 			They are not used for comparison operators such as < that find a range of values.
+#
+# 			Systems that rely on this type of single-value lookup are known as "key-value stores",
+# 			to use MySQL for such applications, use hash indexes wherever possible.
+#
+# 		) The optimizer cannot use a hash index to speed up ORDER BY operations. (This type of index cannot be used to search for the next entry in order)
+#
+# 		) MySQL cannot determine approximately how many rows there are between two values (this is used by the range optimizer to decide which index
+# 			to use)
+#
+# 			This may affect some queries if you change a MyISAM or InnoDB table to a hash-indexed MEMORY table.
+#
+# 		) Only whole keys can be used to search for a row. (with a B-tree index, any leftmost prefix of the key can be used to find rows).
+#
+# USE OF INDEX EXTENSIONS
+#
+# InnoDB automatically extends each secondary index by appending the primary key columns to it.
+# Consider this table definition:
+#
+# 		CREATE TABLE t1 (
+# 			i1 INT NOT NULL DEFAULT 0,
+# 			i2 INT NOT NULL DEFAULT 0,
+# 			d DATE DEFAULT NULL,
+# 			PRIMARY KEY (i1, i2),
+# 			INDEX k_d (d)
+# 		) ENGINE = InnoDB;
+#
+# This table defines the primary key on columns (i1, i2).
+#
+# It also defines a secondary index k_d on column (d), but internally, InnoDB extends this index and treats
+# it as (d, i1, i2)
+#
+# THe optimizer takes into account the primary key columns of the extended secondary index when determining
+# how and whether to use that index.
+#
+# This can result in more efficient query execution plans and better performance.
+#
+# The optimizer can use extended secondary indexes for ref, range, and index_merge index access,
+# for Loose Index Scan access, for join and sorting optimization and for MIN()/MAX() optimization.
+#
+# THe following example shows how execution plans are affected by whether the optimizer uses extended
+# secondary indexes.
+#
+# Suppose that t1 is populated with these rows:
+#
+# 		INSERT INTO t1 VALUES
+# 		(1, 1, '1998-01-01'), (1,2, '1999-01-01'),
+# 		etc.
+#
+# Now consider this query:
+#
+# 		EXPLAIN SELECT COUNT(*) FROM t1 WHERE i1 = 3 AND d = '2000-01-01'
+#
+# The optimizer cannot use the primary key in this case because that comprises columns
+# (i1, i2) and the query does not refer to i2.
+#
+# Instead, the optimizer can use the secondary_index k_d on (d), and the execution plan
+# depends on whether the extended index is used.
+#
+# WHen the optimizer does not consider index extensions, it treats the index k_d as only (d).
+# EXPLAIN for the query produces this result:
+#
+# EXPLAIN SELECT COUNT(*) FROM t1 WHERE i1 = 3 AND d = '2000-01-01'\G
+# ************************ 1. row ***********************************
+#
+# 								id: 1
+# 					select_type: SIMPLE
+# 							table: t1
+# 							type : ref
+# 				possible_keys : PRIMARY,k_d
+# 							  key: k_d
+# 					    key_len: 4
+#  						  ref: const
+# 							rows : 5
+# 						  Extra : Using where; Using index
+#
+# When the optimizer takes index extensions into account, it treats k_d as (d, i1, i2).
+#
+# In this case, it can use the leftmost index prefix (d, i1) to produce a better execution plan:
+#
+# EXPLAIN SELECT COUNT(*) FROM t1 WHERE i1 = 3 AND d = '2000-01-01'\G
+# ************************* 1. row **********************************
+# 
+# 								 id: 1
+# 					 select_type: SIMPLE
+# 						table    : t1
+# 							type  : ref
+# 				possible_keys  : PRIMARY, k_d
+# 								key: k_d
+# 						key_len  : 8
+# 							   ref: const, const
+# 							  rows: 1
+# 							Extra : Using index
+#
+# In both cases, key indicates that the optimizer will use secondary index k_d but the EXPLAIN
+# output shows these improvements from using the extended index:
+#
+# 		) key_len goes from 4 bytes to 8, indicating that key lookups use column d and i1, not just d
+#
+# 		) The ref value changes from const to const, const because the key lookup uses two key parts, not one.
+#
+# 		) The rows count decreased from 5 to 1, indicating that InnoDB should need to examine fewer rows to produce the result.
+#
+# 		) The Extra value changes from Using where; Using index to Using index.
+#
+# 			This means that rows can be read using only the index, without consulting
+# 			columns in the data row.
+#
+# Differences in optimizer behavior for use of extended indexes can also be seen with
+# SHOW_STATUS:
+#
+# FLUSH TABLE t1;
+# FLUSH STATUS;
+# SELECT COUNT(*) FROM t1 WHERE i1 = 3 AND d = '2000-01-01'
+# SHOW STATUS LIKE 'handler_read%'
+#
+# The preceding statements include FLUSH_TABLES and FLUSH_STATUS to flush the table cache and
+# clear the status counters.
+#
+# Without index extensions, SHOW_STATUS produces this result:
+#
+# 		+-------------------------+------+
+# 		| Variable_name 			  | Value|
+# 		+-------------------------+------+
+# 		| Handler_read_first 	  | 0 	|
+# 		| Handler_read_key 		  | 1 	|
+# 		| Handler_read_last 		  | 0    |
+# 		| Handler_read_next 		  | 5    |
+# 		| Handler_read_prev 		  | 0    |
+# 		| Handler_read_rnd 		  | 0    |
+# 		| Handler_read_rnd_next   | 0    |
+#  	+-------------------------+------+
+#
+# With index extensions, SHOW STATUS produces this result.
+#
+# The Handler_read_next value decreases from 5 to 1, indicating more efficient use of the index:
+#
+# 		+-------------------------+-------+
+# 		| Variable_name 			  | Value |
+# 		+-------------------------+-------+
+# 		| Handler_read_first 	  | 0     |
+# 		| Handler_read_key 		  | 1 	 |
+# 		| Handler_read_last 		  | 0     |
+# 		| Handler_read_next 		  | 1     |
+# 		| Handler_read_prev 		  | 0     |
+# 		| Handler_read_rnd 		  | 0     |
+# 		| Handler_read_rnd_next   | 0     |
+# 		+-------------------------+-------+
+#
+# THe use_index_extensions flag of the optimizer_switch system variable permits control over whether the
+# optimizer takes the primary key columns into account when determining how to use an InnoDB table's
+# secondary indexes.
+#
+# By default, use_index_extensions is enabled.
+#
+# TO check whether disable use of index extensions will improve performance, use this statement:
+#
+# 		SET optimizer_switch = 'use_index_extensions=off';
+#
+# Use of index extensions by the optimizer is subject to the usual limits on the number of key parts
+# in an index (16) and the max key length (3072 bytes)
+#
+# OPTIMIZER USE OF GENERATED COLUMN INDEXES
+#
+# MySQL supports indexes on generated columns.
+#
+# for example:
+#
+# 		CREATE TABLE t1 (f1 INT, gc INT AS (f1 + 1) STORED, INDEX (gc));
+#
+# The generated column, gc, is defined as the expression f1 +1.
+#
+# The column is also indexed and the optimizer can take that index into account during
+# execution plan construction.
+#
+# In the following query, the WHERE clause refers to gc and the optimizer considers whether
+# the index on that column yields a more efficient plan:
+#
+# 		SELECT * FROM t1 WHERE gc > 9;
+#
+# The optimizer can use indexes on generated columns to generate execution plans, even in teh absence
+# of direct references in queries to those columns by name.
+#
+# This occurs if the WHERE, ORDER BY or GROUP BY clause refers to an expression that matches the definition
+# of some indexed generated column.
+#
+# The following query does not refer directly to gc, but does use an expression that matches the definition of gc:
+#
+# 		SELECT * FROM t1 WHERE f1 + 1 > 9;
+#
+# The optimizer recognizes that hte expression f1 + 1 matches the definition of gc and that gc is indexed,
+# so it considers that index during execution plan construction.
+#
+# You can see this using EXPLAIN:
+#
+# EXPLAIN SELECT * FROM t1 WHERE f1 + 1 > 9\G
+# ************************* 1. row ***************************
+#
+# 						id: 1
+# 			select_type: SIMPLE
+# 					table: t1
+# 			partitions : NULL
+# 					type : range
+# 		possible_keys : gc
+# 					  key: gc
+# 				key_len : 5
+# 				     ref: NULL
+# 				    rows: 1
+# 				filtered: 100.00
+# 				   Extra: Using index condition
+#
+# In effect, the optimizer has replaced the expression f1 +1 with the name of the generated column that
+# matches the expression.
+#
+# THis is also apparent in the rewritten query available in teh extended EXPLAIN information displayed
+# by SHOW_WARNINGS:
+#
+# SHOW WARNINGS\G
+# *********************** 1. row ***********************
+#
+# 	 Level: Note
+# 	  Code: 1003
+# Message: /* select#1 */ select `test`.`t1`.`f1` AS `f1`, `test`.`t1`.`gc`
+# 				AS `gc` from `test`.`t1` where (`test`.`t1`.`gc` > 9)
+#
+# The following restrictions and conditions apply to the optimizer's use of generated column indexes:
+#
+# 		) For a query expression to match a generated column definition, the expression must be identical
+# 			and it must have the same result type.
+#
+# 			For example, if the generated column expressions f1 + 1, the optimizer will not recognize
+# 			a match if the query uses 1 + f1, or if f1 + 1 (an integer exp.) is compared with a string.
+#
+# 		) The optimization applies to these operators: =, <, <=, >, >=, BETWEEN and IN().
+#
+# 			For operators other than BETWEEN and IN(), either operand can be replaced by a matching generated column.
+#
+# 			For BETWEEN and IN(), only the first argument can be replacted by a matching generated column, and the
+# 			other arguments must have the same result type.
+#
+# 			BETWEEN and IN() are not yet supported for comparisons involving JSON values.
+#
+# 		) The generated column must be defined as an expression that contains at least a function call or one
+# 			of the operators mentioned in the preceding item.
+#
+# 			The expression cannot consist of a simple reference to another column.
+#
+# 			For example, gc INT AS (f1) STORED consists only of a column reference, so indexes on gc are not
+# 			considered.
+#
+# 		) For comparisons of strings to indexed generated columns that compute a value from a JSON function that
+# 			returns a quoted string, JSON_UNQUOTE() is needed in the column definition to remove the extra quotes
+# 			from the function value.
+#
+# 			(For direct comparison of a string to the function result, the JSON comparator handles quote removal,
+# 			but this does not occur for index lookups).
+#
+# 			For example, instead of writing a column definition like this:
+#
+# 				doc_name TEXT AS (JSON_EXTRACT(jdoc, '$.name')) STORED
+#
+# 			Write it like this:
+#
+# 				doc_name TEXT AS (JSON_UNQUOTE(JSON_EXTRACT(jdoc, '$.name'))) STORED
+#
+# 			With the latter definition, the optimizer can detect a match for both of thse comparisons:
+#
+# 				--- WHERE JSON_EXTRACT(jdoc, '$.name') = 'some_string' ---
+# 				--- WHERE JSON_UNQUOTE(JSON_EXTRACT(jdoc, '$.name')) = 'some_string' ---
+#
+# 			Without JSON_UNQUOTE() in the column definition, the optimizer detects a match only for the first of those comparisons.
+#
+# 		) If the optimizer picks the wrong index, an index hint can be used to disable it and force the optimizer
+# 			to make a different choice.
+#
+# INVISIBLE INDEXES
+#
+# MysQL supports invisible indexes; that is, indexes that are not used by the optimizer.
+#
+# The feature applies to indexes other than primary keys (either explicit or implicit)
+#
+# Indexes are visible by default.
+#
+# TO control Index visibility explicitly for a new index, use a VISIBLE or INVISIBLE keyword
+# as part of the index definition for CREATE_TABLE, CREATE_INDEX, or ALTER_TABLE.
+#
+# 		CREATE TABLE t1 (
+# 			i INT,
+# 			j INT,
+# 			k INT,
+# 			INDEX i_idx (i) INVISIBLE
+# 		) ENGINE = InnoDB;
+# 		CREATE INDEX j_idx ON t1 (j) INVISIBLE;
+# 		ALTER TABLE t1 ADD INDEX k_idx (k) INVISIBLE;
+#
+# To alter the visibility of an existing index, use a VISIBLE or INVISIBLE keyword with the ALTER TABLE --- ALTER INDEX operation:
+#
+# 		ALTER TABLE t1 ALTER INDEX i_idx INVISIBLE;
+# 		ALTER TABLE t1 ALTER INDEX i_idx VISIBLE;
+#
+# Information about whether an index is visible or invisible is available from the
+# INFORMATION_SCHEMA.STATISTICS table or SHOW_INDEX output.
+#
+# For example:
+#
+# 		SELECT INDEX_NAME, IS_VISIBLE
+# 		FROM INFORMATION_SCHEMA.STATISTICS
+# 		WHERE TABLE_SCHEMA = 'db1' AND TABLE_NAME = 't1';
+# 		+-----------------------------+
+# 		| INDEX_NAME 	| 	IS_VISIBLE  |
+# 		+--------------+--------------+
+# 		| í_idx 			| YES 			|
+# 		| j_idx 			| NO 				|
+# 		| k_idx 			| NO 				|
+# 		+--------------+--------------+
+#
+# Invisible indexes make it possible to test the effect of removing an index on query performance,
+# without making a destructive change that must be undone should the index turn out to be required.
+#
+# Dropping and re-adding an index can be expensive for a large table, whereas making it invisible and
+# visible - are fast in-place operations.
+#
+# If an index made invisible actually is needed or used by the optimizer,
+# there are several ways to notice the effect of its absence on queries for the table:
+#
+# 		) Errors occur for queries that include index hints that refer to the invisible index
+#
+# 		) https://dev.mysql.com/doc/refman/8.0/en/invisible-indexes.html 		
+# 
