@@ -51489,5 +51489,2008 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # 		) Errors occur for queries that include index hints that refer to the invisible index
 #
-# 		) https://dev.mysql.com/doc/refman/8.0/en/invisible-indexes.html 		
+# 		) Performance Schema data shows an increase in workload for affected queries.
+#
+# 		) Queries have different EXPLAIN execution plans.
+#
+# 		) Queries appear in the slow query log that did not appear there previously.
+#
+# The use_invisible_indexes flag of the optimizer_switch system variable controls whether the optimizer
+# uses invisible indexes for query execution plan construction.
+#
+# If the flag is off (the default), the optimizer ignores invisible indexes (the same behavior as prior
+# to the introduction of this flag).
+#
+# If the flag is on, invisible indexes remain invisible but the optimizer takes them into account for execution
+# plan construction.
+#
+# Index visibility does not affect index maintenance. For example, an index continues to be updated
+# per changes to the table rows, and a unique index prevents insertion of duplicates into a column,
+# regardless of whether the index is visible or invisible.
+#
+# A table with no explicit primary key may still have an effective implicit primary key if it has any UNIQUE
+# indexes on NOT NULL.
+#
+# In this case, the first such index places the same constraint on table rows as an explicit
+# primary key and that index cannot be made invisible.
+#
+# Consider the following table definition:
+#
+# 		CREATE TABLE t2 (
+# 			i INT NOT NULL,
+# 			j INT NOT NULL,
+# 			UNIQUE j_idx (j)
+# 		) ENGINE = InnoDB;
+#
+# The definition includes no explicit primary key, but hte index on NOT NULL column j places the same
+# constraint on rows as a primary key, and cannot be made invisible:
+#
+# 		ALTER TABLE t2 ALTER INDEX j_idx INVISIBLE;
+# 		ERROR 3522 (HY000): A primary key index cannot be invisible.
+#
+# Now suppose that an explicit primary key is added to the table:
+#
+# 		ALTER TABLE t2 ADD PRIMARY KEY (i);
+#
+# The explicit primary key cannot be made invisible.
+#
+# In addition, the unique key index on j no longer acts as an implicit primary key and
+# as a result can be made invisible:
+#
+# ALTER TABLE t2 ALTER INDEX j_idx INVISIBLE;
+# Query OK, 0 rows affected (0.03 sec)
+#
+# DESCENDING INDEXES
+#
+# MySQL supports descending indexes: DESC in a index definition is no longer ignored but causes
+# storage of key values in desc. order.
+#
+# Previously, indexes could be scanned in reverse order but at a performance penalty.
+#
+# A descending index can be scanned in forward order, which is more efficient.
+#
+# Descending indexes also make it possible for the optimizer to use multiple-column indexes when the
+# most efficient scan order mixes ascending order for some columns and descending order for others.
+#
+# Consider the following table definition, which contains two columns and four two-column index definitions
+# for the various combinations of ascending and descending indexes on the columns:
+#
+# 		CREATE TABLE t (
+# 			c1 INT, c2 INT,
+# 			INDEX idx1 (c1 ASC, c2 ASC),
+# 			INDEX idx2 (c1 ASC, c2 DESC),
+# 			INDEX idx3 (c1 DESC, c2 ASC),
+# 			INDEX idx4 (c1 DESC, c2 DESC)
+# 		);
+#
+# The table definition results in four distinct indexes.
+#
+# The optimizer can perform a forward index scan for each of the ORDER BY clauses and
+# need not use a filesort operation:
+# 
+# ORDER BY c1 ASC, c2 ASC -- optimizer can use idx1
+# ORDER BY c1 DESC, c2 DESC -- optimizer can use idx4
+# ORDER BY c1 ASC, c2 DESC -- Optimizer can use idx2
+# ORDER BY c1 DESC, c2 ASC -- optimizer  can use idx3
+#
+# Use of descending index is subject to these conditions:
+#
+# 		) Descending index are supported only for the InnoDB storage engine, with these limitations:
+#
+# 			) Change buffering is not supported for a secondary index if the index contains a descending
+# 				index key column or if the primary key includes a descending index column.
+#
+# 			) The InnoDB SQL parser does not use descending indexes.
+#
+# 				For InnoDB full-text search, this means that the index required on the FTS_DOC_ID column of the
+# 				indexed table cannot be defined as a descending index.
+#
+# 				For more information, see more later under INNODB FULLTEXT INDEXES
+#
+# 		) Descending indexes are supported for all data types for which ascending indexes are available.
+#
+# 		) Descending indexes are supported for ordinary (nongenerated) and genrated columns (both VIRTUAL and STORED)
+#
+# 		) DISTINCT can use any index containing matching columns, including descending key parts.
+#
+# 		) Indexes that have descending key parts are not used for MIN()/MAX() optimization of queries that invoke aggregate
+# 			functions but do not have a GROUP BY clause.
+#
+# 		) Descending indexes are supported for BTREE but not HASH indexes. Descending indexes are not supported
+# 			for FULLTEXT or SPATIAL indexes.
+#
+# 			Explicitly specified ASC and DESC designators for HASH, FULLTEXT, and SPATIAL indexes result in an error.
+#
+# OPTIMIZING DATABASE STRUCTURE
+#
+# In your role as DB designer, look for the most efficient way to organize your schemas, tables and columns.
+# As when tuning application code, you can minimize I/O, keep related items together, and plan ahead
+# so that performance stays high as the data volume increases.
+#
+# Starting with an efficient database design make it easier for team members to write high-performing
+# application code, and makes the database likely to endure as applications evolve and are rewritten.
+#
+# OPTIMIZING DATA SIZE
+#
+# Design your tables to minimize their space on the disk.
+# This can result in huge improvements by reducing the amount of data written to and read from disk.
+#
+# Smaller tables normally require less main memory while their contents are being actively processed
+# during query execution.
+#
+# Any space reduction for table data also results in smaller indexes that can be processed faster.
+#
+# MysQL supports many different storage engines (table types) and row formats.
+# For each table, you can decide which storage and indexing method to use.
+#
+# Choosing the proper table format for your application can give you a big performance gain.
+#
+# See more later in THE INNODB STORAGE ENGINE and ALTERNATIVE STORAGE ENGINES
+#
+# You can get better performance for a table and minimize storage space by using the techniques
+# listed here:
+#
+# 		) TABLE COLUMNS
+#
+# 		) ROW FORMAT
+#
+# 		) INDEXES
+#
+# 		) JOINS
+#
+# 		) NORMALIZATION
+#
+# TABLE COLUMNS
+#
+# 		) use the most efficient (smallest) data types possible.
+#
+# 			MySQL has many specialized types that save disk space and memory.
+# 			For example, use the smaller integer types if possible to get smaller tables.
+#
+# 			MEDIUMINT is often better of a choice than INT because MEDIUMINT columns use 25% less space.
+#
+# 		) Declare columns to be NOT NULL if possible.
+#
+# 			It makes SQL operations faster, by enabling better use of indexes and eliminating overhead for testing
+# 			whether each value is NULL.
+#
+# 			You also save some storage space, one bit per column.
+#
+# 			If you really need NULL values in your tables, use them.
+# 			Just avoid the default setting that allows NULL values in every column.
+#
+# ROW FORMAT
+#
+# 		) InnoDB tables are created using the DYNAMIC row format by default.
+# 			To use a row format other than DYNAMIC, configure innodb_default_row_format,
+# 			or specify the ROW_FORMAT option explicitly in a CREATE_TABLE or ALTER_TABLE statement.
+#
+# 			The compact family of row formats, which includes COMPACT, DYNAMIC, and COMPRESSED,
+# 			decreases row storage space at the cost of increasing CPU use for some operations.
+#
+# 			If your workload is a typical one that is limited by cache hit rates and disk speed
+# 			it is likely to be faster.
+#
+# 			If it is a rare case taht is limited by CPU speed, it might be slower.
+#
+# 			The compact family of row formats also optimizes CHAR column storage when using a 
+# 			variable-length character set such as utf8mb3 or utf8mb4.
+#
+# 			With ROW_FORMAT=REDUNDANT, CHAR(N) occupies N x the max byte length of the char set.
+#
+# 			Many languages can be written primarly using a single-byte utf8 chars, so a fixed storage
+# 			length often wastes space.
+#
+# 			With the compact family of row formats, InnoDB allocates a variable amount of storage
+# 			in teh range of N to N x the max byte length of char set for these columns by stripping trailing spaces.
+#
+# 			The minimum storage length is N bytes to facilitate in-place updates in typical cases.
+#
+# 			For more information, see later under THE PHYSICAL ROW STRUCTURE OF AN INNODB TABLE
+#
+# 		) To minimize space even further by storing table data in compressed form, specify ROW_FORMAT=COMPRESSED
+# 			when creating InnoDB tables, or run the myisampack command on an existing MyISAM table.
+#
+# 			(InnoDB compressed tables are readable and writable, while MyISAM compressed tables are read only)
+#
+# 		) For MyISAM tables, if you do not have any variable-length columns (VARCHAR, TEXT or BLOB columns),
+# 			A fixed-size row foramt is used.
+#
+# 			This is faster but may waste some space.
+#
+# 			More later under MyISAM TABLE STORAGE FORMATS.
+#
+# 			You can hint that you want to have fixed length rows even if you have VARCHAR columns
+# 			with the CREATE_TABLE option ROW_FORMAT=FIXED
+#
+# INDEXES
+#
+# 		) The primary index of a table should be as short as possible.
+#
+# 			This makes identification of each row easy and efficient.
+#
+# 			For InnoDB tables, the primary key columns are duplicated in each secondary
+# 			index entry, so a short primary key saves considerable space if you have
+# 			many secondary indexes.
+#
+# 		) Create only the indexes that you need to improve query performance.
+#
+# 			Indexes are good for retreival, but slow down insert and update operations.
+#
+# 			If you access a table mostly by searching on a combination of columns,
+# 			create a single composite index on them rather than a separate index for each column.
+#
+# 			The first part of the index should be the column most used.
+#
+# 			If you ALWAYS use many columns when selecting from the table, the first column in the index
+# 			should be the one with the most duplicates to obtain better compression of the index.
+#
+# 		) If it is very likely that a long string column has a unique prefix on the first number of characters,
+# 			it is better to index only this prefix, using MySQL's support for creating an index on the leftmost
+# 			part of the column.
+#
+# 			See more under CREATE INDEX SYNTAX.
+#
+# 			Shorter indexes are faster, not only because they require less disk space,
+# 			but because they also give you more hits in teh index cache, and thus fewer disk seeks.
+#
+# 			See configuring the server.
+#
+# JOINS
+#
+# 		) In some circumstances, it can be beneficial to split into two a table that is scanned very often
+#.
+# 			This is especially true if it is a dynamic-format table and it is possible to use a 
+# 			smaller static format table that can be used to find the relevant rows when scanning the table. 	
+#
+# 		) Declare columns with identical information in different tables with identical data types, to speed up
+# 			joins based on the corresponding columns.
+#
+# 		) Keep column names simple, so that you can use the same name across different tables and simplify join queries.
+# 			For example, in a table named customer, use a column name of name instead of customer_name.
+#
+# 			To make your names portable to other SQL servers, consider keeping them shorter than 18 chars.
+#
+# NORMALIZATION
+#
+# 		) Normally, try to keep all data nonredundant (observing what is referred to in database theory as third normal form).
+#
+# 			Instead of repeating lengthy values such as names and addresses, assign them unique IDs, repeat these IDs as needed
+# 			across multiple smaller tables, and join the tables in queries by referencing the IDs in the join clause.
+#
+# 		) If speed is more important than disk space and the maintenance costs of keeping multiple copies of data,
+# 		for example in a business intelligence scenario where you analyze all the data from large tables,
+# 		you can relax the normalization rules, duplicating information or creating summary tables to gain more speed.
+#
+# OPTIMIZING MYSQL DATA TYPES
+#
+# OPTIMIZING FOR NUMERIC DATA
+#
+# 		) For unique IDs or other values that can be represented as either strings or numbers, prefer numeric columns
+# 			to string columns.
+#
+# 			Since large numeric values can be stored in fewer bytes than the corresponding strings, it is faster
+# 			and takes less memory to transfer and compare them.
+#
+# 		) If you are using numeric data, it is faster in many cases to access information from a database (using a live connection)
+# 			than to access a text file.
+#
+# 			Information in the DB is likely to be stored in a more compact format than in the text file,
+# 			so accessing involves fewer disk accesses.
+#
+# 			You can also save code in our application because you can avoid parsing the text file to find line
+# 			and column boundaries.
+#
+# OPTIMIZING FOR CHARACTER AND STRING TYPES
+#
+#  For character and string columns, follow these guidelines:
+#
+# 		) Use binary collation order for fast comparison and sort operations,
+# 			when you do not need language-specific collation features.
+#
+# 			You can use the BINARY operators to use binary collation within a particular query.
+#
+# 		) When comparing values from different columns, declare those columns with the same character
+# 			set and collation wherever possible, to avoid string conversions while running the query.
+#
+# 		) For column values less than 8kb in size, use binary VARCHAR instead of BLOB.
+#
+# 			The GROUP BY and ORDER BY clauses can generate temporary tables, and these temporary
+# 			tables can use the MEMORY storage engine if the original table does not contain any
+# 			BLOB columns.
+#
+# 		) If a table contains string columns such as name and address, but many queries do not retrieve
+# 			those columns, consider splitting the string columns into a separate table and using join queries
+# 			with a foreign key when necessary.
+#
+# 			When MySQL retrieves any value from a row, it reads a data block containing all the columns of that row
+# 			(and possibly other adjancet rows)
+#
+# 			Keeping each row small, with only the most frequently used columns, allows more rows to fit in each
+# 			data block.
+#
+# 			Such compact tables reduce disk I/O and memory usage for common queries.
+#
+# 		) When oyu use a randomly generated value as a primary key in a InnoDB table, prefix it
+# 			with an ascending value such as the current date and time if possible.
+#
+# 			When consecutive primary values are physically stored near each other, InnoDB
+# 			can insert and retrieve them faster.
+#
+# 		) See OPTIMIZING FOR NUMERIC DATA to see why numeric columns are preferable to an equivalent string column.
+#
+# OPTIMIZING FOR BLOB TYPES
+#
+# 		) When storing a large blob containing textual data, consider compressing it first.
+#
+# 			Do not use this technique when the entire table is compresed by InnoDB or MyISAM.
+#
+# 		) For a table with several columns, to reduce memory requirements for queries that do not use
+# 			the BLOB column, consider splitting the BLOB column into a separate table and referencing
+# 			it with a join query when needed.
+#
+# 		) Since the performance requirements to retrieve and display a BLOB value might be very different
+# 			from other data types, you could put the BLOB-specific table on a different storage device or
+# 			even a separate database instance.
+#
+# 			For example, to retrieve a BLOB might require a large sequential disk read that is better suited
+# 			to a traditional hard drive than to an SSD device.
+#
+# 		) See OPTIMIZING FOR CHARACTER AND STRING TYPES for reasons why a binary VARCHAR column is sometimes
+# 			preferable to an equivalent BLOB column.
+#
+# 		) Rather than testing for equality against a very long text string, you can store a hash of the column
+# 			value in a separate column, index that column, and test the hashed values in queries.
+#
+# 			(Use the MD5() or CRC32() function to produce the hash value.)
+#
+# 			Since hash functions can produce duplicate results for different inputs, you still
+# 			include a clause AND blob_column = long_string_value in the query to guard against
+# 			false matches.
+#
+# 			The performance benefit comes from the smaller, easily scanned index for the hashed values.
+#
+# OPTIMIZING FOR MANY TABLES
+#
+# Some techniques for keeping individual queries fast involve splitting data across many tables.
+#
+# When the number of tables run into the thousands or even millions, the overhead of dealing with
+# all these tables become a new performance consideration.
+#
+# HOW MYSQL OPENS AND CLOSES TABLES
+#
+# When you execute a mysqladmin status command, you should see something like this:
+#
+# 		Uptime: 426 Running threads: 1 Questions: 11082
+# 		Reloads: 1 Open tables: 12
+#
+# The Open tables value of 12 can be somewhat puzzling if you have fewer than 12 tables.
+#
+# MySQL is multithreaded, so there may be many clients issuing queries for a given table simultaneously.
+#
+# To minimize the problem with multiple client sessions having different states on the same table,
+# the table is opened independently by each concurrent session.
+#
+# This uses additional memory but normally increaases performance.
+#
+# With MyISAM tables, one extra file descriptor is required for the data file for each client that
+# has the table open. (By contrast, the index file descriptor is shared between all sessions)
+#
+# The table_open_cache and max_connections system variables affect the maximum number of files the server
+# keeps open.
+#
+# If you increase one or both of these values, you may run up against a limit imposed by your operating system
+# on the per-process number of open file descriptors.
+#
+# Many operating systems permit you to increase the open-files limit, although the method varies widely from
+# system to system.
+#
+# Consult your OS documentation to determine whether it is possible to increaase the limit and how to do so.
+#
+# table_open_cache is related to max_connections.
+#
+# For example, for 200 concurrent running connections, specify a table cache size of at least 200 * N,
+# where N is the maximum number of tables per join in any of the queries which you execute.
+#
+# You must also reserve some extra file descriptors for temporary tables and files.
+#
+# Make sure that your operating system can handle the number of open file descriptors implied by the table_open_cache
+# setting.
+#
+# If table_open_cache is set too high, MySQL may run out of file descriptors and exhibit symptoms such as refusing
+# connections or failing to perform queries.
+#
+# Also take into account that the MyISAM storage engine needs two file descriptors for each unique open table.
+#
+# To increase the number of file descriptors available to MySQL, use the --open-files-limit startup option to
+# mysqld.
+#
+# SEE MORE UNDER FILE NOT FOUND AND SIMILAR ERRORS.
+#
+# The cache of open tables is kept at a level of table_open_cache entries. 
+# The server autosizes the cache size at startup.
+#
+# To set the size explicitly, set the table_open_cache system variable at startup.
+#
+# MySQL may temporarily open more tables than this to execute queries, as described later in this section.
+#
+# MySQL closes an unused table and removes it from the table cache under the following circumstances:
+#
+# 		) WHen the cache is full and a thread tries to open a table that is not in the cache
+#
+# 		) When the cache contains more than table_open_cache entries and a table in the cache is no longer being
+# 			used by any threads.
+#
+# 		) When a table-flushing operation occurs. This happens when someone issues a FLUSH_TABLES statement
+# 			or executes a mysqladmin flush-tables or mysqladmin refresh command.
+#
+# When the table cache fills up, the server uses the following procedure to locate a cache entry to use:
+#
+# 		) Tables not currently in use are released, beginning with the table least recently used.
+#
+# 		) If a new table must be opened, but the cache is full and no tables can be released, the cache is temporarily
+# 			extended as necessary.
+#
+# 			When the cache is in a temporary extended state and a table goes from a used to unused state, the table
+# 			is closed and released from the cache.
+#
+# A MyISAM table is opened for each concurrent access.
+#
+# This means the table needs to be opened twice if two threads access the same table or if a thread
+# accesses the table twice in the same query (for example, by joining the table to itself)
+#
+# Each concurrent open requires an entry in the table cache. 
+#
+# The first open of any MyISAM table takes two file descriptors: one for the data file and one
+# for the index file.
+#
+# Each additional use of the table takes only one file descriptor for the data file.
+#
+# The index file descriptor is shared among all threads.
+#
+# If you are opening a table with the HANDLER tbl_name OPEN statement, a dedicated table object
+# is allocated for the thread.
+#
+# This table object is not shared by other threads and is not closed until the thread calls HANDLER tbl_name CLOSE
+# or the thread terminates.
+#
+# When this happens, the table is put back in the table cache (if the cache is not full), SEE MORE LATER IN THE HANDLER SYNTAX
+#
+# To determine whether your table cache is too small, check the Opened_tables status variable,
+# which indicates the number of table-opening operations since the server started:
+#
+# 		SHOW GLOBAL STATUS LIKE 'Opened_tables';
+# 		+--------------------------------------+
+# 		| Variable_name 			| Value 		   |
+# 		+--------------------------------------+
+# 		| Opened_tables 			| 2741 			|
+# 		+--------------------------------------+
+#
+# If the value is very large or increases rapidly, even when you have not issued
+# many FLUSH_TABLES statements, increase the table_open_cache value at server startup.
+#
+# DISADVANTAGES OF CREATING MANY TABLES IN THE SAME DATABASE
+#
+# If you have many MyISAM tables in the same database directory, open, close and create operations are slow.
+#
+# IF you execute SELECT statements on many different tables, there is little overhead when the table cache is full,
+# because for every table that has to be opened, another must be closed.
+#
+# You can reduce this overhead by increasing the number of entries permitted in the table cache.
+#
+# INTERNAL TEMPORARY TABLE USE IN MYSQL
+#
+# In some cases, the server creates internal temporary tables while processing statements.
+# Users have no direct control over when this occurs.
+#
+# The server creates temporary tables under conditions such as these:
+#
+# ) Evaluation of UNION statements, with some exceptions described later.
+#
+# ) Evaluation of some views, such those that use the TEMPTABLE algorithm, UNION or aggreggation
+#
+# ) Evaluation of derived  tables (MORE LATER IN DERIVED TABLES)
+#
+# ) Evaluation of common table expressions (SEE WITH SYNTAX (COMMON TABLE EXPRESSIONS) LATER)
+#
+# ) Tables created for subquery or semi-join materialization (SEE OPTIMIZING SUBQUERIES, DERIVED TABLES, VIEW REFERENCES, AND COMMON TABLE EXPRESSIONS LATER)
+#
+# ) Evaluation of statements that contain an ORDER BY clause and a different GROUP BY clause, or for which the
+# 		ORDER BY or GROUP BY contains columns from tables other than the first table in the join queue.
+#
+# ) Evaluation of DISTINCT combined with ORDER BY may require a temporary table
+#
+# ) For queries that use the SQL_SMALL_RESULT modifier, MySQL uses an in-memory temporary table,
+# 		unless the query also contains elements (described later) that require on-disk storage.
+#
+# ) To evaluate INSERT_---_SELECT statements that select from and insert into the same table, MySQL
+# 		creates an internal temporary table to hold the rows from the SELECT, then inserts those
+#		rows into the target table. SEE MORE LATER ON INSERT_---_SELECT SYNTAX
+#
+# ) Evaluation of multiple-table UPDATE statements
+#
+# ) Evaluation of GROUP_CONCAT() or COUNT(DISTINCT) expressions.
+#
+# ) Evaluation of window functions (MORE LATER IN WINDOW FUNCTIONS) uses temporary tables as necessary.
+#
+# To determine whether a statement requires a temporary table, use EXPLAIN and check the Extra column to see
+# whether it says Using temporary (SEE UNDER OPTIMIZING WITH EXPLAIN)
+#
+# EXPLAIN will not nessecarily say Using temporary for derived or materialized temporary tables.
+#
+# For statements that use window functions, EXPLAIN with FORMAT=JSON always provides information
+# about the windowing steps.
+#
+# If the windowing functions use temporary tables, it is indicated for each step.
+#
+# When the server creates an internal temporary table (either in memory or on disk),
+# it increments the Created_tmp_tables status variable.
+#
+# If the server creates the table on disk (either initially or by converting an in-memory table),
+# it increments the Created_tmp_disk_tables status variable.
+#
+# Some query conditions prevent the use of an in-memory temporary table, in which case the server
+# uses an on-disk table instead:
+#
+# 		) PResence of a BLOB or TEXT column in teh table.
+#
+# 			However, the TempTable storage engine, which is the default storage engine for in-memory
+# 			internal temporary tables in MySQL 8.0, supports binary large objects as of MySQL 8.0.13
+#
+# 			More under INTERNAL TEMPORARY TABLE STORAGE ENGINE
+#
+# 		) Presence of any string column with a maximum length larger than 512 (bytes for binary strings, characters
+# 			for nonbinary strings) in the SELECT list, if UNION or UNION ALL is used.
+#
+# 		) The SHOW_COLUMNS and DESCRIBE statements use BLOB as the type for some columns, thus the temporary table used
+# 			for the results is an on-disk table.
+#
+# The server does not use a temporary table for UNION statements that meet certain qualifications.
+#
+# Instead, it retains from temporary table creation only the data structures necessary to perform
+# result column typecasting.
+#
+# The table is not fully instansiated and no rows are written to or read from it; rows are sent
+# directly to the client.
+#
+# The result is reduced memory and disk requirements, and smaller delay before the first row is sent to client
+# because the server need not wait until the last query block is executed.
+#
+# EXPLAIN and optimizer trace output reflects this execution strat.
+#
+# The UNION RESULT query block is not present because that block corresponds to the part that reads from the temporary table.
+#
+# These conditions qualify a UNION for evaluation without a temporary table:
+#
+# 	) The union is UNION ALL, not UNION or UNION DISTINCT
+#
+# 	) There is no global ORDER BY clause
+#
+# 	) The union is not the top-level query block of an {INSERT | REPLACE} --- SELECT --- statement
+#
+# INTERNAL TEMPORARY TABLE STORAGE ENGINE
+#
+# An internal temporary table can be held in memory and processed by the TempTable or MEMORY storage engine,
+# or stored on disk by the InnoDB or MyISAM storage engine.
+#
+# STORAGE ENGINE FOR IN-MEMORY INTERNAL TEMPORARY TABLES
+#
+# The internal_tmp_mem_storage_engine session variable defines the storage engine for in-memory
+# temporary tables.
+#
+# Permitted values are TempTable (the default) and MEMORY.
+#
+# The TempTable storage engine provides efficient storage for VARCHAR and VARBINARY columns.
+# Storage of other binary large object types is supported qs of 8.0.13
+#
+# The temptable_max_ram configuration option defines the maximum amount of random access memory
+# (RAM) that can be occupied by the TempTable storage engine before it starts allocating space
+# from disk in teh form of temporary files that are mapped into memory.
+#
+# The default temptable_max_ram setting is 1 GIB.
+#
+# Use of temporary files by the TempTable storage engine as an overflow mechanism for in-memory
+# temporary tables is governed by these rules:
+#
+# ) Temporary files are created in teh directory defined by the tmpdir variable.
+#
+# ) Temporary files are deleted immediately after they created and opened, and therefore do not
+# 		remain visible in the tmpdir directory.
+#
+# 		The space occupied by temporary files is held by the operating system while temporary files are open.
+# 		
+# 		The space is reclaimed when temporary files are closed by the TempTable storage engine,
+# 		or when the mysqld process is shut down.
+#
+# ) Data is never moved between RAM and temporary files, within RAM or between temporary files.
+#
+# ) New data is stored in RAM if space becomes available within the limit defined by temptable_max_ram.
+# 		Otherwise, new data is stored in temporary files.
+#
+# ) If space becomes avaialble in RAM after some of the data for a table is written to temporary files,
+# 		it is possible for the remaining table data to be stored in RAM.
+#
+# The memory/temptable/physical_ram and memory/temptable/physical_disk Performance Schema instruments can
+# be used to monitor TempTable space allocation from memory and disk.
+#
+# memory/temptable/physical_ram reports the amount of allocated RAM.
+#
+# memory/temptable/physical_disk reports the amount of space allocated from disk.
+#
+# If the physical_disk instrument reports a value other than 0, the temptable_max_ram threshold
+# was reached at some point.
+#
+# Data can be queried in Performance Schema memory summary tables such as memory_summary_global_by_event_name.
+#
+# SEE MOATER LATER UNDER MEMORY SUMMARY TABLES
+#
+# WHen using the MEMORY storage engine for in-memory temporary tables, MySQL automatically converts an in-memory
+# temporary table to an on-disk table if it becomes too large.
+#
+# The maxium size for in-memory temporary tables is defined by the tmp_table_size or max_heap_table_size value,
+# whichever is smaller.
+#
+# This differs from MEMORY tables explicitly created with CREATE_TABLE.
+#
+# FOr such tables, only the max_heap_table_size variable determines how large a table can grow,
+# and there is no conversion to on-disk format.
+#
+# STORAGE ENGINE FOR ON-DISK INTERNAL TEMPORARY TABLES
+#
+# The internal_tmp_disk_storage_engine variable defines the storage engine the server uses to manage on-disk
+# internal temporary tables.
+#
+# Permitted values are INNODB (default) and MyISAM.
+#
+# For common table expressions (CTEs), the storage engine used for on-disk internal temporary tables cannot be MyISAM.
+#
+# If internal_tmp_disk_storage_engine=MYISAM, an error occurs for any attempt to materialize a  CTE using
+# an on-disk temporary table.
+#
+# NOTE:
+#
+# 		When using internal_tmp_disk_storage_engine=INNODB, queries that generate on-disk internal temporary tables
+# 		that exceed InnoDB row or column limits returns Row size too large or Too many columns errors.
+#
+# 		The workaround is to set internal_tmp_disk_storage_engine to MyISAM.
+#
+# INTERNAL TEMPORARY TABLE STORAGE FORMAT
+#
+# When in-memory internal temporary tables are managed by the TempTable storage engine,
+# rows that include VARCHAR columns, VARBINARY columns or other binary large object type
+# columns (supported as of 8.0.13) are represented in memory by an array of cells, with each cell
+# containing a NULL flag, the data length, and a data pointer.
+#
+# Column values are placed in consecutive order after the array, in a single region of memory,
+# without padding.
+#
+# Each cell in the array uses 16 bytes of storage. The same storage format applies when the TempTable
+# storage engine exceeds the temptable_max_ram limit and starts allocating space from disk in the form
+# of temporary files that are mapped into memory.
+#
+# When in-memory internal temporary tables are managed by the MEMORY storage engine, fixed-length row
+# format is used.
+#
+# VARCHAR and VARBINARY column values are padded to the maximum column length, in effect storing them as
+# CHAR and BINARY columns.
+#
+# On-disk internal temporary tables are managed by the INnoDB or MyISAM storage engine (depending on the 
+# internal_tmp_disk_storage_engine setting)
+#
+# Both engines store internal temporary tables using dynamic-width row format.
+#
+# Columns take only as much storage as needed, which reduces disk I/O, space requirements, and
+# processing time compared to on-disk tables that use fixed-length rows.
+#
+# When using the MEMORY storage engine, statements can initially create an in-memory internal
+# temporary table and then convert it to an on-disk table if the table becomes too large.
+#
+# In such cases, better performance might be achieved by skipping the conversion and creating
+# the internal temporary table on disk to begin with.
+#
+# THe big_tables variable can be used to force disk storage of internal temporary tables.
+#
+# OPTIMIZING FOR INNODB TABLES
+#
+# InnoDB is the storage engine that MySQL customer typically use in production DBs where reliability
+# and concurrency are important.
+#
+# InnoDB is the default storage engine in MySQl. This section explains how to optimize database operations
+# for InnoDB tables.
+#
+# OPTIMIZING STORAGE LAYOUT FOR INNODB TABLES
+#
+# ) Once your data reaches a stable size, or a growing table has increased by tens or some hundreds of
+# 	megabytes, consider using the OPTIMIZE TABLE statement to reorganize the table and compact any wasted space.
+#
+# 	THe reorganized table require less disk I/O to perform full table scans.
+#
+# This is a straightforward technique that can improve performance when other techniques such as improving index usage
+# or tunning application code are not practical.
+#
+# 	OPTIMIZE TABLE copies the data part of the table and rebubilds the indexes.
+#
+# 	The benefits come from improved packing of data within indexes, and reduced
+# 	fragmentation within the tablespaces and on disk.
+#
+# 	The benefits vary depending on the data in each table.
+#
+# 	You may find that ther are significant gains for some and not for others, or that the gains
+# 	decrease over time until you next optimize the table.
+#
+# 	This operation can be slow if the table is large or if the indexes being rebuilt do not fit
+# 	into the buffer pool.
+#
+# 	The first run after adding a lot of data to a table is often much slower than later runs.
+#
+# ) In InnoDB, having a long PRIMARY KEY (either single column with a lengthy value, or several columns
+# 		that form a long composite value) wastes a lot of disk space.
+#
+# 		The primary key value for a row is duplicated in all the secondary index records that point to
+# 		the same row. (SEE MORE UNDER CLUSTERED AND SECONDARY INDEXES)
+#
+# 		Create an AUTO_INCREMENT column as the primary key if your primary key is long, or index
+# 		a prefix of a long VARCHAR column instead of the entire column.
+#
+# ) Use the VARCHAR data type instead of CHAR to store variable-length strings or for columns
+# 		with many NULL values.
+#
+# 		A CHAR(N) column always takes N characters to store data, even if the string is shorter
+# 		or its value is NULL.
+#
+# 		Smaller tables fit better in the buffer pool and reduce disk I/O
+#
+# 		WHen using COMPACT row format (the default InnoDB format) and variable-length character sets,
+# 		such as utf8 or sjis, CHAR(N) columns occupy a variable amount of space, but still at least
+# 		N bytes.
+#
+# ) For tables that are big, or contain lots of repetitive text or numeric data,
+# 		consider using COMPRESSED row format.
+#
+# 		Less disk I/O is required to bring data into the buffer pool, or to perform
+# 		full table scans.
+#
+# 		Before making a permanent decision, measure the amount of compression you can achieve
+# 		by using COMPRESSED versus COMPACT row format.
+#
+# OPTIMIZING INNODB TRANSACTION MANAGEMENT
+#
+# To optimize InnoDB transaction processing, find the ideal balance between the performance overhead of
+# transactional features and the workload of your server.
+#
+# For example, an application might encounter performance issues if it commits thousands of times per second,
+# and different performance issues if it commits only every 2-3 hours.
+#
+# ) The default MySQL setting AUTOCOMMIT=1 can impose performance limitation on a busy DB server.
+#
+# 		Where practical, wrap several related data change operations into a single transaction,
+# 		by issuing SET AUTOCOMMIT=0 or a START TRANSACTION statement, followed by a COMMIT statement
+# 		after making all the changes.
+#
+# 		InnoDB must flush the log to disk at each transaction commit if that transaction made modifications
+# 		to the database.
+#
+# 		When each change is followed by a commit (as with the default autocommit setting), the I/O throughput
+# 		of the storage device puts a cap on the number of potentional operations per second.
+#
+# ) Alternatively, for transactions that consist only of a single SELECT statement, turning on AUTOCOMMIT
+# 		helps InnoDB to recognize read-only transactions and optimize them.
+#
+# 		SEE OPTIMIZING INNODB READ-ONLY TRANSACTIONS later, for the requirements of this.
+#
+# ) Avoid performing rollbacks after inserting, updating or deleting huge numbers of rows.
+#
+# 		If a big transaction is slowing down server performance, rolling it back can make
+# 		the problem worse, potentionally taking several times as long to perform as the
+# 		original data change operations.
+#
+# 		Killing the DB process does not help, because the rollback starts again on server startup.
+#
+# 		To minimize the chance of this issue occurring:
+#
+# 			 ) Increase the size of the buffer pool so that all data change changes can be cached rather
+#				than immediately written to disk.
+#
+# 			) Set innodb_change_buffering=all so that update and delete operations are buffered in addition to inserts.
+#
+# 			) Consider issuing COMMIT statements periodically during the big data change operation,
+# 			possibly breaking a single delete or update into multiple statements that operate
+# 			on smaller number of rows.
+#
+# 		To get rid of a runaway rollback once it occurs, increase the buffer pool so that the rollback
+# 		becomes CPU-bound and runs fast, or kill the server and restart with innodb_force_recovery=3,
+# 		as explained in INNODB RECOVERY 
+#
+# 		The issue is expected to be infrequent with the defualt setting innodb_change_buffering=all, which 
+# 		allows update and delete operations to be cached in memory, making them faster to perform in
+# 		the first place, and also faster to roll back if needed.
+#
+# 		Make sure to use this parameter setting on servers that process long-running transactions
+# 		with many inserts, updates or deletes.
+#
+# ) If you can afford the loss of some of the latest committed transactions if a crash occurs,
+# 		you can set the innodb_flush_log_at_trx_commit parameter to 0.
+#
+# 		InnoDB tries to flush the log once per second anyway, although the flush is not guaranteed.
+#
+# ) WHen rows are modified or deleted, the rows and associated undo logs are not physically removed immediately,
+# 		or even immediately after the transaction commits.
+#
+# 		The old data is preserved until transactions that started earlier or concurrently are finished,
+# 		so that those transactions can access the previous state of modified or deleted rows.
+#
+# 		Thus, a long-running transaction can prevent InnoDB from purging data that was changed by a different transactions.
+#
+# ) When rows are modified or deleted with a long-running transaction, other transactions using
+# 		the READ_COMMITTED and REPEATABLE_READ isolation levels have to do more work to reconstruct the
+# 		older data if they read those same rows.
+#
+# ) When a long running transaction modifies a table, queries against that table from other transactions
+# 		do not make use of the covering index technique.
+#
+# 		Queries that normally could retrieve all the results columns from a secondary index,
+# 		instead look up the appropriate values from the table data.
+#
+# 		If secondary index pages are found to have a PAGE_MAX_TRX_ID that is too new, or if records
+# 		in the secondary index are delete-marked, InnoDB may need to look up records using a clustered index.
+#
+# OPTIMIZING INNODB READ-ONLY TRANSACTIONS
+#
+# InnoDB can avoid the overhead associated with setting up the transaction ID (TRX_ID field)
+# for transactions that are known to be read-only.
+#
+# A transaction ID is only needed for a transaction that might perform write operations or locking
+# reads such as SELECT_---_FOR UPDATE.
+#
+# Eliminating unecessary transaction IDs reduces the size of internal data structures that are
+# consulted each time a query or data change statement constructs a read view.
+#
+# INNODB detects read-only transactions when:
+#
+# 		) The transaction is started with the START_TRANSACTION_READ_ONLY statement.
+#
+# 			IN this case, attempting to make changes to the database (for InnoDB, MyISAM or other
+# 			types of tables) causes an error, and the transaction continues in read-only state:
+#
+# 				ERROR 1792 (25006): Cannot execute statement in a READ ONLY transaction
+#
+# 			You can still make changes to session-specific temporary tables in a read-only transaction,
+# 			or issue locking queries for them, because those changes and locks are not visible to
+# 			any other transaction.
+#
+# 		) The autocommit setting is turned on, so that the transaction is guaranteeed to be a single statement,
+# 			and the single statement making up the transaction is a "Non-locking" SELECT statement.
+#
+# 			That is, a SELECT that does not use a FOR UPDATE or LOCK IN SHARED MODE clause.
+#
+# 		) The transaction is started without the READ ONLY option, but on updates or statements that explicitly
+# 			locks have been executed yet.
+#
+# 			Until updats or explicit locks are required, a transaction stays in read-only mode.
+#
+# THus, for a read-intensive application such as a report generator,  you can tune a sequence of InnoDB
+# queries by grouping them inside START_TRANSACTION_READ_ONLY and COMMIT, or by turning on the autocommit
+# setting before running the SELECT statements, or simply by avoiding any data change statements interspersed
+# with the queries.
+#
+# For information about START_TRANSACTION and autocommit, see later under START TRANSACTION, COMMIT, AND ROLLBACK SYNTAX
+#
+# NOTE:
+#
+# 		Transactions that qualify as auto-commit, non-locking and read-only (AC-NL-RO) are kept out of certain internal
+# 		InnoDB data structures and are therefore not listed in SHOW_ENGINE_INNODB_STATUS output.
+#
+# OPTIMIZING INNODB REDO LOGGING
+#
+# Consider the following guidelines for optimizing redo logging:
+#
+# 		) Make your redo files big, even as big as the buffer pool.
+#
+# 			When InnoDB has written the redo log files full, it must write the modified contents of the buffer
+# 			pool to disk in a checkpoint.
+#
+# 			Small redo log files cause many unecessary disk writes.
+#
+# 			Although historically big redo log files caused lengthy recovery times, recovery is now
+# 			much faster and you can confidently use large redo log files.
+#
+# 			The size and number of redo log files are configured using the innodb_log_file_size and innodb_log_files_in_group
+# 			 configuration options.
+#
+# 			For information about modifying an existing redo log file configuration, see CHANGING THE NUMBER OR SIZE OF REDO LOG FILES.
+#
+# 		) Consider increasing the size of the log buffer.
+#
+# 			A large log buffer enables large transactions to run without a need to write the log to disk before the transactions
+# 			commit.
+#
+# 			Thus, if you have transactions that update, insert, or delete many rows, making the log buffer large saves disk i/O.
+#
+# 			Log buffer size is configured using the innodb_log_buffer_size configuration option, which can be configured
+# 			dynamically in 8.0
+#
+# 		) Configure the innodb_log_write_ahead_size configuration option to avoid "read-on-write".
+#
+# 			This option defines the write-ahead block size for the redo log.
+#
+# 			Set innodb_log_write_ahead_size to match the operating system or file system cache block size.
+#
+# 			Read-on-write occurs when redo log blocks are not entirely cached to the operating system
+# 			or file system due to a mismatch between write-ahead block size for the redo log and operating system
+# 			or file system cache block size.
+# 
+# 			Valid values for innodb_log_write_ahead_size are multiples of the InnoDB log file block size (2^n).
+# 			The minimum value is the InnoDB log file block size (512)
+#
+# 			Write-ahead does not occur when the minimum value if specified.
+#
+# 			THe maxium value is equal to the innodb_page_size value.
+#
+# 			If you specify a value for innodb_log_write_ahead_size that is larger than the innodb_page_size
+# 			value, the innodb_log_write_ahead_size setting is truncated to the innodb_page_size value.
+#
+# 			Setting the innodb_log_write_ahead_size value too low in relation to the operating system or file system
+# 			cache block size results in read-on-write.
+#
+# 			Setting the value too high may have a slight impact on fsync performance for log file writes due to several
+# 			blocks being written at once.
+#
+# 		) Optimize the use of spin delay by user threads waiting for flushed redo.
+#
+# 			Spin delay helps reduce latency. 
+# 
+# 			During periods of low concurrency, reducing latency may be less of a priority, and avoiding the use of spin delay during these periods may reduce
+# 			energy consumption.
+#
+# 			During periods of high concurrency, you may want to avoid expending processing power on spin delay
+# 			so that it can be used for other work.
+#
+# 			The following system variables permit setting high and low watermark values that define boundaries for the use of spin delay:
+#
+# 				) innodb_log_wait_for_flush_spin_hwm: Defines the maximum average log flush time beyond which user threads no longer spin while
+# 						waiting for flushed redo.
+#
+# 					The default is 400 microseconds.
+#
+# 				) innodb_log_spin_cpu_abs_lwm: Defines the minimum amount of CPU usage below which user threads no longer spin while waiting
+# 						for flushed redo.
+#
+# 						The value is expressed as a sum of CPU core usage.
+#
+# 						For example, the default value of 80 is 80% of a single CPU core.
+#
+# 						On a system with a multi-core processor, a value of 150 represents 100% usage of one cpu core plus50% usage of a second CPU core.
+#
+# 				) innodb_log_spin_cpu_pct_hwm: Defines the maximum amount of CPU usage above which user threads no longer spin while waiting for flushed redo.
+#
+# 						The value is expressed as a percentage of the combined total processing power of all CPU cores.
+#
+# 						The default value is 50%. For example, 100% usage of two cpu cores is 50% of the combined CPU processing power on a server with 4 CPU cores.
+#
+# 						The innodb_log_spin_cpu_pct_hwm configuration option respects processor affinity.
+#
+# 						For example, if a server has 48 cores but the mysqld process is pinned to only 4 CPU cores, the other 44 CPU cores are ignored.
+#
+# BULK DATA LOADING FOR INNODB TABLES
+#
+# These performance tips supplement the general guidelines for fast inserts in OPTIMIZING INSERT STATEMENTS.
+#
+# ) WHen importing data into InnoDB, turn off autocommit mode, because it performs a log flush to disk for every insert.
+#
+# 		To disable autocommit during your import operation, surround it with SET_autocommit and COMMIT statements:
+#
+# 			SET autocommit=0;
+# 			___ SQL import statements ___
+# 			COMMIT;
+#
+# 		The mysqldump option --opt creates dump files that are fast to import into an INnoDB table,
+# 		even without wrapping them with the SET_autocommit and COMMIT statements.
+#
+# ) If you have UNIQUE constraints on secondary keys, you can speed up table imports by temporarily
+# 		turning off the uniqueness checks during the import session:
+#
+# 			SET unique_checks=0;
+# 			___ SQL import statements ___
+# 			SET unique_checks=1;
+#
+# 		For big tables, this saves a lot of disk I/O because InnoDB can use its change buffer to write secondary
+# 		index records in a batch.
+#
+# 		Be certain that hte data contains no duplicate keys.
+#
+# ) If you have FOREIGN KEY constraints in your tables, you can speed up table imports by turning off the foreign key
+# 	checks for the duration of the import session:
+#
+# 		SET foreign_key_checks=0;
+# 		___ SQL import statements ___
+# 		SET foriegn_key_checks=1;
+#
+# 		For big tables, this can save a lot of disk I/O
+#
+# ) Using the multiple-row INSERT syntax to reduce communication overhead between the client and the server
+# 		if you need to insert many rows:
+#
+# 		INSERT INTO yourtable VALUES (1,2), (5,5), ---;
+#
+# 		This tip is valid for inserts into any table, not just InnoDB tables.
+#
+# ) When doing bulk inserts into tables with auto-increment columns, set innodb_autoinc_lock_mode to 2
+# 		(interleaved) instead of 1 (consecutive).
+#
+# 		see AUTO_INCREMENT HANDLING IN INNODB for details
+#
+# ) When performing bulk inserts, it is faster to insert rows in PRIMARY KEY order.
+#
+# 	 InnoDB tables use a clustered index, which makes it relativily fast to use data in the order of the PRIMARY KEY.
+#
+# 	 Performing bulk inserts in PRIMARY KEY order is particularly important for tables taht do not fit entirely
+# 	 within the buffer pool.
+#
+# ) For optimal performance when loading data into an InnoDB FULLTEXT index, follow this set of steps:
+#
+# 		a. Define a column FTS_DOC_ID at table creation time, of type BIGINT UNSIGNED NOT NULL, with a unique
+# 			index named FTS_DOC_ID_INDEX.
+#
+# 			For example:
+#
+# 			CREATE TABLE t1 (
+# 			FTS_DOC_ID BIGINT unsigned NOT NULL AUTO_INCREMENT,
+# 			title varchar(255) NOT NULL DEFAULT '',
+# 			text mediumtext NOT NULL,
+# 			PRIMARY KEY (`FTS_DOC_ID`)
+# 			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+#
+# 			CREATE UNIQUE INDEX FTS_DOC_ID_INDEX on t1(FTS_DOC_ID);
+#
+# 		b. Load the data into the tabe
+#
+# 		c. Create the FULLTEXT index after the data is loaded.
+#
+# 			NOTE:
+#
+# 				When adding  FTS_DOC_ID column at table creation time, ensure that the FTS_DOC_ID column
+# 				is updated when the FULLTEXT indexed column is updated, as the FTS_DOC_ID must increase
+# 				monotonically with each INSERT or UPDATE.
+#
+# 				If you choose not to add the FTS_DOC_ID at table creation time and have InnoDB manage DOC IDs
+# 				for you, InnoDB will add the FTS_DOC_ID as a hidden column with the next CREATE_FULLTEXT_INDEX call.
+#
+# 				This approach, however, requires a table rebuild which will impact performance.
+#
+# OPTIMIZING INNODB QUERIES
+#
+# To turn queries for InnoDB tables, create an appropriate set of indexes on each table.
+#
+# See HOW MYSQL USES INDEXES for details.
+#
+# Follow these guidelines for InnoDB indexes:
+#
+# 		) Because each InnoDB table has a primary key (whether you request one or not), specify a set
+# 			of primary key columns for each table, columns that are used in the most important and 
+# 			time-critical queries.
+#
+# 		) Do not specify too many or too long columns in the primary key, because these column values are
+# 			duplicated in each secondary index.
+#
+# 			When an index contains unnecessary data, the I/O to read this data and memory to cache it
+# 			reduce the performance and scalability of the server.
+#
+# 		) Do not create a separate secondary index for each column, because each query can only make use of one index.
+#
+# 			Indexes on rarely tested columns or columns with only a few different values might not be 
+# 			helpful for any queries. 
+#
+# 			If you have many queries for the same table, testing different combinations of columns, try to
+# 			create a small number of concatenated indexes rather than a large number of single-column indexes.
+#
+# 			If an index contains all the columns needed for the result set (known as a covering index)
+# 			, the query might be able to avoid reading the table data at all.
+#
+# 		) If an indexed column cannot contain any NULL values, declare it as NOT NULL when you create the table.
+#
+# 			The optimizer can better determine which index is most effective to use for a query, when it knows
+# 			whether each column contains NULL values. 	
+#
+# 		) You can optimize single-query transactions for InnoDB tables, using the technique in OPTIMZING INNODB READ-ONLY TRANSACTIONS
+#
+# OPTIMIZING INNODB DDL OPERATIONS
+#
+# ) Many DDL operations on tables and indexes (CREATE, ALTER and DROP statements) can be performed online.
+#
+# 		See INNODB AND ONLINE DDL for details.
+#
+# ) Online DDL support for adding secondary indexes means that you can generally speed up the process of creating
+# 		and loading a table and associated indexes by creating the table without secondary indexes, then adding
+# 		secondary indexes after the data is loaded.
+#
+# ) Use TRUNCATE_TABLE to empty a table, not DELETE FROM tbl_name.
+#
+# 		Foreign key constraints can make a TRUNCATE statement work like a regular DELETE statement,
+# 		in which case a sequence of commands like DROP_TABLE and CREATE_TABLE might be fastest.
+#
+# ) Because the primary key is integral to the storage layout of each InnoDB table, and changing
+# 		the definition of the primary key involves organizing the whole table,
+# 		always set up the primary key as part of the CREATE_TABLE statement, and plan ahead so
+# 		that you do not need to ALTER or DROP the primary key afterwards.
+#
+# OPTIMIZING INNODB DISK I/O
+#
+# If you follow best practices for database design and tuning techniques for SQL operations,
+# but your database is still slow due to heavy disk I/O activity, consider these disk I/O optimizations.
+#
+# If the Unix top tool or the Windows Task Manager show that the CPU usage percentage with your workload
+# is < than 70%, your workload is probably disk-bound.
+#
+# ) Increase buffer pool size
+#
+# 		When table data is cached in teh InnoDB buffer pool, it can be accessed repeatedly by queries
+# 		without requiring any disk I/O.
+#
+# 		Specify the size of the buffer pool with the innodb_buffer_pool_size option.
+#
+# 		This memory are is important enough that it is typically recommended that innodb_buffer_pool_size
+# 		is configured to 50 to 75 % of the system memory.
+#
+# 		For more info, see HOW MYSQL USES MEMORY
+#
+# ) Adjust the flush method
+#
+# 		In some versions of GNU/Linux and UNIX, flushing files to disk with the Unix fsync() call
+# 		(which InnoDB uses by default) and similar methods is surprisingly slow.
+#
+# 		If database write performance is an issue, conduct benchmarks with the innodb_flush_method 
+# 		parameter set to O_DSYNC
+#
+# ) Configure a threshold size for the write buffer.
+#
+# 		By default, when InnoDB creates a new data file, such as a new log file or tablespace file,
+# 		it flushes the contents of the write buffer to disk only after the file is fully written,
+# 		which can cause a large amount of disk write activity to occur at once.
+#
+# 		To force smaller, periodic flushes, use innodb_fsync_threshold (introduced in MySQL 8.0.13)
+# 		to define a threshold size for the write buffer, in bytes.
+#
+# 		The contents of the write buffer are flushed to disk when the threshold size is reached.
+#
+# 		The default value of 0 forces the default behavior.
+#
+# 		Specifying a write buffer threshold size to force smaller, periodic flushes may be beneficial
+# 		in cases where multiple MySQL instances use the same storage devices.
+#
+# 		For example, creating a new MySQL instance and its associated data files could cause large surges
+# 		of disk write activity, impeding the performance of other MySQL instances that use
+# 		the same storage devices.
+#
+# 		Configuring a write buffer threshold size helps avoid such surges in disk write activity.
+#
+# ) Use a noop or deadline I/O scheduler with native AIO on Linux
+#
+# 		InnoDB uses the asynchronous I/O subsystem (native AIO) on Linux to perform read-ahead and
+# 		write requests for data file pages.
+#
+# 		This behavior is controlled by the innodb_use_native_aio configuration option, which is enabled
+# 		by default.
+#
+# 		With native AIO, the type of I/O scheduler has greater influence on I/O performance.
+#
+# 		Generally, noop and deadline I/O schedulers are recommended.
+#
+# 		Conduct benchmarks to determine which I/O scheduler provides the best results for your
+# 		workload and environment. For more information, see later under USING ASYNCHRONOUS I/O ON LINUX
+#
+# ) Use direct I/O on Solaris 10 for x86_64 architechture
+#
+# 		When using the InnoDB storage engine on Solaris 10 for x86_64 architechture (AMD Opteron), use direct I/O
+# 		for InnoDB-related files to avoid degradation of InnoDB performance.
+#
+# 		TO use direct I/O for an entire UFS file system used for storing InnoDB-related files, mount it with
+# 		the forcedirectio option; see mount_ufs(1M)
+#
+# 		(The default on Solaris 10/x86_64 is NOT to use this option)
+#
+# 		To apply direct I/O only to InnoDB file operations rather than the whole file system,
+# 		set innodb_flush_method_=O_DIRECT
+#
+# 		With this setting, InnoDB calls directio() instead of fcntl() for I/O to data files
+# 		(not for I/O to log files)
+#
+# ) Use raw storage for data and log files with Solaris >= 2.6
+#
+# 		When using the InnoDB storage engine with a large innodb_buffer_pool_size value on any
+# 		release of Solaris >= 2.6 and any platform (sparc/x86/x64/amd64), conduct benchmarks
+# 		with InnoDB data files and log files on raw devices or on separate direct I/O UFS file systems,
+# 		using the forcedirectio mount option described as prev.
+#
+# 		(it is necessary to use the mount option rather than setting innodb_flush_method if you want
+# 		direct I/O for the log files)
+#
+# 		Users of the Veritas file system VxFS should use the convosync=direct mount option
+#
+# 		Do not place other MySQL data files, such as those for MyISAM tables, on a direct I/O file system.
+#
+# 		Executables or libraries MUST NOT be placed on a direct I/O file system.
+#
+# ) Use additional storage devices
+#
+# 		Additional storage devices could be used to set up a RAID configuration.
+#
+# 		For related information, see OPTIMIZING DISK I/O
+#
+# 		Alternatively, InnoDB tablespace data files and log files can be placed on  different
+# 		physical disks.
+# 			
+# 		For more info, read under:
+#
+# 			 ) INNODB STARTUP CONFIGURATION
+#
+# 			) CREATING A TABLESPACE OUTSIDE OF THE DATA DIRECTORY
+#
+# 			) CREATING A GENERAL TABLESPACE
+#
+# 			) MOVING OR COPYING INNODB TABLES
+#
+# ) Consider non-rotational storage
+#
+# 		Non-rotational storage generally provides better performance for random I/O operations;
+# 		and rotational storage for sequential I/O operations.
+#
+# 		When distributing data and log files across rotational and non-rotational storage devices,
+# 		consider the type of I/O operations that are predominantly performed on each file.
+#
+# 		Random I/O-oriented files typically include file-per-table and general tablespace data files,
+# 		undo tablespaces files and temporary tablespace files.
+#
+# 		Sequential I/O-oriented files include InnoDB system tablespace files (due to doublewrite buffering
+# 		and change buffering) and log files such as binary log files and redo log files.
+#
+# 		Review settings for the following configuration options when using non-rotational storage:
+#
+# 			) innodb_checksum_algorithm
+#
+# 				The crc32 option uses a faster checksum algorithm and is recommended for fast storage systems.
+#
+# 			) innodb_flush_neighbors
+#
+# 				This option optimizes I/O for rotational storage devices. Disable it for non-rotational storage
+# 				or a mix of rotational and non-rotational storage.
+#
+# 				It is disabled by default.
+#
+# 			) innodb_io_capacity
+#
+# 				The default setting of 200 is generally sufficient for lower-end non-rotational storage device.
+#
+# 				For higher-end, bus-attached devices, consider a higher setting such as 1000.
+#
+# 			) innodb_io_capacity_max
+#
+# 				the default value of 2000 is intended for workloads that use non-rotational storage.
+#
+# 				For a high-end, bus-attached non-rotational storage device, consider a higher setting
+# 				such as 2500.
+#
+# 			) innodb_log_compressed_pages
+#
+# 				If redo logs are on non-rotational storage, consider disabling this option to reduce logging.
+# 				See DISABLE LOGGING OF COMPRESSED PAGES.
+#
+# 			) innodb_log_file_size
+#
+# 				If redo logs are on non-rotational storage, configure this option to maximize caching and write combining.
+#
+# 			) innodb_page_size
+#
+# 				Consider using a page size that matches the internal sector size of the disk.
+#
+# 				Early-generation SSD devices often have a 4kb sector size.
+#
+# 				SOme newer devices have a 16kb sector size.
+#
+# 				The default InnoDB page size is 16kb. Keeping the page size close to the storage device
+# 				block size minimizes the amount of unchanged data that is rewritten to disk.
+#
+# 			) binlog_row_image
+#
+# 				If binary logs are on non-rotational storage and all tables have primary keys, consider setting this
+# 				option to minimal to reduce logging.
+#
+# Ensure that TRIM support is enabled for your OS. It is typically enabled by default.
+#
+# ) Increase I/O capacity to avoid backlogs
+#
+# 	If throughput drops periodically because of InnoDB checkpoints operations, consider increasing the value
+# 	of the innodb_io_capacity configuration option:
+#
+# 	Higher values cause more frequent flushing, avoiding the backlog of work that can cause dips in throughput.
+#
+# ) Lower I/O capacity if flushing does not fall behind
+#
+# 	If the system is not falling behind with InnoDB flushing operations, consider lowering the value of
+# 	the innodb_io_capacity configuration option:
+#
+# 	Typically, you keep this option value as low as practical, but not so low that it causes periodic
+# 	drops in throughput as mentioned in the preceding point.
+#
+# 	In a typical scenario where you could lower the option value, you might see a combination like this
+# 	in the output from SHOW_ENGINE_INNODB_STATUS:
+#
+# 		) History list length low, below a few thousand
+#
+# 		) Insert buffer merges close to rows inserted
+#
+# 		) Modified pages in buffer pool consistently well below innodb_max_dirty_pages_pct of the buffer pool.
+#
+# 			(Measure at a time when the server is not doing bulk inserts; it is normal during bulk inserts for the
+# 			modified pages percentage to rise significantly.)
+#
+# 		) Log sequence number - last checkpoint is at less than 7/8 or ideally less than 6/8 of the total size of the InnoDB log files.
+#
+# ) Store system tablespace files on Fusion-io devices
+#
+# 	You can take advantage of a doublewrite buffer-related I/O optimization by storing system tablespace files
+# ("ibdata files") on Fusion-io devices that support atomic writes.
+#
+# IN this case, doublewrite buffer (innodb_doublewrite) is automatically disabled and Fusion-io atomic writes are used
+# for all data files.
+#
+# This feature is only supported on Fusion-io hardware and is only enabled for Fusion-io NVMFS on Linux.
+# To take full advantage of this feature, an innodb_flush_method setting of O_DIRECT is recommended.
+#
+# NOTE:
+#
+# 		BEcause the doublewrite buffer setting is global, doublewrite buffering is also disabled for data files residing
+# 		on non-Fusion-io hardware.
+#
+# ) Disable logging for compressed pages
+#
+# 		WHen using the InnoDB table compression feature, images of re-compressed pages are written to the redo log
+# 		when changes are made to compressed data.
+#
+# 		This behavior is controlled by innodb_log_compressed_pages, which is enabled by default to prevent corruption
+# 		that can occur if a different version of the zlib compression algorithm is used during recovery.
+#
+# 		If you are certain that the zlib version will not change, disable innodb_log_compressed_pages to reduce redo log
+# 		generation for workloads that modify compressed data.
+#
+# OPTIMIZING INNODB CONFIGURATION VARIABLES
+#
+# Different settings work best for servers with light, predictable loads, versus servers that are running
+# near full capacity all the time, or that experience spikes of high activity.
+#
+# Because the InnoDB storage engine performs many of its optimizations automatically, many performance
+# tuning tasks involve monitoring to ensure that the database is performing well, and changing configuration
+# options when performance drops.
+#
+# See INNODB INTEGRATION WITH MYSQL PERFORMANCE SCHEMA for more info about detailed InnoDB performance monitoring.
+#
+# The main configuration steps you can perform include:
+#
+# 		) Controlling the type of data change operations for which InnoDB buffers the changed data,
+# 			to avoid frequent small disk writes.
+#
+# 			See CONFIGURING CHANGE BUFFERING.
+#
+# 			Because the default is to buffer all types of data change operations, only change this setting
+# 			if you need to reduce the amount of buffering.
+#
+# 		) Turning the adaptive hash indexing feature on and off using the innodb_adaptive_hash_index option.
+# 			See ADAPTIVE HASH INDEX later, for more info.
+# 			 
+# 			You might change this setting during periods of unusual activity, then restore it to its original setting.
+#
+# 		) Setting a limit on the number of concurrent threads that InnoDB processes, if context switching is a bottleneck.
+# 			See CONFIGURING THREAD CONCURRENCY FOR INNODB for more info
+#
+# 		) Controlling the amount of prefetching that InnoDB does with its read-ahead operations.
+#
+# 			WHen the system has unused I/O capacity, more read-ahead can improve the performance of queries.
+# 			
+# 			Too much read-ahead can cause periodic drops in performance on a heavily loaded system.
+# 			See CONFIGURING INNODB BUFFER POOL PREFETCHING (READ-AHEAD) later, for more info.
+#
+# 		) Increasing the number of background threads for read or write operations, if you have a high-end
+# 			I/O subsystem that is not fully utilized by the default values.
+#
+# 			See CONFIGURING THE NUMBER OF BACKGROUND INNODB I/O THREADS later for more.
+#
+# 		) Controlling how much I/O InnoDB performs in the background.
+#
+# 			See CONFIGURING THE INNODB MASTER THREAD I/O RATE, later, for more info:
+#
+# 			You might scale back this setting if you observe periodic drops in performance.
+#
+# 		) Controlling the algorithm that determines when InnoDB performs certain types of
+# 			background writes. SEE CONFIGURING INNODB BUFFER POOL FLUSHING later, for more info.
+#
+# 			The algorithm works for some type of workloads but not others, so might turn off this setting if you
+# 			observe periodic drops in performance.
+#
+# 		) Taking advantage of multicore processors and their cache memory configuration, to minimize delays
+# 			in context switching. SEE CONFIGURING SPIN LOCK POLLING later, for more.
+#
+# 		) Preventing one-time operations such as table scans from interfering with the frequently accessed data
+# 			stored in the InnoDB buffer cache. See MAKING THE BUFFER POOL SCAN RESISTANT later, for more info.
+#
+# 		) Adjusting log files to a size that makes sense for reliability and crash recovery.
+#
+# 			InnoDB log files have often been kept small to avoid long startup times after a crash.
+# 			Optimizations introduced in MySQL 5.5 speed up certain steps of the crash recovery process.
+#
+# 			In particular, scanning the redo log and applying the redo log are faster due to improved
+# 			algorithms for memory management.
+#
+# 			If you have kept your log files artificially small to avoid long startup times, you can now
+# 			consider increasing log file size to reduce the I/O that occurs due to recycling of redo log records.
+#
+# 		) Configuring the size and number of instances for the InnoDB buffer pool, especially important for systems
+# 			with multi-gigabyte buffer pools. see CONFIGURING MULTIPLE BUFFER POOL INSTACES for more info, later.
+#
+# 		) Increasing the maxium number of concurrent transactions, which dramatically improves scalability for the
+# 			busiest databases. see UNDO LOGS later, for more info.
+#
+# 		) Moving purge operations (a type of garbage collection) into a background thread.
+# 			See CONFIGURING INNODB PURGE SCHEDULING, later, for more info.
+#
+# 			To effectively measure the results of this setting, tune the other I/O-related and thread-related
+# 			configuration settings first.
+#
+# 		) Reducing the amount of switching that InnoDB does between concurrent threads, so that SQL operations
+# 			on a busy server do not queue up and form a "traffic jam".
+#
+# 			Set a value for the innodb_thread_concurrency option, up to a approximately 32 for a high-powered
+# 			modern system.
+#
+# 			Increase the value for the innodb_concurrency_tickets option, typically to 5000 or so.
+#
+# 			This combination of options sets a cap on the number of threads that InnoDB process at any one time,
+# 			and allows each thread to do substansial work before being swapped out, so that the number
+# 			of waiting threads stays low and operations can complete without excessive context switching.
+#
+# OPTIMIZING INNODB FOR SYSTEMS WITH MANY TABLES
+#
+# ) If you have configured non-persistent optimizer statistics (a non-default configuration),
+# 	InnoDB computes index cardinality values for a table the first time that table is accessed after
+# 	startup, instead of storing such values in teh table.
+#
+# 	This step can take significant time on systems that partition the data into many tables.
+#
+# 	Since this overhead only applies to the initial table open operation, to "warm up" a table
+#  for later use, access it immediately after startup by issuing a statement such as SELECT
+# 	1 FROM tbl_name LIMIT 1.
+#
+# 	Optimizer statistics are persisted to disk by default, enabled by the innodb_stats_persistent
+# 	configuration option.
+#
+# 	For information about persistent optimizer statistics, see CONFIGURING PERSISTENT OPTIMIZER STATISTICS PARAMETERS later on.
+# 
+# OPTIMIZING FOR MYISAM TABLES
+#
+# The MyISAM storage engine performs best with read-mostly data or with low-concurrency operations,
+# because table locks limit the ability to perform simultaneous updates.
+#
+# In MYSQL, InnoDB is the default storage engine rather than MyISAM.
+#
+# OPTIMIZING MYISAM QUERIES
+#
+# Some general tips for speeding up queries on MyISAM tables:
+#
+# 		) To help MySQL better optimize queries, use ANALYZE_TABLE or run myisamchk --analyze on a table after it has been
+# 			loaded with data.
+#
+# 			This updates a value for each index part that indicates the average number of rows that have the same value.
+#
+# 			(For unique indexes, this is always 1)
+#
+# 			MySQL uses this to decide which index to choose when you join two tables based on a nonconstant expression.
+#
+# 			You can check the result from the table analysis by using SHOW INDEX FROM tbl_name and exmaining
+# 			the Cardinality 
+#
+# 			myisamchk --description --verbose shows index distribution information.
+#
+# 		) To sort an index and data according to an index, use myisamchk --sort-index --sort-records=1
+# 			(assuming that you want to sort on index 1)
+#
+# 			This is a good way to make queries faster if you have a unique index from which  you want to read all
+# 			rows in order according to the index.
+#
+# 			The first time you sort a large table this way, it may take a long time.
+#
+# 		) Try to avoid complex SELECT queries on MyISAM tables that are updated frequently, to avoid problems
+# 			with table locking that occur due to contention between readers and writers.
+#
+# 		) MyISAM supports concurrent inserts: If a table has no free blocks in the middle of the data file, you can INSERT
+# 			new rows into it at the same time that other threads are reading from the table.
+#
+# 			If it is important to be able to do this, consider using the table in ways that avoid deleting rows.
+#
+# 			Another possibility is to run OPTIMIZE_TABLE to defragment the table after you have deleted
+# 			a lot of rows from it.
+#
+# 			This behavior is altered by setting the concurrent_insert variable.
+#
+# 			You can force new rows to be appended (and therefore permit concurrent inserts), even in tables
+# 			that have deleted rows. See CONCURRENT INSERTS for more.
+#
+# 		) For MyISAM tables that change frequently, try to avoid all variable-length columns (VARCHAR, BLOB and TEXT)
+#
+# 			The table uses dynamic row format if it includes even a single variable-length column.
+#
+# 			See ALTERNATIVE STORAGE ENGINES for more.
+#
+# 		) It is normally not useful to split a table into different tables just because the rows become large.
+#
+# 			In accessing a row, the biggest performance hit is the disk seek needed to find the first byte of the row.
+# 			After finding the data, most modern disks can read the entire row fast enough for most applications.
+#
+# 			The only cases where splitting up a table makes an appreciable difference is if it is a MyISAM table
+# 			using dynamic row format that you can change to a fixed row size, or if you very often need
+# 			to scan the table but do not need most of the columns.
+#
+# 			See ALTERNATIVE STORAGE ENGINES, later.
+#
+# 		) Use ALTER TABLE --- ORDER BY expr1, expr2, --- if you usually retrieve rows in expr1, expr2, --- order.
+#
+# 			By using this option after extensive changes to the table, you may be able to get
+# 			higher performance.
+#
+# 		) If you often need to calculate results such as counts based on information from a lot of rows,
+# 			it may be preferable to introduce a new table and update the counter in real time.
+#
+# 			An update of the following form is very fast:
+#
+# 				UPDATE tbl_name SET count_col=count_col+1 WHERE key_col=constant;
+#
+# 			This is very important when you use MySQL storage engines such as MyISAM that has only table-level locking
+# 			(multiple readers with single writers)
+#
+# 			This also gives better performance with most database systems, because the row locking manager in this case
+# 			has less to do.
+#
+# 		) Use OPTIMIZE TABLE periodically to avoid fragmentation with dynamic-format MyISAM tables. See MYISAM TABLE STORAGE FORMATS for more info.
+#
+# 		) Declaring a MyISAM table with the DELAY_KEY_WRITE=1 table option makes index updates faster because they are not flushed
+# 			to disk until the table is closed.
+#
+# 			The downside is that if something kills the server while such a table is open, you must ensure that the table is okay
+# 			by running the server with the --myisam-recover-options option, or by running myisamchk before restarting the server.
+#
+# 			(However, even in this case, you should not lose anything by using DELAY_KEY_WRITE, because
+# 			the key information can always be generated from teh data rows)
+#
+# 		) Strings are automatically prefix- and end-space compressed in MyISAM indexes. See CREATE INDEX SYNTAX for more.
+#
+# 		) You can increase performance by caching queries or answers in your application and then executing many
+# 			inserts or updates together.
+#
+# 			Locking the table during this operation ensures that the index cache is only flushed once after all updates.
+#
+# BULK DATA LOADING FOR MYISAM TABLES
+#
+# These performance tips supplement the general guidelines for fast inserts in OPTIMIZING INSERT STATEMENTS discussed earlier
+#
+# ) For a MyISAM table, you can use concurrent inserts to add rows at the same time that SELECT statements are running,
+# 		if there are no deleted rows in middle of the data file.
+#
+# 		see CONCURRENT INSERTS for more.
+#
+# ) With some extra work, it is possible to make LOAD_DATA_ΙΝFILE run even faster for a MyISAM table when the tables has 
+# 		many indexes.
+#
+# 		Use the following procedure:
+#
+# 			a. Execute a FLUSH TABLES statement or a mysqladmin flush-tables command
+#
+# 			b. Use myisamchk --keys-used=0 -rq /path/to/db/tbl_name to remove all use of indexes for the table.
+#
+# 			c. Insert data into the table with LOAD_DATA_INFILE. This does not update any indexes and therefore is very fast.
+#
+# 			d. If you intend only to read from the table in the future, use myisampack to compress it. See COMPRESSED TABLE CHARACTERISTICS for more.
+#
+# 			e. Re-create the indexes with myisamchk -rq /path/to/db/tbl_name
+#
+# 				This creates the index tree in memory before writing it to disk, which is much faster than
+# 				updating the index during LOAD_DATA_INFILE because it avoids lots of disk seeks.
+#
+# 				The resulting index tree is also perfectly balanced.
+#
+# 			f. Execute a FLUSH_TABLES statement or a mysqladmin flush-tables command
+#
+# LOAD_DATA_INFILE performs the preceding optimization automatically if the MyISAM table into which
+# you insert data is empty.
+#
+# The main difference between automatic optimization and using the procedure explicitly is that you can
+# let myisamchk allocate much more temporary memory for the index creation than you might want the server to allocate
+# for index re-creation when it executes the LOAD_DATA_INFILE statement.
+#
+# You can also disable or enable the nonunique indexes for a MyISAM table by using the following statements
+# rather than myisamchk.
+#
+# If you use these statements, you can skip the FLUSH_TABLES operations:
+#
+# 		ALTER TABLE tbl_name DISABLE KEYS;
+# 		ALTER TABLE tbl_name ENABLE KEYS;
+#
+# ) To speed up INSERT operations that are performed with multiple statements for nontransactional tables,
+# 	lock your tables:
+#
+# 		LOCK TABLES a WRITE;
+# 		INSERT INTO a VALUES (1,23), (2,34), (4,33), ---;
+# 		INSERT INTO a VALUES (8, 26), (6,29);
+# 		---
+# 		UNLOCK TABLES;
+#
+# THis benefits performance because the index buffer is flushed to disk only once, after all INSERT
+# statements have completed.
+#
+# Normally, there would be as many index buffer flushes as there are INSERT statements.
+# Explicit locking statements are not needed if you can insert all rows with a single INSERT.
+#
+# Locking also lowers the total time for multiple-connection tests, although the maximum wait time
+# for individual connections might go up because they wait for locks.
+#
+# Suppose that five clients attempts to perform inserts simultaneously as follows:
+#
+# 		) Connection 1 does 1000 inserts
+#
+# 		) Connection 2,3 and 4 do 1 insert
+#
+# 		) Connection 5 does 1000 inserts
+#
+# If you do not use locking, connection 2,3 and 4 finishes before 1 and 5.
+#
+# If you use locking, connections 2,3, 4 probably do not finish before 1 or 5, but the total time
+# should be about 40% faster
+#
+# INSERT, UPDATE and DELETE operations are very fast in MySQL, but you can obtain better overall
+# performance by adding locks around everything that does more than about five successive inserts or updates.
+#
+# If you do very many successive inserts, you could do a LOCK_TABLES followed by an UNLOCK_TABLES once in
+# while (each 1000 rows or so) to permit other threads to access table.
+#
+# This would still result in a nice performance gain.
+#
+# INSERT is still much slower for loading data than LOAD_DATA_INFILE, even when using the strategies just outlined.
+#
+# ) To increase performance for MyISAM tables, for both LOAD_DATA_INFILE and INSERT, enlarge the key cache
+# 	by increasing the key_buffer_size system variable.
+#
+# For more info, see CONFIGURING THE SERVER.
+#
+# OPTIMIZING REPAIR TABLE STATEMENTS
+#
+# REPAIR_TABLE for MyISAM tables is similar to using myisamchk for repair operations, and some of the same performance optimizations apply.
+#
+# 		) myisamchk has variables that control memory allocation. You may be able to improve its performance by setting these variables.
+# 			See MYISAMCHK MEMORY USAGE earlier.
+#
+# 		) For REPAIR_TABLE, the same principle applies, but because the repair is done by the server, you set server system variables
+# 			instead of myisamchk variables.
+#
+# 			Also, in addition to setting memory-allocation variables, increasing the myisam_max_sort_file_Size system variable
+# 			increases the likelihood that the repair will use the faster filesort method and avoid the slower repair by key cache method.
+#
+# 			Set the variable to the maximum file size for your system, after checking to be sure that htere is enough free space
+# 			to hold a copy of the table files.
+#
+# 			The free space must be available in the file system containing the original table files.
+#
+# Suppose that a myisamchk table-repair operation is done using the following options to 
+# set its memory-allocation variables:
+#
+# 		--key_buffer_size=128M --myisam_sort_buffer_size=256M
+# 		--read_buffer_size=64M --write_buffer_size=64M
+#
+# Some of those myisamchk variables correspond to server system variables:
+#
+# 	myisamchk Variable 		System variable
+#
+# 	key_buffer_size 			key_buffer_size
+# 	myisam_sort_buffer_Size myisam_sort_buffer_size 			
+# 	read_buffer_size 			read_buffer_size
+# 	write_buffer_size 		None
+#
+# Each of the server system variables can be set at runtime, and some of them (myisam_sort_buffer_Size, read_buffer_Size) have a 
+# session value in addition to a global value.
+#
+# Setting a session value limits the effect of the change to your current session and does not affect other users.
+#
+# Changing a global-only variable (key_buffer_size, myisam_max_sort_file_size) affects other users as well.
+#
+# For key_buffer_size, you must take into account that the buffer is shared with those users.
+#
+# For example, if you set the myisamchk key_buffer_size variable to 128 mb, you could set the corresponding key_buffer_size
+# system variable larger than that (if it is not already set larger), to permit key buffer use by activity in other sessions.
+#
+# However, changing the global key buffer size invalidates the buffer, causing increased disk I/O and slowdown for other
+# sessions.
+#
+# An alternative that avoids this problem is to use a separate key cache, assign to it the indexes from the table to be repaired,
+# and deallocate it when the repair is complete.
+#
+# See MULTIPLE KEY CACHES for more info.
+#
+# Based on the preceding remarks, a REPAIR_TABLE operation can be done as follows to use settings similar to the
+# myisamchk command.
+#
+# Here a separate 128MB key buffer is allocated and the file system is assumed to permit a file size 
+# of at least 100gb.
+#
+# SET SESSION myisam_sort_buffer_size = 256*1024*1024;
+# SET SESSION read_buffer_size = 64*1024*1024;
+#
+# SET GLOBAL myisam_max_sort_file_size = 100*1024*1024*1024;
+# SET GLOBAL repair_cache.key_buffer_size = 128*1024*1024;
+#
+# CACHE INDEX tbl_name IN repair_cache;
+# LOAD INDEX INTO CACHE tbl_name;
+# REPAIR TABLE tbl_name;
+# SET GLOBAL repair_cache.key_buffer_size = 0;
+#
+# If you intend to change a global variable but want to do so only for the duration of a REPAIR_TABLE operation to minimally
+# affect other users, save its value in a user variable and restore it afterwards.
+#
+# FOr example:
+#
+# SET @old_myisam_sort_buffer_size = @@GLOBAL.myisam_max_sort_file_size;
+# SET GLOBAL myisam_max_sort_file_size = 100*1024*1024*1024;
+# REPAIR TABLE tbl_name;
+# SET GLOBAL myisam_max_sort_buffer_size = @old_myisam_max_sort_file_size;
+#
+# The system variables that affect REPAIR_TABLE can be set globally at server startup if you want the values to be in effect by default.
+# 
+# FOr example, add these lines to the server my.cnf file:
+#
+# 		[mysqld]
+# 		myisam_sort_buffer_size=256M
+# 		key_buffer_size=1G
+# 		myisam_max_sort_file_size=100G
+#
+# These settings do not include read_buffer.size
+#
+# Setting read_buffer_size globally to a large value does so for all sessions and can cause performance
+# to suffer due to excessive memory allocation for a server with many simultaneous sessions.
+#
+# OPTIMIZING FOR MEMORY TABLES
+#
+# Consider using MEMORY tables for noncritical data that is accessed often, and is read-only or rarely updated.
+#
+# Benchmark your application against equivalent InnoDB or MyISAM tables under a realistic workload, to confirm
+# that any additional performance is worth the risk of losing data, or the overhead of copying data from a 
+# disk-based table at application start.
+#
+# For best performance with MEMORY tables, examine the kinds of queries against each table, and specify the type
+# to use for each associated index, either a B-Tree index or a hash index.
+#
+# On the CREATE_INDEX statement, use the clause USING BTREE or USING HASH.
+#
+# B-tree indexes are fast for queries that do greater than or less than comparisons through
+# operators such as > or BETWEEN.
+#
+# Hash indexes are only fast for queries that look up single values through the = operator, or a restricted
+# set of values through the IN operator.
+#
+# FOr why USING BTREE is often a better choice than the default USING HASH, see AVOIDING FULL TABLE SCANS previously.
+#
+# For implementation details on different types of MEMORY indexes, see earlier, COMPARISON OF B-TREE AND HASH INDEXES
+#
+# UNDERSTANDING THE QUERY EXECUTION PLAN
+#
+# Depending On the details of your tables, columns, indexes and conditions in your WHERE clause,
+# the MySQL optimizer considers many techniques to efficiently perform the lookups involved in an
+# SQL query.
+#
+# A query on a huge table can be performed without reading all the rows;
+#
+# A join involving several tables can be performed without comparing every combination of rows.
+#
+# The set of operations that hte optimizer chooses to perform the most efficient query is called
+# "the query execution plan", also known as the EXPLAIN plan.
+#
+# Your goal is to recognize the aspects of the EXPLAIN plan that indicate a query is optimized well,
+# and to learn the SQL syntax and indexing techniques to improve the plan, if possible.
+#
+# OPTIMIZING QUERIES WITH EXPLAIN
+#
+# THe EXPLAIN statement provides information about how MySQL executes statements:
+#
+# 		) EXPLAIN works with SELECT, DELETE, INSERT, REPLACE and UPDATE statements.
+#
+# 		) When EXPLAIN is used with an explainable statement, MySQL displays information from the optimizer about
+# 			the statement execution plan.
+#
+# 			That is, MySQL explains how it would process the statement, including information about how tables
+# 			are joined and in which order.
+#
+# 			For information about using EXPLAIN to obtain execution plan information, see EXPLAIN OUTPUT FORMAT
+#
+# 		) When EXPLAIN is used with FOR CONNECTION connection_id rather than an explainable statement, it displays
+# 			the execution plan for the statement executing in teh named connection.
+#
+# 			See OBTAINING EXECUTION PLAN INFORMATION FOR A NAMED CONNECTION
+#
+# 		) For SELECT statements, EXPLAIN produces additional execution plan information that can be displayed
+# 			using SHOW_WARNINGS.
+#
+# 			See EXTENDED EXPLAIN OUTPUT FORMAT for more info.
+#
+# 		) EXPLAIN is useful for examining queries involving partitioned tables.
+#
+# 			See OBTAINING INFORMATION ABOUT PARTITIONS for more info
+#
+# 		) The FORMAT options can be used to select the output format.
+#
+# 			TRADITIONAL presents the output in tabular format.
+#
+# 			This is the default if not FORMAT option is present.
+#
+# 			JSON Format displays the information in JSON format.
+#
+# With the help of EXPLAIN, you can see where you should add indexes to tables so that the statement executes
+# faster by using indexes to find rows.
+#
+# YOu can also use EXPLAIN to check whether the optimizer joins the tables in an optimal order.
+#
+# To give a hint to the optimizer to use a join order corresponding to the order in which the
+# tables are named in a SELECT statement, begin the statement with SELECT STRAIGHT_JOIN rather than just select.
+#
+# See SELECT SYNTAX for more.
+#
+# However, STRAIGHT_JOIN may prevent indexes from being used because it disables semi-join transformations.
+#
+# See OPTIMIZING SUBQUERIES, DERIVED TABLES, VIEW REFERENCES and COMMON TABLE EXPRESSIONS WITH SEMI-JOIN TRANSFORMATIONS.
+#
+# The optimizer trace may sometimes provide information complementary to that of EXPLAIn.
+#
+# However, the optimizer trace format and content are subject to change betwen versions.
+#
+# For details, see MYSQL INTERNALS: TRACING THE OPTIMIZER
+#
+# If you ahve a problem with indexes not being used when you believe that they should be, run ANALYZE_TABLE
+# to update table statistics, such as cardinality of keys, that can affect the choices the optimizer makes.
+#
+# See ANALYZE TABLE syntax for more.
+#
+# NOTE:
+#
+# 		EXPLAIN can also be used to obtain information about the columns in a table.
+#
+# 		EXPLAIN tbl_name is synonymous with DESCRIBE tbl_name and SHOW COLUMNS FROM tbL_name.
+#
+# 		For more info, see DESCRIBE syntax and SHOW COLUMNS syntax
+#
+# EXPLAIN OUTPUT FORMAT
+#
+# THe explain statement provides information about how MySQL executes statements.
+#
+# EXPLAIN works with SELECT, DELETE, INSERT, REPLACE and UPDATE statements.
+#
+# EXPLAIN returns a row of information for each table used in the SELECT statement.
+#
+# It lists the tbales in the output in teh order that MySQL would read them while
+# processing the statement.
+#
+# MySQL resolves all joins using a nested-loop join method.
+#
+# THis means that MySQL reads a row from the first table, and then finds a matching row
+# in the second table, teh third table, and so on.
+#
+# When all tables are processed, MySQL outputs the selected columns and backtracks through
+# the table list until a table is found for which there are more matching rows.
+#
+# The next row is read from this table and the process continues with the next table.
+#
+# NOTE:
+#
+# 		mySQL Workbench has a Visual Explain capability that provides a visual representation of EXPLAIN output.
+# 		See TUTORIAL: USING EXPLAIN TO IMPROVE QUERY PERFORMANCE
+#
+# EXPLAIN OUTPUT COLUMNS
+#
+# This section describes the output columns produced by EXPLAIN.
+# Later sections provide additional information about the type and Extra columns.
+#
+# Each output row from EXPLAIN provides information about one table.
+#
+# Each row contains the values summarized in EXPLAIN IN OUTPUT COLUMNS, and described in
+# more detail in the following table.
+#
+# Column names are shown in teh table's first column; the second column provides the
+# equivalent property name shown in the output when FORMAT=JSON is used.
+#
+# EXPLAIN OUTPUT COLUMNS
+#
+# Column 				JSON name 				Meaning
+#
+# id 						select_id 				The SELECT identifier
+# select_type 			None 						The SELECT type
+#
+# table 					table_name 				The table for the output row
+# partitions 			partitions 				The matching partitions
+#
+# type 					access_type 			The join type
+# Possible_keys 		possible_keys 			The possible indexes to choose
+#
+# key 					key 						The index actually chosen
+# key_len 				key_length 				The length of the chosen key
+#
+# ref 					ref 						The columns compared to the index
+# rows 					rows 						Estimate of rows to be examined
+#
+# filtered 				Filtered 				Percentage of rows filtered by table condition
+# Extra 					None 						Additional information
+#
+# NOTE:
+#
+# 		The JSON properties which are NULL are not displayed in JSON-formatted EXPLAIN output.
+#
+# ) id(JSON name: select_id)
+#
+# 		THe SELECT modified.
+#
+# 		This is the sequential number of the SELECT within the query.
+#
+# 		The value can be NULL if the row refers to the union result of other rows.
+#
+# 		In this case, the table column shows a value like <union M,N> to indicate that the
+# 		rows refers to the union of the rows with ID values of M and N.
+#
+# ) select_type (JSON name: None)
+#
+# 		The type of SELECT, which can be any of those shown in the following table.
+#
+# 		A JSON-formatted EXPLAIN exposes the SELECT type as a property of a query_block
+# 		unless it is SIMPLE or PRIMARY.
+#
+# 		The JSON names (where applicable) are also shown in the table.
+#
+# 		select_type Value 				JSON name 					Meaning
+#
+# 		SIMPLE 								None 							Simple SELECT (not using UNION or subqueries)
+#
+# 		PRIMARY 								None 							Outermost SELECT
+#
+# 		UNION 								None 							Second or later SELECT statement in a UNION
+#
+# 		DEPENDENT UNION 					dependent (True) 			Second or later SELECT statement in a UNION, dependant on outer query
+#
+# 		UNION RESULT 						union_result 				Result of a UNION
+#
+# 		SUBQUERY 							None 							First SELECT in subquery
+#
+# 		DEPENDANT SUBQUERY 				dependent (True) 			First SELECT in subquery, dependant on outer query
+#
+# 		DERIVED 								None 								Derived table
+#
+# 		MATERIALIZED 						materialized_from_subquery Materialized subquery
+#
+# 		UNCACHABLE SUBQUERY 				cacheable(false) 			A subquery for which the result cannot be cached and must be re-evaluated for each row of the outer query
+#
+# 		UNCACHABLE UNION 					cacheable(false) 			The second or later select in a UNION that belongs to an uncachable subquery (see above)
+#
+# DEPENDENT typically signifies the use of a correlated subquery. See CORRELATED SUBQUERIES later, for more info.
+#
+# DEPENDENT SUBQUERY evaluation differs from UNCACHABLE SUBQUERY evaluation.
+#
+# For DEPENDENT SUBQUERY, the subquery is re-evaluated only once for each set of different values of the variables from its outer context.
+# FOr UNCACHABLE SUBQUERY, the subquery is re-evaluated for each row of the otuer context.
+#
+# When you specify FORMAT=JSON with EXPLAIN, the output has no single property directly equivalent to
+# select_type; the query_block property corresponds to a given SELECT.
+#
+# Properties equivalent to the most of the SELECT subquery types just shown are available (en example being Materialized_from_subquery
+# for MATERIALIZED) and are displayed when appropriate.
+#
+# There are no JSON equivalents for SIMPLE or PRIMARY.
+#
+# The select_type value for non-SELECT statements display the statement type for affected tables.
+#
+# For example, select_type is DELETED for DELETE statements.
+#
+# ) table (JSON name: table_name)
+#
+# The name of the table to which the row of output refers. This can also be one of the following values:
+#
+# ) <unionM,N>: https://dev.mysql.com/doc/refman/8.0/en/explain-output.html
+#
 # 
