@@ -53491,6 +53491,2009 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # The name of the table to which the row of output refers. This can also be one of the following values:
 #
-# ) <unionM,N>: https://dev.mysql.com/doc/refman/8.0/en/explain-output.html
+#		 ) <unionM,N>: The row refers to the union of the rows with id values of M and N
+#
+# 		) <derivedN>: The row refers to the derived table result for the row with an id value of N.
+# 					A derived table may result, for example, from a subquery in the FROM clause.
+#
+# 		) <subqueryN>: The row refers to the result of a materialized subquery for the row with an id value of N.
+# 						See OPTIMIZING SUBQUERIES WITH MATERIALIZATION
+#
+# ) partitions (JSON name:partitions)
+#
+# 		The partitions from which records would be matched by the query.
+# 		The value is NULL for nonpartitioned tables. See OBTAINING INFORMATION ABOUT PARTITIONS for more.
+#
+# ) type (JSON name: access_type)
+#
+# 		The join type. For descriptions of the different types, see EXPLAIN Join Types.
+#
+# ) possible_keys (JSON name: possible_keys)
+#
+# 		The possible_keys column indicates the indexes from which MySQL can choose to find the rows in this table.
+# 		Note that this column is totally independent of the order of the tables as displayed in the output from EXPLAIN.
+#
+# 		That means that some of the keys in possible_keys might not be usable in practice with the generated table order.
+#
+# 		If this column is NULL (or undefined in JSON-formatted output), there are no relevant indexes.
+#
+# 		In this case, you may be able to improve the performance of  your query by examining the WHERE clause
+# 		to check whether it refers to some column or columns that would be suitable for indexing.
+#
+# 		If so, create an appropriate index and check the query with EXPLAIN again. See ALTER TABLE SYNTAX for more info.
+#
+# 		To see what indexes a table has, use SHOW INDEX FROM tbl_name.
+#
+# ) key (JSON name: key)
+#
+# 		The key column indicates the key (index) that MySQL actually decided to use.
+# 		If MySQL decided to use one of the possible_keys indexes to look up rows, that index is listed as the key value.
+#
+# 		It is possible that key will name an index that is not present in the possible_keys value.
+#
+# 		This can happen if none of the possible_keys indexes are suitable for looking up rows, but all the columns
+# 		selected by the query are columns of some other index.
+#
+# 		That is, the named index covers the selected columns, so although it is not used to determine
+# 		which rows to retrieve, an index scan is more efficient than a data row scan.
+#
+# 		For InnoDB, a secondary index might cover the selected columns even if the query also selects the
+# 		primary key because InnoDB stores the primary key value with each secondary index.
+#
+# 		If key is NULL, MySQL found no index to use for executing the query more efficiently.
+#
+# 		To force mySQL to use or ignore an index listed in the possible_keys column, use FORCE INDEX,
+# 		USE INDEX, or IGNORE INDEX in your query.
+#
+# 		See INDEX HINTS for more info.
+#
+# 		For MyISAM tables, running ANALYZE_TABLE helps the optimizer choose better indexes.
+#
+# 		For MyISAM tables, myisamchk --analyze does the same.
+#
+# 		See ANALYZE TABLE SYNTAX and MyISAM TABLE MAINTENANCE AND CRASH RECOVERY
+#
+# ) key_len (JSON name: key_length)
+#
+# 		The key_len column indicates the length of the key that MySQL decided to use.
+#
+# 		The value of key_len enables you to determine how many parts of a multiple-part key
+# 		MySQL actually uses. If the key column says NULL, the len_len column also says NULL.
+#
+# 		Due to the key storage format, the key length is one greater for a column that can be
+# 		NULL than for a NOT NULL column.
+#
+# ) ref (JSON name: ref)
+#
+# 		The ref column shows which columns or constants are compared to the index named in the key column 
+# 		to select rows from the table.
+#
+# 		If the value is func, the value used is the result of some function.
+#
+# 		To see which function, use SHOW_WARNINGS following EXPLAIN to see the extended
+# 		EXPLAIN output.
+#
+#  	The function might actually be an operator such as an arithmetic operator.
+#
+# ) rows (JSON name: rows)
+#
+#		The rows column indicates the number of rows MySQL believes it must examine to execute the query.
+#
+# 		For InnoDB tables, this number is an estimate, and may not always be exact.
+#
+# ) filtered (JSON name: filtered)
+#
+# 		The filtered column indicates an estimated percentage of table rows that will be filtered
+# 		by the table condition.
+#
+# 		The maximum value is 100, which means no filtering of rows occurred.
+#
+# 		Values decreasing from 100 indicate increasing amounts of filtering.
+#
+# 		Rows shows the estimated number of rows examined and rows * filtered shows hte
+# 		number of rows that will be joined with the following table.
+#
+# 		For example, if rows is 1000 and filtered is 50.00 (50%), the number of rows
+# 		to be joined with the following table is 1000 x 50% = 500
+#
+# ) Extra (JSON name: none)
+#
+# 		This column contains additional information about how MySQL resolves the query.
+#
+# 		For descriptions of the different values, see EXPLAIN under EXTRA INFORMATION.
+#
+# 		There is no single JSON property corresponding to the Extra column; however, values
+# 		that can occur in this column are exposed as JSON properties, or as the text of
+# 		the message property.
+#
+# EXPLAIN JOIN TYPES
+#
+# The type column of EXPLAIN output describes how tables are joined.
+#
+# In JSON-formatted output, these are found as values of the access_type property.
+#
+# The following list describes the join types, ordered from the best type to the worst:
+#
+# 		) system
+#
+# 			The table has only one row (= system table). This is a special case of the const join type.
+#
+# 		) const
+#
+# 			The table has at most one matching row, which is read at the start of the query.
+#
+# 			Because there is only one row, values from the column in this row can be regarded as
+# 			constants by the rest of the optimizer.
+#
+# 			const tables are very fast because they are read only once.
+#
+# 			const is used when you compare all parts of a PRIMARY KEY or UNIQUE index to constant values.
+#
+# 			In the following queries, tbl_name can be used as a const table:
+#
+# 				SELECT * FROM tbl_name WHERE primary_key=1;
+#
+# 				SELECT * FROM tbl_name
+# 					WHERE primary_key_part1=1 AND primary_key_part2=2;
+#
+# 		) eq_ref
+#
+# 			One row is read from this table for each combination of rows from the previous tables.
+#
+# 			Other than the system and const types, this is the best possible join type.
+#
+# 			It is used when all parts of an index are used by the join and the index is a PRIMARY
+# 			KEY or UNIQUE NOT NULL index.
+#
+# 			eq_ref can be used for indexed columns that are compared using the = operator.
+#
+# 			The comparison value can be a constant or an expression that uses columns from tables
+# 			that are read before this table.
+#
+# 			In the following examples, MySQL can use an eq_ref join to process ref_table:
+#
+# 				SELECT * FROM ref_table,other_table
+# 					WHERE ref_table.key_column=other_table.column;
+#
+# 				SELECT * FROM ref_table, other_table
+# 					WHERE ref_table.key_column_part1=other_table.column
+# 					AND ref_table.key_column_part2=1;
+#
+# 		) ref
+#
+# 			All rows with matching index values are read from this table for each combination of rows from
+# 			the previous tables.
+#
+# 			ref is used if the join uses only a leftmost prefix of the key or if the key is not a PRIMARY KEY
+# 			or UNIQUE index (in other words, if the join cannot select a single row based on the key value)
+#
+# 			If the key is used matches only a few rows, this is a good join type.
+#
+# 			ref can be used for indexed columns that are compared using the = or <=> operator.
+# 			In the following examples, MySQL can use a ref join to process ref_table:
+#
+# 				SELECT * FROM ref_table WHERE key_column=expr;
+#
+# 				SELECT * FROM ref_table,other_table
+# 					WHERE ref_table.key_column=other_table.column;
+#
+# 				SELECT * FROM ref_table,other_table
+# 					WHERE ref_table.key_column_part1=other_table.column
+# 					AND ref_table.key_column_part2=1;
+#
+# 		) fulltext
+#
+# 			The join is performed using a FULLTEXT index.
+#
+# 		) ref_or_null
+#
+# 			This join type is like ref, but with the addition that MySQL does an extra search for
+# 			rows that contain NULL values.
+#
+# 			This join type optimization is used most often in resolving subqueries.
+#
+# 			In the following examples, MySQL can use a ref_or_null join to process ref_table:
+#
+# 				SELECT * FROM ref_table
+# 					WHERE key_column=expr OR key_column IS NULL;
+#
+# 			See IS NULL OPTIMIZATION for more
+#
+# 		) index_merge
+#
+# 			This join type indicates that the Index Merge optimization is used. In this case, the key column
+# 			in the output row contains a list of indexes used, and key_len contains a list of the
+# 			longest key parts of the indexes used.
+#
+# 			For more information, See INDEX MERGE OPTIMIZATION for more info
+#
+# 		) unique_subquery
+#
+# 			This type replaces eq_ref for some IN subqueries of the following form:
+#
+# 				value IN (SELECT primary_key FROM single_table WHERE some_expr)
+#
+# 			unique_subquery is just an index lookup function that replaces the subquery completely for better efficiency.
+#
+# 		) index_subquery
+#
+# 			This join type is similar to unique_subquery.
+# 			It replaces IN subqueries, but it works for nonunique indexes in subqueries of the following form:
+#
+# 				value IN (SELECT key_column FROM single_table WHERE some_expr)
+#
+# 		) range
+#
+# 			Only rows that are in a given range are retrieved, using an index to select the rows.
+#
+# 			The key column in the output row indicates which index is used.
+#
+# 			The key_len contains the longest key part that was used.
+# 			The ref column is NULL for this type.
+#
+# 			range can be used when a key column is compared to a constant using any of the
+# 			=, <>, >, <=, IS_NULL, <=>, BETWEEN, LIKE or IN() operators:
+#
+# 				SELECT * FROM tbl_name
+# 					WHERE key_column = 10;
+#
+# 				SELECT * FROM tbl_name
+# 					WHERE key_column BETWEEN 10 AND 20;
+#
+# 				SELECT * FROM tbl_name
+# 					WHERE key_column IN (10,20,30);
+#
+# 				SELECT * FROM tbl_name
+# 					WHERE key_part1 = 10 AND key_part2 IN (10, 20, 30);
+#
+# 		) index
+#
+# 			The index join type is the same as ALL, except that the index tree is scanned. This occurs two ways:
+#
+# 				) If the index is covering index for queries and can be used to satisfy all data required from the table,
+# 					only the index tree is scanned.
+#
+# 					In this case, the Extra column says Using index.
+#
+# 					An index-only scan usually is faster than ALL because the size of the index usually is smaller than the table data.
+#
+# 				) A full table scan is performed used reads from the index to look up data rows in index order.
+#
+# 					Uses index does not appear in the Extra column.
+#
+# 			MySQL can use this join type when the query uses only columns that are part of a single index.
+#
+# 		) ALL
+#
+# 			A full table scan is done for each combination of rows from the previous tables.
+#
+# 			This is normally not good if the table is the first table not marked const, and usually
+# 			very bad in other cases.
+#
+# 			Normally, you can avoid ALL by adding indexes that enable row retrieval from the table based
+# 			on constant values or column values from earlier tables.
+#
+# EXPLAIN EXTRA INFORMATION
+#
+# The Extra column of EXPLAIN output contains additional information about how MySQL resolves the query.
+#
+# The following list explains the values that can appear in this column.
+#
+# Each item also indicates for JSON-formatted output which property displays the Extra value.
+#
+# For some of these, there is a specific property.
+#
+# The others display as the text of the message property.
+#
+# If you want to make your queries as fast as possible, look out for Extra column values of Using
+# filesort and Using temporary, or, in JSON-formatted EXPLAIN output, for using_filesort and using_temporary_table
+# properties equal to true.
+#
+# 		) Child of 'table' pushed join@1 (JSON: message text)
+#
+# 			This table is referenced as the child of table in a join that can be pushed down to the NDB kernel.
+#
+# 			applies only in NDB Cluster, when pushed-down joins are enabled.
+
+# 			See the description of the ndb_join_pushdown server system variable for more info and examples.
+#
+# 		) const row not found (JSON property: const_row_not_found)
+#
+# 			For a query such as SELECT --- FROM tbl_name, the table was empty.
+#
+# 		) Deleting all rows (JSON property: message)
+#
+# 			For DELETE, some storage engines (such as MyISAM) support a handler method that removes all
+# 			table rows in a simple and a fast way.
+#
+# 			This Extra value is displayed if the engine uses this optimization.
+#
+# 		) Distinct (JSON property: distinct)
+#
+# 			MySQL is looking for distinct values, so it stops searching for more rows for the current row combination
+# 			after it has found the first matching row.
+#
+# 		) FirstMatch (tbl_name) (JSON property: first_match)
+#
+# 			The semi-join FirstMatch join shortcutting strategy is used for tbl_name.
+#
+# 		) Full scan on NULL key (JSON property: message)
+#
+# 			This occurs for subquery optimization as a fallback strategy when the optimizer cannot use an index-lookup access method.
+#
+# 		) Impossible HAVING (JSON property: message)
+#
+# 			The HAVING clause is always false and cannot select any rows.
+#
+# 		) Impossible WHERE (JSON property: message)
+#
+# 			The WHERE clause is always false and cannot select any rows.
+#
+# 		) Impossible WHERE noticed after reading const tables (JSON property: message)
+#
+#  		MySQL has read all const (and system) tables and notice that the WHERE clause is always false.
+#
+# 		) LooseScan(m--n) (JSON property: message)
+#
+# 			The semi-join LooseScan strategy is used, m and n are key part numbers.
+#
+# 		) No matching min/max row (JSON property: message)
+#
+# 			No row satisfies the condition for a query such as SELECT MIN(---) FROM --- WHERE condition.
+#
+# 		) No matching row in const table (JSON property: message)
+#
+# 			For a query with a join, there was an empty table or a table with no rows satisfying a unique index condition.
+#
+# 		) No matching rows after partition pruning (JSON property: message)
+#
+# 			For DELETE or UPDATE, the optimizer found nothing to delete or update after partition pruning.
+# 			It is similar in meaning to Impossible WHERE for SELECT statements.
+#
+# 		) No tables used (JSON property: message)
+#
+# 			The query has no FROM clause, or has a FROM DUAL clause.
+#
+# 			For INSERT or REPLACE statements, EXPLAIN displays this value when there is no SELECT part.
+#
+# 			For example, it appears for EXPLAIN INSERTS INTO t VALUES(10) because that is equivalent to
+# 			to EXPLAIN INSERT INTO t SELECT 10 FROM DUAL.
+#
+# 		) Not exists (JSON property: message)
+#
+# 			MySQL was able to do a LEFT JOIN optimization on the query and does not examine more rows in this table
+# 			for the previous row combination after it finds one row that matches the LEFT JOIN criteria.
+#
+# 			Here is an example of the type of query that can be optimized this way:
+#
+# 				SELECT * FROM t1 LEFT JOIN t2 ON t1.id=t2.id
+# 					WHERE t2.id IS NULL;
+#
+# 			Assume that t2.id is defined as NOT NULL. In this case, MySQL scans t1 and looks up the rows
+# 			in t2 using the values of t1.id
+#
+# 			If MySQL finds a matching row in t2, it knows that t2.id can never be NULL, and does not scan
+# 			through the rest of the rows in t2 that have teh same id value.
+#
+# 			In other words, for reach row in t1, MySQL needs to do only a single lookup in t2, regardless
+# 			of how many rows actually match in t2.
+#
+# 		) Plan isn't ready yet (JSON property: none)
+#
+# 			This value occurs with EXPLAIN_FOR_CONNECTION when the optimizer has not finished creating the
+# 			execution plan for the statement executing in the named connection.
+#
+# 			If execution plan output comprises multiple lines, any or all of them could have this Extra
+# 			value, depending on the progress of teh optimizer in determining the full execution plan.
+#
+# 		) Range checked for each record (index map: N) (JSON property: message)
+#
+# 			MySQL found no good index to use, but found that some of indexes might be used
+# 			after column values from preceding tables are known.
+#
+# 			For each row combination in the preceding tables, MySQL checks whether it is possible to
+# 			use a range or index_merge access method to retrieve rows.
+#
+# 			This is not very fast, but is faster than performing a join with no index at all.
+#
+# 			The applicability criteria are as described in RANGE OPTIMIZATION and INDEX MERGE OPTIMIZATION
+# 			with the exception that all column values for the preceding table are known and considered to be
+# 			constants.
+#
+# 			Indexes are numbered beginning with 1, in the same order as shown by SHOW_INDEX for the table.
+#
+# 			The index map value N is a bitmask value that indicates which indexes are candidates.
+#
+# 			For example, a value of 0x19 (binary 11001) means that indexes 1,4, and 5 will be considered.
+#
+# 		) Recursive (JSON property: recursive)
+#
+# 			This indicates that the row applies to the recursive SELECT part of a recursive common table
+# 			expression.
+#
+# 			See WITH SYNTAX (COMMON TABLE EXPRESSIONS) for more info
+#
+# 		) Scanned N databases (JSON property: message)
+#
+# 			This indicates how many directory scans the server performs when processing a query
+# 			for INFORMATION_SCHEMA tables, as described in OPTIMIZING INFORMATION_SCHEMA QUERIES.
+#
+# 			The value can be 0,1 or ALL.
+#
+# 		) Select tables optimized away (JSON property: message)
+#
+# 			The optimizer determined 1) that at most one row should be returned, and 2) that to produce this row,
+# 			a deterministic set of rows must be read.
+#
+# 			When the rows to be read can be read during the optimization phase (for example, by reading index rows),
+# 			there is no need to read any tables during query execution.
+#
+# 			The first condition is fullfilled when the query is implicitly grouped (contains an aggregate function but
+# 			no GROUP BY clause)
+#
+# 			The second condition is fullfilled when one row lookup is performed per index used.
+#
+# 			The number of indexes read determines the number of rows to read.
+#
+# 			Consider the following implicitly grouped query:
+#
+# 				SELECT MIN(c1), MIN(c2) FROM t1;
+#
+# 			Suppose that MIN(c1) can be retrieved by reading one index row and MIN(c2) can be retrieved
+# 			by reading one row from a different index.
+#
+# 			That is, for each column c1 and c2, there exists an index where the column is the first
+# 			column of the index.
+#
+# 			In this case, one row is returned, produced by reading two deterministic rows.
+#
+# 			This Extra value does not occur if the rows to read are not deterministic.
+# 			Consider this query:
+#
+# 				SELECT MIN(c2) FROM t1 WHERE c1 <= 10;
+#
+# 			SUppose that (c1, c2) is a covering index.
+# 			Using this index, all rows with c1 <= 10 must be scanned to find the minimum c2 value.
+#
+# 			By contrast, consider this query:
+#
+# 				SELECT MIN(c2) FROM t1 WHERE c1 = 10;
+#
+# 			In this case, the first index row with c1 = 10 contains the minimum c2 value.
+#
+# 			Only one row must be read to produce the returend row.
+#
+# 			For storage engines that maintain an exact row count per table (such as MyISAM, but not InnoDB),
+# 			this Extra value can occur for COUNT(*) queries for which the WHERE clause is missing or always
+# 			true and there is no GROUP BY clause.
+#
+# 			(This is an instance of an implicitly grouped query where the storage engine influences whether a
+# 				determinsitc number of rows can be read)
+#
+# 		) Skip_open_table, Open_frm_only, Open_full_table (JSON property: message)
+#
+# 			These values indicate file-opening optimizations that apply to queries for INFORMATION_SCHEMA tables.
+#
+# 				) Skip_open_table: Table files do not need to be opened. The information is already a vailable from the data dictionary.
+#
+# 				) Open_frm_only: Only the data dictionary need be read for table information.
+#
+# 				) Open_full_table: Unoptimized information lookup. Table information must be read from the data dictionary and by reading table files.
+#
+# 		) Start temporary, End temporary (JSON property: message)
+#
+# 			This indicates temporary table use for the semi-join Duplicate Weedout Strategy
+#
+# 		) unique row not found (JSON property: message)
+#
+# 			For a query such as SELECT_---_FROM tbl_name, no rows satisfy the condition for a UNIQUE index or PRIMARY KEY on the table.
+#
+# 		) Using filesort (JSON property: using_filesort)
+#
+# 			MySQL must do an extra pass to find out how to retrieve the rows in sorted order.
+#
+# 			The sort is done by going through all rows according to the join type and storing
+# 			the sort key and pointer to the row for all rows that match the WHERE clause.
+#
+# 			The keys then are sorted and the rows are retrieved in sorted order.
+#
+# 			See ORDER BY OPTIMIZATION
+#
+# 		) Using index (JSON property: using_index)
+#
+# 			The column information is retrieved from the table using only information in the index
+# 			tree without having to do an additional seek to read the actual row.
+#
+# 			This strategy can be used when the query uses only columns that are part of a single index.
+#
+# 			For InnoDB tables that have a user-defined clustered index, that index can be used even when
+# 			Using index is absent from the Extra column.
+#
+# 			This is the case if type is index and key is PRIMARY.
+#
+# 		) Using index condition (JSON property: using_index_condition)
+#
+# 			Tables are read by accessing index tuples and testing them first to determine whether
+# 			to read full table rows.
+#
+# 			In this way, index information is used to defer ("Push down") reading full table rows
+# 			unless it is necessary.
+#
+# 			See INDEX CONDITION PUSHDOWN OPTIMIZATION
+#
+# 		) Using index for group-by (JSON property: using_index_for_group_by)
+#
+# 			Similar to the Using index table access method, Using index for group-by indicates
+# 			that MySQL found an index that can be used to retrieve all columns of a GROUP BY or DISTINCT
+# 			query without any extra disk access to the actual table.
+#
+# 			Additionally, the index is used in the most efficient way so that for each group,
+# 			only a few index entries are. See GROUP BY OPTIMIZATION for more info.
+#
+# 		) Using index for skip scan (JSON property: using_index_for_skip_scan)
+#
+# 			Indicates that the Skip Scan access method is used. See SKIP SCAN RANGE ACCESS METHOD.
+#
+# 		) Using join buffer (Block Nested Loop), Using join buffer (Batched Key Access)
+# 			(JSON property: using_join_buffer)
+#
+# 			Tables from earlier joins are read in portions into the join buffer, and then their rows
+# 			are used from the buffer to perform the join with the current table.
+#
+# 			(Block Nested Loop) indicates use of the Block Nested-Loop algorithm and (Batched Key Access)
+# 			indicates use of the Batched Key Access algorithm.
+#
+# 			That is, the keys from the table on the preceding line of the EXPLAIN ouput will be buffered,
+# 			and the matching rows will be fetched in batches from the table represented by the line
+# 			in which Using join buffer appears.
+#
+# 			In JSON-formatted output, the value of using_join_buffer is always either one of Block Nested
+# 			Loop or Batched Key Access.
+#
+# 		) Using MRR (JSON property: message)
+#
+# 			Tables are read using the Multi-Range Read optimization strategy. See MULTI-RANGE READ OPTIMIZATION, for more info.
+#
+# 		) Using sort_union(---), Using union(---), Using intersect (---) (JSON property: message)
+#
+# 			These indicate the particular algorithm showing how index scans are merged for the index_merge join type.
+#
+# 			See INDEX MERGE OPTIMIZATION for more info.
+#
+# 		) Using temporary(JSON property: using_temporary_table)
+#
+# 			To resolve the query, MySQL needs to create a temporary table to hold the result.
+#
+# 			This typically happens if the query contains GROUP BY and ORDER BY clauses that list
+# 			columns differently.
+#
+# 		) Using where (JSON property: attached_condition)
+#
+# 			A WHERE clause is used to restrict which rows to match against the next table or send to the client.
+#
+# 			Unless you specifically intend to fetch or examine all rows from the table,
+# 			you may have something wrong in your query if the Extra value is not Using where
+# 			and the table join type is ALL or index.
+#
+# 			Using where has no direct counterpart in JSON-formatted output; teh attached_condition
+# 			property contains any WHERE condition used.
+#
+# 		) Using where with pushed condition (JSON property: message)
+#
+# 			This item applies to NDB tables only.
+#
+# 			It means that NDB Cluster is using the Condition Pushdown optimization to improve
+# 			the efficiency of a direct comparison between a nonindexed column and a constant.
+#
+# 			In such cases, the condition is "pushed down" to the cluster's data nodes and is evaluated
+# 			on all data nodes simultaneously.
+#
+# 			This eliminates the need to send nonmatching rows over the network, and can speed up
+# 			such queries by a factor of 5 to 10 times over cases where Condition Pushdown could be
+# 			but is not used.
+#
+# 			For more info, see ENGINE CONDITION PUSHDOWN OPTIMIZATION.
+#
+# 		) Zero limit (JSON property: message)
+#
+# 			The query had a LIMIT 0 clause and cannot select any rows.
+#
+# EXPLAIN OUTPUT INTERPRETATION
+#
+# You can get a good indication of how good a join is by taking the product of the values in the rows
+# column of the EXPLAIN output.
+#
+# This should tell you roughly how many rows MySQL must examine to execute the query.
+#
+# If you restrict queries with the max_join_size system variable, this row product also is used to
+# determine which multiple-table SELECT statements to execute and which to abort.
+#
+# See earlier, in relation to Configuring the  Server.
+#
+# The following example shows how a multiple-table join can be optimized progressively based on the
+# information provided by EXPLAIN.
+#
+# Suppose that you have the SELECT statement shown here and that you plan to examine it using EXPLAIN:
+#
+# 		EXPLAIN SELECT tt.TicketNumber, tt.TimeIn,
+# 							tt.ProjectReference, tt.EstimatedShipDate,
+# 							tt.ActualShipDate, tt.ClientID,
+# 							tt.ServiceCodes, tt.RepetitiveID,
+# 							tt.CurrentProcess, tt.CurrentDPPerson,
+# 							tt.RecordVolume, tt.DPPrinted, et.COUNTRY,
+# 							et_1.COUNTRY, do.CUSTNAME
+# 					FROM tt, et, et AS et_1 do
+# 					WHERE tt.SubmitTime IS NULL
+# 						AND tt.ActualPC = et.EMPLOYID
+# 						AND tt.AssignedPC = et_1.EMPLOYID
+# 						AND tt.ClientID = do.CUSTNMBR;
+#
+# For this example, make the following assumptions:
+#
+# 		) The columns being compared have been declared as follows:
+#
+# 			Table 			Column 					Data Type
+# 			tt 				ActualPC 				CHAR(10)
+# 			tt 				AssignedPC 				CHAR(10)
+# 			tt 				ClientID 				CHAR(10)
+# 			et 				EMPLOYID 				CHAR(15)
+# 			do 				CUSTNMBR 				CHAR(15)
+#
+# 		) The tables have the following indexes
+#
+# 			Table 			Index
+# 			tt 				ActualPC
+# 			tt 				AssignedPC
+# 			tt 				ClientID
+# 			et 				EMPLOYID (primary key)
+# 			do 				CUSTNMBR (primary key)
+#
+# 		) The tt.ActualPC values are not evenly distributed.
+#
+# Initially, before any optimizations have been performed, the EXPLAIN statement produces the following information:
+#
+# 	table 	Type 		Possible_keys 		key 		key_len 		ref 		rows 		Extra
+# 	et 		ALL 		PRIMARY 				NULL 		NULL 			NULL 		74
+# 	do 		ALL 		PRIMARY 				NULL 		NULL 			NULL 		2135
+# 	et_1 		ALL 		PRIMARY 				NULL 		NULL 			NULL 		74
+#
+#  tt 		ALL 		AssignedPC, 		NULL 		NULL 			NULL 		3872
+# 							ClientID,
+# 							ActualPC 			 				
+# 				Range checked for each record (index map: 0x23)
+#
+# Because type is ALL for each table, this output indicates that MySQL is generating a Cartesian product
+# of all the tables;
+#
+# That is, every combination of rows.
+#
+# This takes quite a long time, because the product of the number of rows in each table must be examined.
+#
+# For the case at hand, this product is 74 x 2135 x 73 x 3872 = about 45 mil rows.
+#
+# If the tables were bigger, you can only imagine the growth.
+#
+# One problem here is that MySQL can use indexes on columns more efficiently if they are
+# declared as the same type and size.
+#
+# In this context, VARCHAR and CHAR are considered the same if they are declared as the same size.
+#
+# tt.ActualPC is declared as CHAR(10) and et.EMPLOYID is CHAR(15), so there is a length mismatch.
+#
+# To fix this disparity between column lengths, use ALTER_TABLE to lengthen ActualPC from 10 characters
+# to 15 characters:
+#
+# 		ALTER TABLE tt MODIFY ActualPC VARCHAR(15);
+#
+# Now tt.ActualPC and et.EMPLOYID are both VARCHAR(15).
+#
+# Executing the EXPLAIN statement again produces this result:
+#
+# 		table type 			possible_keys 	key 		key_len 		ref 		rows 		Extra
+# 		tt 	ALL 			AssignedPC, 	NULL 		NULL 			NULL 		3872 		Using 
+# 								ClientID, 															where
+# 								ActualPC
+# 		do 	ALL 			PRIMARY 			NULL 		NULL 			NULL 		2135
+#				Range checked for each record (index map: 0x1)
+# 		et_1 	ALL 			PRIMARY 			NULL 		NULL 			NULL 		74
+# 				Range checked for each record (index map: 0x1)
+# 		et 	eq_ref 		PRIMARY 			PRIMARY 	15  			tt.ActualPC 1
+#
+# This is not perfect, but better.
+#
+# The product of the rows values is less by a factor of 74. This version executes in a couple of seconds.
+#
+# A second alternation can be to eliminate the column length mismatches for the tt.AssignedPC = et_1.EMPLOYID
+# and tt.ClientID = do.CUSTNMBR comparisons:
+#
+# 		ALTER TABLE tt MODIFY AssignedPC VARCHAR(15),
+# 							MODIFY ClientID  	VARCHAR(15);
+#
+# After that modification, EXPLAIN produces the output shown here:
+#
+# 		table type 			possible_keys 	key 		key_len 		ref 				rows 		Extra
+# 		et 	ALL 			PRIMARY 			NULL 		NULL 			NULL 				74
+# 		tt 	ref 			AssignedPC, 	ActualPC 15 			et.EMPLOYID 	52 		Using
+# 								ClientID, 																	where
+# 								ActualPC
+# 		et_1 	eq_ref 		PRIMARY 			PRIMARY 	15 			tt.AssignedPC 	1
+# 		do  	eq_ref 		PRIMARY 			PRIMARY  15 			tt.ClientID 	1
+#
+# At this point, the query is optimized almost as well as possible.
+#
+# The remaining problem, is that by default MySQL assumes that values in the tt.ActualPC column are evenly
+# distributed.
+#
+# That is not the case for the tt.table.
+#
+# Fortunately, it is easy to tell MySQL to analyze the key distrib:
+#
+# 		ANALYZE TABLE tt;
+#
+# With the additional index information, the join is perfect and EXPLAIN produces this result:
+#
+# 		table type 			possible_keys 	key 		key_len 		ref 				rows 		Extra
+# 		tt 	ALL 			AssignedPC 		NULL 		NULL 			NULL 				3872 		Using
+# 								ClientID, 																	where
+# 								ActualPC
+# 		et 	eq_ref 		PRIMARY 			PRIMARY 	15 			tt.ActualPC  	1
+# 		et_1 	eq_ref 		PRIMARY 			PRIMARY  15 			tt.AssignedPC 	1 
+# 		do 	eq_ref 		PRIMARY 			PRIMARY 	15 			tt.ClientID 	1
+#
+# The rows column in the output from EXPLAIN is an educated guess from the MySQL join optimizer.
+#
+# Check whether the numbers are even close to the truth by comparing the rows products with
+# the actual number of rows that the query runs.
+#
+# If then umbers are quite different, you might get better performance by using STRAIGHT_JOIN
+# in your SELECT statement and trying to list the tables in a different order in the FROM clause.
+#
+# (However, STRAIGHT_JOIN may prevent indexes from being used because it disables semi-join transformations.
+# See OPTIMIZING SUBQUERIES, DERIVED TABLES, VIEW REFERENCES, AND COMMON TABLE EXPRESSIOSN WITH SEMI-JOIN TRANSFORMATIONS
+#
+# IT is possible in some cases to execute statements that modify data when EXPLAIN_SELECT is used
+# with a subquery.
+
+# For more info about this, see DERIVED TABLES, later.
+#
+# EXTENDED EXPLAIN OUTPUT FORMAT
+#
+# The EXPLAIN statement produces extra ("extended") information that is not part of EXPLAIN
+# output but can be viewed by issuing a SHOW WARNINGS statement following EXPLAIN.
+#
+# As of MySQL 8.0.12, extended information is available for SELECT, DELETE, INSERT, REPLACE and UPDATE statements.
+#
+# Prior to 8.0.12, extended info is only available for SELECT statements.
+#
+# The Message value in show_warnings output displays how the optimizer qualifies table and column
+# names in the SELECT statement, what hte SELECT looks like after the application of rewriting
+# and optimization rules, and possibly other notes about the optimizaiton process.
+#
+# The extended information displayable with a SHOW_WARNINGS statement following EXPLAIN is produced only
+# for SELECT statements.
+#
+# SHOW_WARNINGS displays an empty result for other explainable statements. (DELETE, INSERT, REPLACE and UPDATE)
+#
+# Here is an example of extended EXPLAIN output:
+#
+# 		EXPLAIN SELECT t1.a, t1.a IN (SELECT t2.a FROM t2) FROM t1\G
+# 		******************** 1. row *********************
+#
+# 							id: 1
+# 				select_type: PRIMARY
+# 						table: t1
+# 						 type: index
+# 			possible_keys : NULL
+# 						  key: PRIMARY
+# 					key_len : 4
+# 						  ref: NULL
+# 						rows : 4
+# 				filtered   : 100.00
+# 						Extra: Using index
+#
+# 		******************* 2. row **********************
+# 		
+# 							id: 2
+# 				select_type: SUBQUERY
+# 						table: t2
+# 						 type: index
+# 			 possible_keys: a
+# 						  key: a
+# 					key_len : 5
+# 					 	  ref: NULL
+# 						rows : 3
+# 				filtered   : 100.00
+# 					Extra   : Using index
+# 		2 rows in set, 1 warning (0.00 sec)
+#
+# 		SHOW WARNINGS\G
+# 		****************** 1. row **************************
+# 		
+# 		Level: 	Note
+# 		 Code: 	1003
+# 	  Message:  /* select#1 */ select `test`.`t1`.`a` AS `a`,
+# 					<in_optimizer>(`test`.`t1`.`a`, `test`.`t1`.`a` in
+# 					( <materialize> (/* select#2 */ select `test`.`t2`.`a`
+# 					from `test`.`t2` where 1 having 1 ),
+# 					<primary_index_lookup>(`test`.`t1`.`a` in
+# 					<temporary_table> on <auto_key>
+# 					where ((`test`.`t1`.`a` = `materialized-subquery`.`a`))))) AS `t1.a`
+# 					IN (SELECT t2.a FROM t2)` from `test`.`t1`
+# 		1 row in set (0.00 sec)
+#
+# Because the statement displayed by SHOW_WARNINGS may contain special markers to provide info
+# about query rewriting or optimizer actions, the statement is not necessarily valid SQL
+# and is not intended to be executed.
+#
+# The output may also include rows with Message values that provide additional non-SQL explanatory
+# notes about actions taken by the optimizer.
+#
+# The following list describes special markers that can appear in the extended output displayed
+# by SHOW_WARNINGS:
+#
+# 		) <auto_key>
+#
+# 			An automatically generated key for a temporary table
+#
+# 		) <cache>(expr)
+#
+# 			The expression (such as scalar subquery) is executed once and the resulting value is saved
+# 			in memory for later use.
+#
+# 			For results consisting of multiple values, a temporary table may be created and you will
+# 			see <temporary table> instead.
+#
+# 		) <exists>(query fragment)
+#
+# 			THe subquery predicate is converted to an EXISTS predicate and the subquery is transformed
+# 			so that it can be used together with the EXISTS predicate.
+#
+# 		) <in_optimizer>(query fragment)
+#
+# 			This is an internal optimizer object with no user significance
+#
+# 		) <index_lookup> (query fragment)
+#
+# 			The query fragment is processed using an index lookup to find qualifying rows
+#
+# 		) <if>(condition, expr1, expr2)
+#
+# 			If the condition is true, evaluate to expr1, otherwise expr2
+#
+# 		) <is_not_null_test>(expr)
+#
+# 			A test to verify that the expression does not evaluate to NULL
+#
+# 		) <materialize>(query fragment)
+#
+# 			Subquery materialization is used.
+#
+# 		) `materialized-subquery`.col_name
+#
+# 			A reference to the column col_name in an internal temporary table materialized to hold the result from evaluating a subquery.
+#
+# 		) <primary_index_lookup>(query fragment)
+#
+# 			The query fragment is processed using a primary key lookup to find qualifying rows
+#
+# 		) <ref_null_helper>(expr)
+# 
+# 			This is an internal otpimizer object with no user significance
+#
+# 		) /* SELECT#N */ select_stmt
+#
+# 			The SELECT is associated with the row in non-extended EXPLAIN output that has an id value of N.
+#
+# 		) outer_tables semi join (inner_tables)
+#
+# 			A semi-join operation.
+#
+# 			inner_tables shows the tables that were not pulled out. 
+#
+# 			See OPTIMIZING SUBQUERIES, DERIVED TABLES, VIEW REFERENCES AND COMMON TABLE EXPRESSIONS WITH SEMI-JOIN TRANSFORMATIONS.
+#
+# 		) <temporary table>
+#
+# 			This represents an internal temporary table created to cache an intermediate result.
+#
+# When some tables are of const or system type, expressions involving columns from these tables
+# are evaluated early by the optimizer and are not part of the displayed statement.
+#
+# However, with FORMAT=JSON, some const table accesses are displayed as ref access
+# that uses a const value.
+#
+# OBTAINING EXECUTION PLAN INFORMATION FOR A NAMED CONNECTION
+#
+# To obtain the execution plan for an explainable statement executing in a named connection,
+# use this statement:
+#
+# 		EXPLAIN [options] FOR CONNECTION connection_id;
+#
+# EXPLAIN_FOR_CONNECTION returns the EXPLAIN information that is currently being used to
+# execute a query in a given connection.
+#
+# Because of changes to data (and supporting statistics) it may produce a different result from
+# running EXPLAIN on the equivalent query text.
+#
+# This difference in behavior can be useful in diagnosing more transient performance problems.
+#
+# FOr example, if you are running a statement in one session that is taking a long time to complete,
+# using EXPLAIN_FOR_CONNECTION in another session may yield useful information about the cause of the delay.
+#
+# connection_id is the connection identifier, as obtained from the INFORMATION_SCHEMA.PROCESSLIST table or
+# the SHOW_PROCESSLIST statement.
+#
+# If you have the PROCESS privilege, you can specify the identifier for any connection.
+#
+# Otherwise, you can specify the identifier only for your own connections.
+#
+# If the named connection is not executing a statement, the result is empty.
+#
+# Otherwise, EXPLAIN FOR CONNECTION applies only if the statement being executed in teh
+# named connection is explainable.
+#
+# THis includes SELECT, DELETE, INSERT, REPLACE and UPDATE.
+#
+# (However, EXPLAIN FOR CONNECTION does not work for prepared statements, even prepared
+# statements of those types.)
+#
+# If the named connection is executing an explainable statement, the output is what  you would
+# obtain by using EXPLAIN on the statement itself.
+#
+# If the named connection is executing a statement that is not explainable, an error occurs.
+#
+# For example, you cannot name the connection identifier for your current session because EXPLAIN
+# is not explainable:
+#
+# SELECT CONNECTION_ID();
+# +----------------------------+
+# | CONNECTION_ID() 				 |
+# +----------------------------+
+# | 					373 		    |
+# +----------------------------+
+# 1 row in set (0.00 sec)
+#
+# EXPLAIN FOR CONNECTION 373;
+# ERROR 1889 (HY000): EXPLAIN FOR CONNECTION command is not supported
+# only for SELECT/UPDATE/INSERT/DELETE/REPLACE
+#
+# The Com_explain_other status variable indicates the number of EXPLAIN_FOR_CONNECTION
+# statements executed.
+#
+# ESTIMATING QUERY PERFORMANCE
+#
+# In most cases, you can estimate query performance by counting disk seeks.
+#
+# For small tables, you can usually find a row in one disk seek (because the index is probably
+# cached)
+#
+# For bigger tables, you can estimate that, using B-TREE indexes, you need this many seeks to find
+# a row:
+#
+# log(row_count) / log(index_block_length / 3 * 2 / (index_length + data_pointer_length)) + 1
+#
+# In MYSQL an index block is usually 1024 bytes and the data pointer is usually four bytes.
+#
+# For a 500,000-row table with a key value length of three bytes (the size of MEDIUMINT),
+# the formula indicates:
+#
+# 		log(500,000)/log(1024/3*2/(3+4)) + 1 = 4 seeks
+#
+# This index would require storage of about 500,000 * 7 * 3/2=5.2MB, assuming a
+# typical index buffer fill ratio of 2/3), so you probably have much of the index
+# in memory and so need only one or two calls to read data to find the row.
+#
+# For writes, however, you need four seek requests to find where to place a new index value and
+# normally two seeks to update the index and write the row.
+#
+# The preceding discussion does not mean that your application pperformance slowly degenerated
+# by LOG N.
+#
+# As long as everything is cached by the OS or the MySQL server, things become only marginally
+# slower as the tables get bigger.
+#
+# After the data gets too big to be cached, things start to go much slower until your applications
+# are bound only by disk seeks
+#
+# (which increases by LOG N)
+#
+# To avoid this, increase the key cache size as the data grows.
+#
+# For MyISAM tables, the key cache is controlled by the key_buffer_size system variable.
+#
+# CONTROLLING THE QUERY OPTIMIZER
+#
+# MySQL provides optimizer control through system variables that affect how query plans are evaluated,
+# switchable optimizations, optimizer and index hints, and the optimizer cost model.
+#
+# The server also maintains statistics about column values, although the optimizer does not
+# yet use this information.
+#
+# CTRONLLING QUERY PLAN EVOLUTION
+#
+# The task of the query optimizer is to find an optimal plan for executing an SQL query.
+#
+# Because the difference in performance between "good" and "bad" plans can be orders of
+# magnitudes (that is, seconds vs hours or even days), most query optimizers, include that of MySQL,
+# perform a more or less exhaustive search for na optimal plan amongst all possible query evaluation plans.
+#
+# For join queries, the number of possible plans investigated by the MySQL optimizer grows exponentionally
+# with the number of tables referenced in a query.
+#
+# For small number of tables (typically less than 7 to 10) this is not a problem.
+#
+# However, when large queries are submitted, the time spent in query optimization may easily
+# become the major bottleneck in the server's performance.
+#
+# a more flexible method for query optimization enabvles the user to control how exhaustive
+# the optimizer is in its search for an optimal query evaluation plan.
+#
+# The general idea is that the fewer plans that are investigated by the optimizer, the less time
+# it spends in compiling a query.
+#
+# On the other hand, because the optimizer skips some plans, it may miss finding an optimal plan.
+#
+# The behavior of the optimizer with respect to the number of plans it evaluates can be controlled
+# using two system variables:
+#
+# 		) The optimizer_prune_level variable tells the optimizer to skip certain plans based on
+# 			estimates of the number of rows accessed for each table.
+#
+# 			Our experience shows that this kind of "educated guess" rarely misses optimal plans, and
+# 			may dramatically reduce query compilation times.
+#
+# 			That is why this option is on (optimizer_prune_level=1) by default.
+#
+# 			However, if oyu believe that hte optimizer missed a better query plan, this option can be
+# 			switched off (optimizer_prune_level=0) with the risk that query compilation
+# 			may take much longer.
+#
+# 			Note that, even with the use of this heuristic, the optimizer still explores a
+# 			roughly exponentional number of plans.
+#
+# 		) The optimizer_search_depth variable tells how far into the "future" of each incomplete
+# 			plan the optimizer should look to evaluate whether it should be expanded further.
+#
+# 			Smaller values of optimizer_search_depth may result in orders of magnitudes smaller query
+# 			compilation times.
+#
+# 			For example, queries with 12, 13 or more tables may easily require hours or even days
+# 			to compile, if optimizer_search_depth is close to the number of tables in teh query.
+#
+# 			At the same time, if compiled with optimizer_saerch_depth equal to 3 or 4, the optimizer
+# 			may compile in less than a minute for the same query.
+#
+# 			If you are unsure of what a reasonable value is for optimizer_search_depth,
+# 			this variable can be set to 0 to tell the optimizer to determine the value automatically.
+#
+# OPTIMIZER HINTS
+#
+# 		One means of control over optimizer strategies is to set the optimizer_Switch system variable 
+# 		(See SWITCHABLE OPTIMIZATIONS).
+#
+# 		Changes to this variable affect execution of all subsequent queries; to affect one query differently
+# 		from another, it is necessary to change optimizer_switch before each one.
+#
+# 		Another way to control the optimizeri s by using optimizer hints, which can be specified within
+# 		individual statements.
+#
+# 		BEcause optijmizer hints apoply on a per-statement basis,s they provide finer control over
+# 		statement execution plans than can be achieved using optimizer_switch.
+#
+# 		For example, you can enable an optimization for one table in a statement and disable the
+# 		optimization for a different table.
+#
+# 		Hints within a statement take precedence over optimizer_switch flags.
+#
+# 		Examples:
+#
+# 			SELECT /*+ NO_RANGE_OPTIMIZATION(t3 PRIMARY, f2_idx) */ f1
+# 				FROM t3 WHERE f1 > 30 and f1 < 33;
+# 			SELECT /*+ BKA(t1) NO_BKA(t2) */ * FROM t1 INNER JOIN t2 WHERE ---;
+#
+# 			SELECT /*+ NO_ICP(t1, t2) */ * FROM t1 INNER JOIN t2 WHERE ---;
+# 			SELECT /*+ SEMIJOIN(FIRSTMATCH, LOOSESCAN) */ * FROM t1 ---;
+#
+# 			EXPLAIN SELECT /*+ NO_ICP(t1) */ * FROM t1 WHERE ---;
+# 			SELECT /*+ MERGE(dt) */ * FROM (SELECT * FROM t1) AS dt;
+# 		
+# 			INSERT /*+ SET_VAR(foreign_key_checks=OFF) */ INTO t2 VALUES(2);
+#
+# Optimizer hints described here, differ from index hints described in INDEX HINTS.
+#
+# Optimizer and index hints may be used separately or together.
+#
+# OPTIMIZER HINT OVERVIEW
+#
+# Optimizer hints apply at different scope levels:
+#
+# 		) Global: The hint affects the entire statement
+#
+# 		) Query block: The hint affects a particular query block within a statement
+#
+# 		) table-level: The hint affects a particular table within a query block
+#
+# 		) Index-level: The hint affects a particular index within a table
+#
+# The following table summarizes teh available optimizer hints, the optimizer strategies they affect,
+# and the scope or scopes at which they apply.
+#
+# More details are given later.
+#
+# OPTIMIZER HINTS AVAILABLE
+#
+# HINT NAME 						DESC 																	Applicable Scopes
+#
+# BKA, NO_BKA 				Affects Batched Key Access join processing 			Query block, table
+# 
+# BNL, NO_BNL 				Affects Block Nested-Loop join processing 			Query block, table
+#
+# INDEX_MERGE, 			Affects Index Merge optimization 						Table, Index
+# NO_INDEX_MERGE
+#
+# JOIN_FIXED_ORDER 		Use table order specified in FROM clause 				Query block 
+# 								for join order
+#
+# JOIN_ORDER 				Use table order specified in hint for join order 	Query block
+#
+# JOIN_PREFIX 				Use tabel order specified in hint for first  		Query BLock 
+# 								tables of join order 
+#
+# JOIN_SUFFIX 				use tabel order specified in hint for last 			Query block
+# 								tables of join order
+#
+# MAX_EXECUTION_TIME 	Limits statement execution time 							Global
+#
+# MERGE, NO_MERGE 		Affects derived table/view merging into 				Table 
+# 								outer query block
+#
+# MRR, NO_MRR 				Affects Multi-Range Read Optimization 					Table, index
+#
+# NO_ICP 					affects index condition pushdown optimization 		Table, index
+#
+# NO_RANGE_OPTIMIZATION Affects range optimization 								Table, index
+#
+# QB_NAME 					Assigns name to query block 								Query block
+#
+# RESOURCE_GROUP 			Set resource group during statement execution 		Global
+#
+# SEMIJOIN, NO_SEMIJOIN Affects semi-join strategies 								Query block
+#
+# SKIP_SCAN, NO_SKIP_SCAN Affects Skip Scan optimization 						table, index
+#
+# SET_VAR 					Set variable during statement execution 				Global
+#
+# SUBQUERY 					Affects materialization, IN-to-EXISTS subquery 		Query block
+# 								strategies
+#
+# Disabling an optimization prevents the optimizer from using it.
+#
+# Enabling an optimization means the optimizer is free to use the strategy if it applies
+# to statement execution, not that hte optimizer necessarily will use it.
+#
+# OPTIMIZER HINT SYNTAX
+#
+# MySQL supports comments in SQL statements as described in COMMENT SYNTAX later.
+#
+# Optimizer hints must be specified within /*+ --- */ comments
+#
+# That is, optimnizer hints use a variant of /* --- */ C-style comment syntax, with a + char
+# following the /* comment opening sequence. Examples:
+#
+# /*+ BKA(t1) */
+# /*+ BNL(t1, t2) */
+# /*+ NO_RANGE_OPTIMIZATION(t4 PRIMARY) */
+# /*+ QB_NAME(qb2) */
+#
+# Whitespace is permitted after the + character.
+#
+# The parser recognizes optimizer hints comments after the intial keyword of SELECt, UPDATE,
+# INSERT, REPLACE and DELETE statements.
+#
+# Hints are permitted in thse contexts:
+#
+# 		) The beginning of query and data change statements:
+#
+# 			SELECT /*+ --- */ ---
+# 			INSERT /*+ --- */ ---
+# 			REPLACE /+ --- */ ---
+# 			UPDATE /*+ --- */ ---
+# 			DELETE /*+ --- */ ---
+#
+# 		) At the beginning of query blocks
+#
+# 			(SELECT /*+ --- */ --- )
+# 			(SELECT --- ) UNION (SELECT /*+ --- */ --- )
+# 			(SELECT /*+ --- */ --- ) UNION (SELECT /*+ --- */ --- )
+#
+# 			UPDATE --- WHERE x IN (SELECT /*+ --- */ ---)
+# 			INSERT --- SELECT /*+ --- */ ---
+#
+# 		) In hintable statements prefaced by EXPLAIN. For example:
+#
+# 			EXPLAIN SELECT /*+ --- */ ---
+# 			EXPLAIN UPDATE --- WHERE x in (SELECT /*+ --- */ ---)
+#
+# 			The impliation is that you can use EXPLAIN to see how optimizer hints affect execution plans.
+# 			Use SHOW_WARNINGS immediately after EXPLAIN to see how hints are used.
+#
+# 			The extended EXPLAIN output displayed by a following SHOW_WARNINGS indicates which
+# 			hints were used.
+#
+# 			Ignored hints are not displayed.
+#
+# A hint comment may contain multiple hints, but a query block cannot contain multiple hint comments.
+# This is valid:
+#
+# 		SELECT /*+ BNL(t1) BKA(t2) */ ---
+#
+# But this is invalid:
+#
+# 		SELECT /*+ BNL(t1) */ /* BKA(t2) */ ---
+#
+# When a hint comment contains multiple hints, the possibility of duplicates and conflicts exists.
+#
+# The following general guidelines apply.
+#
+# For specific hint types, additional rules may apply, as indicated in teh hint descriptions.
+#
+# 		) Duplicate hints: For a hint such as /*+ MRR(idx1) MRR(idx1) */, MySQL uses the first hint and issues a warning about the duplicate hint
+#
+# 		) Conflicting hints: FOr a hint such as /*+ MRR(idx1) NO_MRR(idx1) */, MysQL uses the first hint and issues a warning about the second conflicting hint
+#
+# Query block names are identifiers and follow the usual rules about what names are valid and how to quote them.
+# (See SCHEMA OBJECT NAMES for more info)
+#
+# Hint names, query block names and strategy names are not case sensitive.
+#
+# References to table and index names follow the usual identifier case sensitivity rules
+# (see IDENTIFIER CASE SENSITIVITY)
+#
+# JOIN-ORDER OPTIMIZER HINTS
+#
+# Joint-order hints affect the order in which the optimizer joins tables.
+#
+# Syntax of the JOIN_FIXED_ORDER hint:
+#
+# 		hint_name([@query_block_name])
+#
+# Syntax of other join-order hints:
+#
+# 		hint_name([@query_block_name] tbl_name [, tbl_name] ---)
+# 		hint_name(tbl_name[@query_block_name] [, tbl_name[@query_block_name]] ---)
+#
+# The syntax refers to these terms:
+#
+# 		) hint_name: These hint names are permitted:
+#
+# 			) JOIN_FIXED_ORDER: Force the optimizer to join tables using the order in which they appear in the FROM clause.
+# 										This is the same as specifying SELECT STRAIGHT_JOIN.
+#
+# 			) JOIN_ORDER: Instruct the optimizer to join tables using the specified table order.
+#
+# 								The hint applies to the named tables.
+#
+# 								The optimizer may place tables that are not named anywhere in the join order, including between specified tables.
+#
+# 			) JOIN_PREFIX: Instruct the optimizer to join tables using the specified table order for the first tables of the join execution plan.
+# 		
+# 								The hint applies to the named tables.
+#
+# 								The optimizer places all other tables after the named tables.
+#
+# 			) JOIN_SUFFIX: Instruct the optimizer to join tables using the specified table order for the last tables of the join execution plan.
+# 								
+# 								The hint applies to the named tables.
+#
+# 								The optimizer places all other tables before the named tables.
+#
+# 		) tbl_name: The name of a table used in the statement.
+#
+# 						A hint that names tables applies to all tables that it names.
+#
+# 						The JOIN_FIXED_ORDER hint names no tables and applies to all tables in the FROM
+# 						clause of the query block in which it occurs.
+#
+# 						If a table has an alias, hints must refer to the alias, not the table name.
+#
+# 						Table names in hints cannot be qualified with schema names.
+#
+# 		) query_block_name:
+#
+# 						The query block to which the hint applies.
+#
+# 						If the hint includes no leading @query_block_name, the hint applies to 
+# 						the query block in which it occurs.
+#
+# 						For tbl_name@query_block_name syntax, the hint applies to the named table
+# 						in the named query block.
+#
+# 						To assign a name to a query block, see OPTIMIZER HINTS FOR NAMING QUERY BLOCKS
+#
+# Example:
+#
+# 		SELECT
+# 		/*+ JOIN_PREFIX(t2, t5@subq2, t4@subq1)
+# 			 JOIN_ORDER(t4@subq1, t3)
+# 			 JOIN_SUFFIX(t1)  */
+# 		COUNT(*) FROM t1 JOIN t2 JOIN t3
+# 					  WHERE t1.f1 IN (SELECT /*+ QB_NAME(subq1) */ f1 FROM t4)
+# 						AND t2.f1  IN (SELECT /*+ QB_NAME(subq2) */ f1 FROM t5);
+#
+# Hints control the behavior of semi-join tables that are merged to the outer query block.
+#
+# If subqueries subq1 and subq2 are converted to semi-joins, tables t4@subq1 and t5@subq2 are merged
+# to the outer query block.
+#
+# In this case, the hint specified in the outer query block controls the behavior of t4@subq1, t5@subq2 tables.
+#
+# The optimizer resolves join-order hints according to these principles:
+#
+# 		) Multiple hint instances
+#
+# 			Only one JOIN_PREFIX and JOIN_SUFFIX hint of each type are applied.
+#
+# 			ANy later hints of the same type are ignored with a warning.
+#
+# 			JOIN_ORDER can be specified several times.
+#
+# 			Examples:
+#
+# 				/*+ JOIN_PREFIX(t1) JOIN_PREFIX(t2) */
+#
+# 			The second JOIN_PREFIX hint is ignored with a warning.
+#
+# 				/*+ JOIN_PREFIX(t1) JOIN_SUFFIX(t2) */
+#
+# 			Both hints are applicable. No warning occurs.
+#
+# 				/* JOIN_ORDER(t1, t2) JOIN_ORDER(t2, t3) */
+#
+# 			Both hints are applicable. No warning occurs.
+#
+# 		) Conflicting hints
+#
+# 			In some cases hints can conflict, such as when JOIN_ORDER and JOIN_PREFIX have table
+# 			orders that are impossible to apply at the same time:
+#
+# 				SELECT /*+ JOIN_ORDER(t1, t2) JOIN_PREFIX(t2, t1) */ --- FROM t1, t2;
+#
+# 			In this case, the first specified hint is applied and subsequent conflicting hints
+# 			are ignored with no warning.
+#
+# 			A valid hint that is impossible to apply is silently ignored with no warning.
+#
+# 		) Ignored hints
+#
+# 			A hint is ignored if a table specified in the hint has circular dependency
+#
+# 			Example:
+#
+# 				/*+ JOIN_ORDER(t1, t2) JOIN_PREFIX(t2, t1) */
+#
+# 			The JOIN_ORDER hint sets table t2 dependent on t1.
+#
+# 			The JOIN_PREFIX hint is ignored because table t1 cannot be dependant on t2.
+#
+# 			Ignored hints are not displayed in extended EXPLAIN output.
+#
+# 		) Interaction with  const tables
+#
+# 			The MySQL optimizer places const tables first in the join order, and the position of
+# 			a const table cannot be affected by hints.
+#
+# 			References to const tables in join-order hints are ignored, although the hint
+# 			is still applicable.
+#
+# 			For example, these are equivalent:
+#
+# 				JOIN_ORDER(t1, const_tbl, t2)
+# 				JOIN_ORDER(t1, t2)
+#
+# 			Accepted hints shown in extended EXPLAIN output include const tables as they were specified.
+#
+# 		) Interaction with types of join operations
+#
+# 			MySQL supports several type of joins:
+#
+# 				LEFT, RIGHT, INNER, CROSS, STRAIGHT_JOIN.
+#
+# 			A hint that conflicts with the specified type of join is ignored with no warning.
+#
+# 			Example:
+#
+# 				SELECT /*+ JOIN_PREFIX(t1, t2) */FROM t2 LEFT JOIN t1;
+#
+# 			Here a conflict occurs between the requested join order in the hint and the order
+# 			required by the LEFT JOIN.
+#
+# 			The hint is ignored with no warning.
+#
+# TABLE-LEVEL OPTIMIZER HINTS
+#
+# Table-level hints affect:
+#
+# 		) Use of the Block Nested-Loop (BNL) and Batched Key Access (BKA) join-processing algorithms
+# 			(see BLOCKED NESTED-LOOP AND BATCHED KEY ACCESS JOINS)
+#
+# 		) Whether derived tables, view references or common table expressions should be merged into the
+# 			outer query block, or materialized using an internal temporary table.
+#
+# These hint types apply to specific tables, or all tables in a query block.
+#
+# Syntax of table-level hints:
+#
+# 		hint_name([@query_block_name] [tbl_name [, tbl_name] ---])
+# 		hint_name([tbl_name@query_block_name [, tbl_name@query_block_name] ---])
+#
+# The syntax refers to these terms:
+#
+# 		) hint_name: These hint names are permitted:
+#
+# 			) BKA, NO_BKA: Enable or disable BKA for the specified tables.
+#
+# 			) BNL, NO_BNL: Enable or disable BNL for the specified tables.
+#
+# 			) MERGE, NO_MERGE: Enable merging for the specified tables, view references or common table expressions; or disable
+# 									merging and use materialization instead.
+#
+# 			NOTE:
+#
+# 				To use a BNL or BKA hint to enable join buffer for any inner table of an outer join,
+# 				join buffering must be enabled for all inner tables of the outer join.
+#
+# 		) tbl_name: The name of a table used in the statement.
+#
+# 			The hint applies to all tables that it names. 
+#
+# 			If the hint names no tables, it applies to all tables of the query block in which it occurs.
+#
+# 			If a table has an alias, hints must refer to the alias, not the table name.
+#
+# 			Table names in hints cannot be qualified with schema names.
+#
+# 		) query_block_name: The query block to which the hint applies.
+#
+# 			If the hint includes no leading @query_block_name, the hint applies to the query
+# 			block in which it occurs.
+#
+# 			For tbl_name@query_block_name syntax, the hint applies to the named table in the named query block.
+#
+# 			To assign a name to a query block, see OPTIMIZER HINTS FOR NAMING QUERY BLOCKS.
+#
+# 	Examples:
+#
+# 		SELECT /*+ NO_BKA(t1, t2) */ t1 * FROM t1 INNER JOIN t2 INNER JOIN t3;
+# 		SELECT /*+ NO_BNL() BKA(t1) */ t1 * FROM t1 INNER JOIN t2 INNER JOIN t3;
+# 		SELECT /*+ NO_MERGE(dt) */ * FROM (SELECT * FROM t1) AS dt;
+#
+# A table-level hint applies to tables that receives records from previous tables,
+# not sender tables.
+#
+# Consider this statement:
+#
+# 		SELECT /*+ BNL(t2) */ FROM t1, t2;
+#
+# If the optimizer chooses to process t1 first, it applies a Block Nested-Loop join to t2 by buffering
+# the rows from t1 before starting to read from t2.
+#
+# If the optimizer instead chooses to process t2 first, the hint has no effect because
+# t2 is a sender table.
+#
+# For the MERGE and NO_MERGE hints, these precedence rules apply:
+#
+# 		) A hint takes precedence over any optimizer heuristic that is not a technical constraint.
+# 			(If providing a hint as a suggestion has no effect, the optimizer has a reason for ignoring it)
+#
+# 		) A hint takes precedence over the derived_merge flag of the optimizer_switch system variable.
+#
+# 		) For view references, an ALGORITHM={MERGE|TEMPTABLE} clause in teh view definition takes precedence 
+# 			over a hint specified in the query referencing the view.
+#
+# INDEX-LEVEL OPTIMIZER HINTS
+#
+# Index-level hints affect which index-processing strategies the optimizer uses for particular tables or indexes.
+#
+# These hint types affect use of Index Condition Pushdown (ICP), Multi-Range Read (MRR), Index Merge, and 
+# range optimizations.
+#
+# SEE OPTIMIZING SELECT STATEMENTS.
+#
+# Syntax of index-level hints:
+#
+# 		hint_name([@query_block_name] tbl_name [index_name [, index_name] ---])
+# 		hint_name(tbl_name@query_block_name [index_name [, index_name] ---])
+#
+# The syntax refers to these terms:
+#
+# 		) Hint_name: These hint names are permitted:
+#
+# 			) INDEX_MERGE, NO_INDEX_MERGE: Enable or disable the Index Merge access method for the specified
+# 				table or indexes.
+#
+# 				For information about this access method, see INDEX MERGE OPTIMIZATION.
+#
+# 				These hints apply to all three Index Merge algorithms.
+#
+# 				The INDEX_MERGE hint forces the optimizer to use Index Merge for the specified
+# 				table using the specified set of indexes.
+#
+# 				If no index is specified, the optimizer considers all possible index combinations
+# 				and selects the least expensive one.
+#
+# 				The hint may be ignored if the index combination is inapplicable to the given statement.
+#
+# 				The NO_INDEX_MERGE hint disables Index Merge combinations that involve any of the specified indexes.
+#
+# 				If the hint specifies no indexes, Index Merge is not permitted for the table.
+#
+# 			) MRR, NO_MRR: Enable or disable MRR for the specified table or indexes.
+#
+# 				MRR hints apply only to InnoDB and MyISAM tables.
+#
+# 				For information about this access method, see MULTI-RANGE READ OPTIMIZATION
+#
+# 			) NO_ICP: Disable ICP for the specified table or indexes.
+#
+# 				By default, ICP is a candidate optimization strategy, so there is no hint
+# 				for enabling it.
+#
+# 				For information about this access method, see INDEX CONDITION PUSHDOWN OPTIMIZATION
+#
+# 			) NO_RANGE_OPTIMIZATION:
+#
+# 				Disable index range access for the specified table or indexes.
+#
+# 				This hint also disables Index Merge and Loose Index Scan for the table or indexes.
+#
+# 				By default, range access is a candidate optimization strategy, so there is no hint for enabling it.
+#
+# 				This hint may be useful when the number of ranges may be high and range optimization would require many resources.
+#
+# 			) SKIP_SCAN, NO_SKIP_SCAN:
+#
+# 				Enable or disable the Skip Scan access method for the specified table or indexes.
+#
+# 				For information about this access method, see SKIP SCAN RANGE ACCESS METHOD.
+#
+# 				These hints are available as of MySQL 8.0.13
+#
+# 				The SKIP_SCAN hint forces the optimizer to use Skip Scan for the specified table using
+# 				the specified set of indexes.
+#
+# 				If no index is specified, the optimizer considers all possible indexes and selects the
+# 				least expensive one.
+#
+# 				The hint may be ignored if the index is inapplicable to the given statement.
+#
+# 				The NO_SKIP_SCAN hint disables Skin Scan for the specified indexes.
+#
+# 				If the hint specifies no indexes, Skip Scan is not permitted for the table.
+#
+# 			) tbl_name: The table to which the hint applies
+#
+# 			) index_name: The name of an index in the named table.
+#
+# 				The hint applies to all indexes that it names. If the hint names no indexes,
+# 				it applies to all indexes in teh table.
+#
+# 				To refer to a primary key, use the name PRIMARY.
+#
+# 				To see the index names for a table, use SHOW_INDEX.
+#
+# 			) query_block_name: The query block to which the hint applies.
+#
+# 				If the hint includes no leading @query_block_name, the hint applies
+# 				to the query block in which it occurs.
+#
+# 				For tbl_name@query_block_name syntax, the hint applies to the named table
+# 				in teh named query block.
+#
+# 				To assign a name to a query block, see OPTIMIZER HINTS FOR NAMING QUERY BLOCKS.
+#
+# Examples:
+#
+# SELECT /*+ INDEX_MERGE(t1 f3, PRIMARY) */ f2 FROM t1
+# 	WHERE f1 = 'o' AND f2 = f3 AND f3 <= 4;
+#
+# SELECT /*+ MRR(t1) */ * FROM t1 WHERE f2 <= 3 AND 3 <= f3;
+#
+# SELECT /*+ NO_RANGE_OPTIMIZATION(t3 PRIMARY, f2_idx) */ f1
+# 		FROM t3 WHERE f1 > 30 AND f1 < 33;
+#
+# INSERT INTO t3(f1, f2, f3)
+# 		(SELECT /*+ NO_ICP(t2) */ t2.f1, t2.f2, t2.f3 FROM t1, t2
+# 		WHERE t1.f1=t2.f1 AND t2.f2 BETWEEN t1.f1
+# 		AND t1.f2 AND t2.f2 + 1 >= t1.f1 + 1);
+#
+# SELECT /*+ SKIP_SCAN(t1 PRIMARY) */ f1, f2
+# 	FROM t1 WHERE f2 > 40;
+#
+# The following examples use the Index Merge hints, but other index-level
+# hints follow the same principles regarding hint ignoring and precedence
+# of optimizer hints in relation to the optimizer_switch system variable or index hints.
+#
+# Assume that table t1 has columns a,b,c and d and that indexes named i_a, i_b and i_c exist
+# on a, b and c, respectively:
+#
+# 		SELECT /*+ INDEX_MERGE(t1 i_a, i_b, i_c)*/ * FROM t1
+# 			WHERE a = 1 AND b = 2 AND c = 3 AND d = 4;
+#
+# Index Merge is used for (i_a, i_b, i_c) in this case.
+#
+# 		SELECT /*+ INDEX_MERGE(t1 i_a, i_b, i_c)*/ * FROM t1
+# 			WHERE b = 1 AND c = 2 AND d = 3;
+#
+# Index merge is used for (i_b, i_c) in this case
+#
+# /*+ INDEX_MERGE(t1 i_a, i_b) NO_INDEX_MERGE(t1 i_b) */
+#
+# NO_INDEX_MERGE is ignored because there is a preceding hint for the same table.
 #
 # 
+# /*+ NO_INDEX_MERGE(t1 i_a, i_b) INDEX_MERGE(t1 i_b) */
+#
+# INDEX_MERGE is ignored because there is a preceding hint for the same table.
+#
+# For the INDEX_MERGE and NO_INDEX_MERGE optimizer hints, these precedence rules apply:
+#
+# 		) If an optimizer hint is specified and is applicable, it takes precedence over the Index Merge-related flags of the optimizer_switch system variable.
+#
+# 			SET optimizer_switch='index_merge_intersection=off';
+# 			SELECT /*+ INDEX_MERGE(t1 i_b, i_c) */ * FROM t1
+# 			WHERE b = 1 AND c = 2 AND d = 3;
+#
+# 		) The hint takes precedence over optimizer_switch. Index merge is used for (i_b, i_c) in this case.
+#
+# 			SET optimizer_switch='index_merge_intersection=on';
+# 			SELECT /*+ INDEX_MERGE(t1 i_b) */ * FROM t1
+# 			WHERE b = 1 AND c = 2 AND d = 3;
+#
+# 		) The hint specifies only one index, so it is inapplicable, and the optimizer_switch flag(on) applies.
+# 			Index Merge is used if the optimizer assesses it to be cost efficient.
+#
+# 			SET optimizer_switch='index_merge_intersection=off';
+# 			SELECT /*+ INDEX_MERGE(t1 i_b) */ * FROM t1
+# 			WHERE b = 1 AND c = 2 AND d = 3;
+#
+# 		) The hint specifies only one index, so it is inapplicable, and the optimizer_switch(off) applies. Index merge is not used.
+#
+# ) The USE INDEX, FORCE INDEX, and IGNORE INDEX hints have higher priority than the INDEX_MERGE and NO_INDEX_MERGE optimizer hints.
+#
+# 		) /*+ INDEX_MERGE(t1 i_a, i_b, i_c) */ --- IGNORE INDEX i_a
+#
+# 			IGNORE INDEX takes precedence over INDEX_MERGE, so index i_a is excluded from the possible ranges for Index Merge.
+#
+# 		) /*+ NO_INDEX_MERGE(t1 i_a, i_b) */ --- FORCE INDEX i_a, i_b
+#
+# 			Index Merge is disallowed for i_a, i_b because of FORCE INDEX, but the optimizer is forced to use either i_a or i_b for range or ref access.
+# 			There are no conflicts. Both hints are applicable.
+#
+# 		) If an IGNORE INDEX hint names multiple indexes, those indexes are unavailable for Index Merge
+#
+# 		) The FORCE INDEX and USE INDEX hints make only the named indexes to be available for Index Merge.
+#
+# 			SELECT /*+ INDEX_MERGE(t1 i_a, i_b, i_c) */ a FROM t1
+# 			FORCE INDEX (i_a, i_b) WHERE c = 'h' AND a = 2 AND b = 'b';
+#
+# 			The Index Merge intersection access algorithm is used for (i_a, i_b).
+#
+# 			The same is true if FORCE INDEX is changed to USE INDEX
+#
+# SUBQUERY OPTIMIZER HINTS
+#
+# Subquery hints affect whether to use semi-join transformations and which semi-join strategies
+# to permit, and, when semi-joins are not used, whether to use subquery materialization or IN-to-EXISTS transformations.
+#
+# For more information about these optimizations, see OPTIMIZING SUBQUERIES, DERIVED TABLES, VIEW REFERENCES AND COMMON TABLE EXPRESSIONS for more info.
+#
+# Syntax of hints that affect semi-join strategies:
+#
+# 		hint_name([@query_block_name] [strategy [, strategy] ---])
+#
+# The syntax refers to these terms:
+#
+# 		) hint_name: These hint names are permitted:
+#
+# 				) SEMIJOIN, NO_SEMIJOIN: Enable or disable the named semi-join strats.
+#
+# 		) Strategy: A semi-join strategy to be enabled or disabled.
+#
+# 						These strategy names are permitted: DUPSWEEDOUT, FIRSTMATCH, LOOSESCAN, MATERIALIZATION.
+#
+# 						For SEMIJOIN hints, if no strategies are named, semi-join is used if possible based on the strategies
+# 						enabled according to the optimizer_switch system variable.
+#
+# 						If strategies are named but inapplicable for the statement, DUPSWEEDOUT is used.
+#
+# 						For NO_SEMIJOIN hints, if no strategies are named, semi-join is not used.
+#
+# 						If strategies are named that rule out all applicable strategies for the statement,
+# 						DUPSWEEDOUT is used.
+#
+# IF one subquery is nested within another and both are merged into a semi-join of an outer query,
+# any specifications of semi-join strategies for the innermost query are ignored.
+#
+# SEMIJOIN and NO_SEMIJOIN hints can still be used to enable or disable semi-join transformations
+# for such nested subqueries.
+#
+# If DUPSWEEDOUT is disabled, on occasion the optimizer may generate a query plan that is far from optimal.
+#
+# This occurs due to heuristic pruning during greedy search, which can be avoided by setting optimizer_prune_level=0
+#
+# Examples:
+#
+# 		SELECT /*+ NO_SEMIJOIN(@subq1 FIRSTMATCH, LOOSESCAN) */ * FROM t2
+# 			WHERE t2.a IN (SELECT /*+ QB_NAME(subq1) */ a FROM t3);
+#
+# 		SELECT /*+ SEMIJOIN(@subq1 MATERIALIZATION, DUPSWEEDOUT) */ * FROM t2
+# 			WHERE t2.a IN (SELECT /*+ QB_NAME(subq1) */ a FROM t3);
+#
+# Syntax of hints that affect whether to use subquery materialization or IN-to-EXISTS transformations:
+#
+# 		SUBQUERY([@query_block_name] strategy)
+#
+# The hint name is always SUBQUERY.
+#
+# For SUBQUERY hints, these strategy values are permitted: INTOEXISTS, MATERIALIZATION.
+#
+# Examples:
+#
+# 		SELECT id, a IN (SELECT /*+ SUBQUERY(MATERIALIZATION */ a FROM t1) FROM t2;
+# 		SELECT * FROM t2 WHERE t2.a IN (SELECT /*+ SUBQUERY(INTOEXISTS */ a FROM t1);
+#
+# For semi-join and SUBQUERY hints, a leading @query_block_name specifies teh query block
+# to which the hint applies.
+#
+# If the hint includes no leading @query_block_name, the hint applies to the query block
+# in which it occurs.
+#
+# To assign a name to a query block, see OPTIMIZER HINTS FOR NAMING QUERY BLOCKS.
+#
+# If a hint comment contains multiple subquery hints, the first is used.
+#
+# If there are other following hints of that type, they produce a warning.
+#
+# Following hints of other types are silently ignored.
+#
+# STATEMENT EXECUTION TIME OPTIMIZER HINTS
+#
+# The MAX_EXECUTION_TIME hint is permitted only for SELECT statements.
+#
+# It places a limit n(a timeout value in miliseconds) on how long a statement is permitted to execute before
+# the server terminates it:
+#
+# 		MAX_EXECUTION_TIME(N)
+#
+# Examples with a timeout of 1 second (1000 miliseconds):
+#
+# 		SELECT /*+ MAX_EXECUTION_TIME(1000) */ * FROM t1 INNER JOIN t2 WHERE ---
+#
+# The MAX_EXECUTION_TIME(N) hint sets a statement execution timeout of N miliseconds.
+#
+# If this option is absent or N is 0, the statement timeout established by the max_execution_time system variable applies.
+#
+# The MAX_EXECUTION_TIME hint is applicable as follows:
+#
+# 		) For statements with multiple SELECT keywords,, such as unions or statements with subqueries, MAX_EXECUTION_TIME
+# 			applies to the entire statement and must appear after the first SELECT.
+#
+# 		) It applies to read-only SELECT statements. Statements that are not read only are those that invoke a stored function that modifies data as a side effect.
+#
+# 		) It does not apply to SELECT statements in stored programs and is ignored.
+#
+# VARIABLE-SETTING HINT SYNTAX
+#
+# The SET_VAR hint sets the session value of a system variable temporarily (for the duration of a single statement).
+# Examples:
+#
+# 		SELECT /*+ SET_VAR(sort_buffer_size = 16M) */ name FROM people ORDER BY name;
+# 		INSERT /*+ SET_VAR(foreign_key_checks=OFF) */ INTO t2 VALUES(2);
+# 		SELECT /*+ SET_VAR(optimizer_switch = 'mrr_cost_based=off') */ 1;
+#
+# Syntax of the SET_VAR hint:
+#
+# 		SET_VAR(var_name = value)
+#
+# var_name names a system variable that has a session value (although not all such variables can be named, as explained later).
+# value is the value to assign to the variable; the value must be a scalar.
+#
+# SET_VAR makes a temporary variable change, as demonstrated by these statements:
+#
+# 		SELECT @@unique_checks;
+# 		+---------------------+
+# 		| @@unique_checks 	 |
+# 		+---------------------+
+# 		| 						1   |
+# 		+---------------------+
+#
+# 		SELECT /* SET_VAR(unique_checks=OFF) */ @@unique_checks;
+# 		+---------------------+
+# 		| @@unique_checks 	 |
+# 		+---------------------+
+# 		| 						0   |
+# 		+---------------------+
+#
+# 		SELECT @@unique_checks;
+# 		+---------------------+
+# 		| @@unique_checks 	 |
+# 		+---------------------+
+# 		| 						1   |
+# 		+---------------------+
+#
+# With SET_VAR, there is no need to save and restore the variable value.
+#
+# This enables you to replace multiple statements by a single statement.
+# Consider this sequence of statements:
+#
+# 		SET @saved_val = @@SESSION.var_name;
+# 		SET @@SESSION.var_name = value;
+# 		SELECT ---
+# 		SET @@SESSION.var_name = @saved_val;
+#
+# The sequence can be replaced by this single statement:
+#
+# 		SELECT /*+ SET_VAR(var_name = value) ---
+#
+# Standalone SET statements permit any of these syntaxes for naming session variables:
+#
+# 		SET SESSION var_name = value;
+# 		SET @@SESSION.var_name = value;
+# 		SET @@.var_name = value;
+#
+# Because the SET_VAR hint applies only to session variables, session scope is implicit,
+# and SESSION @@SESSION., and @@ are neither needed nor permitted.
+#
+# Including explicit session-indicator syntax results in the SET_VAR hint being ignored
+# with a warning.
+#
+# Not all session variables are permitted for use with SET_VAR.
+#
+# individual system variable descriptions indicate whether each variable is hintable.
+#
+# You can also check a system variable at runtime by attempting to use it with SET_VAR.
+# If the variable is not hintable, a warning occurs:
+#
+# 		SELECT /*+ SET_VAR(collation_server = 'utf8') */ 1;
+# 		+---+
+# 		| 1 |
+# 		+---+
+# 		| 1 |
+# 		+---+
+# 		1 row in set, 1 warning (0.00 sec)
+#
+# 		SHOW WARNINGS\G
+# 		***************** 1. row ******************
+# 		
+# 			Level: Warning
+# 			 Code: 4537
+# 		 Message: Variable 'collation_server' cannot be set using SET_VAR hint.
+#
+# SET_VAR syntax permits setting only a single variable, but multiple hints cna be given to set multiple variables:
+#
+# 		SELECT /*+ SET_VAR(optimizer_switch = 'mrr_cost_based=off')
+# 					  SET_VAR(max_heap_table_size = 1G) */ 1;
+#
+# If several hints with the same variable name appear in the same statement, the first one is
+# applied and the others are ignored with a warning:
+#
+# 		SELECT /*+ SET_VAR(max_heap_table_size = 1G)
+# 					  SET_VAR(max_heap_table_size = 3G) */ 1;
+#
+# In this case, the second hint is ignored with a warning that it is conflicting.
+#
+# A SET_VAR hint is ignored with a warning if no system variable has the specified
+# name or the variable value is incorrect:
+#
+# 		SELECT /*+ SET_VAR(max_size = 1G) */ 1;
+# 		SELECT /*+ SET_VAR(optimizer_switch = 'mrr_cost_based=yes') */ 1;
+#
+# For the first statement, there is no max_size variable.
+#
+# For the second statement, mrr_cost_flag takes values of on or off, so attempting to set "yes" is incorrect.
+#
+# In each case, the hint is ignored with a warning.
+#
+# The  SET_VAR hint is permitted only at the statement level.
+#
+# If used in a subquery, the hint is ignored with a warning.
+#
+# Slave servers ignore SET_VAR hints in replicated statements to avoid the potential for security issues.
+#
+# RESOURCE GROUP HINT SYNTAX
+#
+# The RESOURCE_GROUP optimizer hint is used for resource group management (see more under RESOURCE GROUPS).
+#
+# This hint assigns the thread that executes a statement to the named resource group temporarily (for the
+# duration of the statement).
+#
+# It requires the RESOURCE_GROUP_ADMIN or RESOURCE_GROUP_USER privilege.
+#
+# Examples:
+#
+# 		SELECT /*+ RESOURCE_GROUP(USR_default) */ name FROM people ORDER BY name;
+# 		INSERT /*+ RESOURCE_GROUP(Batch */ INTO t2 VALUES(2);
+#
+# Syntax of the RESOURCE_GROUP hint:
+#
+# 		RESOURCE_GROUP(group_name)
+#
+# group_name indicates the resource group to which the thread should be assigned
+# for the duration of statement execution.
+#
+# If the group is nonexistent, a warning occurs and the hint is ignored.
+#
+# The RESOURCE_GROUP hint must appear after the initial statement keyword (SELECT, INSERT, REPLACE, UPDATE or DELETE)
+#
+# An alternative to RESOURCE_GROUP is the SET_RESOURCE_GROUP statement, which nontemporarily assigns threads
+# to a resource group.
+#
+# See SET RESOURCE GROUP SYNTAX for more info.
+#
+# OPTIMIZER HINTS FOR NAMING QUERY BLOCKS
+#
+# Table-level, index-level and subquery optimizer hints permit specific query blocks
+# to be named as part of their argument syntax.
+#
+# To create these names, use the QB_NAME hint, which assigns a name to the query block
+# in which it occurs:
+#
+# 		QB_NAME(name)
+#
+# QB_NAME hints can be used to make explicit in a clear way which query blocks other hints apply to.
+#
+# They also permit all non-query block name hints to be specified within a single hint comment
+# for easier understanding of complex statements.
+#
+# Consider teh following statement:
+#
+# 	SELECT ---
+# 		FROM (SELECT ---
+# 		FROM (SELECT --- FROM ---)) ---
+#
+# QB_NAME hints assign names to query blocks in the statement:
+#
+# 	SELECT /*+ QB_NAME(qb1) */ ---
+# 		FROM (SELECT /*+ QB_NAME(qb2) */ ---
+# 		FROM (SELECT /*+ QB_NAME(qb3) */ --- FROM ---)) ---
+#
+# Then other hints can use those names to refer to the appropriate query blocks:
+#
+# 	SELECT /*+ QB_NAME(qb1) MRR(@qb1 t1) BKA(@qb2) NO_MRR(@qb3t1 idx1, id2) */ ---
+# 		FROM (SELECT /*+ QB_NAME(qb2) */ ---
+# 		FROM (SELECT /*+ QB_NAME(qb3) */ --- FROM ---))---
+#
+# The resulting effect is as follows:
+#
+# 		) MRR(@qb1_t1) applies to table t1 in query block qb1
+#
+# 		) BKA(@qb2) applies to query block qb2
+#
+# 		) NO_MRR(@qb3_t1_idx1, id2) applies to indexes idx1 and idx2 in table t1 in query block qb3.
+#
+# Query block names are identifiers and follow the usual rules about what names are valid and how to quote them.
+# (See more later under SCHEMA OBJECT NAMES)
+#
+# For example a query block name that contains spaces must be quoted, which can be done using backticks:
+#
+# 		SELECT /*+ BKA(@`my hint name`) */ ---
+# 			FROM (SELECT /*+ QB_NAME(`my hint name`)` */ ---) --- 			
+# 
+# If the ANSI_QUOTES SQL mode is enabled, it is also possible to quote query block names
+# within double quotation marks:
+#
+# 		SELECT /*+ BKA(@"my hint name") */ ---
+# 			FROM (SELECT /*+ QB_NAME("my hint name") */ ---) ---
+#
+# SWITCHABLE OPTIMIZATIONS
+#
+# The optimizer_switch system variable enables control over optimizer behavior.
+#
+# Its value is a set of flags, each of which has a value of on or Off to indicate whether the
+# corresponding optimizer behavior is enabled or disabled.
+#
+# This variable has global and session values and can be changed at runtime.
+#
+# The global default can be set at server startup.
+#
+# https://dev.mysql.com/doc/refman/8.0/en/switchable-optimizations.html
