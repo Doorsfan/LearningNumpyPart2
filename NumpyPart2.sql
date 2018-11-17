@@ -55496,4 +55496,2007 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # The global default can be set at server startup.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/switchable-optimizations.html
+# To see the current set of optimizer flags, select the variable value:
+#
+# 		SELECT @@optimizer_switch\G
+# 		********************** 1. row ************************
+# 		@@optimizer_switch: index_merge=on,index_merge_union=on,
+# 								  index_merge_sort_union=on,
+# 								  index_merge_intersection=on,
+# 								  engine_condition_pushdown=on,
+# 								  index_condition_pushdown=on,
+# 								  mrr=on,mrr_cost_based=on,
+# 								  block_nested_loop=on, batched_key_access=off,
+# 								  
+# 								  materialization=on, semijoin=on, loosescan=on,
+# 								  firstmatch=on,duplicateweedout=on,
+# 								  subquery_materialization_cost_based=on,
+# 								  use_index_extensions=on,
+# 								  condition_fanout_filter=on,derived_merge=on,
+# 								  use_invisible_indexes=off,skip_scan=on
+#
+# To change the value of optimizer_switch, assign a value consisting of a comma-separated
+# list of one or more commands:
+#
+# SET [GLOBAL|SESSION] optimizer_switch='command[,command] ---';
+#
+# Each command value should have one of the forms shown in the following table.
+#
+# Command Syntax 					Meaning
+#
+# default 					Reset every optimization to its default value
+#
+# opt_name=default 		Set the named optimization to its default value
+#
+# opt_name=off 			Disable the named optimization
+#
+# opt_name=on 				Enable the named optimization
+#
+# The order of commands in the value does not matter, although the default command is
+# executed first if present.
+#
+# Setting an opt_name flag to default sets it to whichever of on or off is its default value.
+# Specifying any given opt_name more than once in the value is not permitted and causes an error.
+#
+# Any errors in the value cause the assignment to fail with an error, leaving the value
+# of optimizer_switch unchanged.
+#
+# The following list describes the permissible opt_name flag names, grouped by optimization strategy:
+#
+# 		) Batched Key Access Flags
+#
+# 			) batched_key_access (default off)
+#
+# 				Controls use of BKA join algorithm
+#
+# 			For batched_key_access to have any effect when set to on, the mrr flag must also be on.
+# 			Currently, the cost estimation for MRR is too pessimistic.
+#
+# 			Hence, it is also necessary for mrr_cost_based to be off for BKA to be used.
+#
+# 			For more info, see BLOCK NESTED-LOOP AND BATCHED KEY ACCESS JOINS
+#
+# 		) Block Nested-Loop Flags
+#
+# 			) block_nested_loop (default on)
+#
+# 				Controls use of BNL join algorithm
+#
+# 			For more information, see BLOCK NESTED-LOOP AND BATCHED KEY ACCESS JOINS"
+#
+# 		) Condition Filtering Flags
+#
+# 			) condition_fanout_filter (default on)
+#
+# 				Controls use of condition filtering
+#
+# 			For more information, see CONDITION FILTERING
+#
+# 		) Derived Table Merging Flags
+#
+# 			) derived_merge (default on)
+#
+# 				Controls merging of derived tables and views into outer query block
+#
+# 			The derived_merge flag controls whether the optimizer attempts to merge derived tables,
+# 			view references, and common table expressions into the outer query block, assuming that
+# 			no other rule prevents merging.
+#
+# 			For example, an ALGORITHM directive for a view takes precedence over the derived_merge setting.
+# 			By default, the flag is on to enable merging.
+#
+# 			For more info, read OPTIMIZING DERIVED TABLES, VIEW REFERENCES, AND COMMON TABLE EXPRESSIONS
+#
+# 		) Engine Condition Pushdown Flags
+#
+# 			) engine_condition_pushdown (default on)
+#
+# 				Controls engine condition pushdown
+#
+# 			For more information, see ENGINE CONDITION PUSHDOWN OPTIMIZATION
+#
+# 		) Index Condition Pushdown Flags
+#
+# 			) index_condition_pushdown (default on)
+#
+# 				Controls index condition pushdown
+#
+# 			See INDEX CONDITION PUSHDOWN OPTIMIZATION
+#
+# 		) Index Extensions Flags
+#
+# 			) use_index_extensions (default on)
+#
+# 				Controls use of index extensions
+#
+# 			For more information, see USE OF INDEX EXTENSIONS
+#
+# 		) Index Merge Flags
+#
+# 			) index_merge (default on)
+#
+# 				Controls all Index Merge optimizations
+#
+# 			) index_merge_intersection (default on)
+#
+# 				Controls the Index Merge Intersection Access optimization.
+#
+# 			) index_merge_sort_union (default on)
+#
+# 				Controls the Index Merge Sort-Union Access optimization
+#
+# 			) index_merge_union (default on)
+#
+# 				Controls the Index Merge Union Access optimization
+#
+# 			For more info, see INDEX MERGE OPTIMIZATION
+#
+# 		) Index Visibility Flags
+#
+# 			) use_invisible_indexes (default off)
+#
+# 				Controls use of invisible indexes
+#
+# 			For more information, see Invisible Indexes
+#
+# 		) Multi-Range Read Flags
+#
+# 			) mrr (default on)
+#
+# 				Controls the Multi-Range Read strategy.
+#
+# 			) mrr_cost_based (default on)
+#
+# 				Controls use of cost-based MRR if mrr=on
+#
+# 			For more info, see MULTI-RANGE READ OPTIMIZATION
+#
+# 		) Skip Scan Flags
+#
+# 			) skip_scan (default on)
+#
+# 				Controls use of Skip Scan access method.
+#
+# 			For more information, see SKIP SCAN RANGE ACCESS METHOD.
+#
+# 		) Semi-Join Flags
+#
+# 			) semijoin (default on)
+#
+# 				Controls all semi-join strategies
+#
+# 			) duplicateweedout (default on)
+#
+# 				Controls the semi-join Duplicate Weedout strategy
+#
+# 			) firstmatch (default on)
+#
+# 				Controls the semi-join FirstMatch strategy
+#
+# 			) loosescan (default on)
+#
+# 				Controls the semi-join LooseScan strategy (not to be confused with Loose Index Scan for GROUP BY)
+#
+# 			The semijoin, firstmatch, loosescan and duplicateweedout flags enable control over semi-join strategies.
+#
+# 			The semijoin flag controls whether semi-joins are used.
+#
+# 			If it is set to on, teh firstmatch and loosescan flags enable finer control over the permitted semi-join strategies.
+#
+# 			If the duplicateweedout semi-join strategy is disabled, it is not used unless all other applicable strategies are also disabled.
+#
+# 			If semijoin and materialization are both on, semi-joins also use materialization where applicable. These flags are on by default.
+#
+# 			For more information, see OPTIMIZING SUBQUERIES, DERIVED TABLES, VIEW REFERENCES, AND COMMON TABLE EXPRESSIONS WITH SEMI-JOIN TRANSFORMATION.
+#
+# 		) Subquery Materialization Flags
+#
+# 			) materialization (default on)
+#
+# 				Controls materialization (including semi-join materialization)
+#
+# 			) subquery_materialization_cost_based (default on)
+#
+# 				Use cost-based materialization choice.
+#
+# 			The materialization flag controls whether subquery materialization is used.
+#
+# 			If semijoin and materialization are both on, semi-joins also use materialization
+# 			where applicable.
+#
+# 			These flags are on by default.
+#
+# 			The subquery_materialization_cost_based flag enables control over the choice between subquery materialization
+# 			and IN-to-EXISTS subquery transformation.
+#
+# 			if the flag is on (the default), the optimizer performs a cost-based choice between subquery-materialization
+# 			and IN-to-EXISTS subquery transformation if either method could be used.
+#
+# 			if the flag is off, the optimizer chooses subquery materialization over IN-to-EXISTS subquery transformation.
+#
+# 			For more information, see OPTIMIZING SUBQUERIES, DERIVED TABLES, VIEW REFERENCES AND COMMON TABLE EXPRESSIONS
+#
+# When you asssign a value to optimizer_switch, flags that are not mentioned keep their current value.
+#
+# THis makes it possible to enable or disable specific optimizer behaviors in a single statement without affecting
+# other behaviors.
+#
+# The statement does not depends on what other optimizer flags exist and what their values are.
+#
+# Suppose that all Index Merge optimizations are enabled:
+#
+# 			SELECT @@optimizer_switch\G
+# 			********************** 1. row *********************
+# 			@@optimizer_switch: index_merge=on,index_merge_union=on,
+# 									  index_merge_sort_union=on,
+# 									  index_merge_intersection=on,
+# 									  engine_condition_pushdown=on,
+# 									  index_condition_pushdown=on,
+# 									  mrr=on, mrr_cost_based=on,
+#
+# 									  block_nested_loop=on, batched_key_access=off,
+# 									  materialization=on, semijoin=on, loosescan=on,
+# 									  firstmatch=on, subquery_materialization_cost_based=on,
+# 									  use_index_extensions=on, condition_fanout_filter=on
+#
+# If the server is using the Index Merge Union or Index Merge Sort-Union access methods for certain
+# queries and you want to check whether the optimizer will perform better without them, set the variable like this:
+#
+# 			SET optimizer_switch='index_merge_union=off,index_merge_sort_union=off';
+#
+# 			SELECT @@optimizer_switch\G
+# 			*********************** 1. row ********************
+# 			@@optimizer_switch: index_merge=on, index_merge_union=off,
+# 									  index_merge_sort_union=off,
+# 									  index_merge_intersection=on,
+# 									  engine_condition_pushdown=on,
+# 									  index_condition_pushdown=on,
+# 									  mrr=on,mrr_cost_based=on,
+#
+# 									  block_nested_loop=on, batched_key_access=off,
+# 									  materialization=on,semijoin=on,loosescan=on,
+# 									  firstmatch=on,
+# 									  subquery_materialization_cost_based=on,
+# 									  use_index_extensions=on,
+# 									  condition_fanout_filter=on
+#
+# INDEX HINTS
+#
+# Index hints gives the optimizer information about how to choose indexes during query processing.
+# Index hints, described here, differ from optimizer hints, described in OPTIMIZER HINTS.
+#
+# Index and optimizer hints may be used separately or together.
+#
+# Index hints apply only to SELECT statements. 
+# (They are accepted by the parser for UPDATE statements but are ignored and have no effect)
+# 		
+# Index hints are specified following a table name. 
+# (For the general syntax for specifying tables in a SELECT statement, see JOIN SYNTAX for more info)
+#
+# The syntax for referring to an individual table, including index hints, looks like this:
+#
+# 		tbl_name [[AS] alias] [index_hint_list]
+#
+# 		index_hint_list:
+# 			index_hint [index_hint] ---
+#
+# 		index_hint:
+# 			USE {INDEX|KEY}
+# 				[FOR {JOIN|ORDER BY|GROUP BY}] ([index_list])
+# 		 | IGNORE {INDEX|KEY}
+# 				[FOR {JOIN|ORDER BY|GROUP BY}] (index_list)
+# 		 | FORCE {INDEX|KEY}
+# 				[FOR {JOIN|ORDER BY|GROUP BY}] (index_list)
+#
+# 		index_list:
+# 			index_name [, index_name] ---
+#
+# The USE INDEX (index_list) hint tells MySQL to use only one of the named indexes to find rows in the table.
+# The alternative syntax IGNORE INDEX (index_list)  tells MySQL to not use some particular index or indexes.
+#
+# These hints are useful if EXPLAIN shows that MySQL is using the wrong index from the list of possible indexes.
+#
+# The FORCE INDEX hint acts like USE INDEX (index_list), with the addition that a table scan is assumed to be
+# VERY expensive.
+#
+# In other words, a table scan is used only if there is no way to use one of the named indexes to find rows
+# in the table.
+#
+# Each hint requires index names, not column names. To refer to a primary key, use the name PRIMARY.
+# To see the index names for a table, use the SHOW_INDEX statement or the INFORMATION_SCHEMA.STATISTICS table.
+#
+# An index_name value need not be a full index name. It can be unambiguous prefix of an index name.
+# If a prefix is ambiguous, an error occurs.
+#
+# Examples:
+#
+# 		SELECT * FROM table1 USE INDEX (col1_index, col2_index)
+# 			WHERE col1=1 AND col2=2 AND col3=3;
+#
+# 		SELECT * FROM table1 IGNORE INDEX (col3_index)
+# 			WHERE col1=1 AND col2=2 AND col3=3;
+#
+# The syntax for index hints has the following characteristics:
+#
+# 		) It is syntactically valid to omit index_list for USE_INDEX, which means "use no indexes".
+#
+# 			Omitting index_list for FORCE_INDEX or IGNORE INDEX is a syntax error.
+#
+# 		) You can specify the scope of an index hint by adding a FOR clause to the hint.
+#
+# 			This provides more fine-grained control over optimizer selection of an execution plan for
+# 			various phases of query processing. 
+#
+# 			To affect only the indexes used when MySQL decides how to find rows in the table and how
+# 			to process joins, use FOR JOIN.
+#
+# 			To influence index usage for sorting or grouping rows, use FOR ORDER BY or FOR GROUP BY.
+#
+# 		) You can specify multiple index hints:
+#
+# 				SELECT * FROM t1 USE INDEX (i1) IGNORE INDEX FOR ORDER BY (i2) ORDER BY a;
+#
+# 			It is not an error to name the same index in several hints (even with the same hint):
+#
+# 				SELECT * FROM t1 USE INDEX (i1) USE INDEX (i1,i1);
+#
+# 			However, it is an error to mix USE INDEX and FORCE INDEX for the same table:
+#
+# 				SELECT * FROM t1 USE INDEX FOR JOIN (i1) FORCE INDEX FOR JOIN (i2);
+#
+# If an index hint includes no FOR clause, the scope of the hint is to apply to all parts
+# of the statement.
+#
+# For example, this hint:
+#
+# 		IGNORE INDEX (i1)
+#
+# is equivalent to this combination of hints:
+#
+# 		IGNORE INDEX FOR JOIN (i1)
+# 		IGNORE INDEX FOR ORDER BY (i1)
+# 		IGNORE INDEX FOR GROUP BY (i1)
+#
+# In MySQL 5.0, hint scope with no FOR clause was to apply only to row retrieval.
+#
+# To cause the server to use this older behavior when no FOR clause is present, enable
+# the old system variable at server startup.
+#
+# Take care about enabling this variable in a replication setup.
+#
+# With statement-based binary logging, having different modes for the master and slaves
+# might lead to replication errors.
+#
+# WHen index hints are processed, they are collected in a single list by type (USE, FORCE, IGNORE)
+# and by scope (FOR JOIN, FOR ORDER BY, FOR GROUP BY)
+#
+# For example:
+#
+# 		SELECT * FROM t1
+# 			USE INDEX () IGNORE INDEX (i2) USE INDEX (i1) USE INDEX (i2);
+#
+# Is equivalent to:
+#
+# 		SELECT * FROM t1
+# 			USE INDEX (i1,i2) IGNORE INDEX (i2);
+#
+# The index hints then are applied for each scope in the following order:
+#
+# 		1. {USE|FORCE} INDEX is applied if present. (If not, the optimizer-determined set of indexes is used)
+#
+# 		2. IGNORE INDEX is applied over the result of the previous step
+#
+# 			For example, the following two queries are equivalent:
+#
+# 				SELECT * FROM t1 USE INDEX (i1) IGNORE INDEX (i2) USE INDEX (i2);
+#
+# 				SELECT * FROM t1 USE INDEX (i1);
+#
+# For FULLTEXT searches, index hints work as follows:
+#
+# 		) For natural language mode searches, index hints are silently ignored.
+#
+# 			For example, IGNORE INDEX(i1) is ignored with no warning and the index is still used.
+#
+# 		) For boolean mode searches, index hints with FOR ORDER BY or FOR GROUP BY are silently ignored.
+#
+# 			Index hints with FOR JOIN or no FOR modifier are honored.
+#
+# 			In contrast to how hints apply for non-FULLTEXT searches, the hint is used for all phases
+# 			of query execution (finding rows and retrieval, grouping and ordering)
+#
+# 			This is true even if the hint is given for a non-FULLTEXT index.
+#
+# 			For example, the following two queries are equivalent:
+#
+# 				SELECT * FROM t
+# 					USE INDEX (index1)
+# 					IGNORE INDEX (index1) FOR ORDER BY
+# 					IGNORE INDEX (index1) FOR GROUP BY
+# 					WHERE --- IN BOOLEAN MODE ---
+#
+# 				SELECT * FROM t
+# 					USE INDEX (index1)
+# 					WHERE --- IN BOOLEAN MODE ---
+#
+# THE OPTIMIZER COST MODEL
+#
+# To generate execution plans, the optimizer uses a cost model that is based on estimates
+# of the cost of various operations that occur during query execution.
+#
+# The optimizer has a set of compiled-in default "cost constants" available to it to make
+# decisions regarding execution plans.
+#
+# The optimizer also has a database of cost estimates to use during execution plan construction.
+#
+# These estimates are stored in the server_cost and engine_cost tables in the mysql system
+# database and are configurable at any time.
+#
+# The intent of these tables is to make it possible to easily adjust the cost estimates that the
+# optimizer uses when it attempts to arrive at query execution plans.
+#
+# COST MODEL GENERAL OPERATION
+#
+# The configurable optimizer cost model works like this:
+#
+# 		) The server reads the cost model tables into memory at startup and uses the in-memory values at runtime.
+#
+# 			Any non-NULL cost estimate specified in the tables takes precedence over the corresponding compiled-in
+# 			default  cost constant.
+#
+# 			Any NULL estimate indicates to the optimizer to use the compiled-in default.
+#
+# 		) At runtime, the server may reread the cost tables. This occurs when a storage engine is dynamically
+# 			loaded or when a FLUSH_OPTIMIZER_COSTS statement is executed.
+#
+# 		) Cost tables enable server administrators to easily adjust cost estimates by changing entries in the tables.
+#
+# 			It is also easy to revert to a default by setting an entry's cost to NULL.
+#
+# 			The optimizer uses the in-memory cost values, so changes to the tables should be followed by FLUSH_OPTIMIZER_COSTS
+# 			to take effect.
+#
+# 		) The in-memory cost estimates that are current when a client sessions begins apply throughout that session until it ends.
+#
+# 			In particular, if the server rereads the cost tables, any changed estimates apply only to subsequently started sessions.
+#
+# 			Existing sessions are unaffected.
+#
+# 		) Cost tables are specific to a given server instance. The server does not replicate cost table changes to replication slaves.
+#
+# THE COST MODEL DATABASE
+#
+# the optimizer cost model database consists of two tables in the mysql system database that contain cost
+# estimate information for operations that occur during query execution:
+#
+# 		) server_cost : Optimizer cost estimates for general server operations
+#
+# 		) engine_cost : Optimizer cost estimates for operations specific to particular storage engines
+#
+# The server_cost table contains these columns:
+#
+# 		) cost_name
+#
+# 			The name of a cost estimate used in the cost model.
+#
+# 			The name is not case-sensitive. If the server does not recognize the cost name
+# 			when it reads this tables, it writes a warning to the error log.
+#
+# 		) cost_value
+#
+# 			The cost estimate value. If the value is non-NULL, the server uses it as the cost.
+# 			Otherwise, it uses the default estimate (the compiled-in value).
+#
+# 			DBAs can change a cost estimate by updating this column.
+#
+# 			If the server finds that the cost value is invalid (nonpositive) when it reads this table,
+# 			it writes a warning to the error log.
+#
+# 			To override a default cost estimate (for an entry that specifies NULL), set the cost to
+# 			a non-NULL value.
+#
+# 			To revert to the default, set the value to NULL.
+#
+# 			Then execute FLUSH_OPTIMIZER_COSTS to tell the server to reread the cost tables.
+#
+# 		) last_update
+#
+# 			The time of the last row update.
+#
+# 		) comment
+#
+# 			A descriptive comment associated with the cost estimate.
+#
+# 			DBAs can use this column to provide information about why a cost estimate row stores a particular value.
+#
+# 		) default_value
+#
+# 			The default (compiled-in) value for the cost estimate.
+#
+# 			This column is a read-only generated column that retains its value even if the associated
+# 			cost estimate is changed.
+#
+# 			For rows added to the table at runtime, the value of this column is NULL.
+#
+# The primary key for the server_cost table is the cost_name column, so it is not possible to create multiple
+# entries for any cost estimate.
+#
+# The server recognizes these cost_name values for the server_cost table:
+#
+# 		) disk_temptable_create_cost, disk_temptable_row_cost
+#
+# 			The cost estimates for internally created temporary table stored in a disk-based storage engine
+# 			(either InnoDB or MyISAM)
+#
+# 			Increasing these values increases the cost estimate of using internal temporary tables and makes
+# 			the optimizer prefer query plans with less use of them.
+#
+# 			For information about such tables, see INTERNAL TEMPORARY TABLE USE IN MYSQL.
+#
+# 			The larger default value for these disk parameters compared to the default values for the
+# 			corresponding memory parameters (memory_temptable_create_cost, memory_temptable_row_cost)
+# 			reflects the greater cost of processing disk-based tables.
+#
+# 		) key_compare_cost
+#
+# 			The cost of comparing record keys. Increasing this value causes a query plan that compares
+# 			many keys to become more expensive.
+#
+# 			For example, a query plan that performs a filesort becomes relativily more expensive compared to
+# 			a query plan that avoids sorting by using an index.
+#
+# 		) memory_temptable_create_cost, memory_temptable_row_cost
+#
+# 			The cost estimates for internally created temporary tables stored in the MEMORY storage engine.
+#
+# 			Increasing these values increases the cost estimate of using internal temporary tables
+# 			and makes the optimizer prefer query plans with less use of them.
+#
+# 			For information about such tables, see INTERNAL TEMPORARY TABLE USE IN MYSQL
+#
+# 			The smaller default  values for these memory parameters compared to the default values for the corresponding
+# 			disk parameters (disk_temptable_create_cost, disk_temptable_row_cost) reflects the lesser cost of processing
+# 			memory-based tables.
+#
+# 		) row_evaluate_cost
+#
+# 			The cost of evaluating record conditions. Increasing this value causes a query plan that examines
+# 			rows to become more expensive compared to a query plan that examines fewer rows.
+#
+# 			For example, a table scan becomes relativily more expensive compared to a range scan that reads fewer rows.
+#
+# The engine_cost table contains these columns:
+#
+# 		) engine_name
+#
+# 			The name of the storage engine to which this cost estimate applies.
+# 			The name is not case-sensitive.
+#
+# 			If the value is default, it applies to all storage engines that have no
+# 			named entry of their own.
+#
+# 			If the server does not recognize the engine name when it reads this table, it writes a warning to the error log
+#
+# 		) device_type
+#
+# 			The device type to which this cost estimate applies.
+#
+# 			The column is intended for specifying different cost estimates for different
+# 			storage device types, such as hard disk drives versus solid state drives.
+#
+# 			Currently, this information is not used and 0 is the only permitted value.
+#
+# 		) cost_name
+#
+# 			Same as in the server_cost table.
+#
+# 		) cost_value
+#
+# 			Same as in the server_cost table.
+#
+# 		) last_update
+#
+# 			Same as in the server_cost table.
+#
+# 		) comment
+#
+# 			Same as in the server_cost table
+#
+# 		) default_value
+#
+# 			The default (compiled-in) value for the cost estimate.
+#
+# 			This column is read-only column that retains its value even if the associated
+# 			cost estimate is changed.
+#
+# 			For rows added to the table at runtime, the value of this column is NULL, with the
+# 			exception that if the row has the same cost_name value as one of the original rows,
+# 			the default value column will have the same value as that row.
+#
+# The primary key for the engine_cost table is a tuple comprising the (cost_name, engine_name, device_type)
+# columns, so it is not possible to create multiple entries for any combination of values in those columns.
+#
+# The server recognizes these cost_name values for the engine_cost table:
+#
+# 		) io_block_read_cost
+#
+# 			The cost of reading an index or data block from disk.
+#
+# 			Increasing this value causes a query plan that reads many disk blocks to become more expensive compared to
+# 			a query plan that reads fewer disk blocks.
+#
+# 			For example, a table scan becomes relatively more expensive compared to a range scan that reads fewer blocks.
+#
+# 		) memory_block_read_cost
+#
+# 			Similar to io_block_read_cost, but represents the cost of reading an index or data block from an in-memory database buffer.
+#
+# If the io_block_read_cost and memory_block_read_cost values differ, the execution plan may change between
+# two runs of the same query.
+#
+# Suppose that the cost for memory access is less than the cost for disk access.
+#
+# In that case, at server startup before data has been read into the buffer pool, you may
+# get a different plan than after the query has been run because then the data will be in memory.
+#
+# MAKING CHANGES TO THE COST MODEL DATABASE
+#
+# For DBAs who wish to change the cost model parameters from their defaults, try doubling
+# or halving the value and measuring the effect.
+#
+# Changes to the io_block_read_cost and memory_block_read_cost parameters are most likely to
+# yield worthwhile results.
+#
+# These parameter values enable cost models for data access methods to take into account the costs
+# of reading information from different sources; that is, the cost of reading information from disk
+# versus reading information already in a memory buffer.
+#
+# For example, all other things being equal, setting io_block_read_cost to a value larger than
+# memory_block_read_cost causes the optimizer to prefer query plans that read information already
+# held in memory to plans that must read from disk.
+#
+# This example shows how to change the default value for io_block_read_cost:
+#
+# 		UPDATE mysql.engine_cost
+# 			SET cost_value = 2.0
+# 			WHERE cost_name = 'io_block_read_cost';
+# 		FLUSH OPTIMIZER_COSTS;
+#
+# This example show how to change the value of io_block_read_cost only for the InnoDB storage engine:
+#
+# 		INSERT INTO mysql.engine_cost
+# 			VALUES ('InnoDB', 0, 'io_block_read_cost', 3.0,
+# 			CURRENT_TIMESTAMP, 'Using a slower disk for InnoDB');
+# 		FLUSH OPTIMIZER_COSTS;
+#
+# OPTIMIZER STATISTICS
+#
+# The column_statistics data dictionary table stores histogram statistics about column values,
+# for use by the optimizer in constructing query execution plans.
+#
+# To perform histogram management, use the ANALYZE_TABLE statement; see ANALYZE TABLE SYNTAX for more
+#
+# The column_statistics table has these characteristics:
+#
+# 		) The table contains statistics for columns of all data types except geometry types (spatial data) and JSON.
+#
+# 		) The table is persistent so that column stats need not be created each time the server starts.
+#
+# 		) The server performs updates to the table; users do not.
+#
+# The column_statistics table is not directly accessible by users because it is part of the data dictionary.
+#
+# Histogram information is available using INFORMATION_SCHEMA.COLUMN_STATISTICS, which is implemented as a view
+# on the data dictionary table.
+#
+# COLUMN_STATISTICS has these columns:
+#
+# 		) SCHEMA_NAME, TABLE_NAME, COLUMN_NAME: The names of the schema, table, and column for which the stats apply.
+#
+# 		) HISTOGRAM: A JSON value describing the column stats, stored as a histogram.
+#
+# Column histograms contain buckets for parts of the range of values stored in the column.
+# Histograms are JSON objects to permit flexibility in the representation of column stats.
+#
+# Here is a sample histogram object:
+#
+# 		{
+# 			"buckets": [
+# 				[
+# 					1,
+# 					0,33---
+# 				],
+# 				[
+# 					2,
+# 					0,66---
+# 				],
+# 				[
+# 					3,
+# 					1,
+# 				]
+# 			],
+# 			"null-values": 0,
+# 			"last-udpated": "2017-03-24 13:32:40.00000";
+# 			"sampling-rate": 1,
+# 			"histogram-type": "singleton",
+# 			"number-of-buckets-specified": 128,
+# 			"data-type": "int",
+# 			"collation-id": 8
+# 		}
+#
+# histogram objects have these keys:
+#
+# 		) buckets: The histogram buckets. Bucket structure depends on the histogram type.
+#
+# 			For singleton histograms, buckets contain two values:
+#
+#  			) Value 1: The value for the bucket. The type depends on the column data type.
+#
+# 				) Value 2: A double representing the cumulative frequency for the value.
+#
+# 							For example, .25 and .75 indicate that 25% and 75% of the values in the columns are less
+# 							than or equal to the bucket value.
+#
+# 			For equi-height histograms, buckets contain four values:
+#
+# 				) Values 1,2: The Lower and upper inclusive values for the bucket.
+# 									The type depends on the column data type.
+#
+# 				) Value 3: A double representing the cumulative frequency for the value.
+#
+# 							For example, .25 and .75 indicates that 25% and 75% of the values in the columns are less
+# 							than or equal to the bucket upper value. 				
+#
+#				) Value 4: The number of distinct values in the range from the bucket lower value to its upper value.
+#
+# 		) null-values: A number between 0.0 and 1.0 indicating the fraction of column values that are SQL NULL values. If 0, the column contains no NULL values.
+#
+# 		) last-updated: When the histogram was generated, as a UTC value in YYYY-MM-DD HH:MM:SS.hhmmss format.
+#
+# 		) sampling-rate: a number between 0.0 and 1.0 indicating the fraction of data that was sampled to create the histogram.
+#
+# 							A value of 1 means that all of the data was read (no sampling)
+#
+# 		) histogram-type: The histogram type:
+# 	
+# 			) singleton: One bucket represents one single value in teh column.
+#
+# 							This histogram type is created when the number of distinct values in the column
+# 							is less than or equal to the number of buckets specified in the ANALYZE_TABLE 
+# 							statement that generate the histogram.
+#
+# 			) equi-height: One bucket represents a range of values.
+#
+# 							This histogram type is created when the number of distinct values in the column is
+# 							greater than the number of buckets specified in the ANALYZE_TABLE statement that generated
+# 							the histogram.
+#
+# 		) number-of-buckets-specified: The number of buckets specified in the ANALYZE_TABLE statement that generated the histogram.
+#
+# 		) data-type: The type of data this histogram contains.
+#
+# 						This is needed when reading and parsing histograms from persistent storage into memory.
+# 						The value is one int, uint (unsigned integer), double, decimal, datetime or string (includes character and binary strings)
+#
+# 		) collation-id: The collation ID for the histogram data.
+#
+# 						It is mostly meaningful when the data-type value is string.
+# 						Values corresponding to ID column values in the INFORMATION_SCHEMA.COLLATIONS table.
+#
+# To extract particular values from the histogram objects, you can use JSON operations.
+# For example:
+#
+# 		SELECT
+# 			TABLE_NAME, COLUMN_NAME,
+# 			HISTOGRAM->>'$."data-type"' AS 'data-type',
+# 			JSON_LENGTH(HISTOGRAM->>'$."buckets"') AS 'bucket-count'
+# 		FROM INFORMATION_SCHEMA.COLUMN_STATISTICS;
+#
+# 	+-----------------+---------------+--------------+--------------+
+# 	| TABLE_NAME 		| COLUMN_NAME   | data-type    | bucket-count |
+# 	+-----------------+---------------+--------------+--------------+
+# 	| country 	 		| Population 	  | int 			  | 			226 |
+#  | city 		 		| Population 	  | int 			  | 		  1024 |
+# 	| countrylanguage | Language 		  | string 		  | 			457 |
+# 	+-----------------+----------------+--------------+-------------+
+#
+# The optimizer uses histogram statistics, if applicable, for columns of any data type for which
+# statistics are collected.
+#
+# The optimizer applies histogram statistics to determine row estimates based on the 
+# selectivity (filtering effect) of column value comparisons against constant values.
+#
+# Predicates of these forms qualify for histogram use:
+#
+# 		col_name = constant
+# 		col_name <> constant
+# 		col_name != constant
+# 		col_name > constant
+#
+# 		col_name < constant
+# 		col_name >= constant
+# 		col_name <= constant
+#
+# 		col_name IS NULL
+# 		col_name IS NOT NULL
+# 		col_name BETWEEN constant AND constant
+# 
+# 		col_name NOT BETWEEN constant AND constant
+# 		col_name IN (constant[, constant] ---)
+# 		col_name NOT IN (constant[, constant] ---)
+#
+# For example, these statements contain predicates that qualify for histogram use:
+#
+# 		SELECT * FROM orders WHERE amount BETWEEN 100.0 AND 300.0;
+# 		SELECT * FROM tbl WHERE col1 = 15 AND col2 > 100;
+#
+# The requirement for comparison against a constant value includes functions that are
+# constant, such as ABS() and FLOOR():
+#
+# 		SELECT * FROM tbl WHERE col1 < ABS(-34);
+#
+# Histogram stats are useful primarily for nonindexed columns.
+#
+# Adding an index to a column for which histogram stats are applicable
+# might also help the optimizer make row estimates.
+#
+# The tradeoffs are:
+#
+# 		) An index must be updated when table data is modified.
+#
+# 		) A histogram is created or updated only on demand, so it adds no overhead when table data is modified.
+# 		
+# 			On the other hand, the stats become progressively more out of date when table modifications occur,
+# 			until the next time they are updated.
+#
+# The optimizer prefers range optimizer row estimates to those obtained from histogram stats.
+#
+# If the optimizer determines that the range optimizer applies, it does not use histogram stats.
+#
+# For columns that are indexed, row estimates can be obtained for equality comparisons using index dives
+# (see RANGE OPTIMIZATION)
+#
+# In this case, histogram stats are not necessarily useful because index dives can yield better estimates.
+#
+# In some cases, use of histogram stats may not improve query execution; for example, if the stats are
+# out of date.
+#
+# To check whether this is the case, use ANALYZE TABLE to regenerate the histogram stats, then run the query again.
+#
+# Alternatively, to disable histogram stats, use ANALYZE_TABLE to drop them.
+#
+# A different method of disabling histogram stats is to turn off the condition_fanout_filter flag
+# of the optimizer_switch system variable (although this may disable other optimizations as well):
+#
+# 		SET optimizer_switch='condition_fanout_filter=off';
+#
+# If histogram stats are used, the resulting effect is visible using EXPLAIN.
+#
+# Consider the following query, where no index is available for column col1:
+#
+# SELECT * FROM t1 WHERE col1 < 24;
+#
+# If histogram stats indicate that 57% of the rows in t1 satisfy the col1 < 24 predicate,
+# filtering can occur even in the absence of an index, and EXPLAIN shows 57.00 in the filtered column.
+#
+# BUFFERING AND CACHING
+#
+# MySQL uses several strategies that cache information in memory buffers to increase performance.
+#
+# InnoDB BUFFER POOL OPTIMIZATION
+#
+# InnoDB maintains a storage area called the buffer pool for caching data and indexes in memory.
+#
+# Knowing how the InnoDB buffer pool works, and taking advantage of it to keep frequently accessed
+# data in memory, is an important aspect of MySQL tuning.
+#
+# For an explanation of the inner workings of the InnoDB buffer pool, an overview of its LRU replacement algorithm,
+# and general configuration information, see BUFFER POOL.
+#
+# For additional InnoDB buffer pool configuration and tuning information, see these sections:
+#
+# 	) CONFIGURING INNODB BUFFER POOL PREFETCHING (READ-AHEAD)
+#
+# 	) CONFIGURING INNODB BUFFER POOL FLUSHING
+#
+# 	) MAKING THE BUFFER POOL SCAN RESISTANT
+#
+# 	) CONFIGURING MULTIPLE BUFFER POOL INSTANCES
+#
+# 	) SAVING AND RESTORING THE BUFFER POOL STATE
+#
+# 	) FINE-TUNING INNODB BUFFER POOL FLUSHING
+#
+# 	) CONFIGURING INNODB BUFFER POOL SIZE
+#
+# THE MYISAM KEY CACHE
+#
+# To minimize disk I/O, the MyISAM storage engine exploits a strategy that is used by many DB management
+# systems.
+#
+# It employs a cache mechanism to keep the most frequently accessed table blocks in memory:
+#
+# 		) For index blocks, a special structure called the key cache (or key buffer) is maintained.
+# 			The structure contains a number of block buffers where the most-used index blocks are placed.
+#
+# 		) For data blocks, MYSQL uses no special cache. Instead it relies on the native operating system file system cache.
+#
+# This section first describes the basic operation of the MyISAM key cache.
+#
+# Then it discusses features that improve key cache performance and that enables you
+# to better control cache operation:
+#
+# 		) Multiple sessions can access the cache concurrently.
+#
+# 		) You can set up multiple key caches and assign table indexes to specific caches.
+#
+# To control the size of the key cache, use the key_buffer_size system variable.
+#
+# If this variable is set equal to 0, no key cache is used.
+#
+# The key cache also is not used if the key_buffer_size value is too small to allocate
+# the minimal number of block buffers (8).
+#
+# When the key cache is not operational, index files are accessed using only the native file system
+# buffering provided by the operating system.
+#
+# (In other words, table index blocks are accessed using the same strategy as that employed for table data blocks)
+#
+# An index block is a contigous unit of access to the MyISAM index files.
+#
+# Usually the size of an index block is equal to the size of nodes of the index B-TREE.
+#
+# (Indexes are represented on disk using a B-tree data structure. Nodes at the bottom of the 
+# tree are leaf nodes.
+#
+# Nodes above the leaf nodes are nonleaf nodes)
+#
+# All block buffers in a key cache structure are the same size.
+#
+# This size can be equal to, greater than, or less than size of a table index block. 
+# Usually once these two values is a multiple of the other.
+#
+# When data from any table index block must be accessed, the server first checks whether it is
+# available in some block buffer of the key cache.
+#
+# If it is, the server accesses data in the key cache rather than on disk.
+#
+# That is, it reads from the cache or writes into it rather than reading from or writing to disk.
+#
+# Otherwise, the server chooses a cache block buffer containing a different table index block (or blocks)
+# and replaces the data there by a copy of required table index block.
+#
+# As soon as the new index block is in the cache, the index data can be accessed.
+#
+# If it happens that a block selected for replacement has been modified, the block is
+# considered "dirty". In this case, prior to being replaced, its contents are flushed
+# to the table index from which it came.
+#
+# Usually, the server follows an LRU (Least Recently Used) strategy.
+#
+# When choosing a block for replacement, it selects the least recently used index block.
+# To make this choice easier, the key cache module maintains all used blocks in a special list
+# (LRU chain) ordered by time of use.
+#
+# When a block is accessed, it is the most recently used and is placed at the end of the list.
+#
+# WHen blocks need to be replaced, blocks at the beginning of the list are the least recently
+# used and become the first candidates for eviction.
+#
+# The InnoDB storage engine also uses an LRU algorithm, to manage its buffer pool.
+# See BUFFER POOL for more, later.
+#
+# SHARED KEY CACHE ACCESS
+#
+# Threads can access key cache buffers simultaneously, subject to the following conditions:
+#
+# 		) A buffer that is not being updated can be accessed by multiple sessions.
+#
+# 		) A buffer that is being updated causes sessions that need to use it to wait until the update is complete.
+#
+# 		) Multiple sessions can initiate requests that result in cache block replacements, as long as they do
+# 			not interfere with each other (that is, as long as they need different index blocks, and thus cause
+# 			different cache blocks to be replaced)
+#
+# Shared access to the key cache enables the server to improve throughput significantly.
+#
+# MULTIPLE KEY CACHES
+#
+# Shared access to the key cache improves performance but does not eliminate contention among sessions entirely.
+#
+# They still compete for control structures that manage access to the key cache buffers.
+#
+# To reduce key cache access contention further, MySQL also provides multiple key caches.
+# This feature enables you to assign different table indexes to different key caches.
+#
+# Where there are multiple key caches, the server must know which cache to use when processing
+# queries for a given MyISAM table.
+#
+# By default, all MyISAM table indexes are cached in the default key cache.
+#
+# To assign table indexes to a specific key cache, use the CACHE_INDEX statement (See more under CACHE INDEX SYNTAX later).
+#
+# For example, the following statement assigns indexes from the tables t1, t2, and t3 to the key cache
+# named hot_cache:
+#
+# 		CACHE INDEX t1, t2, t3 IN hot_cache;
+# 		+-----------+--------------------+-------------+----------+
+# 		| Table 		| Op 						| Msg_type 	  | Msg_text |
+# 		+-----------+--------------------+-------------+----------+
+# 		| test.t1   | assign_to_keycache | status 	  | OK 	    |
+# 		| test.t2   | assign_to_keycache | status 	  | OK 	    |
+# 	   | test.t3   | assign_to_keycache | status 	  | OK 		 |
+# 		+-----------+--------------------+-------------+----------+
+#
+# The key cache referred to in a CACHE_INDEX statement can be created by setting its size with a SET_GLOBAL
+# parameter setting statement or by using server startup options.
+#
+# 		SET GLOBAL keycache1.key_buffer_size=128*1024;
+# 
+# To destroy a key cache, set its size to zero:
+#
+# 		SET GLOBAL keycache1.key_buffer_size=0;
+#
+# You cannot destroy the default key cache.
+# Any attempt to do this is ignored:
+#
+# 		SET GLOBAL key_buffer_size = 0;
+#
+# 		SHOW VARIABLES LIKE 'key_buffer_size';
+# 		+-------------------------+-------------+
+# 		| Variable_name 			  | Value 		 |
+# 		+-------------------------+-------------+
+# 		| key_buffer_size 		  | 8384512 	 |
+# 		+-------------------------+-------------+
+#
+# Key cache variables are structured system variables that have a name and components.
+#
+# For keycache1.key_buffer_size, keycache1 is the cache variable name and key_buffer_size
+# is the cache component.
+#
+# See STRUCTURED SYSTEM VARIABLES for more info, in regards to syntax used for structured key cache system vars.
+#
+# By default, table indexes are assigned to the main (default) key cache created at the server startup.
+# When a key cache is destroyed, all indexes assigned to it are reassigned to the default key cache.
+#
+# For a busy server, you can use a strategy that involves three key caches:
+#
+# 		) A "hot" key cache that takes up 20% of the space allocated for all key caches. Use this for tables that are heavily used for searches but that are not updated.
+#
+# 		) A "cold" key cache that takes up 20% of the space allocated for all key caches. Use this cache for medium-sized, intensively modified tables, such as temporary tables.
+#
+# 		) A "warm" key cache that takes up 60% of the key cache space. Employ this as the default key cache, to be used by default for all other tables.
+#
+# One reason the use of three key caches is beneficial is that access to one key cache structure does not access to the others.
+#
+# Statements that access tables assigned to one cache do not compete with statements that access tables assigned to
+# another cache.
+#
+# Performance gains occur for other reasons as well:
+#
+# 		) The hot cache is used only for retrieval queries, so its contents are never modified.
+#
+# 			Consequently, whenever an index block needs to be pulled in from disk, the 
+# 			contents of the cache block chosen for replacement need not be flushed first.
+#
+# 		) For an index assigned to the hot cache, if there are no queries requiring an index scan,
+# 			there is a high probability that the index blocks corresponding to nonleaf nodes of the
+# 			index B-Tree remain in the cache.
+#
+# 		) An update operation most frequently executed for temporary tables is performed much faster
+# 			when the updated node is in the cache and need not be read in from a disk first.
+#
+# 			If the size of the indexes of the temporary tables are comparable with the size of cold key cache,
+# 			the probability is very high that the updated node is in the cache.
+#
+# The CACHE_INDEX statement sets up an association between a table and a key cache, but the association
+# is lost each time the server restarts.
+#
+# If you want the association to take effect each time the server starts, one way to accomplish this is to
+# use an option file:
+#
+# 		Include variable settings that configure your key caches, and an init-file option that names
+# 		a file containing CACHE_INDEX statements to be executed.
+#
+# 		For example:
+#
+# 		key_buffer_size = 4G
+# 		hot_cache.key_buffer_size = 2G
+# 		cold_cache.key_buffer_size = 2G
+# 		init_file=/path/to/data-directory/mysqld_init.sql
+#
+# The statements in mysqld_init.sql are executed each time the server starts.
+#
+# The file should contain one SQL statement per line.
+# The following example assigns several tables each to hot_cache and cold_cache:
+#
+# 		CACHE INDEX db1.t1, db1.t2, db2.t3 IN hot_cache
+# 		CACHE INDEX db1.t4, db2.t5, db2.t6 IN cold_cache
+#
+# MIDPOINT INSERTION STRATEGY
+#
+# By default, the key cache management system uses a simple LRU strategy for choosing key
+# cache blocks to be evicted, but it also supports a more sophisticated method called the midpoint
+# insertion strategy.
+#
+# When using the midpoint insertion strategy, the LRU chain is divided into two parts:
+#
+# 		a hot sublist and a warm sublist.
+#
+# The division point between two parts is not fixed, but the key cache management system
+# takes care that the warm part is not "too short", always containing at least key_cache_division_limit percent
+# of the key cache blocks.
+#
+# key_cache_division_limit is a component of structured key cache variables, so its value is a parameter
+# that can be set per cache.
+#
+# When an index block is read from a table into the key cache, it is placed at the end of the warm sublist.
+#
+# After a certain number of hits (accesses of the block), it is promoted to the hot sublist.
+#
+# At present, the number of hits required to promote a block (3) is the same for all index blocks.
+#
+# A block promoted into the hot sublist is placed at the end of the list.
+#
+# The block then circulates within this sublist. IF the block stays at the beginning of the sublist
+# for a long enough time, it is demoted to the warm sublist.
+#
+# This time is determined by the value of the key_cache_age_threshold component of the key cache.
+#
+# The threshold value perscribes that, for a key cache containing N blocks, the block at the beginning
+# of the hot sublist not accessed within the last N * key_cache_age_threshold / 100 hits is to be moved
+# to the beginning of the warm sublist.
+#
+# The midpoint insertion strategy enables you to keep more-valued blocks away in the  cache.
+#
+# If you prefer to use the plain LRU strategy, leave the key_cache_division_limit value set
+# to its default of 100.
+#
+# The midpoint insertion strategy helps to improve performance when execution of a query that requires
+# an index scan effectively pushes out of the cache all the index blocks corresponding to valuable
+# high-level B-tree nodes.
+#
+# To avoid this, you must use a midpoint insertion strategy with the key_cache_division_limit set to much
+# less than 100.
+#
+# Then valuable frequently hit nodes are preserved in teh hot sublist during an index scan operation as well.
+#
+# INDEX PRELOADING
+#
+# If there are enough blocks in a key cache to hold blocks of an entire index, or at least the blocks corresponding
+# to its nonleaf nodes, it makes sense to preload the key cache with index blocks before starting to use it.
+#
+# Preloading enables you to put the table index blocks into a key cache buffer in teh most efficient way:
+# 
+# By reading the index blocks from disk sequentially.
+#
+# Without preloading, the blocks are still placed into the key cache as needed by queries.
+#
+# Although the blocks will stay in the cache, because there are enough buffers for all of them,
+# they are fetched from disk in random order, and not sequentially.
+#
+# To preload an index into a cache, use the LOAD_INDEX_INTO_CACHE statement.
+#
+# For example, the following statement preloads nodes (index blocks) of indexes of the tables
+# t1 and t2:
+#
+# 		LOAD INDEX INTO CACHE t1, t2 IGNORE LEAVES;
+# 		+-----------+--------------+----------+------------+
+# 		| Table 	   | Op 		  		| Msg_type | Msg_text   |
+# 		+-----------+--------------+----------+------------+
+# 		| test.t1 	| preload_keys | status   | OK 		   |
+# 		| test.t2 	| preload_keys | status   | OK 			|
+# 		+-----------+--------------+----------+------------+
+#
+# The IGNORE LEAVES modifier causes only blocks for the nonlead nodes of the index to be preloaded.
+#
+# Thus, the statement shown preloads all index blocks from t1, but only blocks for the nonleaf
+# nodes from t2.
+#
+# If an index has been assigned to a key cache using a CACHE_INDEX statement, preloading places
+# index blocks into that cache.
+#
+# Otherwise, the index is loaded into the default key cache.
+#
+# KEY CACHE BLOCK SIZE
+#
+# It is possible to specify the size of the block buffers for an individual key cache using
+# the key_cache_block_size variable.
+#
+# This permits tuning of the performance of I/O operations for index files.
+#
+# The best performance for I/O operations is achieved when the size of read buffers
+# is equal to the size of the native operating system I/O buffers.
+#
+# But setting the size of key nodes equal to the size of the I/O buffer does not always
+# ensure the best overall performance.
+#
+# When reading the big leaf nodes, the server pulls in a lot of unecessary data, effectively
+# preventing reading other leaf nodes.
+#
+# To control the size of blocks in the .MYI index file of MyISAM tables, use the --myisam-block-size
+# option at server startup.
+#
+# RESTRUCTURING A KEY CACHE
+#
+# A key cache can be restructured at any time by updating its parameter values.
+# for example:
+#
+# 		SET GLOBAL cold_cache.key_buffer_size=4*1024*1024;
+#
+# If you assign to either the key_buffer_size or key_cache_block_size key cache component 
+# a value that differs from the component's current value, the server destroys the cache's old structure
+# and creates a new one based on the new values.
+#
+# If the cache contains any dirty blocks, the server saves them to disk before destroying and 
+# re-creating the cache.
+#
+# Restructuring does not occur if you change other key cache parameters.
+#
+# When restructuring a key cache, the server first flushes the contents of any dirty buffers to disk.
+#
+# After that, the cache contents become unavailable. However, restructuring does not
+# block queries that need to use indexes assigned to the cache.
+#
+# INstead, the server directly accesses the table indexes using native file system caching.
+#
+# File system caching is not as efficient as using a key cache, so although queries execute,
+# a slowdown can be anticipated.
+#
+# After the cache has been restructured, it becomes available again for caching indexes assigned
+# to it, and the use of file system  caching for the indexes ceases.
+#
+# CACHING OF PREPARED STATEMENTS AND STORED PROGRAMS
+#
+# For certain statements that a client might execute multiple times during a session, the server converts
+# the statement to an internal structure and caches that structure to be used during execution.
+#
+# Caching enables the server to perform more efficiently because it avoids the overhead of reconverting
+# the statement should it be needed again during the session.
+#
+# Conversion and caching occurs for these statements:
+#
+# 		) Prepared statements, both those processed at the SQL level (using the PREPARE statement) and those
+# 			processed using the binary client/server protocol (using the mysql_stmt_prepare() C API function)
+#
+# 			The max_prepared_stmt_count system variable controls the total number of statements the server caches.
+#
+# 			(The sum of the number of prepared statements across all sessions)
+#
+# 		) Stored programs (stored procedures and functions, triggers, and events).
+#
+# 			In this case, teh server converts and caches the entire program body.
+#
+# 			The stored_program_cache system variable indicates the approximate number of stored
+# 			programs the server caches per session.
+#
+# The server maintains caches for prepared statements and stored programs on a per-session basis.
+#
+# Statements cached for one session are not accessible to other sessions. When a session ends,
+# the server discards any statements cached for it.
+#
+# When the server uses a cached internal statement structure, it must take care taht the structure does not
+# go out of date.
+#
+# Metadata changes can occur for an object used by the statement, causing a mismatch between the current
+# object definition and the definition as represented in the internal statement structure.
+#
+# Metadata changes occur for DDL statements such as those that create drop, alter, rename or truncate tables,
+# or that analyze, optimize or repair tables.
+#
+# Table content changes (for example, with INSERT or UPDATE) do not change metadata, nor do SELECT statements.
+#
+# Here is an illustration of the problem, Suppose that a client prepares this statement:
+#
+# 		PREPARE s1 FROM 'SELECT * FROM t1';
+#
+# The SELECT * expands in teh internal structure to the list of columns in the table.
+#
+# If the set of columns in the table is modified with ALTER TABLE, the prepared statement goes otu of date.
+#
+# If the server does not detect this change the next time the client executes s1, the prepared statement returns incorrect results.
+#
+# To avoid problems caused by metadata changes to tables or views referred to by the prepared statement, the server
+# detects these changes and automatically prepares the statement when it is next executed.
+#
+# That is, the server reparses the statement and rebuilds the internal structure.
+#
+# Reparsing also occurs after referenced tables or views are flushed from the table definition cache,
+# either implicitly to make room for new entries in the cache, or explicitly due to FLUSH_TABLES.
+#
+# Similarly, if changes occur to objects used by a stored program, the server reparses affected statements
+# within the program.
+#
+# The server also detects metadata changes for objects in expressions. These might be used in statements specific
+# to stored programs, such as DECLARE CURSOR or flow-control statements such as IF, CASE, and RETURN.
+#
+# To avoid reparsing entire stored programs, the server reparses affected statements or expressions within a program
+# 	only as needed.
+#
+# 	Examples:
+#
+# 		) Suppose that metadata for a table or view is changed. Reparsing occurs for a SELECT * that accesses the table or view,
+# 			but not for a SELECT * that does not access the table or view.
+#
+# 		) When a statement is affected, the server reparses it only partially if possible. Consider this CASE statement:
+#
+# 			CASE case_expr 
+# 				WHEN when_expr1 ---
+# 				WHEN when_expr2 ---
+# 				WHEN when_expr3 ---
+# 				---
+# 			END CASE
+#
+# 		If a metadata change affects only WHEN when_expr3, that expression is reparsed.
+# 		case_expr and the other WHEN expressions are not reparsed.
+#
+# Reparsing uses the default DB and SQL mode that were in effect for the original conversion to internal form.
+#
+# The server attempts reparsing up to three times. An error occurs if all attempts fail.
+#
+# Reparsing is automatic, but to the extent that it occurs, diminishes prepared statements and stored program
+# performance.
+#
+# For prepared statements, the Com_stmt_reprepare status variable tracks the number of repreparations.
+#
+# OPTIMIZING LOCKING OPERATIONS
+#
+# MySQL manages contention for table contents using locking:
+#
+# 		) Internal locking is performed within the MySQL server itself to manage contention for table contents by multiple threads.
+#
+# 			This type of locking is internal because it is performed entirely by the server, and involves no other programs.
+#
+# 			See INTERNAL LOCKING METHODS, later.
+#
+# 		) External locking occurs when the server and other programs lock MyISAM table files to coordinate among themselves
+# 			which program can access the tables at which time.
+#
+# 			See EXTERNAL LOCKING, later.
+#
+# INTERNAL LOCKING METHODS
+#
+# This section discusses internal locking; that is, locking performed within the MySQL server itself to manage
+# contention for table contents by multiple sessions.
+#
+# This type of locking is internal because it is performed entirely by the server and involves no other programs.
+#
+# For locking performed on MYSQL files by other programs, see EXTERNAL LOCKING.
+#
+# 		) Row-level Locking
+#
+# 		) Table-Level Locking
+#
+# 		) Choosing the Type of Locking
+#
+# ROW-LEVEL LOCKING
+#
+# MySQL uses row-level locking for InnoDB tables to support simultaneous write access by multiple sessions,
+# making them suitable for multi-user, highly concurrent and OLTP applications.
+#
+# To avoid deadlocks when performing multiple concurrent write operations on a single InnoDB tables,
+# acquire necessary locks at the start of the transaction by issuing a SELECT --- FOR UPDATE statement
+# for each group of rows expected to be modified, even if the data changes come later in teh transaction.
+#
+# If transactions modify or lock more than one table, issue the applicable statements in the same order
+# within each transaction.
+#
+# Deadlocks affect performance rather than representing a serious error, because InnoDB automatically detects
+# deadlock conditions by default and rolls back one of the affected transactions.
+#
+# On high concurrency systems, deadlock detection can cause a slowdown when numerous threads wait for the same lock.
+#
+# At times, it may be more efficient to disable deadlock detection and rely on the innodb_lock_wait_timeout setting
+# for transaction rollback when a deadlock occurs.
+#
+# Deadlock detection can be disabled using the innodb_deadlock_detect configuration option.
+#
+# Advantages of row-level locking:
+#
+# 		) Fewer lock conflicts when different sessions access different rows.
+#
+# 		) Fewer changes for rollbacks.
+#
+# 		) Possible to lock a single row for a long time
+#
+# TABLE-LEVEL LOCKING
+#
+# MySQL uses table-level locking for MyISAM, MEMORY and MERGE tables, permitting only one session to update
+# those tables at a time.
+#
+# This locking level makes these storage engines more suitable for read-only, read-mostly or single-user applications.
+#
+# These storage engines avoid deadlocks by always requesting all needed locks at once at the beginning 
+# of a query and always locking the tables in teh same order.
+#
+# The tradeoff is that this strategy reduces concurrency; other sessions that want to modify the table must wait
+# until the current data change statement finishes.
+#
+# Advantages of table-level locking:
+#
+# 		) Relativily little memory required (row locking requires memory per row or group of rows locked)
+#
+# 		) Fast when used on a large part of the tables because only a single lock is involved.
+#
+# 		) Fast if you often do GROUP BY operations on a large part of the data or must scan the entire table frequently.
+#
+# MySQL grants table write locks as follows:
+#
+# 		1. If there are no locks on teh table, put a write lock on it.
+#
+# 		2. Otherwise, put the lock request in the write lock queue.
+#
+# MySQL grants table read locks as follows:
+#
+# 		1. If there are no write locks on the table, put a read lock on it.
+#
+# 		2. Otherwise, put the lock request in the read lock queue.
+#
+# Table updates are given higher priority than table retrievals.
+#
+# Therefore, when a lock is released, the lock is made available to the requests
+# in the write lock queue and then to the requests in teh read lock queue.
+#
+# This ensures that updates to a table are not "starved" even when there is
+# heavy SELECT activity for the table.
+#
+# However, if there are many updates for a table, SELECT statements wait until there
+# are no more updates.
+#
+# For information on altering the priority of reads and writes, see TABLE LOCKING ISSUES.
+#
+# You can analyze the table lock contention on your system by checking the Table_locks_immediate
+# and Table_locks_waited status variables, which indicate the number of times that
+# requests for table locks could be granted immediately and the number that had to
+# wait, respectively:
+#
+# 		SHOW STATUS LIKE 'Table%';
+# 		+-------------------------------+----------+
+# 		| Variable_name 					  |   Value  |
+# 		+-------------------------------+----------+
+# 		| Table_locks_immediate 		  | 1151552  |
+# 		| Table_locks_waited 			  | 15324 	 |
+# 		+-------------------------------+----------+
+#
+# The Performance Schema lock tables also provide locking information. See PERFORMANCE SCHEMA LOCK TABLES, later.
+#
+# The MyISAM storage engine supports concurrent inserts to reduce contention between readers and writers
+# for a given table: 
+#
+# If a MyISAM table has no free blocks in the middle of hte data file, rows are always
+# inserted at the end of the data file.
+#
+# In this case, you can freely mix concurrent INSERT and SELECT statements for a MyISAM table without locks.
+#
+# That is, you can insert rows into a MyISAM table at the same time other clients are reading from it.
+#
+# Holes can result from rows having been deleted from or updated in the middle of the table.
+#
+# if there are holes, concurrent inserts are disabled but are enabled again automatically when all
+# holes have been filled with new data.
+#
+# To control this behavior, use the concurrent_insert system variable. See CONCURRENT INSERTS.
+#
+# If you acquire a table lock explicitly with LOCK_TABLES, you can request a READ LOCAL lock rather than
+# a READ lock to enable other sessions to perform concurrent inserts while you have the table locked.
+#
+# To perform many INSERT and SELECT operations on a table t1 when concurrent inserts are not possible,
+# you can insert rows into a temporary table temp_t1 and update the real table with the rows
+# from the temporary table:
+#
+# 		LOCK TABLES t1 WRITE, temp_t1 WRITE;
+# 		INSERT INTO t1 SELECT * FROM temp_t1;
+# 		DELETE FROM temp_t1;
+# 		UNLOCK TABLES;
+#
+# CHOOSING THE TYPE OF LOCKING
+#
+# Generally, table locks are superior to row-level locks in the following cases:
+#
+# 		) Most statements for the table are reads.
+#
+# 		) Statements for the table are a mix of reads and writes, where writes are updates or deletes for a single
+# 			row that can be fetched with one key read:
+#
+# 			UPDATE tbl_name SET column=value WHERE unique_key_col=key_value;
+# 			DELETE FROM tbl_name WHERE unique_key_col=key_value;
+#
+# 		) SELECT combined with concurrent INSERT statements, and very few UPDATE or DELETE statements.
+#
+# 		) Many scans or GROUP BY operations on the entire table without any writers.
+#
+# With higher-level locks, you can more easily tune applications by supporting locks of different types,
+# because the lock overhead is less than for row-level locks.
+#
+# Options other than row-level locking:
+#
+# 		) Versioning (Such as that used in MySQL for concurrent inserts) where it is possible to have one writer at the same time
+# 			as many readers.
+#
+# 			This means that the database or table supports different views for the data depending on when access begins.
+#
+# 			Other common terms for this are "time travel", "copy on write", or "copy on demand"
+#
+# 		) Copy on demand is in many cases superior to row-level locking. However, in the worst case - it can use much more memory
+# 			than using normal locks.
+#
+# 		) Instead of using row-level locks, you can employ application-level locks, such as those provided by
+# 			GET_LOCK() and RELEASE_LOCK() in MySQL.
+#
+# 			These are advisory locks, so they work only with applications that cooperate with each other.
+#
+# 			See more, under LOCKING FUNCTIONS.
+#
+# TABLE LOCKING ISSUES
+#
+# InnoDB tables use row-level locking so that multiple sessions and applications can read from and
+# write to the same table simultaneously, without making each other wait or producing inconsistent results.
+#
+# For this storage engine, avoid using the LOCK_TABLES statement, because it does not offer any extra
+# protection, but instead reduces concurrency.
+#
+# The automatic row-level locking makes these tables suitable for your busiest database with your most
+# important data, whilst also simplifying application logic since you do not need to lock and unlock tables.
+#
+# Consequently, the InnoDB storage engine is the default in MySQL.
+#
+# MySQL uses table locking (instead of page, row or column locking) for all storage engines except InnoDB.
+#
+# The locking operations themselves do not have much overhead. But because only one session can write to a table
+# at any one time, for best performance with these other storage engines, use them primarily for tables that
+# are queried often and rarely inserted into or updated.
+#
+# PERFORMANCE CONSIDERATIONS FAVORING InnoDB
+#
+# When choosing whether to create a table using InnoDB or a different storage engine, keep in mind
+# the following disadvantages of table locking:
+#
+# 		) Table locking enables many sessions to read from a table at the same time, but if a session
+# 			wants to write to a table, it must first get exclusive access, meaning it might have to
+# 			wait for other sessions to finish with the table first.
+#
+# 			During the update, all other sessions that want to access this particular table must wait
+# 			until the update is done.
+#
+# 		) Table locking causes problems when a session is waiting because the disk is full and free
+# 			space needs to become available before the session can proceed.
+#
+# 			In this case, all sessions that want to access the problem table are also put in
+# 			a waiting state until more disk space is made available.
+#
+# 		) A SELECT statement that takes a long time to run prevents other sessions from updating the table
+# 			in the meantime, making the other sessions appear slow or unresponsive.
+#
+# 			While a session is waiting to get exclusive access to the table for updates, other sessions that
+# 			issue SELECT statements will queue up behind it, reducing concurrency even for read-only sessions.
+#
+# WORKAROUNDS FOR LOCKING PERFORMANCE ISSUES
+#
+# The following items describe some ways to avoid or reduce contention caused by table locking:
+#
+# 		) Consider switching the table to the InnoDB storage engine, either using CREATE TABLE --- ENGINE=INNODB
+# 			during setup, or using ALTER TABLE --- ENGINE=INNODB for an existing table.
+#
+# 			See THE INNODB STORAGE ENGINE for more details about this storage engine.
+#
+# 		) Optimize SELECT statements to run faster so that they lock tables for a shorter time.
+#
+# 			You might have to create some summary tables to do this.
+#
+# 		) Start mysqld with --low-priority-updates.
+#
+# 			 For storage engines that use only table-level locking (such as MyISAM, MEMORY and MERGE),
+# 			 this gives all statements that update (modify) a table lower priority than SELECT statements.
+#
+# 			 In this case, the second SELECT statement in the preceding scenario would execute before
+# 	   	 the UPDATE statement, and would not wait for the first SELECT To finish.
+#
+# 		) To specify that all updates issued in a specific connection should be done with low priority, set the low_priority_updates
+# 			server system variable to 1.
+#
+# 		) To give a specific INSERT, UPDATE or DELETE statement lower priority, use the LOW_PRIORITY attribute.
+#
+# 		) To give a specific SELECT statement higher priority, use the HIGH_PRIORITY attribute. See SELECT SYNTAX for more info.
+#
+# 		) Start mysqld with a low value for the max_write_lock_count system variable to force MySQL to temporarily elevate
+# 			the priority of all SELECT statements that are waiting for a table after a specific number of inserts to the table occur.
+#
+# 			THis permits READ locks after a certain number of WRITE locks.
+#
+# 		) If you have problems with INSERT combined with SELECT, consider switching to MyISAM tables, which support
+# 			concurrent SELECT and INSERT statements. (see CONCURRENT INSERTS, for more info, later)
+#
+# 		) If you have problems with mixed SELECT and DELETE statements, the LIMIT option to DELETE may help. See more under, DELETE SYNTAX, later.
+#
+# 		) Using SQL_BUFFER_RESULT with SELECT statements can help to make the duration of the table locks shorter. See SELECT SYNTAX, later.
+#
+# 		) Splitting tables contents into separate tables may help, by allowing queries to run against columns in one table,
+# 			while updates are confined to columns in a different table.
+#
+# 		) You could change the locking code in mysys/thr_lock.c to use a single queue. In this case, write locks and read locks would have
+# 			the same priority, which might help some applications.
+#
+# CONCURRENT INSERTS
+#
+# The MyISAM storage engine supports concurrent inserts to reduce contention betwen readers and writers for a given table:
+#
+# If a MyISAM table has no holes in the data file (deleted rows in the middle), an INSERT statement can be executed to add
+# rows to the end of the table at the same time that SELECT statements are reading rows from the table.
+#
+# If there are multiple INSERT statements, they are queued and performed in sequence, concurrently with the SELECT statements.
+#
+# The results of a concurrent INSERT may not be visible instantly.
+#
+# The concurrent_insert system variable can be set to modify the concurrent-insert processing.
+#
+# By default, the variable is set to AUTO (or 1) and concurrent inserts are handled as just described.
+#
+# If concurrent_insert is set to NEVER (or 0), concurrent inserts are disabled. If the variable is set to ALWAYS (or 2),
+# concurrent inserts at the end of the table are permitted even for tables that have deleted rows.
+#
+# See also the description of the concurrent_insert system variable.
+#
+# If you are using the binary log, concurrent inserts are converted to normal inserts for CREATE --- SELECT
+# or INSERT --- SELECT statements.
+#
+# This is done to ensure that you can re-create an exact copy of your tables by applying the log during a backup
+# operation.
+#
+# See THE BINARY LOG, for more information.
+#
+# In addition, for those statements a read lock is placed on the selected-from table such that inserts
+# into that table are blocked.
+#
+# The effect is that concurrent inserts for that table must wait as well.
+#
+# With LOAD_DATA_INFILE, if you specify CONCURRENT with a MyISAM table that satisfies the condition
+# for concurrent inserts (taht is, it contains no free blocks in the middle), other sessions can retrieve
+# data from the table while LOAD_DATA is executing.
+#
+# Use of the CONCURRENT option affects the performance of LOAD_DATA a bit, even if no other
+# session is using the table at the same time.
+#
+# If you specify HIGH_PRIORITY, it overrides the effect of the --low-priority-updates option if the server
+# was started with that option. It also causes concurrent inserts not to be used.
+#
+# For LOCK_TABLE, the difference between READ LOCAL and READ is that READ LOCAL permits nonconflicting INSERT
+# statements (concurrent inserts) to execute while the lock is held.
+#
+# However, this cannot be used if you are going to manipulate the database using processes external to the 
+# server while you hold the lock.
+#
+# METADATA LOCKING
+#
+# MySQL uses metadata locking to manage concurrent access to database objects and to ensure data consistency.
+# Metadata locking applies not just to tables, but also to schemas, stored programs (procedures, functions, triggers and scheduled events)
+# and tablespaces.
+#
+# The Performance Schema metadata_locks table exposes metadata lock information, which can be useful for seeing
+# which session hold locks, are blocked waiting for lock, and so forth.
+#
+# For details, see THE METADATA_LOCKS TABLE later.
+#
+# Metadata locking does involve some overhead, which increases as query volume increases.
+#
+# Metadata contention increases the more the multiple queries attempt ot access the same objects.
+#
+# Metadata locking is not a replacement for the table definition cache, and its mutexes and locks differ
+# from the LOCK_open mutex. The following discussion provides some information about how metadata locking works.
+#
+# METADATA LOCK ACQUISITION
+#
+# If there are multiple waiters for a given lock, the highest-priority lock request is satisfied first, with
+# an exception related to the max_write_lock_count system variable.
+#
+# Write lock requests have higher priority than read lock requests.
+#
+# However, if max_write_lock_count is set to some low value (say, 10), read lock requests may be preferred
+# over pending write lock requests if the read lock requests have already been pqssed over in favor of 10 write
+# lock requests.
+#
+# Normally, this behavior does not occur because max_write_lock_count by default has a very large value.
+#
+# Statements acquire metdata locks one by one, not simultaenously, and lock acquisition occurs in name order:
+#
+# 		) This RENAME TABLE statement renames tbla to something else, and renames tblc to tbla:
+#
+# 				RENAME TABLE tbla TO tbld, tblc TO tbla;
+#
+# 			The statement acquires metadata locks, in order, on tbla, tblc and tbld (because tbld follows tblc in name order).
+#
+# 		) This slightly different statement also renames tbla to something else, and renames tblc to tbla:
+#
+# 				RENAME TABLE tbla TO tblb, tblc TO tbla
+#
+# 			In this case, the statement acquires metadata locks in order, on tbla, tblb and tblc (because tblb precedes tblc in name order).
+#
+# Both statements acquire locks on tbla and tblc, in that order, but differ in whether the lock on the remaining table
+# name is acquired before or after tblc.
+#
+# Metadata lock acquisition order can make a difference in operation outcome when multiple transactions execute concurrently,
+# as the following example illustrates.
+#
+# Begin with two tables x and x_new that have identical structure. Three clients issue statements that involve these tables:
+#
+# 		Client 1:
+#
+# 			LOCK TABLE x WRITE, x_new WRITE;
+#
+# 		The statement requests and acquires write locks in name order on x and x_new
+#
+# 		Client 2:
+#
+# 			INSERT INTO x VALUES(1);
+#
+# 		The statement requests and blocks waiting for a write lock on x.
+#
+# 		Client 3:
+#
+# 			RENAME TABLE x TO x_old, x_new TO x;
+#
+# 		The statement requests exclusive locks in name order on x, x_new and x_old but blocks waiting for the lock on x.
+#
+# 		Client 1:
+#
+# 			UNLOCK TABLES
+#
+# The staetment releases the write locks on x and x_new. 
+#
+# The exclusive lock request for x by Client 3 has higher priority than the write lock request by Client 2,
+# so Client 3 acquires its lock on x, then also on x_new and x_old, performs the renaming, and releases its locks.
+#
+# Client 2 then acquires its lock on x, performs the insert and releases its lock.
+#
+# Lock acquisition order results in the RENAME_TABLE executing before the INSERT.
+#
+# The x into which the insert occurs is the table that was named x_new when Client 2
+# issued the insert and was renamed to x by Client 3:
+#
+# 		SELECT * FROM x;
+# 		+-----------------+
+# 		| i 					|
+# 		+-----------------+
+# 		| 1 					|
+# 		+-----------------+
+#
+# 		SELECT * FROM x_old;
+# 		Empty set (0.01 sec)
+#
+# Now begin instead with tables named x and new_x that have identical structure.
+# Again, three clients issue statements that involve these tables:
+#
+# 		Client 1:
+#
+# 			LOCK TABLE x WRITE, new_x WRITE;
+#
+# 		The statement requests and acquires write locks in name order on new_x and x.
+#
+# 		Client 2:
+#
+# 			INSERT INTO x VALUES(1);
+#
+# 		The statement requests and blocks waiting for a write lock on x.
+#
+# 		Client 3:
+#
+# 			RENAME TABLE x TO old_x, new_x TO x;
+#
+# 		The statement requests exclusive locks in name order on new_x, old_x and x, but blocks waiting
+# 		for the lock on new_x.
+#
+# 		Client 1:
+#
+# 		UNLOCK TABLES;
+#
+# The statements releases the write locks on x and new_x.
+#
+# FOr x, the only pending request is by Client 2, so CLient 2 acquires its lock,
+# performs the insert and releases the lock.
+#
+# FOr new_x, the only pending request is by Client 3, which is permitted to acquire that lock
+# (and also the lock on old_x).
+#
+# The rename operation still blocks for the lock on x until the Client 2 insert finishes and releases
+# its lock.
+#
+# Then client 3 acquires the lock on X, performs the rename, and releases its lock.
+#
+# In this case, lock acquisition order results in the INSERT executing before the RENAME_TABLE.
+# The x into which the insert occurs is the original x, now renamed old_x by the rename operation:
+#
+# SELECT * FROM x;
+# Empty set (0.01 sec)
+#
+# SELECT * FROM old_x;
+# +----------+
+# | i 		 |
+# +----------+
+# | 1 		 |
+# +----------+
+#
+# If order of lock acquisition in concurrent statements makes a difference to an application
+# in operation outcome, as in the preceding example, you may be able to adjust the table names
+# to affect the order of lock acquisition.
+#
+# Metadata locks are extended, as necessary, to tables by a foreign key constraint to prevent conflicting
+# DML and DDL operations from executing concurrently on the related tables.
+#
+# When updating a parent table,, a metadata lock is taken on the child table while updating foreign key
+# metadata.
+#
+# Foreign key metadata is owned by the child table.
+#
+# METADATA LOCK RELEASE
+#
+# To ensure transaction serializability, the server must not permit one session to perform a data
+# definition language (DDL) statement on a table that is used in an uncompleted explicitly or implicitly
+# started transaction in another session.
+#
+# The server achieves this by acquiring metadata locks on tables used within a transaction and
+# deferring release of those locks until the transaction ends.
+#
+# A metadata lock on a table prevents changes to the table's structure.
+#
+# This locking approach has the implication that a table that is being used by a transaction
+# within one session cannot be used in DDL statements by other sessions until the transaction ends.
+#
+# This principle applies not only to transactional tables, but also to nontransactional tables.
+#
+# Suppose that a session begins a transaction that uses transactional table t and nontransactional
+# table nt as follows:
+#
+# 		START TRANSACTION;
+# 		SELECT * FROM t;
+# 		SELECT * FROM nt;
+#
+# The server holds metadata locks on both t and nt until the transaction ends.
+#
+# If another session attempts a DDL or write lock operation on either table,
+# it blocks unitl metadata lock releases at transaciton end.
+#
+# For example, a second session blocks if it attempts any of these operations:
+#
+# 		DROP TABLE t;
+# 		ALTER TABLE t ---;
+# 		DROP TABLE nt;
+# 		ALTER TABLE nt ---;
+# 		LOCK TABLE t --- WRITE;
+#
+# The same behavior applies for the LOCK_TABLES_---_READ.
+#
+# That is, explicitly or implicitly started transactions that update any table 
+# (transactional or nontransactional) will block and be blocked by LOCK TABLES --- READ for taht table.
+#
+# If the server acquires metadata locks for a statement that is syntatically valid but fails during execution,
+# it does not release the locks early.
+#
+# Lock release is still deferred to the end of the transaction because the failed statement is written to the 
+# binary log and locks protect log consistency.
+#
+# In autocommit mode, each statement is in effect a complete transaction, so metadata locks acquired for the
+# statement are held only to the end of the statement.
+#
+# Metadata locks acquired during a PREPARE statement are releasesed once the statement has been prepared, even if
+# preparation occurs within a multiple-statement transaction.
+#
+# As of MySQL 8.0.13, for XA transactions in PREPARED state, metadata locks are maintained across client disconnects
+# and server restarts, until XA_COMMIT or XA_ROLLBACK is executed.
+#
+# EXTERNAL LOCKING
+#
+# External locking is the use of file system locking to manage contention for MyISAM database tables by multiple processes.
+#
+# External locking is used in situations where a single process such as the MySQL server cannot be assumed to be hte
+# only process that requires access to tables.
+#
+# Here are some examples:
+#
+# 		) If you run multiple servers that use the same DB directory (not recommended), each server must have external locking enabled.
+#
+# 		) If you use myisamchk to perform table maintenance operations on MyISAM tables, you must either ensure that hte sever
+# 			is not running, or that hte server has external locking enabled so that it locks table files as necessary to coordinate with 
+# 			myisamchk for access to the tables.
+#
+# 			The same is true for use of myisampack to pack MyISAM tables.
+#
+# 			If the server is run with external locking enabled, you can use myisamchk at any time for read operations
+# 			such as checking tables.
+#
+# 			In this case, if the server tries to update a table that myisamchk is using, the server will wait for myisamchk to finish
+# 			before it continues.
+#
+# 			If you use myisamchk for write operations such as repairing or optimizing tables, or if you use myisampack to pack tables,
+# 			you must always ensure that hte mysqld server is not using the table.
+#
+# 			If you do not stop mysqld, at least do a mysqladmin flush-tables before you run myisamchk.
+#
+# 			Your tables MAY BECOME CORRUPTED if the server and myisamchk access the tables simultaneously.
+#
+# With external locking in effect, each process that requires access to a table acquires a file system lock
+# for the table files before proceeding to access the table.
+#
+# If all necessary locks cannot be acquired, the process is blocked from accessing the table until the locks
+# can be obtained (after the process that currently holds the locks release them)
+#
+# Exernal locking affects server performance because the server must sometimes wait for other proceses before it can
+# access tables.
+#
+# External locking is unecessary if you run a single server to access a given data directory (which is the usual case),
+# and if no other programs such as mysaicmhk need to modify tables while the server is running.
+#
+# If you only READ tables with other programs, external locking is not required, although myisamchk might report warnings
+# if the server changes tables while myisamchk is reading them.
+#
+# With external locking disabled, to use myisamchk, you must either stop the server while myisamchk or else lock and
+# flush the tables before running myisamchk.
+#
+# (SEe SYSTEM FACTORS, later)
+#
+# To avoid this requirement, use the CHECK_TABLE and REPAIR_TABLE staements to check and repair myISAM tables.
+#
+# For mysqld, external locking is controlled by the value of the skip_external_locking system variable.
+#
+# When this variable is enabled, external locking is disabled and vice versa.
+#
+# External locking is disabled by default.
+#
+# Use of external locking can be controlled at server startup by using the --external-locking or --skip-external-locking option.
+#
+# If you do use external locking option to enable updates to MyISAM tables from many MySQL processes,
+# do not start the server with the --delay-key-write=ALL option or use the DELAY_KEY_WRITE=1 table option
+# for any shared tables.
+#
+# Otherwise, index corruption can occur.
+#
+# The easiest way to satisfy this condition is to always use --external-locking together with --delay-key-write=OFF.
+# (This is not done by default because in many setups it is useful to have a mixture of the preceding options)
+#
+# OPTIMIZING THE MYSQL SERVER
+#
+# This section discusses optimization techniques for the database server, primarily dealing with
+# system configuration rather than tuning SQL statements.
+#
+# The information in this section is appropriate for DBAs who want ot ensure perofrmance and scalability
+# across the servers they manage; for devs constructing installation scripts that include setting up
+# the DB.
+#
+# And people running MySQL themselves for development, testing and so on, who want to mqximize their own productivity.
+#
+# OPTIMIZING DISK I/O
+#
+# This section describes ways to configure storage devices when you can devote more and faster storage hardware to the DB server.
+#   
+# For information about optimizing an InnoDB configuration to improve I/O performance, see OPTIMIZING INNODB DISK I/O
+#
+#	 ) Disk seeks are a huge performance bottleneck.
+# 
+# 		This problem becomes more apparent when the amount of data starts to grow so large that effective caching
+# 		becomes impossible.
+#
+# 		For large DBs where you access mroe or less randomly,m you can be sure that oyu need at least one disk seek
+# 		to read and a couple of disk seeks to write things.
+#
+# 		To minimize this problem, use disks with low seek times.
+#
+# 	) iNcrease the number of available disk spindles (and thereby reduce the seek overhead) by either symlinking files to different
+# 		disks or striping the disks:
+#
+# 			) Using symbolic links
+#
+# 				This means that, for MyISAM tables, you symlink the index file and data files from their usual location
+# 				in teh data directory to another disk (that may also be striped)
+#
+# 				This makes both the seek and read times better, assuming that hte disk is not used for otherp urposes as well.
+#
+# 				See more, under USING SYMBOLIC LINKS, later.
+#
+# 				Symbolic links are not supported for use with InnoDB tables. However, it is possible to place InnoDB
+# 				data and log files on different physical disks.
+#
+# 				For more information, see OPTIMIZING INNODB DISK I/O, earlier.
+#
+# 			) Striping
+#
+# 				https://dev.mysql.com/doc/refman/8.0/en/disk-issues.html
+#
+# 
