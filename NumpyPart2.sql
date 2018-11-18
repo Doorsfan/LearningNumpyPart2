@@ -57497,6 +57497,2022 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # 			) Striping
 #
-# 				https://dev.mysql.com/doc/refman/8.0/en/disk-issues.html
+# 				Striping means that you have many disks and put the first block on the first disk, second block on the second disk,
+# 				and the N-th block on the N-th disk (N % number_of_disks) disk, and so on.
+#
+# 				This means if your normal data size is less than the stripe size (or pefectly aligned), you get much better performance.
+#
+# 				Striping is very dependant on operating system and the stripe size, so benchmark your application with different stripe sizes.
+#
+# 				See USING YOUR OWN BENCHMARKS later.
+#
+# 				The speed difference for striping is very dependant on the parameters.
+#
+# 				Depending on how you set the striping parameters and number of disks, you may get
+# 				differences measured in orders of magnitude.
+#
+# 				You have to choose to optimize for random or sequential access.
+#
+# 		) For reliability, you may want to use RAID 0+1 (striping plus mirroring), but in this case, you need 2 x N drives
+# 			of data.
+#
+# 			This is probably the best option if you have the money for it.
+#
+# 			However, you may get some volume-management software to handle it effectively.
+#
+# 		) A good option is to vary the RAID level according to how critical a type of data is.
+#
+# 			For example, store semi-important data that can be regenerated on a RAID 0 disk, but
+# 			store really important data such as host information and logs on a RAID 0+1 or RAID N disk.
+#
+# 			RAID N can be a problem if you have many writes, due to the time required to update the parity bits.
+#
+# 		) You can also set the parameters for the file system that the database uses:
+#
+# 			If you do not need to know when files were last accessed (which is not really useful on a database server),
+# 			you can mount your file systems with the -o noatime option.
+#
+# 			That skips updates to the last access time in inodes on the file system, which avoids some disk seeks.
+#
+# 			On many operating systems, you can set a file system to be updated asynchronously by mounting it with
+# 			the -o async option.
+#
+# 			If  your computer is reasonably stable, this should give you better performance without sacrificing too much
+# 			reliability (This flag is on by default on Linux)
+#
+# USING NFS WITH MYSQL
+#
+# Caution is advised when considering using NFS with MySQL. Potential issues, which vary by operating system and NFS
+# version, include:
+#
+# 		) MySQL data and log files placed on NFS volumes becoming locked and unavailable for use.
+#
+# 			Locking issues may occur in cases where multiple instances of MySQL access the same data directory or where
+# 			MySQL is shut down improperly due to a power outage, for example.
+#
+# 			NFS version 4 addresses underlying locking issues with the introduction of advisory and lease-based locking.
+# 			However, sharing a data directory among MySQL instances is not recommended.
+#
+# 		) Data inconsistencies introduced due to messages received out of order or lost network traffic.
+#
+# 			To avoid this issue, use TCP with hard and intr mount options.
+#
+# 		) Maximum file size limitations. NFS Version 2 clients can only access the lowest 2GB of a file (signed 32 bit offset).
+# 			NFS version 3 clients support larger files (up to 64 bit offsets). 
+#
+# 			The maximum supported file size also depends on the local file system of the NFS server.
+#
+# Using NFS within a professional SAN environment or other storage system tends to offer greater reliability
+# than using NFS outside of such an environment.
+#
+# However, NFS within a SAN environment may be slower than directly attached or bus-attached non-rotational storage.
+#
+# If you choose to use NFS, NFS Version 4 or later is recommended, as is testing your NFS setup
+# thoroughly before deploying into a production environment.
+#
+# USING SYMBOLIC LINKS
+#
+# You can move databases or tables from the database directory to other locations and replace them with
+# symbolic links to the new locations.
+#
+# You might want to do this, for example, to move a database to a file system with more free space or increase
+# the speed of your system by spreading your tables to different disks.
+#
+# For InnoDB tables, using the DATA DIRECTORY clause on the CREATE_TABLE statement instead of symbolic links,
+# as explained in CREATING A TABLESPACE OUTSIDE OF THE DATA DIRECTORY.
+#
+# This new feature is a supported, cross-platform technique.
+#
+# The recommended way to do this is to symlink entire database directories to a different disk.
+#
+# Symlink MyISAM tables only as a last resort only.
+#
+# To determine the location of your data directory, use this statement:
+#
+# 		SHOW VARIABLE LIKE 'datadir';
+#
+# USING SYMBOLIC LINKS FOR DATABASES ON UNIX
+#
+# On Unix, the way to symlink a database is first to create a directory on some disk where
+# you have free space and then to create a soft link to it from the MySQL data directory.
+#
+# 		mkdir /dr1/databases/test
+# 		ln -s /dr1/databases/test /path/to/datadir
+#
+# MySQL does not support linking one directory to multiple databases.
+#
+# Replacing a database directory with a symbolic link works as long as you do not make a symbolic link
+# between databases.
+#
+# Suppose that you have a database db1 under the MySQL data directory, and then make a symlink db2 that
+# points to db1:
+#
+# 		cd /path/to/datadir
+# 		ln -s db1 db2
+#
+# The result is that, for any table tbl_a in db1, there also appears to be a table tbl_a in db2.
+#
+# If one client updates db1.tbl_a and another client updates db2.tbl_a, problems may occur.
+#
+# USING SYMBOLIC LINKS FOR MYISAM TABLES ON UNIX
+#
+# Note:
+#
+# 		Symbolic link supports as described here, along with the --symbolic-links option that controls it,
+# 		is deprecated and will be removed in a future version of MySQL.
+#
+# 		In addition, the option is disabled by default.
+#
+# Symlinks are fully supported only for MyISAM tables.
+#
+# For files used by tables for other storage engines, you may get strange problems if you try to use
+# symbolic links.
+#
+# For InnoDB tables, use the alternative technique explained in CREATING A TABLESPACE OUTSIDE OF THE DATA DIRECTORY instead.
+#
+# Do not use symlink tables on systems that do not have a fully operational realpath() call.
+# (Linux and Solaris support realpath())
+#
+# To determine whether your system supports symbolic links, check the value of the have_symlink system variable
+# using this statement:
+#
+# 		SHOW VARIABLES LIKE 'have_symlink';
+#
+# The handling of symbolic links for MyISAM tables works as follows:
+#
+# 		) In the data directory, you always have the data (.MYD) file and the index (.MYI) file.
+# 			The data file and index file can be moved elsewhere and replaced in the data directory by symlinks.
+#
+# 		) You can symlink the data file and the index file independently to different directories.
+#
+# 		) To instruct a running MySQL server to perform the symlinking, use the DATA DIRECTORY and INDEX DIRECTORY
+# 			options to CREATE_TABLE.
+#
+# 			See CREATE TABLE SYNTAX later.
+#
+# 			Alternatively, if mysqld is not running, symlinking can be accomplished manually using ln -s from the cmd line.
+#
+# 			NOTE:
+#
+# 				The path used with either or both of the DATA DIRECTORY and INDEX DIRECTORY options may not include the
+# 				MySQL data directory. (Bug #32167)
+#
+# 		) myisamchk does not replace a symlink with the data file or index file.
+#
+# 			It works directly on the file to which the symlink points.
+#
+# 			Any temporary files are created in the directory where the data file or index file is located.
+#
+# 			The same is true for the ALTER_TABLE, OPTIMIZE_TABLE and REPAIR_TABLE statements.
+#
+# 			NOTE:
+#
+# 				When you drop a table that is using symlinks, both the symlink and the file to which the symlink points are dropped.
+# 				This is an extremely good reason not to run mysqld as the system root or permit system users to have write access
+# 				to the MySQL database directories.
+#
+# 		) If you rename a table with ALTER_TABLE_---_RENAME or RENAME_TABLE and you do not move the table to anotehr database,
+# 		the symlinks in the database directory are renamed to teh new names and teh data file and index file are renamed accordingly.
+#
+# 		) If you use ALTER_TABLE_---_RENAME or RENAME_TABLE to move a table to another database, the table is moved to the other
+# 			database directory.
+#
+# 			If the table name changed, the symlinks in the new database directory are renamed to the new names and the data file
+# 			and index files are renamed accordingly.
+#
+# 		) If you are not using symlinks, start mysqld with the --skip-symbolic-links option to ensure that no one can use
+# 			mysqld to drop or rename a file outside of the data directory.
+#
+# These table symlink operations are not supported:
+#
+# 		) ALTER_TABLE ignores the DATA DIRECTORY and INDEX DIRECTORY table options.
+#
+# USING SYMBOLIC LINKS FOR DATABASES ON WINDOWS
+#
+# On Windows, symbolic links can be used for database directories.
+#
+# This enables you to put a database directory at a different location (for example,
+# on a different disk) by setting up a symbolic link to it.
+#
+# Use of database symlinks on Windows is similar to their use on Unix, although the procedure
+# for setting up the link differs.
+#
+# Suppose that you want to place the database directory for a database named mydb at D:\data\mydb
+#
+# To do this, create a symbolic link in the MySQL data directory that points to D:\data\mydb
+#
+# However, before creating the symbolic link, make sure that the D:\data\mydb directory exists
+# by creating it if necessary.
+#
+# If you already have a database directory named mydb in the data directory, move it to D:\data
+#
+# Otherwise, the symbolic link will be ineffective.
+#
+# To avoid problems, make sure that hte server is not running when you move teh database directory.
+#
+# On Windows, you can create a symlink using the mklink command. This command requires admin privs.
+#
+# 1. Change location into the data directory:
+#
+# 			cd \path\to\datadir
+#
+# 2. In the data directory, create a symlink named mydb that points to the location of the database directory:
+#
+# 			mklink /d mydb D:\data\mydb
+#
+# After this, all tables created in teh database mydb are created in D:\data\mydb
+#
+# OPTIMIZING MEMORY USAGE
+#
+# HOW MYSQL USES MEMORY
+#
+# MySQL allocates buffers and caches to improve performance of database operations.
+#
+# The default configuration is designed to permit a MySQL server to start on a virtual machine
+# that has approx 512 MB of RAM.
+#
+# You can improve MySQLs performance by increasing the values of certain cache and buffer-related
+# system variables.
+#
+# You can also modify the default configuration to run MySQL on systems with limited memory.
+#
+# The following list describes some of the ways that MySQL uses memory. Where applicable, relevant
+# system variables are referenced.
+#
+# Some items are storage engine or feature specific.
+#
+# 		) The InnoDB buffer pool is a memory area that holds cached InnoDB data for tables, indexes, and other
+# 			auxiliary buffers.
+#
+# 			For efficiency of high-volume read operations, the buffer pool is divided into pages that can
+# 			potentially hold multiple rows.
+#
+# 			For efficiency of cache management, the buffer pool is implemented as a linked list of pages;
+# 			Data that is rarely used is aged out of the cache, using a variation of the LRU algorithm.
+#
+# 			For more info on this, see later under BUFFER POOL.
+#
+# 			The size of the buffer pool is important for system performance:
+#
+# 				) InnoDB allocates memory for the entire buffer pool at server startup, using malloc() operations.
+#
+# 					The innodb_buffer_pool_size system variable defines the buffer pool size.
+#
+# 					Typically, a recommended innodb_buffer_pool_size value is 50 to 75 percent of system memory.
+#
+# 					innodb_buffer_pool_size can be configured dynamically, while the server is running.
+#
+# 					For more information, see CONFIGURING INNODB BUFFER POOL SIZE
+#
+# 				) On systems with a large amount of memory, you can improve concurrency by dividing the buffer
+# 					into multiple buffer pool instances.
+#
+# 					The innodb_buffer_pool_instances system variable defines the number of buffer pool instances.
+#
+# 				) A buffer pool that is too small may cause excessive churning as pages are flushed from the buffer pool
+# 					only to be required again a short itme later.
+#
+# 				) A buffer pool that is too large may cause swapping due to competition for memory.
+#
+# 		) The storage engine interface enables the optimizer to provide information about the size of the
+# 			record buffer to be used for scans that the optimizer estimates will read multiple rows.
+#
+# 			The buffer size can vary based on the size of the estimate.
+#
+# 			InnoDB uses this variable-size buffering capability to take advantage of row prefetching,
+# 			and to reduce the overhead of latching and B-tree navigation.
+#
+# 		) All threads share the MyISAM key buffer. The key_buffer_size system variable determines its size.
+#
+# 			For each MyISAM table the server opens, the index file is opened once; the data file is opened
+# 			once for each concurrently running thread that accesses the table.
+#
+# 			For each concurrent thread, a table structure, column structures for each column, and a buffer size
+# 			of size 3 * N are allocated (where N is the maximum row length, not counting BLOB columns)
+#
+# 			A BLOB column requires five to eight bytes plus the length of the BLOB data.
+#
+# 			The MyISAM storage engine maintains one extra row buffer for internal use.
+#
+# 		) The myisam use mmap system variable can be set to 1 to enable memory-mapping for all MyISAM tables
+#
+# 		) If an internal in-memory temporary table becomes too large (as determined using the tmp_table_size and
+# 			max_heap_table_size system variables), MySQL automatically converts the table from in-memory
+# 			to on-disk format.
+#
+# 			On-disk temporary tables use the storage engine defined by the internal tmp disk storage engine system
+# 			variable.
+#
+# 			You can increase the permissible temporary table size as described in INTERNAL TEMPORARY TABLE USE IN MYSQL
+#
+# 			For MEMORY tables explicitly created with CREATE_TABLE, only the max_heap_table_size system variables determines
+# 			how large a table can grow, and there is no conversion to on-disk format.
+#
+# 		) The MySQL Performance Schema is a feature for monitoring MySQL server execution at a low level.
+#
+# 			The Performance Schema dynamically allocates memory incrementally, scaling its memory use to actual server load,
+# 			instead of allocating required memory during server startup.
+#
+# 			Once memory is allocated, it is not freed until the server is restarted.
+#
+# 			For more information, see THE PERFORMANCE SCHEMA MEMORY-ALLOCATION MODEL
+#
+# 		) Each thread that hte server uses to manage client connections requires some thread-specific space.
+#
+# 			The following list indicates these and which system variables control their size:
+#
+# 				) A stack (Thread stack)
+#
+# 				) A connection buffer (net buffer length)
+#
+# 				) A result buffer (net buffer length)
+#
+# 			The connection buffer and result buffer each begin with a size equal to net_buffer_length bytes,
+# 			but are dynamically enlarged up to max_allowed_packet byte as needed.
+#
+# 			The result buffer shrinks to net_buffer_length bytes after each SQL statement.
+#
+# 			While a statement is running, a copy of the current statement string is also allocated.
+#
+# 			Each connection thread uses memory for computing statement digests.
+#
+# 			The server allocates max_digest_length bytes per session.
+#
+# 			See PERFORMANCE SCHEMA STATEMENT DIGEST AND SAMPLING later, for more info.
+#
+# 		) All threads share the same base memory.
+#
+# 		) When a thread is no longer needed, the memory allocated to it is released and returned
+# 			to the system unless the thread goes back into the thread cache.
+#
+# 			IN that case, the memory remains allocated.
+#
+# 		) Each request that performs a sequential scan of a table allocates a read buffer. The read_buffer_size
+# 			System variable determines the buffer size.
+#
+# 		) When reading rows in an arbitrary sequence (for example, following a sort), a random-read buffer may be
+# 			allocated to avoid disk seeks.
+#
+# 			The read_rnd_buffer_size system variable determines the buffer size.
+#
+# 		) All joins are executed in a single pass, and most joins can be done without even using a temporary table.
+#
+# 			Most temporary tables are memory-based hash tables.
+#
+# 			Temporary tables with a large row length (calculated as the sum of all column lengths) or that contain BLOB
+# 			columns are stored on disk.
+#
+# 		) Most requests that perform a sort allocate a sort buffer and zero to two temporary files depending on
+# 			the result size.
+#
+# 			WHERE MYSQL STORES TEMPORARY FILES
+#
+# 		) ALmost all parsing and calculating is done in thread-local and reusable memory pools.
+#
+# 			No memory overhead is needed for small items, thus avoiding the normal slow memory allocation
+# 			and freeing.
+#
+# 			Memory is allocated only for unexpected large strings.
+#
+# 		) For each table having BLOB columns, a buffer is enlarged dynamically to read in larger BLOB
+# 			values.
+#
+# 			If you scan a table, the buffer grows as large as the largest BLOB value.
+#
+# 		) MySQL requires memory and descriptors for the table cache.
+#
+# 			Handle structures for all in-use tables are saved in the table cache and managed
+# 			as "First in, First out" (FIFO)
+#
+# 			The table_open_cache system variable defines the intial table cache size. See HOW MYSQL OPENS AND CLOSES TABLES.
+#
+# 			MySQL also requires memory for the table definition cache. The table_definition_cache system variables defines
+# 			the number of  table definitions that can be stored in teh table definition cache.
+#
+# 			If you use a large number of tables, you can create a large table definition cache to speed up
+# 			the opening of tables.
+#
+# 			The table definition cache takes less space and does not use file descriptors, unlike the table cache.
+#
+# 		) A FLUSH_TABLES statement or mysqladmin flush-tables command closes all tables that are not in use at once
+# 			and marks all in-use tables to be closed when the currently executing thread finishes.
+#
+# 			This effectively frees most in-use memory.
+#
+# 			FLUSH_TABLES does not return until all tables have been closed.
+#
+# 		) The server caches information in memory as a result of GRANT, CREATE_USER, CREATE_SERVER and INSTALL_PLUGIN
+# 			statements.
+#
+# 			This memory is not released by the corresponding REVOKE, DROP_USER, DROP_SERVER and UNINSTALL PLUGIN statements,
+# 			so for a server that executes many instances of the statements that cause caching, there will be an increase
+# 			in memory use.
+#
+# 			This cached memory can be freed with FLUSH_PRIVILEGES.
+#
+# 		) In a replication topology, the following settings affect memory usage, and can be adjusted as required:
+#
+# 				) The max_allowed_packet system variable on a replication master limits the maxium message size that
+# 					the master sends to its slaves for processing.
+#
+# 					This setting defaults to 64M.
+#
+# 				) The slave_pending_jobs_size_max system variable on a multi-threaded slave sets the maximum amount of memory
+# 					that is made available for holding messages awaiting processing.
+#
+# 					This setting defaults to 128M.
+#
+# 					The memory is only allocated when needed, but it might be used if your replication topology handles
+# 					large transactions sometimes.
+#
+# 					It is a soft limit, and larger transactions can be processed.
+#
+# 				) The rpl_read_size system variable on a replication master or slave controls the minimum amount of data in
+# 					bytes that is read from the binary log files and relay log files.
+#
+# 					THe default is 8192 bytes. A buffer the size of this value is allocated for each thread
+# 					that reads from the binary log and relay log files, including dump threads on masters
+# 					and coordinator threads on slaves.
+#
+# 				) THe binlog_transaction_dependency_history_size system variable limits the number of rows hashes
+# 					held as in-memory history.
+#
+# 				) The max_binlog_cache_Size system variable specifies the upper limit of memory usage by an individual transaction.
+#
+# 				) The max_binlog_stmt_cache_size system variable specifies the upper limit of memory usage by the statement cache.
+#
+# ps and other system status programs may report that mysqld uses a lot of memory.
+#
+# THis may be caused by thread stacks on differnet memory addresses.
+# For example, the Solaris version of ps counts the unused memory between stacks as used memory.
+#
+# To verify this, check available swap with swap -s. We test mysqld with several memory-leakage
+# detectors (both commercial/open source),so there should not be any memory leaks.
+#
+# MONITORING MYSQL MEMORY USAGE
+#
+# The following example demonstrates how ot use Performance SChema and Sys schema to monitor MySQL memory usage.
+#
+# Most Performance Schema memory instrumentation is disabled by default.
+#
+# Instruments can be enabled by updating the ENABLED column of the Performance Schema
+# setup_instruments table.
+#
+# Memory instruments have names in teh form of memory/code_area/instrument_name, where code_area
+# is a value such as sql or innodb, and instrument_name is the instrument detail.
+#
+# 1. To view available MySQL memory instruments, query the Performance Schema setup_instruments table.
+#
+# 		The following query returns hundreds of memory instruments for all code areas:
+#
+# 			SELECT * FROM performance_schema.setup_instruments
+# 			WHERE NAME LIKE '%memory%';
+#
+# 		YOu can narrow results by specifying a code area. For example, you can limit results to InnoDB
+# 		memory instruments by specifying innodb as the code area.
+#
+# 			SELECT * FROM performance_schema.setup_instruments
+# 			WHERE NAME LIKE '%memory/innodb%';
+# 			+---------------------------------------------------+------------+---------+
+# 			| NAME 															 | ENABLED 	  | TIMED   |
+# 			+---------------------------------------------------+------------+---------+
+# 			| memory/innodb/adaptive_hash_index 					 | NO 		  | NO 	   |
+# 			| memory/innodb/buf_buf_pool 								 | NO 		  | NO      |
+# 		   | memory/innodb/dict_stats_bg_recalc_pool_t 			 | NO 		  | NO 	   |
+# 			| memory/innodb/dict_stats_index_map_t 				 | NO 		  | NO 	   |
+# 			| memory/innodb/dict_stats_n_diff_on_level 			 | NO 		  | NO 		|
+# 			| memory/innodb/other 										 | NO 		  | NO 	   |
+# 			| memory/innodb/row_log_buf 								 | NO 		  | NO 	   |
+# 			| memory/innodb/row_merge_sort 							 | NO 		  | NO 	   |
+# 			| memory/innodb/std 											 | NO 		  | NO      |
+# 			| memory/innodb/trx_sys_t::rw_trx_ids 				    | NO 		  | NO 	   |
+# 			---
+#
+# Depending on your MySQL installation, code areas may include performance_schema, sql, client,
+# innodb, myisam, csv, memory, blackhole, archive, partition and others.
+#
+# 2. To enable memory instruments, add a performance-schema-instrument rule to your MySQL configuration
+# 		file.
+#
+# 		For example, to enable all memory instruments, add this rule to your configuration file and restart
+# 		the server:
+#
+# 			performance-schema-instrument='memory/%=COUNTED'
+#
+# 		NOTE:
+#
+# 			Enabling memory instruments at startup ensures that memory allocations that occur at startup are counted.
+#
+# 		After restarting the server, the ENABLED column of the Performance Schema setup_instruments
+# 		table should report YES for memory instruments that you enabled.
+#
+# 		The TIMED column in the setup_instruments table is ignored for memory instruments because
+# 		memory operations are not timed.
+#
+# 		SELECT * FROM performance_schema.setup_instruments 
+# 		WHERE NAME LIKE '%memory/innodb%';
+# 		+------------------------------------------------------+---------------+-----------+
+# 		| NAME 																 | ENABLED 		  | TIMED 	  |
+# 		+------------------------------------------------------+---------------+-----------+
+# 		| memory/innodb/adaptive_hash_index 						 | NO 			  | NO 	     |
+# 		| memory/innodb/buf_buf_pool 									 | NO 			  | NO 		  |
+# 		| memory/innodb/dict_stats_bg_recalc_pool_t 				 | NO 			  | NO 		  |
+# 		| memory/innodb/dict_stats_index_map_t 					 | NO 			  | NO 	     |
+# 		| memory/innodb/dict_stats_n_diff_on_level 				 | NO 			  | NO 		  |
+# 		| memory/innodb/other 											 | NO 			  | NO 		  |
+# 		| memory/innodb/row_log_buf 									 | NO 			  | NO 		  |
+# 		| memory/innodb/row_merge_sort 								 | NO 			  | NO 		  |
+# 		| memory/innodb/std 												 | NO 			  | NO 		  |
+# 		| memory/innodb/trx_sys_t::rw_trx_ids 						 | NO 			  | NO 		  |
+# 		---
+#
+# 3. Query memory instrument data.
+#
+# 		In this example, memory instrument data is queried in the Performance Schema memory_summary_global_by_event_name table,
+# 		which summarizes data by EVENT_NAME.
+#
+# 		The EVENT_NAME is the name of the instrument.
+#
+# 		The following query returns memory data for the InnoDB buffer pool.
+#
+# 		For column descriptions, see MEMORY SUMMARY TABLES for more info.
+#
+# 		SELECT * FROM performance_schema.memory_summary_global_by_event_name
+# 		WHERE EVENT_NAME LIKE 'memory/innodb/buf_buf_pool'\G
+# 						EVENT_NAME: memory/innodb/buf_buf_pool
+# 					  COUNT_ALLOC: 1
+# 				 		COUNT_FREE: 0
+# 	SUM_NUMBER_OF_BYTES_ALLOC: 137428992
+# 	 SUM_NUMBER_OF_BYTES_FREE: 0
+# 				LOW_COUNT_USED  : 0
+# 			CURRENT_COUNT_USED : 1
+# 				HIGH_COUNT_USED : 1
+# 	 LOW_NUMBER_OF_BYTES_USED: 0
+#CURRENT_NUMBER_OF_BYTES_USED: 137428992
+#  HIGH_NUMBER_OF_BYTES_USED: 13748992
+#
+# The same underlying data can be queried using the sys schema memory_global_by_current_bytes table,
+# which shows current memory usage within the server globally, broken down by allocation type:
+#
+# 		SELECT * FROM sys.memory_global_by_current_bytes
+# 		WHERE event_name LIKE 'memory/innodb/buf_buf_pool'\G
+# 		************************ 1. row ************************
+# 				event_name: memory/innodb/buf_buf_pool
+# 			current_count: 1
+# 			current_alloc: 131.06 MiB
+# 	  current_avg_alloc: 131.06 MiB
+# 				high_count: 1
+# 				high_alloc: 131.06 MiB
+# 		  high_avg_alloc: 131.06 MiB
+#
+# This sys schema query aggregates currently allocated memory (current_alloc) by code area:
+#
+# 		SELECT SUBSTRING_INDEX(event_name, '/', 2) AS
+# 		code_area, sys.format_bytes(SUM(current_alloc))
+# 		AS current_alloc
+# 		FROM sys.x$memory_global_by_current_bytes
+# 		GROUP BY SUBSTRING_INDEX(event_name, '/', 2)
+# 		ORDER BY SUM(current_alloc) DESC;
+#
+# 		+--------------------------------+----------------+
+# 		| code_area 							| current_alloc  |
+# 		+--------------------------------+----------------+
+# 		| memory/innodb 						| 843.24 MiB 	  |
+# 		| memory/performance_schema 		| 81.29 MiB 	  |
+# 		| memory/mysys 						| 8.20 MiB 		  |
+# 		| memory/sql 							| 2.47 MiB 		  |
+# 		| memory/memory 						| 174.01 KiB 	  |
+# 		| memory/myisam 						| 46.53 KiB 	  |
+# 		| memory/blackhole 					| 512 bytes 	  |
+# 		| memory/federated 					| 512 bytes 	  |
+# 		| memory/csv 							| 512 bytes 	  |
+# 		| memory/vio 							| 496 bytes 	  |
+# 		+--------------------------------+----------------+
+#
+# For more information about sys schema, see CHAPTER 27, MySQL SYS SCHEMA, more later
+#
+# ENABLING LARGE PAGE SUPPORT
+#
+# Some hardware/operating systme architechture support memory pages greater than the default (usually 4kb).
+# The actual implementation of this support depends on the underlying hardware and operating system.
+#
+# Applications that perform a lot of memory accesses may obtain performance improvements by using large
+# pages due to redued Translation Lookaside Buffer (TLB) misses.
+#
+# In MySQL, large pages can be used by InnoDB, to allocate memory for its buffer pool and additional memory pool.
+#
+# Standard use of large pages in MySQL attempts to use the largest size supported, up to 4MB.
+#
+# Under Solaris, a "super large pages" feature enables uses of pages up to 256MB.
+#
+# THis feature is available for recent SPARC platforms. It can be enabled or disabled by
+# using the --super-large-pages or --skip-super-large-pages option.
+#
+# MySQL also supports the Linux implementation of large page support (which is called HugeTLB in Linux)
+#
+# Before large pages can be used on Linux, the kernel must be enabled to support them and it is necessary
+# to configure the HugeTLB memory pool.
+#
+# For reference, the HugeTLB API is documented in teh Documentation/vm/hugetlbpage.txt file of your Linux sources.
+#
+# The kernel for some recent systems such as Read Hat Enterprises Linux appear to have the large pages
+# feature enabled by default.
+#
+# TO check whether this is true for your kernel, use the following command and look for output lines containing "Huge".
+#
+# 		cat /proc/meminfo | grep -i huge
+# 		HugePages_Total: 		0
+# 		HugePages_Free: 		0
+# 		HugePages_Rsvd: 		0
+# 		HugePages_Surp: 		0
+# 		Hugepagesize: 		4096 kb
+#
+# The nonempty command output indicates that large page support is present, but the zero values indicate
+# that no pages are configured for use.
+#
+# If your kernel needs to be reconfigured to support large pages, consult the hugetlbpage.txt file for instructions.
+#
+# Assuming that your Linux kernel has large page support enabled, configure it for use by MySQL using the following commands.
+#
+# Normally, you put these in an rc file or equivalent startup file that is executed during the system boot sequence,
+# so that hte commands execute each time the system starts.
+#
+# The commands should execute early in the boot sequence, before the MySQL server starts.
+#
+# Be sure to change the allocation numbers and the group number as appropriate for your system.
+#
+# 		# Set the number of pages to be used.
+# 		# Each page is normally 2MB, so a value of 20 = 40MB.
+# 		# This command actually allocates memory, so this much
+# 		# memory must be avaialable.
+# 		echo 20 > /proc/sys/vm/nr_hugepages
+#
+# 		# Set the group number that is permitted to access this
+# 		# memory (102 in this case). The mysql user must be a member of this group.
+# 		echo 102 > /proc/sys/vm/hugetlb_shm_group
+#
+# 		# INcrease the amount of shmem permitted per segment
+# 		# (12G in this case)
+# 		echo 1560281088 > /proc/sys/kernel/shmmax
+#
+# 		# Increase total amount of shared memory. The value
+# 		# is the number of pages. At 4kb/page, 4194304 = 16GB
+# 		echo 4194304 > /proc/sys/kernel/shmall
+#
+# For MySQL usage, you normally want the value of shmmax to be close to the value of shmall.
+#
+# To verify the large page configuration, check /proc/meminfo again as described previously.
+# Now you should see some nonzero values:
+#
+# 		cat /proc/meminfo | grep -i huge
+# 		HugePages_Total: 		20
+# 		HugePages_Free: 		20
+# 		HugePages_Rsvd: 		 0
+# 		HugePages_Surp: 	 	 0
+# 		Hugepagesize: 		 4096 kB
+#
+# THe final step to make use of the hugetlb_shm_group is to give the mysql user an "unlimited" value for the
+# memlock limit.
+#
+# This can be done either by editing /etc/security/limits.conf or by adding the following command to your
+# mysqld_safe script:
+#
+# 		ulimit -1 unlimited
+#
+# Adding the ulimit command to mysqld_safe causes the root user to set the memlock limit to unlimited
+# before switching to the mysql user.
+#
+# (This assumes that mysqld_safe is started by root)
+#
+# large page support in MySQL is disabled by default.
+# To enable it, start the server with the --large-pages option.
+#
+# For example, you can use the following lines in the server my.cnf file:
+#
+# 		[mysqld]
+# 		large-pages
+#
+# With this option, InnoDB uses large pages automatically for its buffer pool and additional memory pool.
+#
+# If InnoDB cannot do this, it falls back to use of traditional memory and writes a warning to the
+# error log: Warning : Using conventional memory pool
+#
+# To verify that large pages are being used, check /proc/meminfo again:
+#
+# 		cat /proc/meminfo | grep -i huge
+# 		HugePages_Total: 			20
+# 		HugePages_Free: 			20
+# 		HugePages_Rsvd: 			 2
+# 		HugePages_Surp: 			 0
+# 		Hugepagesize: 	 		 4096 kB
+#
+# OPTIMIZING NETWORK USE
+#
+# HOW MYSQL HANDLES CLIENT CONNECTIONS
+#
+# THis section describes aspects of how the MySQL server manages client connections.
+#
+# 		) Network Interfaces and Connection Manager Threads
+#
+# 		) Client Connection Thread Management
+#
+# 		) Connection Volume Management
+#
+# 		) Administrative Connection Management
+#
+# NETWORK INTERFACES AND CONNECTION MANAGER THREADS
+#
+# The server is capable of listening for client connections on multiple network interfaces.
+#
+# Connection manager threads handle client connection requests on the network interfaces
+# that the server listens to:
+#
+# 		) On all platforms, one manager thread handles TCP/IP connection requests
+#
+# 		) On Unix, the same manager thread also handles Unix socket file connection requests
+#
+# 		) On Windows, a manager thread handles shared-memory connection requests, and another handles named-pipe connection requests.
+#
+# 		) On all platforms, an additional network interface may be enabled to accept administrative TCP/IP connection requests.
+#
+# 			This interface can use the manager thread that handles "ordinary" TCP/IP requests, or a separate thread.
+#
+# The server does not create threads to handle interfaces that it does not listen to.
+#
+# For example, a Windows Server that does not have support for named-pipe connections
+# enabled does not create a thread to handle them.
+#
+# CLIENT CONNECTION THREAD MANAGEMENT
+#
+# Connection manager threads associate each client connection with a thread dedicated to it that handles
+# authentication and request processing for that connection.
+#
+# Manager threads create a new thread when necessary but try to avoid doing so by consulting the thread cache
+# first to see whether it contains a thread that can be used for the connection.
+#
+# When a connection ends, its thread is returned ot the thread cache if the cache is not full.
+#
+# In this connection thread model, there are as many threads as there are clients currently connected, which has some
+# disadvantages when server workload must scale to handle large numbers of connections.
+#
+# For example, thread creation and disposal becomes expensive. Also, each thread requires server and kernel resources,
+# such as stack space.
+#
+# To accommodate a large number of simultaneous connections, the stack size per thread must be kept small, leading to
+# a situation where it is either too small or the server consumes large amounts of memory.
+#
+# Exhaustion of other resources can occur as well, and scheduling overhead can become significant.
+#
+# MySQL Enterprise Edition includes a thread pool plugin that provides an alternative thread-handling model designed to
+# reduce overhead and improve performance.
+#
+# It implements a thread pool taht increases server performance by efficiently managing statement execution threads
+# for large numbers of client connections.
+#
+# See MYSQL ENTERPRISE THREAD POOL for more info.
+#
+# To control and monitor how the server manages threads that handle client connections, several system and
+# status variables are relevant.
+#
+# See SERVER SYSTEM VARIABLES and SERVER STATUS VARIABLES, for more info.
+#
+# The thread_cache_size system variable determines the thread cache size.
+#
+# By default, the server autosizes the value at startup, but it can be set explicitly
+# to override this default.
+#
+# A value of 0 disables caching, which causes a thread to be set up for each new connection
+# and disposed of when the connection terminates.
+#
+# To enable N inactive connection threads to be cached, set thread_cache_size to N at server
+# startup or at runtime.
+#
+# A connection thread becomes inactive when the client connection with which it was associated terminates.
+#
+# To monitor the number of threads in the cache and how many threads have been created because a thread
+# could not be taken from the cache, check the Threads_cached and Threads_created status variables.
+#
+# When the thread stack is too small, this limits the complexity of the SQL statements which the server
+# can handle, the recursion depth of stored procedures, and other memory-consuming actions.
+#
+# To set a stack size of N bytes for each thread, start the server with thread_stack set to N at server startup.
+#
+# CONNECTION VOLUME MANAGEMENT
+#
+# To control the maximum number of clients the server permits to connect simultaneously, set the
+# max_connections system variable at server startup or at runtime.
+#
+# It may be necessary to increase max_connections if more clients attempt to connect simultaneously
+# then the server is configured to handle.
+#
+# See TOO MANY CONNECTIONS, SECTION B.5.2.6 later for more info.
+#
+# Mysqld actually permits max_connections + 1 client connections.
+#
+# The extra connection is reserved for use by accounts that have the CONNECTION_ADMIN
+# or SUPER privilege.
+#
+# BY granting the privilege to admins and not to normal users (who should not need it),
+# an admin can connect to the server and use SHOW_PROCESSLIST to diagnose problems even
+# if the maximum number of unprivileged clients are connected.
+#
+# See SHOW PROCESSLIST SYNTAX for more info, later.
+#
+# (The server also permits administrative connections on a dedicated interface. See ADMINISTRATIVE CONNECTION MANAGEMENT)
+#
+# If the server refuses a connection because the max_connections limit is reached, it increments the
+# Connection_errors_max_connections status variable.
+#
+# The maximum number of connections MySQL supports (that is, the maximum value to which max_connections can be set)
+# depends on several factors:
+#
+# 		) The quality of the thread library on a given platform
+#
+# 		) The amount of RAM available
+#
+# 		) The amount of RAM is used for each connection
+#
+# 		) The workload from each connection
+#
+# 		) The desired response time
+#
+# 		) The number of file descriptors available
+#
+# Linux or Solaris should be able to support at least 500 to 1000 simultaneous connections routinely
+# and as many as 10,000 connections if you have many gigabytes of RAM available and the workload
+# from each is low or the response time target undemanding.
+#
+# Increasing the max_connections value increases the number of file descriptors that mysqld requires.
+#
+# IF the required number of descriptors are not available, the server reduces the value
+# of max_connections.
+#
+# For comments on file descriptor limits, see HOW MYSQL OPENS AND CLOSES TABLES, for more info.
+#
+# Increasing --open-files-limit may be necessary, which may also require raising the operating system
+# limit on how many file descriptors can be used by MySQL.
+#
+# Consult your operating system documentation to determine whether it is possible to increase the limit
+# and how to do so.
+#
+# See SECTION B.5.2.17, "FILE NOT FOUND AND SIMILAR ERRORS" for more information.
+#
+# ADMINISTRATIVE CONNECTION MANAGEMENT
+#
+# As of MySQL 8.0.14, the server permits a TCP/IP port to be configured specifically
+# for administrative connections.
+#
+# This provides an alternative to the single administrative connection that is permitted
+# on the network interfaces used for ordinary connections even when max_connections connections
+# are already established.
+#
+# See CONNECTION VOLUME MANAGEMENT
+#
+# The administrative network interface has these characteristics:
+#
+# 		) The interfaceis available only if the admin_address system variable is set at startup to indicate
+# 			the IP address for the administrative interface.
+#
+# 			If no admin_address value is specified, the server maintains no administrative interface.
+#
+# 		) The admin_port system varaible specifies the interface TCP/IP port number (default 33062)
+#
+# 		) There is no limit on the number of administrative connections
+#
+# 		) Connections are permitted only by users who have the SERVICE_CONNECTION_ADMIN privilege.
+#
+# The create_admin_listener_thread system variable enables DBAs to choose at startup whether the administrative
+# interface is implemented using the listener thread used for ordinary connections, or has its own separate thread.
+#
+# The default is to implement the administrative interface using the listener thread used for ordinary
+# connections.
+#
+# DNS LOOKUP OPTIMIZATION AND THE HOST CACHE
+#
+# The MySQL server maintains a host cache in memory that contains information about clients: IP address,
+# host name, and error information.
+#
+# The Performance Schema host_cache table exposes the contents of the host cache so that it can be examined
+# using SELECT statements.
+#
+# This may help you diagnose the cuase of connection problems.
+#
+# See THE HOST_CACHE TABLE for more info, later.
+#
+# Note:
+#
+# 		The server uses the host cache only for nonlocal TCP connections.
+#
+# 		IT does not use the cache for TCP connections established using a loopback interface
+# 		address (for example, 127.0.0.1 or ::1) or for connections established using a Unix socket
+# 		file, named pipe or shared memory.
+#
+# HOST CACHE OPERATION
+#
+# The server uses the host cache for several purposes:
+#
+# 		) By caching the results of IP-to-host name lookups, the server avoids doing a Domain Name System (DNS) lookup
+# 			for each client connection.
+#
+# 			Instead, for a given host, it needs to perform a lookup only for the first connection from that host.
+#
+# 		) The cache contains information about errors that occur during the connection process.
+#
+# 			Some errors are considered "blocking". If too many of these occur successively from a given host
+# 			without a successful connection, the server blocks further connections from that host.
+#
+# 			The max_connect_errors system variable determines the permitted number of successive errors before
+# 			blocking occurs.
+#
+# 			See HOST 'HOST_NAME' IS BLOCKED SECTION B.5.2.5 later for more info.
+#
+# For each new client connection, the server uses the client IP address to check whether the client host name
+# is in the host cache.
+#
+# If so, the server refuses or continues to process the connection request depending on whether or not
+# the host is blocked.
+#
+# If the host is not in the cache, the server attempts to resolve the host name.
+#
+# First, it resolves the IP address to a host name and resolves that host name back to an IP address.
+#
+# Then it compares the result to the original IP address to ensure that they are the same.
+#
+# The server stores information about the result of this operation in teh host cache.
+# If the cache is full, the least recently used entry is discarded.
+#
+# The server handles entries in the host cache like this:
+#
+# 		1. When the first TCP client connection reaches the server from a given IP address, a new cache
+# 			entry is created to record the client IP, host name and client lookup validation flag.
+#
+# 			Initially, the host name is set ot NULL and the flag is false.
+#
+# 			This entry is also used for subsequent client TCP connections from the same original IP.
+#
+# 		2. If the validation flag for the client IP entry is false, the server attempts an IP-to-host name-to-IP DNS
+# 			resolution.
+#
+# 			If thati s successful, the host name is updated with the resolved host name and the validation flag is set to true.
+#
+# 			If resolution is unsuccessful, the action taken depends on whether the error is permanent or transient.
+# 			For permanent failures, the host name remains NULL and the validation flag is set to true.
+#
+# 			For transient failures, the host name and validation flag remain unchanged.
+ #			(In this case, another DNS resolution attempt occurs the next time a client connects from this IP)
+ #
+ # 	3. If an error occurs while processing an incoming client connection from a given IP address, the server 
+ # 			updates the corresponding error counters in the entry for that IP.
+ #
+ # 		For a description of the errors recorded, see SECTION 26.12.17.1 "THE HOST_CACHE TABLE"
+ #
+ # The server performs host name resolution using the gethostbyaddr() and gethostbyname() system cals.
+ #
+ # To unblock blocked hosts, flush the host cache by executing a FLUSH HOSTS statement, a TRUNCATE_TABLE statement
+ # that truncates the Performance Schema host_cache table or a mysqladmin flush-hosts command.
+ #
+ # FLUSH_HOSTS and mysqladmin flush-hosts require the RELOAD Privilege. TRUNCATE_TABLE requires the DROP privilege
+ # for the host_cache table.
+ #
+ # It is possible for a blocked host to become unblocked even without flushing the host cache if activity from other
+ # hosts has occurred since the last connection attempt from the blocked host.
+ #
+ # This can occur because the server discard the least recently used entry to make room for a new entry if the 
+ # cache is full when a connection arrives from a client IP not in the cache.
+ #
+ # IF the discard entry is for a blocked host, that host becomes unblocked.
+ #
+ # Some connection errors are not associated with TCP connections, occur very early in the connection process
+ # (even ebfore an IP address is known) or are not specific to any particular IP address (such as out-of-memory conditions).
+ #
+ # For information about these errors, check the Connection_errors_xxx status variables.
+ # See SECTION 5.1.10, SERVER STATUS VARIABLES for more information.
+ #
+ # HOST CACHE CONFIGURATION
+ #
+ # The host cache is enabled by default.
+ #
+ # The host_cache_size system variable controls its size, as well as the size of the
+ # Performance Schema host_cache table that exposes the cache contents.
+ #
+ # The cache size can be set at server startup and changed at runtime.
+ #
+ # For example, to set the size to 100 at startup, put these lines in the server my.cnf
+ # file:
+ #
+ # 		[mysqld]
+ # 		host_cache_size=200
+ #
+ # To change the size to 300 at runtime, do this:
+ #
+ # 		SET GLOBAL host_cache_size=300;
+ #
+ # Setting host_cache_size to 0, either at server startup or at runtime, disables the host cache.
+ # With the cache disabled, the server performs a DNS lookup every time a client connects.
+ #
+ # Changing the cache size at runtime causes an implicit FLUSH_HOSTS operation that clears the host cache,
+ # truncates the host_cache table, and unblocks any blocked hosts.
+ #
+ # Using the --skip-host-cache option is similar to setting the host_cache_size system variable to 0, but
+ # host_cache_size is more flexible, because it can also be used to resize, enable and disable the host cache at runtime,
+ # not just at server startup.
+ #
+ # Starting the server with --skip-host-cache does not prevent changes to hte value of host_cache_size,
+ # but such changes have no effect and the cache is not re-enabled even if host_cache_size is set
+ # larger than 0 at runtime.
+ #
+ # To disable DNS host name lookups, start the server with the --skip-name-resolve option.
+ #
+ # IN this case, the server uses only IP addresses and not host names to match connecting hosts
+ # to rows in the MySQL grant tables.
+ #
+ # Only accounts specified in those tables using IP addresses can be used.
+ #
+ # (A client may not be able to connect if no account exists that specifies the client IP address)
+ #
+ # IF you have a very slow DNS and many hosts, you might be able to improve the performance either by disabling DNS lookups
+ # with --skip-name-resolve or by increasing the value of host_cache_size to make the host cache larger.
+ #
+ # To disallow TCP/IP connections entirely, start the server with the --skip-networking option.
+ #
+ # RESOURCE GROUPS
+ #
+ # MySQL supports creation and management of resource groups, and permits assigning threads running
+ # within the server to particular groups so that threads execute according to the resources available
+ # to the group.
+ #
+ # Group attributes enable control over its resources, to enable or restrict resource consumption by threads
+ # in the group.
+ #
+ # DBAs can modify these attributes as appropriate for different workloads.
+ #
+ # Currently, CPU time is a managable resource, reprented by the concept of "virtual CPU" as a term that
+ # includes CPU cores, hyperthreads, hardware threads, and so forth.
+ #
+ # THe server determines at startup how many virtual CPUs are available, and database administrators
+ # with appropriate privileges can associate these CPUs with resource groups and assign threads
+ # to groups.
+ #
+ # For example, to manage execution or batch jobs that need not execute with high priority, a DBA can
+ # create a Batch resource group, and adjust its priority up or down depending on how busy the server is.
+ #
+ # (Perhaps batch jobs assigned to the group should run at lower priority during the day and at higher
+ # priority during the night)
+ #
+ # The DBA can also adjust the set of CPUs available to the group. Groups can be enabled or disabled 
+ # to control whether threads are assignable to them.
+ #
+ # The following sections describe aspects of resource group use in MySQL:
+ #
+ # ) Resource Group COmponents
+ #
+ # ) Resource Group Attributes
+ #
+ # ) Resource Group Management 
+ #
+ # ) Resource Group Replication
+ #
+ # ) Resource Group Restrictions 
+ #
+ # IMPORTANT:
+ #
+ # On some platforms or MySQL server configurations, resource groups are unavailable or have limitations.
+ # In particular, Linux systems might require a manual step for some installation methods.
+ #
+ # For details, see RESOURCE GROUP RESTRICTIONS for more info.
+ #
+ # RESOURCE GROUP COMPONENTS
+ #
+ # These capabilities provide the SQL interface for resource group management in MySQL:
+ #
+ # 	) SQL statements enables creating, altering and dropping resouce groups and enable assigning
+ # 		threads to resource groups.
+ #
+ # 		An optimizer hint enables assigning individual statements to resource groups.
+ #
+ # 	) Resource group privileges provide control over which users can perform resource group operations.
+ #
+ # 	) The INFORMATION_SCHEMA.RESOURCE_GROUPS table exposes information about resource group
+ # 		definitions and the Performance Schema threads table shows the resource group assignment for each thread.
+ #
+ # 	) Status variables provide execution counts for each management SQL statement.
+ #
+ # RESOURCE GROUP ATTRIBTUES
+ #
+ # Resource groups have attributes that define the group.
+ # All attributes can be set at group creation time.
+ #
+ # Some attributes are fixed at creation time; others can be modified any time thereafter.
+ #
+ # These attributes are defined at resource group creation time and cannot be modified:
+ #
+ # 	) Each group has a name. Resource group names are identifiers like table and column names,
+ # 		and need not be quoted in SQL statements unless they contain special characters or are reserved words.
+ #
+ # 		Group names are not case sensitive and may be up to 64 characters long.
+ #
+ # 	) Each group has a type, which is either SYSTEM or USER.
+ #
+ # 		The resource group type affects the range of priority values assignable to the group,
+ # 		as described later.
+ #
+ # 		This attribute together with the differences in permitted priorities enables system
+ # 		threads to be identified so as to protect them from contention for CPU resources against
+ # 		user threads.
+ #
+ # 		System and user threads correspond to background and foreground threads as listed in the Performance Schema threads table.
+ #
+ # These attributes are defined at resource group creation time and can be modified an time thereafter:
+ #
+ # 	) The CPU affinity is the set of virtual CPUs the resource group can use. An affinity can be any
+ # 		nonempty subset of the available CPUs.
+ #
+ # 		If a group has no affinity, it can use all available CPUs.
+ #
+ # 	) The thread priority is the execution priority for threads assigned to the resource group.
+ # 		Priority values range from -20 (highest prio) to 19 (lowest prio)
+ #
+ # 		The default prio is 0, forb oth system and user groups.
+ #
+ # 		System groups are permitted a higher priority than user groups, ensuring that user threads
+ # 		never have a higher prio than system threads:
+ #
+ # 			) For system resource groups, the permitted priority range is -20 to 0.
+ #
+ # 			) For user resource groups, the permitted priority range is 0 to 19.
+ #
+ #		) Each group can be enabled or disabled, affording administrators control over thread assignments.
+ #
+ # 		Threads can be assigned only to enabled groups.
+ #
+ # RESOURCE GROUP MANAGEMENT
+ #
+ # By default, there is one system group and one user group, named SYS_default and USR_default, respectively.
+ # These default groups cannot be dropped and their attributes cannot be modified.
+ #
+ # Each default group has no CPU affinity and priority 0.
+ #
+ # Newly created system and user threads are assigned to the SYS_default and USR_default groups, respectively.
+ #
+ # For user-defined resource groups, all attributes are assigned at group creation time.
+ #
+ # After a group has been created, its attributes can be modified, with the exception of the name
+ # and typpe attributes.
+ #
+ # To create and manage user-defined resource groups, use these SQL statements:
+ #
+ # 	) CREATE_RESOURCE_GROUP creates a new group. See SECTION 13.7.2.2, "CREATE RESOURCE GROUP syntax" for more info.
+ #
+ # 	) ALTER_RESOURCE_GROUP modifies an existing group. See SECTION 13.7.2.1, "ALTER RESOURCE GROUP Syntax" for more info.
+ #
+ # 	) DROP_RESOURCE_GROUP drops an existing group. See SECTION 13.7.2.3, "DROP RESOURCE GROUP Syntax" for more info.
+ #
+ # Those statements require the RESOURCE_GROUP_ADMIN privilege.
+ #
+ # To manage resource group assignments, use these capabilities:
+ #
+ # 	) SET_RESOURCE_GROUP assigns threads to a group. See SECTION 13.7.2.4, "SET RESOURCE GROUP Syntax" for more info.
+ #
+ # 	) The RESOURCE_GROUP optimizer hints assigns individual statements to a group. See Section 8.9.2, "OPTIMIZER HINTS" for more info.
+ #
+ # Those operations require the RESOURCE_GROUP_ADMIN or RESOURCE_GROUP_USER privilege.
+ #
+ # Resource group definitions are stored in the resource_groups data dictionary table so that
+ # groups perssist across server restarts.
+ #
+ # Because resource_groups is part of the data dictionary, it is not directly accessible by users.
+ #
+ # Resource group information is available using the INFORMATION_SCHEMA.RESOURCE_GROUPS table,
+ # which is implemented as a view on the data dictionary table.
+ #
+ # See Section 25.21, "THE INFORMATION_SCHEMA RESOURCE_GROUPS TABLE" for more info.
+ #
+ # Initially, the RESOURCE_GROUPS table has these rows describing the default groups:
+ #
+ # 		SELECT * FROM INFORMATION_SCHEMA.RESOURCE_GROUPS\G
+ # 		************************* 1. row **********************
+ # 			RESOURCE_GROUP_NAME: USR_default
+ # 			RESOURCE_GROUP_TYPE: USER
+ # 		RESOURCE_GROUP_ENABLED: 1
+ # 						VCPU_IDS  : 0-3
+ # 				THREAD_PRIORITY : 0
+ # 		************************* 2. row **********************
+ # 			RESOURCE_GROUP_NAME: SYS_default
+ # 			RESOURCE_GROUP_TYPE: SYSTEM
+ # 		RESOURCE_GROUP_ENABLED: 1
+ # 						VCPU_IDS  : 0-3
+ # 				THREAD_PRIORITY : 0
+ #
+ # The THREAD_PRIORITY values are 0, indicating the default priority.
+ #
+ # The VCPU_IDS values show a range comprising all available CPUs.
+ #
+ # For the default groups, the displayed value varies depending on the system
+ # on which the MySQL server runs.
+ #
+ # Earlier discussion mentioned a scenario involving a resource group named Batch
+ # to manage execution of batch jobs that need not execute with high priority.
+ #
+ # To create such a group, use a statement similar to this:
+ #
+ # CREATE RESOURCE GROUP Batch
+ # 	TYPE = USER
+ # 	VCPU = 2-3 				-- assumes a system with at least 4 CPUs
+ # 	THREAD_PRIORITY = 10;
+ #
+ # To verify that the resource group was created as expected, check the RESOURCE_GROUPS table:
+ #
+ # 	SELECT * FROM INFORMATION_SCHEMA.RESOURCE_GROUPS WHERE RESOURCE_GROUP_NAME = 'Batch'\G
+ # 	******************************** 1. row ***********************
+ # 		RESOURCE_GROUP_NAME: Batch
+ # 		RESOURCE_GROUP_TYPE: USER
+ # 	RESOURCE_GROUP_ENABLED: 1
+ # 					VCPU_IDS  : 2-3
+ # 			THREAD_PRIORITY : 10
+ #
+ # If the THREAD_PRIORITY value is 0 rather than 10, check whether your platform or system configuration
+ # limits the resource group capability.
+ #
+ # See RESOURCE GROUP RESTRICTIONS for more information.
+ #
+ # To assign a thread to the Batch group, do this:
+ #
+ # 		SET RESOURCE GROUP Batch FOR thread_id;
+ #
+ # Thereafter, statements in the named thread execute with Batch group resources.
+ #
+ # If a session's own current thread should be in the Batch group, execute this statement
+ # within the session:
+ #
+ # 	SET RESOURCE GROUP Batch;
+ #
+ # Thereafter, statements in the session execute with Batch group resources.
+ #
+ # To execute a single statement using the Batch group, use the RESOURCE_GROUP optimizer hint:
+ #
+ # 	INSERT /*+ RESOURCE_GROUP(Batch) */ INTO t2 VALUES(2);
+ #
+ # Threads assigned to the Batch group execute with its resources, which can be modified as desired:
+ #
+ # 	) For times when the system is highly loaded, decreases the number of CPUs assigned to the group,
+ # 		lower its priority or (as shown) both:
+ #
+ # 		ALTER RESOURCE GROUP Batch
+ # 			VCPU = 3
+ # 			THREAD_PRIORITY = 19;
+ #
+ # 	) For times when the system is lightly loaded, increase the number of CPUs assigned to the group, raise its priority, or, as shown, both:
+ #
+ # 		ALTER RESOURCE GROUP Batch
+ # 			VCPU = 0-3
+ # 			THREAD_PRIORITY = 0;
+ #
+ # RESOURCE GROUP REPLICATION
+ #
+ # Resource group management is local to the server on which it occurs.
+ #
+ # Resource group SQL statements and modifications to the resouce_groups data dictionary
+ # table are not written to the binary log and are not replicated.  
+#
+# RESOURCE GROUP RESTRICTIONS
+#
+# On some platforms or MySQL Server configurations, resource groups are unavailable or have limitations:
+#
+# 		) Resource groups are unavailable if the thread pool plugin is installed.
+#
+# 		) Resource groups are unavailable on macOS, which provides no API for binding CPUs to a thread.
+#
+# 		) On FreeBSD and Solaris, resource group thread priorities are ignored.
+#
+# 			(Effectively, all threads run at priority 0).
+#
+# 			Attempts to change priorities result in a warning:
+#
+# 			ALTER RESOURCE GROUPS abc THREAD_PRIORIY = 10;
+# 			Query OK, 0 rows affected, 1 warning (0.18 sec)
+#
+# 			SHOW WARNINGS;
+# 			+--------------+-----------+-----------------------------------------------------------------+
+# 			| Level 			| Code 		| Message 																			|
+# 			+--------------+-----------+-----------------------------------------------------------------+
+# 			| Warning 		| 4560 	   | Attribute thread_priority is ignored (using default value) 	   |
+# 			+--------------+-----------+-----------------------------------------------------------------+
+#
+# 		) On Linux, resource groups thread priorities are ignored unless the CAP_SYS_NICE capability is set.
+#
+# 			Granting CAP_SYS_NICE capability to a process enables a range of privileges; consult external resources for that.
+#
+# 			Be careful when enabling this capability.
+#
+# 			On Linux platforms using systemd and kernel support for Ambient Capabilities (Linux 4.3 or newer), the recommended
+# 			way to enable CAP_SYS_NICE capability is to modify the MySQL service file and leave the mysqld binary unmodified.
+#
+# 			To adjust the service file for MySQL, use this procedure:
+#
+# 				a. Run the appropraite command for your platform:
+#
+# 					> Oracle Linux, Red Hat and Fedora systems:
+#
+# 						sudo systemctl edit mysqld
+#
+# 					> SUSE, Ubuntu, and Debian systems:
+#
+# 						sudo systemctl edit mysql
+#
+# 				b. Using an editor, add the following text to the service file:
+#
+# 					[Service]
+# 					AmbientCapabilities=CAP_SYS_NICE
+#
+# 				c. Restart the MySQL Service.
+#
+# 			If you cannot enable the CAP_SYS_NICE capability as just described, it can be set manually using
+# 			the setcap command, specifying the path name to the mysqld executable (this requires sudo access).
+#
+# 			You can check the capabilities using getcap. For example:
+#
+# 				sudo set cap_sys_nice+ep /path/to/mysqld
+# 				getcap /path/to/mysqld
+# 				/path/to/mysqld = cap_sys_nice+ep
+#
+# 			As a safety measure, restrict execution of the mysqld binary to the root user and users with mysql group membership:
+#
+# 				sudo chown root:mysql /path/to/mysqld
+# 				sudo chmod 0750 /path/to/mysqld
+#
+# 			IMPORTANT:
+#
+# 				If manual use of setcap is required, it must be performed after each reinstall.
+#
+# 		) on Windows, threads run at one of five thread priority levels.
+#
+# 			The resource group thread priority range of -20 to 19 maps onto those levels
+# 			as indicated in the following table.
+#
+# 			Resource Group Thread Priority on Windows
+#
+# 			Priority Range 					WINDOWS PRIORITY LEVEL
+#
+# 			-20 to -10 							THREAD_PRIORITY_HIGHEST
+# 			-9 to -1 							THREAD_PRIORITY_ABOVE_NORMAL
+#
+# 			0 										THREAD_PRIORITY_NORMAL
+#
+# 			1 to 10 								THREAD_PRIORITY_BELOW_NORMAL
+# 			11 to 19 							THREAD_PRIORITY_LOWEST
+#
+# MEASURING PERFORMANCE (BENCHMARKING)
+#
+# To measure performance, consider the following factors:
+#
+# 		) Whether you are measuring the speed of a single operation on a quiet system, or how a set of operations
+# 			(a "workload") works over a period of time.
+#
+# 			With simple tests, you usually test how changing one aspect (a configuration setting, the set of indexes
+# 			on a table, the SQL clauses in a query) affects performance.
+#
+# 			Benchmarks are typically long-running and elaborate performance tests, where the results
+# 			could dictate high-level choices such as hardware and storage configuration, or how soon to
+# 			upgrade to a new MySQL version.
+#
+# 		) For benchmarking, sometimes you must simulate a heavy database worklaod to get an accurate picture.
+#
+# 		) Performance can vary depending on so many different facotrs that a difference of a few percentage
+# 			points might not be a decisive victory.
+#
+# 			THe results might shift the oppposite way when you test in a different environment.
+#
+# 		) Certain MYSQL features help or do not help performance depending on the workload.
+#
+# 			For completeness, always test performance with those features turned on and 
+# 			turned off.
+#
+# 			The most important feature to try with each workload is the adaptive hash index for InnoDB tables.
+#
+# This section progresses from simple and direct measurement techniques that a single dev can do,
+# to more complicated ones that require additional expertise to perform and interpret hte results.
+#
+# MEASURING THE SPEED OF EXPRESSIONS AND FUNCTIONS
+#
+# To measure the speed of a specific MySQL expression or function, invoke the BENCHMARK() function
+# using the mysql client program.
+#
+# its syntax is BENCHMARK(loop count, expression).
+#
+# The return value is always zero, but mysql prints a line displaying approximately how long
+# the statement took to execute.
+#
+# For example:
+#
+# 		SELECT BENCHMARK(1000000,1+1);
+# 		+----------------------------+
+# 		| BENCHMARK(1000000,1+1) 	  |
+# 		+----------------------------+
+# 		| 							0 		  |
+# 		+----------------------------+
+# 		1 row in set (0.32 sec)
+#
+# This result for instance, was done with a Pentium II 400 MHz system.
+# It shows that MySQL can perform 1 mil simple addition expresisons in 0.32 on that system.
+#
+# The built-in MySQL functions are typically highly optimized, but there may be
+# some exceptions.
+#
+# BENCHMARK() is an excellent tool for finding out if some function is a problem for your queries.
+#
+# USING YOUR OWN BENCHMARKS
+#
+# Benchmark your application and database to find out where the bottlenecks are.
+#
+# After fixing one bottleneck (or by replacing it with a "dummy" module), you can proceed
+# to identify the next bottleneck.
+#
+# Even if the overall performance for your application currently is acceptable, you should
+# at least make a plan for each bottleneck and decide how to solve if someday you 
+# really need that extra performance.
+#
+# A free benchmark suite is the OPen Source Database Benchmark, available at -> <link>
+#
+# It is very common for a problem to occur only when hte system is very heavily loaded.
+#
+# We have had many customers who contact us when they have a (tested) system in production,
+# and have encountered load problems.
+#
+# IN most cases, performance problems turn out ot be due to issues of basic DB design
+# (for example, table scans are not good under high load) or problems with the OS or libraries.
+#
+# Most of the time, these problems would be much easier to fix if the systems were not
+# already in production.
+#
+# To avoid problems like this, benchmark your whole application under hte worst possible load:
+#
+# 		) The mysqlslap program can be helpful for simulating a high load produced by multiple clients issuing queries
+# 			simultaneously.
+#
+# 			See mysqlslap - LOAD EMULATION CLIENT for more info.
+#
+# 		) You can also try benchmarking packages such as SysBench and DBT2, available at _> Links.
+#
+# These programs or packages can bring a system to its knees, so be sure to use them only on your
+# development systems.
+#
+# MEASURING PERFORMANCE WITH PERFORMANCE_SCHEMA
+#
+# You can query the tables in the performance_schema database to see real-time
+# information about the performance characteristics of your server and the application it is
+# running.
+#
+# See CHAPTER 26, MYSQL PERFORMANCE SCHEMA for details.
+#
+# EXAMINING THREAD INFORMATION
+#
+# When you are attempting to ascertain what your MysQL server is doing, it can be helpful to
+# examine the process list, which is the set of threads currently executing within
+# the server.
+#
+# Process list information is available from these sources:
+#
+# 		) The SHOW [FULL] PROCESSLIST statement: More under SHOW PROCESSLIST SYNTAX Section 13.7.6.29
+#
+# 		) The SHOW_PROFILE statement: Section 13.7.6.31, "SHOW PROFILES Syntax"
+#
+# 		) The INFORMATION_SCHEMA PROCESSLIST table: Section 25.18, "The INFORMATION_SCHEMA PROCESSLIST Table"
+#
+# 		) The mysqladmin processlist command: Section 4.5.2, MYSQLADMIN - CLIENT FOR ADMINISTERING A MYSQL SERVER
+#
+# 		) The Performance Schema threads table, stage tables, and lock tables: See 26.12.17, PERFORMANCE SCHEMA MISCELLANEOUS TABLES,
+# 			SECTION 26.12.5 "PERFORMANCE SCHEMA STAGE EVENT TABLES", SECTION 26.12.12 "PERFORMANCE SCHEMA LOCK TABLES" for more info.
+#
+# Access to threads does not require a mutex and has a minimal impact on server performance.
+#
+# INFORMATION_SCHEMA.PROCESSLIST and SHOW_PROCESSLIST have negative performance consequences
+# because they require a mutex.
+#
+# threads also shows information about background threads, which INFORMATION_SCHEMA.PROCESSLIST
+# and SHOW_PROCESSLIST do not. 
+#
+# This means that threads can be used to monitor activity the other thread information
+# sources cannot.
+#
+# YOu can always view information about your own threads. To view information about threads being executed for other
+# accounts, you must have the PROCESS privilege.
+#
+# Each process list entry contains several pieces of information:
+#
+# 		) ID is the connection identifier for the client associated with the thread.
+#
+# 		) User and Host indicate the account associated with the htread.
+#
+# 		) db is the default daatbase for the thread, or NULL if none is selected.
+#
+# 		) Command and State indicate what the thread is doing.
+#
+# 			Most states correspond to very quick operations. If a thread stays in a given state
+# 			for many seconds, there might be a problem that needs to be investigated.
+#
+# 		) Time indicates how long the thread has been in its current state.
+#
+# 			The thread's notion of hte current time may be altered in some cases:
+#
+# 			The thread can change the time with SET_TIMESTAMP = value.
+#
+# 			For a thread running on a slave that is processing events from the master,
+# 			the thread time is set ot the time found in the events and thus reflects
+# 			current time on the master and not hte slave.
+#
+# 		) Info contains the text of the statement being executed by the thread, or NULL if it is not executing one.
+# 			By default, this value contains only the first 100 characters of the statement.
+#
+# 			TO see the complete statements, use SHOW_FULL_PROCESSLIST.
+#
+# 		) The sys schema processlist view, which presents information from the Performance Schema threads
+# 			table in a more accessible format, see:
+#
+# 			Section 27.4.3.22 "THE PROCESSLIST AND x$processlist VIEWS"
+#
+# 		) The sys schema session view, which presents information about user sessions (like the sys schema processlist view, but with
+# 			background processes filtered out):
+#
+# 			Section 27.4.3.33 "The session and x$session Views"
+#
+# The following sections list hte possible Command values, and State values grouped by category.
+# The meaning of some of these values is self-evident.
+#
+# For others, additional description is provided.
+#
+# THREAD COMMAND VALUES
+#
+# A thread can have any of the following Command values:
+#
+# 		) Binlog Dump
+#
+# 			This is a thread on a master server for sending binary log contents to a slave server
+#
+# 		) Change user
+#
+# 			The thread is executing a change-user operation
+#
+# 		) Close stmt
+#
+# 			The thread is closing a prepared statement
+#
+# 		) Connect
+#
+# 			A replication slave is connected to its master
+#
+# 		) Connect Out
+#
+# 			A replication slave is connecting to its master.
+#
+# 		) Create DB
+#
+# 			The thread is executing a create-database operation.
+#
+# 		) Daemon
+#
+# 			This thread is internal to the server, not a thread that services a client connection
+#
+# 		) Debug
+#
+# 			The thread is generating debugging information
+#
+# 		) Delayed insert
+#
+# 			The thread is a delayed-insert handler
+#
+# 		) Drop DB
+#
+# 			The thread is executing a drop-database operation
+#
+# 		) Error
+#
+# 		) Execute
+#
+# 			The thread is executing a prepared statement
+#
+# 		) Fetch
+#
+# 			The threadi s fetching the results from executing a prepared statement.
+#
+# 		) Field List
+#
+# 			The thread is retrieving information for table columns
+#
+# 		) Init DB
+#
+# 			The thread is selecting a default database.
+#
+# 		) Kill
+#
+# 			The thread is killing another thread.
+#
+# 		) Long Data
+#
+# 			The thread is retrieving long data in the result of executing a prepared statement.
+#
+# 		) Ping
+#
+# 			The thread is handling a server-ping request
+#
+# 		) Prepare
+#
+# 			The thread is preparing a prepared statement.
+#
+# 		) Processlist
+#
+# 			The thread is producing informaiton about server threads.
+#
+# 		) Query
+#
+# 			The thread is executing a statement
+#
+# 		) Quit
+#
+# 			The thread is terminating
+#
+# 		) Refresh
+#
+# 			The thread is flsuhing tables, logs or caches, or resetting status variable or replication
+# 			server information.
+#
+# 		) Register Slave
+#
+# 			The thread is registering a slave server.
+#
+# 		) Reset stmt
+#
+# 			The thread is resetting a prepared statement.
+#
+# 		) Set option
+#
+# 			The thread is setting or resetting a client statement execution option
+#
+# 		) Shutdown
+#
+# 			The thread is shutting down the server
+#
+# 		) Sleep
+#
+# 			The thread is waiting for the client sto send a new statement to it
+#
+# 		) Statistics
+#
+# 			The thread is producing server-status information
+#
+# 		) Table DUmp
+#
+# 			The thread is sending table contents to a slave server.
+#
+# 		) Time
+#
+# 			Unused
+#
+# GENERAL THREAD STATES
+#
+# The following list describes thread State values that are associated with general query processing
+# and not more specialized activities such as replication.
+#
+# Many of these are useful only for finding bugs in the server.
+#
+# 		) After create
+#
+# 			This occurs when the thread creates a table (including internal temporary tables), at the end of
+# 			the function that creates the table:
+#
+# 			This state is used even if the table could not be created due to some error.
+#
+# 		) Analyzing
+#
+# 			The thread is calculating a MyISAM table key distrib (for example, for ANALYZE_TABLE)
+#
+# 		) Checking permissions
+#
+# 			The thread is checking whether hte server has the required privileges to execute the statement
+#
+# 		) Checking table
+#
+# 			The thread is performing a table check operation
+#
+# 		) cleaning up
+#
+# 			The thread has processed one command and is prepared to free memory and reset certain state variables.
+#
+# 		) closing tables
+#
+# 			The thread is flushing the changed table data to disk and closing the used tables.
+# 			THis should be a fast operation.
+#
+# 			If not, verify that you do not have a full disk and that hte disk is not in very heavy use.
+#
+# 		) converting HEAP to ondisk
+#
+# 			The thread is converting an internal temporary table from a MEMORY table to an on-disk table.
+#
+# 		) copy to tmp table
+#
+# 			The thread is processing an ALTER_TABLE statement.
+#
+# 			This state occurs after the table with the new structure has been created, but before
+# 			rows are copied into it.
+#
+# 			For a thread in this state, the Performance Schema can be used to obtain about hte progress
+# 			of the copy operation.
+#
+# 			See SECTION 26.12.5 "Performance Schema Stage Event Tables"
+#
+# 		) Copying to group table
+#
+# 			If a statemnet has different ORDER BY and GROUP BY criteria, the rows are sorted by group and
+# 			copied to a temporary table.
+#
+# 		) Copying to tmp table
+#
+# 			The server is copying to a temporary table in memory.
+#
+# 		) Altering table
+#
+# 			The server is in the process of executing an in-place ALTER_TABLE
+#
+# 		) Copying to tmp table on disk
+#
+# 			The server is copying to a temporary table on disk.
+# 			The temporary result set has become too large (see SECTION 8.4.4 "INTERNAL TEMPORARY TABLE USE IN MYSQL")
+#
+# 			Consequently, the thread is changing the temporary table from in-memory to disk-based format to save memory.
+#
+# 		) Creating index
+#
+# 			The thread is processing ALTER TABLE --- ENABLE KEYS for a MyISAM table.
+#
+# 		) Creating sort index
+#
+# 			The thread is processing a SELECT that is resolving using an internal temporary table.
+#
+# 		) creating table
+#
+# 			The thread is creating a table. This includes creation of temporary tables.
+#
+# 		) Creating tmp table
+#
+# 			The thread is creating a temporary table in memory or on disk.
+#
+# 			If the table is created in memory, but later is converted to an on-disk table,
+# 			the state during that operationg will be Copying to tmp table on disk.
+#
+# 		) comitting alter table to storage engine
+#
+# 			The server has finished an in-place ALTER TABLE and is committing the result.
+#
+# 		) deleting from main table
+#
+# 			The server is executing the first part of a multiple-table delete.
+#
+# 			It is deleting only from the first table, and saving columns and offsets to be used
+# 			for deleting from the other (reference) tables.
+#
+# 		) deleting from reference table
+#
+# 			The server is executing the second part of a multiple-table delete and deleting the matched rows
+# 			from the other tables.
+#
+# 		) discard_or_import_tablespace
+#
+# 			The thread is processing an ALTER TABLE --- DISCARD TABLESPACE or ALTER TABLE --- IMPORT TABLESPACE
+# 			statement.
+#
+# 		) end
+#
+# 			THis occurs at the end but before the cleanup of ALTER_TABLE, CREATE_VIEW, DELETE, INSERT, SELECT or UPDATE statements.
+#
+# 		) executing
+#
+# 			The thread has beung executing a statement
+#
+# 		) Execution of init_command
+#
+# 			The thread is executing statements in the value of the init_command system variable.
+#
+# 		) freeing items
+#
+# 			The thread has executed a command. This state is usually follwoed by cleaning up.
+#
+# 		) FULLTEXT initialization
+#
+# 			The server is preparing to perform a natural-langauge full-text search
+#
+# 		) init
+#
+# 			This occurs before the intiialization of ALTER_TABLE, DELETE, INSERT, SELECT or UPDATE statements.
+# 			Actions taken by the server in this state include flushing the binary log and the InnoDB log.
+#
+# 			For the end state, the following operations could be happening:
+#
+# 				) Writing an event ot the binary log
+#
+# 				) Freeing memory buffers, including for blobs
+#
+# 		) Killed
+#
+# 			Someone has sent a KILL statement to the thread and it should abort next time it checks the kill flag.
+#
+# 			The flag is checked in each major loop in MySQL, but in some cases it might still take a short time
+# 			for the thread to die.
+#
+# 			If the thread is locked by some other thread, the kill takes effect as soon as the other thread releases its lock.
+#
+# 		) Locking system tables
+#
+# 			The thread is trying to lock a system table (for example, a time zone or log table)
+#
+# 		) logging slow query
+#
+# 			The thread is writing a statement to the slow-query log.
+#
+# 		) login
+#
+# 			The intial state for a connection thread until the client has been
+# 			authenticated successfully.
+#
+# 		) manage keys
+#
+# 			The server is enabling or disabling a table index.
+#
+# 		) NULL
+#
+# 			This state is used for the SHOW_PROCESSLIST state.
+#
+# 		) Opening system tables
+#
+# 			The thread is trying to open a system table (for example, a time zone or log table)
+#
+# 		) Opening tables
+#
+# 			THe thread is trying to open a table. 
+#
+# 			This hsould be a very fast procedure, unless something prevents opening.
+#
+# 			For example, an ALTER_TABLE or a LOCK_TABLE statement can prevent opening
+# 			a table until the statement is finished.
+#
+# 			It is also worth checking that your table_open_cache value is large enough.
+#
+# 			For system tables, the Opening system tables state is used instead.
+#
+# 		) optimizing
+#
+# 			The server is performing initial optimizations for a query.
+#
+# 		) preparing
+#
+# 			This state occurs during query optimization.
+#
+# 		) Purging old relay logs
+#
+# 			The thread is removing unneeded relay log files.
+#
+# 		) query end
+#
+# 			This state occurs after processing a query but before the freeing items state.
+#
+# 		) Receiving from client
+#
+# 			The server is reading a packet from the client.
+#
+# 		) Removing duplicates
+#
+# 			The query was using SELECT_DISTINCT in such a way that MySQL could not optimize away
+# 			the distinct operation at an early stage.
+#
+# 			Because of this, MySQL requires an extra stage to remove all duplicated rows
+# 			before sending the result to the client.
+#
+# 		) removing tmp table
+#
+# 			The thread is removing an internal temporary table after processing a SELECT statement.
+# 			This state is not used if no temporary table was created.
+#
+# 		) rename
+#
+# 			The thread is renaming a table
+#
+# 		) Rename result table
+#
+# 			The thread is processing an ALTER_TABLE statement, has created the new table, and is
+# 			renaming it to replace the original table.
+#
+# 		) Reopen tables
+#
+# 			The thread got a lock for the table, but noticed after getting the lock that
+# 			the underlying table structure changed.
+#
+# 			It has freed the lock, closed the table, and is trying to reopen it.
+#
+# 		) Repair by sorting
+#
+# 			The repair code is using a sort of create indexes.
+#
+# 		) preparing for alter table
+#
+# 			The server is preparing to execute an in-place ALTER_TABLE
+#
+# 		) Repair done
+#
+# 			The thread has completed a multithreaded repair for a myISAM table.
+#
+# 		) Repair with keycache
+#
+# 			THe repair code is using creating keys one by one through the key cache.
+# 			THis is much slower than Repair by sorting.
+#
+# 		) Rolling back
+#
+# 			The thread is rolling back a transaction.
+#
+# 		) Saving State
+#
+# 			For MyISAM table operations such as repair or analysis, the thread
+# 			is saving the new table state to the .MYI file header.
+#
+# 			States includes informaiton such as number of rows, the AUTO_INCREMENT counter,
+# 			and key distribs.
+#
+# 		) Searching rows for update
+#
+# 			The thread is doing a first phase to find all matching rows before updating them.
+# 			
+# 			This has ot be done if the UPDATE is changing the index that is used to find the
+# 			involved rows.
+#
+# 		) Sending data
+#
+# 			THe thread is reading and processing rows for a SELECT statement, and sending data to the client.
+#
+# 			Because operations occurring during this state tend to perform large amounts of disk
+# 			access (reads), it is often the longest-running state over the lifetime of a given query.
+#
+# 		) Sending to client
+#
+# 			The server is writing a pcket ot hte client.
+#
+# 		) Setup
+#
+# 			The thread is beginning an ALTER_TABLE operation.
+#
+# 		) Sorting for group
+#
+# 			The thread is doing a sort to satisfy a GROUP BY.
+#
+# 		) Sorting for order
+#
+# 			The thread is doing a sort to satisfy an ORDER BY.
+#
+# 		) Sorting index
+#
+# 			The thread is sorting index pages for more efficient accessing during a MyISAM table optimization operation.
+#
+# 		) Sorting result
+#
+# 			For a SELECT statement, this is similar to Creating sort index, but for nontemporary tables.
+#
+# 		) statistics
+#
+# 			The server is calculating statistics to develop a query execution plan.
+#
+# 			If a thread is in this state for a long time, the server is probably disk-bound
+# 			performing other work.
+#
+# 		) System lock
+#
+# 			The thread has called mysql_lock_tables() and the thread state has not been updated since.
+#
+# 			This is a very general state that cna occur for many reasons.
+#
+# 			FOr example, the thread is going to request or is waiting for an internal or external system lock for the table.
+#
+# 			THis can occur when InnoDB waits for a table-level lock during execution of LOCK_TABLES.
+#
+# 			IF this state is being caused by requests for external locks and you are not using multiple mysqld servers
+# 			that are accessing the same MyISAM tables, you can disable external system locks with the --skip-external-locking option.
+#
+# 			However, external locking is disabled by default, so it is likely that htis option will ahve no effect.
+#
+# 			For SHOW_PROFILE, this state means the thread is requesting the lock (not waiting for it)
+#
+# 			For system tables, the Locking system tables state is used instead.
+#
+# 		) update
+#
+# 			The thread is getting ready to start updating the table.
+#
+# 		) Updating
+#
+# 			The thread is searching for rows to update and is updating them.
+#
+# 		) https://dev.mysql.com/doc/refman/8.0/en/general-thread-states.html
+# 
+# 		
+# 		
+# 		
+#
 #
 # 
