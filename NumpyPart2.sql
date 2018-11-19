@@ -59508,7 +59508,2070 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # 			The thread is searching for rows to update and is updating them.
 #
-# 		) https://dev.mysql.com/doc/refman/8.0/en/general-thread-states.html
+# 		) Updating main table
+#
+# 			The server is executing the first part of a multiple-table update. It is updating only
+# 			and saving columns and offsets to be used for updating the other (reference) tables.
+#
+# 		) updating reference tables
+#
+# 			The server is executing the second part of a multiple-table update and updating the matched rows
+# 			from the other tables.
+#
+# 		) User lock
+#
+# 			The thread is going to request or is waiting for an advisory lock requested with a GET_LOCK() call.
+# 			For SHOW_PROFILE, this state means the thread is requesting the lock (not waiting for it)
+#
+# 		) User sleep
+#
+# 			The thread has invoked a SLEEP() call
+#
+# 		) Waiting for commit lock
+#
+# 			FLUSH TABLES WITH READ LOCK is waiting for a commit lock.
+#
+# 		) Waiting for global read lock
+#
+# 			FLUSH TABLES WITH READ LOCK is waiting for a global read lock or the global read only system variable is being set.
+#
+# 		) Waiting for tables
+#
+# 			The thread got a notification that the underlying structure for a table has changed and it needs
+# 			to reopen the table to get the new structure.
+#
+# 			However, to reopen the table, it must wait until all other threads have closed the table in question.
+#
+# 			This notification takes place if another thread has used FLUSH_TABLES or one of the following statements
+# 			on the table in question:
+#
+# 			FLUSH TABLES tbl_name, ALTER TABLE, RENAME TABLE, REPAIR TABLE, ANALYZE TABLE or OPTIMIZE TABLE
+#
+# 		) Waiting for table flush
+#
+# 			The thread is executing FLUSH TABLES and is waiting for all threads to close their tables,
+# 			or the thread got a notification that the underlying structure for a table has changed and
+# 			it needs to reopen the table to get the new structure.
+#
+# 			However, to reopen the table, it must wait until all other threads have closed the table
+# 			in question.
+#
+# 			This notification takes place if another thread has used FLUSH TABLES or one of the following
+# 			statements on the table in question:
+#
+# 			FLUSH TABLES tbl_name, ALTER_TABLE, RENAME_TABLE, REPAIR_TABLE, ANALYZE_TABLE or OPTIMIZE_TABLE.
+#
+# 		) Waiting for lock_type lock
+#
+# 			The server is waiting to acquire a THR_LOCK lock or a lock from the metadata locking subsystem,
+# 			where lock_type indicates the type of lock.
+#
+# 			This state indicates a wait for a THR_LOCK:
+#
+# 				) Waiting for table level lock
+#
+# 			These states indicate a wait for a metadata lock:
+#
+# 				) Waiting for event metadata lock
+#
+# 				) Waiting for global read lock
+#
+# 				) Waiting for schema metadata lock
+#
+# 				) Waiting for stored function metadata lock
+#
+# 				) Waiting for stored procedure metadata lock
+#
+# 				) Waiting for table metadata lock
+#
+# 				) Waiting for trigger metadata lock
+#
+# 			For information about table lock indicators, see 8.11.1, "INTERNAL LOCKING METHODS"
+#
+# 			For information about metadata locking, see Section 8.11.4, "Metadata Locking"
+#
+# 			To see which locks are blocking lock requests, use the Performance Schema lock tables
+# 			described in Section 26.12.12 "PERFORMANCE SCHEMA LOCK TABLES"
+#
+# 		) Waiting on cond
+#
+# 			A generic state in which the thread is waiting for a condition to become true.
+# 			No specific state information is available.
+#
+# 		) Writing to net
+#
+# 			The server is writing a packet to the network.
+#
+# REPLICATION MASTER THREAD STATES
+#
+# The following list shows the most common states you may see in the State column for the
+# master's Binlog Dump thread.
+#
+# If you see no Binlog Dump threads on a master server, this means that replication is not
+# running; that is, that no slaves are currently connected.
+#
+# 		) Finished reading one binlog; switching to next binlog
+#
+# 			The thread has finished reading a binary log file and is opening the next one to send to the slave.
+#
+# 		) Master has sent all binlog to slave; waiting for more updates
+#
+# 			The thread has read all remaining updates from the binary logs and sent them to the slave.
+#
+# 			The thread is now idle, waiting for new events to appear in the binary log resulting
+# 			from new updates occurring on the master.
+#
+# 		) Sending binlog event to slave
+#
+# 			Binary log consists of events, where an event is usually an update plus some other information.
+#
+# 			The thread has read an event from the binary log and is now sending it to the slave.
+#
+# 		) Waiting to finalize termination
+#
+# 			A very brief state that occurs as the thread is stopping.
+#
+# REPLICATION SLAVE I/O THREAD STATES
+#
+# The following list shows the most common states you see in the State column for a slave server I/O thread.
+#
+# This state also appears in the Slave_IO_State column displayed by SHOW_SLAVE_STATUS, so you can get
+# a good view of what is happening by using that statement.
+#
+# 		) Checking master version
+#
+# 			A state that occurs very briefly, after the connection to the master is established.
+#
+# 		) Connecting to master
+#
+# 			The thread is attempting to connect to the master
+#
+# 		) Queuing master event to the relay log
+#
+# 			The thread has read an event and is copying it to the relay log so that the SQL thread can process it.
+#
+# 		) Reconnecting after a failed binlog dump request
+#
+# 			The thread is trying to reconnect to the master.
+#
+# 		) Reconnecting after a failed master event read
+#
+# 			The thread is trying to reconnect to the master.
+#
+# 			When connection is established again, the state becomes Waiting for master to send event.
+#
+# 		) Registering slave on master
+#
+# 			A state that occurs very briefly after the connection to the master is established.
+#
+# 		) Requesting binlog dump
+#
+# 			A state that occurs very briefly, after the connection to the master is established.
+#
+# 			The thread sends to the master a request for the contents of its binary logs,
+# 			starting from the requested binary log file name and position.
+#
+# 		) Waiting for its turn to commit
+#
+# 			A state that occurs when the slave thread is waiting for older worker threads to commit if
+# 			slave_preserve_commit_order is enabled.
+#
+# 		) Waiting for master to  send event
+#
+# 			The thread has connected to the master and is waiting for binary log events to arrive.
+#
+# 			This can last for a long time if the master is idle.
+#
+# 			If the wait lasts for slave_net_timeout seconds, a timeout occurs.
+#
+# 			At that point, the thread considers the connection to be broken and makes an attempt to reconnect.
+#
+# 		) Waiting for master update
+#
+# 			The initial state before Connecting to master.
+#
+# 		) Waiting for slave mutex on exit
+#
+# 			A state that occurs briefly as the thread is stopping.
+#
+# 		) Waiting for the slave SQL thread to free enough relay log space
+#
+# 			You are using a nonzero relay_log_space_limit value, and the relay logs have grown
+# 			large enough that their combined sized exceeds this value.
+#
+# 			The I/O thread is waiting until the SQL thread frees enough space by processing relay log contents
+# 			so that it can delete some relay log files.
+#
+# 		) Waiting to reconnect after a failed binlog dump request
+#
+# 			If the binary log dump request failed (due to disconnection), the thread goes into this state
+# 			while it sleeps, then tries to reconnect periodically.
+#
+# 			The interval between retries can be specified using the CHANGE_MASTER_TO statement.
+#
+# 		) Waiting to reconnect after a failed master event read
+#
+# 			An error occurred while reading (due to disconnection). 
+#
+# 			The thread is sleeping for the number of seconds set by the CHANGE_MASTER_TO statement
+# 			(default to 60) before attempting to reconnect.
+#
+# REPLICATION SLAVE SQL THREAD STATES
+#
+# The following list shows the most common states you may see in the State column for a slave server SQL thread:
+#
+# 		) Killing SLave
+#
+# 			The thread is processing a STOP SLAVE statement
+#
+# 		) Making temporary file (append) before replaying LOAD DATA INFILE
+#
+# 			The thread is executing a LOAD_DATA_INFILE statement and is appending the data to a temporary file
+# 			containing the data from which the slave will read rows.
+#
+# 		) Making temporary file (create) before replaying LOAD DATA INFILE
+#
+# 			The thread is executing a LOAD_DATA_INFILE statement and is creating a temporary file containing
+# 			the data from which the slave will read rows.
+#
+# 			This state can only be encountered if the original LOAD_DATA_INFILE statement was logged by a master
+# 			running a version of MySQL lower than 5.0.3
+#
+# 		) Reading event from the relay log
+#
+# 			The thread has read an event from the relay log so that the event can be processed.
+#
+# 		) Slave has read all relay log; waiting for more updates
+#
+# 			The thread has processed all events in the relay log files, and is not waiting for the
+# 			I/O thread to write new events to the relay log.
+#
+# 		) Waiting for an event from Coordinator
+#
+# 			Using the multithreaded slave (slave_parallel worker is greater than 1), one of the slave worker
+# 			threads is waiting for an event from the coordinator thread.
+#
+# 		) Waiting for slave mutex on exit
+#
+# 			A very brief state that occurs as the thread is stopping.
+#
+# 		) Waiting for Slave Workers to free pending events
+#
+# 			This waiting action occurs when the total size of events being processed by Workers exceeds
+# 			the size of the slave_pending_jobs_size_max system variable.
+#
+# 			The Coordinator resumes scheduling when the size drops below this limit.
+#
+# 			This state occurs only when slave_parallel_workers is set greater than 0.
+#
+# 		) Waiting for the next event in relay log
+#
+# 			The intial state before Reading event from the relay log.
+#
+# 		) Waiting until MASTER_DELAY seconds after master executed event
+#
+# 			The SQL thread has read an event but is waiting for the slave delay to lapse.
+# 			This delay is set with the MASTER_DELAY option of CHANGE_MASTER_TO.
+#
+# The Info column for the SQL thread may also show the text of a statement.
+#
+# This indicates that the thread has read an event from the relay log, extracted the statement
+# from it, and may be executing it.
+#
+# REPLICATION SLAVE CONNECTION THREAD STATES
+#
+# These thread states occur on a replication slave but are associated with connection threads,
+# not with the I/O or SQL threads.
+#
+# 		) Changing master
+#
+# 			The thread is processing a CHANGE_MASTER_TO statement
+#
+# 		) Killing slave
+#
+# 			The thread is processing a STOP SLAVE statement
+#
+# 		) Opening master dump table
+#
+# 			This state occurs after Creating table from master dump
+#
+# 		) Reading master dump table data
+#
+# 			This state occurs after Opening master dump table
+#
+# 		) Rebuilding the index on master dump table
+#
+# 			THis state occurs after Reading master dump table data.
+#
+# NDB CLUSTER THREAD STATES
+#
+# ) Committing events to binlog
+#
+# ) Opening mysql.ndb_apply_status
+#
+# ) Processing events
+#
+# 		The thread is processing events for binary logging
+#
+# ) Processing events from schema table
+#
+# 		The thread is doing the work of schema replication
+#
+# ) Shutting down
+#
+# ) Syncing ndb table schema operation and binlog
+#
+# 		This is used to have a correct binary log of schema operations for NDB
+#
+# ) Waiting for allowed to take ndbcluster global schema lock
+#
+# 		The thread is waiting for permission to take a global schema lock
+#
+# ) Waiting for event from ndbcluster
+#
+# 		The server is acting as an SQL node in an NDB cluster, and is connected to a cluster management node.
+#
+# ) Waiting for first event from ndbcluster
+#
+# ) Waiting for ndbcluster binlog update to reach current position
+#
+# ) Waiting for ndbcluster global schema lock
+#
+# 		The thread is waiting for a global schema lock held by another thread to be released.
+#
+# ) Waiting for ndbcluster to start
+#
+# ) Waiting for schema epoch
+#
+# 		The thread is waiting for a schema epoch (that is, a global checkpoint)
+#
+# EVENT SCHEDULER THREAD STATES
+#
+# These states occur for the Event Scheduler thread, threads that are created to execute scheduled events, or threads that
+# terminate the scheduler.
+#
+# ) Clearing
+#
+# 		The scheduler thread or a thread that was executing an event is terminating and is about to end.
+#
+# ) Initialized
+#
+# 		The scheduler thread or a thread that will execute an event has been initialized.
+#
+# ) Waiting for next activation
+#
+# 		The scheduler has a nonempty event queue but the next activation is in the future.
+#
+# ) Waiting for scheduler to stop
+#
+# 		The thread issued SET GLOBAL event_scheduler=OFF and is waiting for the scheduler to stop.
+#
+# ) Waiting on empty queue
+#
+# 		The scheduler's event queue is empty and it is sleeping.
+#
+# LANGUAGE STRUCTURE
+#
+# This chapter discusses the rules for writing the following elements of SQL statements when using MySQL:
+#
+# 		) Literal values such as strings and numbers
+#
+# 		) Identifiers such as database, table and column names
+#
+# 		) Keywords and reserved words
+#
+# 		) User-defined and system variables
+#
+# 		) Comments
+#
+# LITERAL VALUES
+#
+# This section describes how to write literal values in MYSQL.
+# These include strings, numbers, hexadecimal and bit values, boolean values and NULL.
+#
+# The section also covers various nuances that you may encounter when dealing with these basic types
+# in MySQL.
+#
+# STRING LITERALS
+#
+# A string is a sequence of bytes of characters, enclosed within either single quote (') or double
+# quote (") characters.
+#
+# Examples:
+#
+# 		'a string'
+# 		"another string"
+#
+# Quoted strings placed next to each other are concatenated to a single string.
+#
+# The following lines are equivalent:
+#
+# 		'a string'
+# 		'a' ' ' 'string'
+#
+# If the ANSI_QUOTES SQL mode is enabled, string literals can be quoted only within single
+# quotation marks because a string quoted within double quotation marks is interpreted as an identifier.
+#
+# A binary string is a string of bytes. Every binary string has a character set and collation named binary.
+#
+# A nonbinary string is a string of characters.
+#
+# It has a character set other than binary and a collation that is compatible with the character set.
+#
+# For both types of strings, comparisons are based on the numeric values of the string unit.
+# For binary strings, the unit is the byte; Comparisons using numeric byte values.
+#
+# FOr nonbinary strings, the unit is the character and some character sets support multibyte characters;
+# comparisons use numeric character code values.
+#
+# Character code ordering is a function of the string collation.
+#
+# (For more information, See SECTION 10.8.5 "THE BINARY COLLATION COMPARED TO _BIN COLLATIONS")
+#
+# A character string literal may have an optional character set introducer and COLLATE clause,
+# to designate it as a string that uses a particular character set and collation:
+#
+# 		[_charset_name]'string' [COLLATE collation_name]
+#
+# Examples:
+#
+# 		SELECT _latin1'string';
+# 		SELECT _binary'string';
+# 		SELECT _utf8'string' COLLATE utf8_danish_ci;
+#
+# You can use N'literal' (or n'literal') to create a string in the national character set.
+# These statements are equivalent:
+#
+# 		SELECT N'some text';
+# 		SELECT n'some text';
+# 		SELECT _utf8'some text';
+#
+# For information about these forms of string syntax, See SECTION 10.3.7, "THE NATIONAL CHARACTER SET", and SECTION 10.3.8, "CHARACTER SET INTRODUCERS"
+#
+# Within a string, certain sequences have special meaning unless the NO_BACKSLASH_ESCAPES SQL mode is enabled.
+# Each of these sequences begins with a backslash (\), known as the escape character.
+#
+# MySQL recognizes the escape sequences shown soon.
+#
+# For all other escape sequences, backslash is ignored.
+# That is, the escaped character is interpreted as if it was not escaped.
+#
+# For example, \x is just x. These sequences are case-sensitive.
+#
+# For example, \b is interpreted as Backspace, but \B is interpted as B.
+#
+# Escape processing is done according to the character set indicated by the character_set_connection
+# system variable.
+#
+# This is true even for strings that are preceded by an introducer that indicates a different character set,
+# as discussed in SECTION 10.3.6, "CHARACTER STRING LITERAL CHARACTER SET AND COLLATION"
+#
+# SPECIAL CHARACTER ESCAPE SEQUENCES
+#
+# Escape Sequence 	Character Represented by Sequence
+#
+# 	\0 					 An ASCII NUL (X'00') character
+#  \' 					 A single quote (') character
+#
+#  \" 					A double quote (") character
+#  \b 					A backspace character
+#
+# 	\n 					A newline (linefeed) character
+# 	\r 					A carriage return character
+#  \t 					A tab character
+#
+# 	\Z 					ASCII 26 (Control+Z); see note following the table
+# 	\\ 					A backslash (\) character
+# 	\% 					A % character; see note following the table
+# 	\_ 					A _ character; see note following the table
+#
+# The ASCII 26 character can be encoded as \Z to enable you to work around the problem that ASCII 26
+# stands for EOF on Windows.
+#
+# ASCII 26 within a file causes problems if you try to use mysql db_name < file_name
+#
+# The \% and \_ sequences are used to search for literal instances of % and _ in pattern-matching
+# contexts where they would otherwise be interpreted as wildcard characters.
+#
+# See the description of the LIKE operator in SECTION 12.5.1 "STRING COMPARISON FUNCTIONS"
+#
+# If you use \% or \_ outside of pattern-matching contexts, they evaluate to the strings \% and \_, not % and _
+#
+# There are several ways to include quote characters within a string:
+#
+# 		) A ' inside a string quoted with ' may be written as ''
+#
+# 		) A " inside a string quoted with " may be written as ""
+#
+# 		) Precede the quote character by an escape character (\)
+#
+# 		) A ' inside a string quoted with " needs no special treatment and need not be 
+# 			doubled or escaped.
+#
+# 			In the same way, " inside a string quoted with ' needs no special treatment.
+#
+# The following SELECT statements demonstrate how quoting and escaping work:
+#
+# 		SELECT 'hello', '"hello"', '""hello""', 'hel''lo', '\'hello';
+# 		+--------+----------+------------+---------+-----------+
+# 		| hello  | "hello"  | ""hello""  | hel'lo  | 'hello    |
+# 		+--------+----------+------------+---------+-----------+
+#
+# 		SELECT "hello", "'hello'", "''hello''", "hel""lo", "\"hello";
+# 		+--------+----------+------------+---------+-----------+
+# 		| hello  | 'hello'  | ''hello''  | hel"lo  | "hello 	 |
+# 		+--------+----------+------------+---------+-----------+
+#
+# 
+# 		SELECT 'This\nIs\nFour\nLines';
+# 		+----------------+
+# 		| This 			  |
+# 		| Is 				  |
+# 		| Four 			  |
+# 		| Lines 			  |
+# 		+----------------+
+#
+# 		SELECT 'disappearing\ backslash';
+# 		+------------------------+
+# 		| disappearing backslash |
+#  	+------------------------+
+#
+# To insert binary data into a string column (such as a BLOB column), you should represent certain characters by
+# escape sequences.
+#
+# Backslash (\) and the quote character used to quote the string must be escaped.
+#
+# In certain client environments, it may also be necessary to escape NULL or Control+Z.
+#
+# The mysql client truncates quoted strings containing NUL characters if they are not escaped,
+# and Control+Z may be taken for EOF on Windows if not escaped.
+#
+# For the escape sequences that represent each of these characters, see Special Character Escape Sequences.
+#
+# When writing application programs, any string that might contain any of these special characters
+# must be properly escaped before the string is used as a data value in an SQL statement that is
+# sent to the MySQL server.
+#
+# You can do this in two ways:
+#
+# 		) Process the string with a function that escapes the special characters.
+#
+# 			In a C program, you can use the mysql_real_escape_string_quote() C API function
+# 			to escape characters.
+#
+# 			See SECTION 28.7.7.56 "MYSQL_REAL_ESCAPE_STRING_QUOTE()"
+#
+# 			Within SQL statements that construct other SQL statements, you can use the
+# 			QUOTE() function.
+#
+# 			The Perl DBI interface provides a quote method to convert special characters
+# 			to the proper escape sequences.
+#
+# 			See SECTION 28.9, "MYSQL PERL API"
+#
+# 			Other language interfaces may provide a similar capability.
+#
+# 		) As an alternative to explicitly escaping special characters, many MySQL APIs provide
+# 			a placeholder capability that enables you to insert special markers into a statement string,
+# 			and then bind data values to them when you issue the statement.
+#
+# 			In this case, the API takes care of escaping special characters in the values for you.
+#
+# NUMERIC LITERALS
+#
+# Number literals include exact-value (integer and DECIMAL) literals and approximate value (floating point) literals.
+#
+# Integers are represented as a sequence of digits. Numbers may include . as a decimal separator.
+#
+# NUmbers may be preceded by - or + to indicate a negative or positive values, respectively.
+#
+# Numbers represented in scientific notation with a mantissa and exponent are approximate-value numbers.
+#
+# Exact-value numeric literals have an integer part or fractional part, or both.
+#
+# They may be signed. Examples 1, .2, 3.4, -5, -6.78, +9.10
+#
+# Approximate-value numeric literals are represented in scientific notation with a mantissa and exponent.
+# Either or both partys may be signed. Examples:
+#
+# 1.2E3, 1.2E-3, -1.2E3, -1.2E-3
+#
+# Tow numbers that look similar may be treated differently. For example, 2.34 is an exact-value (fixed point)
+# number, whereas 2.34E0 is an approximate value (floating point numbers)
+#
+# The DECIMAL data type is a fixed-point type and calculations are exact.
+#
+# In MySQL, the DECIMAL type has several synonyms: NUMERIC, DEC, FIXED.
+#
+# The integer types also are exact-value types.
+#
+# For more info about exact value calculations, see SECTION 12.24 "PRECISION MATH"
+#
+# The FLOAT and DOUBLE data types are floating-point types and calculations are approximate.
+# In MySQL, types that are synonymous with FLOAT or DOUBLE are DOUBLE PRECISION and REAL.
+#
+# An integer may be used in a floating-point context; it is interpreted as the equivalent
+# floating-point number.
+#
+# DATE AND TIME LITERALS
+#
+# Date and time values can be represented in several formats, such as quoted strings or as numbers,
+# depending on the exact type of the value and other factors.
+#
+# For example, in contexts where MySQL expects a date, it interprets any of '2015-07-21',
+# '20150721' and 20150721 as a date.
+#
+# This section describes the acceptable formats for date and time literals.
+#
+# For more information about the temporal data types, such as the range of permitted values,
+# consult these sections:
+#
+# 		) SECTION 11.1.2, "DATE AND TIME TYPE OVERVIEW"
+#
+# 		) SECTION 11.3, "DATE AND TIME TYPES"
+#
+# Standard SQL and ODBC Date and Time Literals.
+# Standard SQL permits temporal literals to be specified using a type keyword
+# and a string.
+#
+# The space between the keyword and string is optional.
+#
+# 		DATE 'str'
+# 		TIME 'str'
+# 		TIMESTAMP 'str'
+#
+# MySQL recognizes those constructions and also the corresponding ODBC syntax:
+#
+# 		{ d 'str' }
+# 		{ t 'str' }
+# 		{ ts 'str' }
+#
+# MySQL uses the type keyword and these constructions produce DATE, TIME and DATETIME values, respectively, including
+# a trailing fractional seconds part if specified.
+#
+# The TIMESTAMP syntax produces a DATETIME value in MySQL because DATETIME has a range that
+# more closely corresponds to the standard SQL TIMESTAMP type, which has a year range from
+# 0001 to 9999.
+#
+# (The MySQL TIMESTAMP year range is 1970 to 2038)
+#
+# String and Numeric Literals in Date and Time Context. MySQL recognizes DATE values in these formats:
+#
+# 		) As a string in either 'YYYY-MM-DD' or 'YY-MM-DD' format. A "relaxed" syntax is permitted:
+#
+# 			Any punctuation character may be used as the delimiter between date parts.
+#
+# 			For example, '2012-12-31', '2012/12/31', '2012^12^31' and '2012@12@31' are equivalent.
+#
+# 		) As a string with no delimiters in either 'YYYYMMDD' or 'YYMMDD' format, provided that the string
+# 			makes sense as a date.
+#
+# 			For example, '20070523' and '070523' are interpreted as '2007-05-23', but '071332' is illegal
+# 			(it has nonsensical month and day parts) and becomes '0000-00-00'
+#
+# 		) As a number in either YYYYMMDD or YYMMDD format, provided that the number makes sense as a date.
+# 			For example, 19830905 and 830905 are interpreted as '1983-09-05'
+#
+# MySQL recognizes DATETIME and TIMESTAMP values in these formats:
+#
+# 		) As a string in either 'YYYY-MM-DD HH:MM:SS' or 'YY-MM-DD HH:MM:SS' format.
+#
+# 			A "relaxed" syntax is permitted here, too:
+#
+# 				Any punctuation character may be used as the delimiter between date parts
+# 				or times parts.
+#
+# 				For example, '2012-12-31 11:30:45', '2012^12^31 11+30+45', '2012/12/31 11*30*45'
+# 				and '2012@12@31 11^30^45' are equivalent.
+#
+# 				The only delimiter recognized between a date and time part and a fractional second part
+# 				is the decimal point.
+#
+# 				The date and time parts can be separated by T rather than a space. For example, '2012-12-31 11:30:45'
+# 				'2012-12-31T11:30:45' are equivalent.
+#
+# 		) As a string with no delimiters in either 'YYYYMMDDHHMMSS' or 'YYMMDDHHMMSS' format, provided that the string
+# 			makes sense as a date.
+#
+# 			For example '20070523091528' and '070523091528' are interpreted as '2007-05-23 09:15:28', but the other is illegal,
+# 			(Due to violation on minute part) and becomes '0000-00-00 00:00:00'
+#
+# 		) As a number in either YYYYMMDDHHMMSS or YYMMDDHHMMSS format, provided that the number makes sense as a date.
+#
+# 			For example, 19830905132800 and 830905132800 are both interpreted as:
+#
+# 				'1983-09-05 13:28:00'
+#
+# A DATETIME or TIMESTAMP value can include a trailing fractional second part in up to microseconds (6 digits) precision.
+#
+# The fractional part should always be separated from the rest of the time by a decimal point;
+# No other fractional seconds delimiter is recognized.
+#
+# For information about fractional seconds support in MySQL, see SECTION 11.3.6, "FRACTIONAL SECONDS IN TIME VALUES"
+#
+# Dates containing two-digit year values are ambiguous because teh century is unknown.
+#
+# MySQL interprets two-digit year values using these rules:
+#
+# 		) year values in the range 70-99 are converted to 1970-1999
+#
+# 		) Year values in the range 00-69 are converted to 2000-2069
+#
+# See also SECTION 11.3.8, "TWO-DIGIT YEARS IN DATES"
+#
+# For values specified as strings that include date part delimiters, it is unnecessary to specify
+# two digits for month or day values that are less than 10.
+#
+# '2015-6-9' is the same as '2015-06-09'.
+#
+# Similarly, for values specified as strings that include time part delimiters, it is unnecessary
+# to specify two digits for hour, minute or second values that are less than 10.
+#
+# '2015-10-30 1:2:3' is the same as '2015-10-30 01:02:03'
+#
+# Values specified as numbers should be 6, 8, 12 or 14 digits long.
+#
+# If a number is 8 or 14 digits long, it is assumed to be in YYYYMMDD or YYYYMMDDHHMMSS format and
+# that the year is given by the first 4 digits.
+#
+# If the number is 6 or 12 digits long, it is assumed to be in YYMMDD or YYMMDDHHMMSS format and
+# that hte year is given by the first 2 digits.
+#
+# Numbers that are not one of these lengths are interpreted as though padded with leading zeros to
+# the closest length.
+#
+# Values specified as nondelimited strings are interpreted according to their length.
+# For a string 8 or 14 characters long, the year is assumed to be given by the first 4 characters.
+#
+# Otherwise, the year is assumed to be given by the first 2 characters.
+#
+# The string is interpreted from left to right to find year, month, day, hour, minute and
+# second values, for as many parts as are present in the string.
+#
+# This means you should not use strings that have fewer than 6 characters.
+#
+# For example, if you specify '9903', thinking that represents March, 1999, MySQL converts
+# it to the "zero" date value.
+#
+# This occurs because the year and month values are 99 and 03, but the day part is
+# completely missing.
+#
+# However, you can explicitly specify a value of zero to represent missing month or day parts.
+# For example, to insert the value '1999-03-00', use '990300'
+#
+# MySQL recognizes TIME values in these formats:
+#
+# 		) As a string in 'D HH:MM:SS' format. You can also use one of the following "relaxed" syntaxes:
+#
+# 			'HH:MM:SS', 'HH:MM', 'D HH:MM', 'D HH' or 'SS'
+#
+# 			Here D is day, it can range from 0 to 34
+#
+# 		) As a string with no delimiters in 'HHMMSS' format, provided that it makes sense as a time.
+#
+# 			For example, '101112' is understood as '10:11:12', but '109712' is illegal (it has a nonsensical
+# 			minute part) and becomes '00:00:00'
+#
+# 		) As a number in HHMMSS format, provided that it makes sense as a time.
+#
+# 			For example, 101112 is understood as '10:11:12'
+#
+# 			The following alternative formats are also understood: SS, MMSS, or HHMMSS
+#
+# A trailing fractional seconds part is recognized in the 'D HH:MM:SS.fraction', 'HH:MM:SS.fraction' and
+# HHMMSS.fraction time formats, where fraction is the fractional part in up to microseconds (6 digits) precision.
+#
+# The fractional part should always be separated from the rest of the time by a decimal point, no other
+# fractional seconds delimiter is recognized.
+#
+# For information about fractional seconds support in MySQL, see 11.3.6 "FRACTIONAL SECONDS IN TIME VALUES"
+#
+# For TIME values specified as strings that include a time part delimiter, it is unnecessary to specify
+# two digits for hours, minutes or seconds values that are less than 10.
+#
+# '8:3:2' is the same as '08:03:02'
+#
+# HEXADECIMAL LITERALS
+#
+# Hexadecimal literal values are written using X'val' or 0xval notation, where val contains
+# hexadecimal digits (0..9, A..F)
+#
+# Lettercase of the digits and of any leading X does not matter.
+#
+# A leading 0x is case-sensitive and cannot be written as 0X
+#
+# Legal hexaecimal literals:
+#
+# 		X'01AF'
+# 		X'01af'
+# 		x'01AF'
+# 		x'01af'
+# 		0x01AF
+# 		0x01af
+#
+# Illegal hexadecimal literals:
+#
+# 		X'0G' (G is not a hexadecimal digit)
+# 		0X01AF (0X must be written as 0x)
+#
+# Values written using X'val' notation must contain en even number of digits or a syntax error occurs.
+# To correct the problem, pad the value with a leading zero:
+#
+# 		SET @s = X'FFF';
+# 		ERROR 1064 (42000): You have an error in your SQL syntax;
+# 		check the manual that corresponds to your MySQL server
+# 		version for the right syntax to use near 'X'FFF''
+#
+# 		SET @s = X'0FFF';
+# 		QUery OK, 0 rwos affected (0.00 sec)
+#
+# Values written using 0xval notation that contain an odd number of digits are treated as having
+# an extra leading 0.
+#
+# For example, 0xaaa is interpreted as 0x0aaa
+#
+# By default, a hexadecimal literal is a binary string, where each pair of hexadecimal digits represent a character:
+#
+# 		SELECT X'4D7953514C', CHARSET(X'4D7953514C');
+# 		+-------------------+------------------------+
+# 		| X'4D7953514C' 	  | CHARSET(X'4D7953514C') |
+# 		+-------------------+------------------------+
+# 		| MySQL 				  | binary 					   |
+# 		+-------------------+------------------------+
+#
+# 		SELECT 0x5461626c65, CHARSET(0x5461626c65);
+# 		+-------------------+------------------------+
+# 		| 0x5461626c65 	  | CHARSET(0x5461626c65 	|
+# 		+-------------------+------------------------+
+# 		| Table 			  	  | binary 						|
+# 		+-------------------+------------------------+
+#
+# A hexadecimal literal may have an optional character set introducer and COLLATE clause,
+# to designate it as a string that uses a particular character set and collation:
+#
+# 		[_charset_name] X'val' [COLLATE collation_name]
+#
+# Examples:
+#
+# 		SELECT _latin1 X'4D7953514C';
+# 		SELECT _utf8 0x4D7953514C COLLATE utf8_danish_ci;
+#
+# The examples use X'val' notation, but 0xval notation permits introducers as well.
+# For information about introducers, see SECTION 10.3.8 "CHARACTER SET INTRODUCERS"
+#
+# In numeric contexts, MySQL treats a hexadecimal literal like a BIGINT(64-bit integer)
+#
+# To ensure numeric treatment of a hexadecimal literal, use it in numeric context.
+# Ways to do this include adding 0 or using CAST(--- AS UNSIGNED)
+#
+# For example, a hexadecimal literal assigned to a user-defined variable is a binary string
+# by default.
+#
+# To assign the value as a number, use it in numeric context:
+#
+# 		SET @v1 = X'41';
+# 		SET @v2 = X'41'+0;
+# 		SET @v3 = CAST(X'41' AS UNSIGNED);
+# 		SELECT @v1, @v2, @v3;
+# 		+--------+---------+----------+
+# 		| @v1 	| @v2 	 | @v3 		|
+# 		+--------+---------+----------+
+# 		| A 		| 65 		 | 65 		|
+# 		+--------+---------+----------+
+#
+# An empty hexadecimal value (X'') evaluates to a zero-length binary string.
+# Converted to a number, it produces 0:
+#
+# 		SELECT CHARSET(X''), LENGTH(X'');
+# 		+--------------------+-----------------+
+# 		| CHARSET(X'') 		| LENGTH(X'') 	   |
+# 		+--------------------+-----------------+
+# 		| binary 				| 				0 		|
+# 		+--------------------+-----------------+
+#
+# 		SELECT X''+0;
+# 		+------------+
+# 		| X''+0 	    |
+# 		+------------+
+# 		| 0 			 |
+# 		+------------+
+#
+# The X'val' notation is based on standard SQL. The 0x notation is based on ODBC, for which hexadecimal strings
+# are often used to supply values for BLOB columns.
+#
+# To convert a string or a number to a string in hexadecimal format, use teh HEX() function:
+#
+# 		SELECT HEX('cat');
+# 		+-------------------+
+# 		| HEX('cat') 		  |
+# 		+-------------------+
+# 		| 636174  			  |
+# 		+-------------------+
+#
+# 		SELECT X'636174';
+# 		+----------------+
+# 		| X'636174' 	  |
+# 		+----------------+
+# 		| cat 			  |
+# 		+----------------+
+#
+# For hexadecimal literals, bit operations are considered numeric context, but bit operations permit numeric
+# or binary string arguments in MySQL 8.0 and higher.
+#
+# To explicitly specify binary string context for hexadecimal literals, use a _binary introducer for at least
+# one of the arguments:
+#
+# 		SET @v1 = X'000D' | X'0BC0';
+# 		SET @v2 = _binary X'000D' | X'0BC0';
+# 		SELECT HEX(@v1), HEX(@v2);
+#
+# 		+------------+---------------+
+# 		| HEX(@v1) 	 | HEX(@v2) 	  |
+# 		+------------+---------------+
+# 		| BCD 		 | 0BCD 			  |
+# 		+------------+---------------+
+#
+# The displayed result appears similar for both bit operations, but the result without 
+# _binary is a BIGINT, whereas the result with _binary is a binary string.
+#
+# Due to the difference in result types, the displayed values differ:
+#
+# High-order 0 digits are not displayed for the numeric result.
+#
+# BIT-VALUE LITERALS
+#
+# Bit-value literals are written using b'val' or 0bval notation.
+#
+# val is a binary value written using zeros and ones.
+# Lettercase of any leading b does not matter.
+#
+# A leading 0b is case sensitive and cannot be written as 0B.
+#
+# Legal bit value literals:
+#
+# 		b'01'
+# 		B'01'
+# 		0b01
+#
+# Illegal bit-value literals:
+#
+# 		b'2' 		(2 is not a binary digit)
+# 		0b01 		(0B must be written as 0b)
+#
+# By default, a bit-value literal is a binary string:
+#
+# 		SELECT b'1000001', CHARSET(b'1000001');
+# 		+---------------+----------------------+
+# 		| b'1000001' 	 | CHARSET(b'1000001') 	|
+# 		+---------------+----------------------+
+# 		| A 				 | binary 					|
+# 		+---------------+----------------------+
+#
+# 		SELECT 0b1100001, CHARSET(0b1100001);
+# 		+---------------+----------------------+
+# 		| 0b1100001 	 | CHARSET(0b1100001)   |
+# 		+---------------+----------------------+
+# 		| a 				 | binary 				   |
+# 		+---------------+----------------------+
+#
+# A bit-value literal may have an optional character set introducer and COLLATE clause, to designate it
+# as a string that uses particular character set and collation:
+#
+# 		[_charset_name] b'val' [COLLATE collation_name]
+#
+# Examples:
+#
+# 		SELECT _latin1 b'1000001';
+# 		SELECT _utf8 0b1000001 COLLATE utf8_danish_ci;
+#
+# The examples use b'val' notation, but 0bval notation permits introducers as well.
+#
+# For information about introducers, see SECTION 10.3.8 "CHARACTER SET INTRODUCERS"
+#
+# In numeric contexts, MySQL treats a bit literal like an integer.
+# To ensure numeric treatment of a bit literal, use it in numeric context.
+#
+# Ways to do this include adding 0 or using CAST(--- AS UNSIGNED)
+#
+# For example, a bit literal assigned to a user-defined variable is a binary string by default.
+# To assign the value as a number, use it in numeric context:
+#
+# 		SET @v1 = b'1100001';
+# 		SET @v2 = b'1100001'+0;
+# 		SET @v3 = CAST(b'1100001' AS UNSIGNED);
+# 		SELECT @v1, @v2, @v3;
+# 		+---------+----------+----------+
+# 		| @v1 	 | @v2 		| @v3 	  |
+# 		+---------+----------+----------+
+# 		| a 		 | 97 		| 97 		  |
+# 		+---------+----------+----------+
+#
+# An empty bit value (b'') evaluates to a zero-length binary string.
+# Converted to a number, it produces 0:
+#
+# 		SELECT CHARSET(b''), LENGTH(b'');
+# 		+--------------+-----------------+
+# 		| CHARSET(b'') | LENGTH(b'') 	   |
+# 		+--------------+-----------------+
+# 		| binary 		| 0 					|
+# 		+--------------+-----------------+
+#
+# 		SELECT b''+0;
+# 		+-------------+
+# 		| b''+0 		  |
+# 		+-------------+
+# 		| 		0 		  |
+# 		+-------------+
+#
+# Bit-value notation is convenient for specifying values to be assigned to BIT columns:
+#
+# 		CREATE TABLE t (b BIT(8));
+# 		INSERT INTO t SET b = b '11111111';
+# 		INSERT INTO t SET b = b'1010';
+# 		INSERT INTO t SET b = b'0101';
+#
+# Bit values in result sets are returned as binary values, which may not display well.
+#
+# To convert a bit value to printable form, use it in numeric context or use a conversion
+# function such as BIN() or HEX().
+#
+# High-order 0 digits are not displayed in the converted value.
+#
+# 		SELECT b+0, BIN(b), OCT(b), HEX(b) FROM t;
+# 		+----------+-------------+------------+-------------+
+# 		| b+0 	  | BIN(b) 		 | OCT(b) 	  | HEX(b) 		 |
+# 		+----------+-------------+------------+-------------+
+# 		| 		255  | 11111111    | 377 		  | FF 			 |
+# 		| 		 10  | 1010 		 | 12 		  | A 			 |
+# 		| 		  5  | 101 			 | 5 			  | 5 			 |
+# 		+----------+-------------+------------+-------------+
+#
+# For bit literals, bit operations are considered numeric context, but bit operations
+# permit numeric or binary string arguments in MySQL >= 8.0.
+#
+# To explicitly specify binary string context for bit literals, use a _binary introducer
+# for at least one of the arguments:
+#
+# 		SET @v1 = b'000010101' | b'000101010';
+# 		SET @v2 = _binary b'000010101' | _binary b'000101010';
+# 		SELECT HEX(@v1), HEX(@v2);
+# 		+------------+------------+
+# 		| HEX(@v1) 	 | HEX(@v2)   |
+# 		+------------+------------+
+# 		| 3F 			 | 003F 		  |
+# 		+------------+------------+
+#
+# The displayed result appears similar for both bit operations, but the result without _binary is a BIGINT value,
+# whereas the result with _binary is a binary string.
+#
+# Due to the difference in result types, the displayed values differ: High-order 0 digits are not displayed
+# for the numeric result.
+#
+# BOOLEAN LITERALS
+#
+# The constant TRUE and FALSE evaluate to 1 and 0, respectively.
+# The constant names can be written in any lettercase.
+#
+# 		SELECT TRUE, true, FALSE, false
+# 		 		 -> 1, 1, 0 , 0
+#
+# NULL VALUES
+#
+# The NULL value means "no data". NULL can be written in any lettercase.
+#
+# Be aware that the NULL value is different from values such as 0 for numeric types
+# or the empty string for string types.
+#
+# For more information, see SECTION B.5.4.3, "PROBLEMS WITH NULL VALUES"
+#
+# For text file import or export operations performed with LOAD_DATA_INFILE or
+# SELECT_---_INTO_OUTFILE NULL is represented by the \N sequence.
+#
+# See SECTION 13.2.7, "LOAD DATA INFILE SYNTAX"
+#
+# For sorting with ORDER BY, NULL values sort before other values for ascending sorts, after other values
+# for descending sorts.
+#
+# SCHEMA OBJECT NAMES
+#
+# Certain objects within MySQL, include database, table, index, column, alias, view, stored procedure,
+# partition, tablespace, resource group and other object names are known as identifiers.
+#
+# This section describes the permissible syntax for identifiers in MySQL. 
+#
+# SECTION 9.2.2, "IDENTIFIER CASE SENSITIVITY", describes which types of identifiers are case-sensitive
+# and under what conditions.
+#
+# An identifier may be quoted or unquoted.
+#
+# If an identifier contains special characters or is a reserved word, you MUST quote it whenever you refer ot it.
+# (Exception: A reserved word that follows a period in a qualified name must be an identifier, so it need not be quoted)
+#
+# Reserved words are listed at SECTION 9.3 "KEYWORDS AND RESERVED WORDS"
+#
+# Identifiers are converted to Unicode internally.
+# They may contain these characters:
+#
+# 		) Permitted characters in unquoted identifiers:
+#
+# 			) ASCII: [0-9,a-z,A-Z$_] (basic Latin letters, digits 0-9, dollar, underscore)
+#
+# 			) Extended: U+0080 -- U+FFFF
+#
+# 		) Permitted characters in quoted identifiers include the full Unicode Basic Multilingual Plane (BMP), except U+0000:
+#
+# 			) ASCII: U+0001 -- U+007F
+# 
+# 			) Extended: U+0080 -- U+FFFF
+#
+# 		) ASCII NUL (U+0000) and supplementary characters (U+10000 and higher) are not permitted in quoted or unquoted identifiers.
+#
+# 		) Identifiers may begin with a digit but unless quoted may not consist solely of digits.
+#
+# 		) Database, table and column names cannot end with space characters
+#
+# THe identifier quote character is the backtick (`):
+#
+# 		SELECT * FROM `select` WHERE `select`.id > 100;
+#
+# If the ANSI_QUOTES SQL mode is enabled, it is also permissible to quote identifiers within double quotation marks:
+#
+# 		CREATE TABLE "test" (col INT);
+# 		ERROR 1064: You have an error in your SQL syntax ---
+# 		SET sql_mode='ANSI_QUOTES';
+# 		CREATE TABLE "test" (col INT);
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# The ANSI_QUOTES mode causes the server to interpret double-quoted strings as identifiers.
+#
+# Consequently, when this mode is enabled, string literals must be enclosed within single quotation marks.
+# They cannot be enclosed within double quotation marks.
+#
+# The server SQL mode is controlled as described earlier.
+#
+# Identifier quote characters can be included within an identifier if you quote the identifier.
+#
+# If the character to be included within the identifier is the same as that used to quote the
+# identifier itself, then you need to double the character.
+#
+# The following statement creates a table named a`b that contains a column named c"d:
+#
+# 		CREATE TABLE `a``b` (`c"d` INT);
+#
+# In the select list of a query, a quoted column alias can be specified using identifier
+# or string quoting characters:
+#
+# 		SELECT 1 AS `one`, 2 AS 'two';
+# 		+----------+---------+
+# 		| one 	  | two 	   |
+# 		+----------+---------+
+# 		| 1 		  | 2 		|
+# 		+----------+---------+
+#
+# Elsewhere in the statement, quoted references to the alias must use identifier quoting or the reference
+# is treated as a string literal.
+#
+# IT is recommended that you do not use names that begin with Me or MeN, where M and N are integers.
+#
+# For example, avoid using 1e as an identifier, because an expression such as 1e+3 is ambiguous.
+#
+# Depending on context, it might be interpreted as the expression 1e + 3 or as the number 1e+3
+#
+# Be careful when using MD5() to produce table names because it can produce names in illegal or
+# ambiguous formats such as those just described.
+#
+# A user variable cannot be used directly in an SQL statement as an identifier or as part of an
+# identifier.
+#
+# See SECTION 9.4, "USER-DEFINED VARIABLES", for more information and examples of workarounds.
+#
+# Special characters in database and table names are encoded in the corresponding file system names
+# as described in section 9.2.3, "MAPPING OF IDENTIFIERS TO FILE NAMES"
+#
+# The following table describes the maximum length for each type of identifier.
+#
+# 				Identifier Type 							Maximum Length (characters)
+#
+# 	Database 									64 (NDB storage engine: 63)
+#
+# 	Table 										64 (NDB storage engine: 63)
+#
+# 	Column 										64
+#
+# 	Index 										64
+#
+# 	Constraint 									64
+#
+# 	Stored Program 							64
+#
+# 	View 											64
+#
+# 	Tablespace 									64
+#
+# 	Server 										64
+#
+# 	Log File Group 							64
+#
+# 	Alias 										256 (see exception following table)
+#
+# 	Compound Statement Label 				16
+#
+# 	User-Defined Variable 					64
+#
+# 	Resource Group 							64
+#
+# Aliases for column names in CREATE_VIEW statements are checked against the maxium
+# column length of 64 characters (not the maximum alias length of 256 characters)
+#
+# Identifiers are stored using Unicode (UTF-8)
+#
+# THis applies to identifiers in table definitions and to identifiers stored in the 
+# grant tables in the mysql database.
+#
+# The sizes of the identifier string columns in the grant tables are measured in characters.
+#
+# You can use multibyte characters without reducing the number of characters permitted for values
+# stored in these columns.
+#
+# As indicated earlier, the permissible Unicode characters are those in the Basic Multilingual Plane (BMP)
+#
+# Supplementary characters are not permitted.
+#
+# NDB Cluster imposes a maximum length of 63 characters for names of databases and tables.
+# See SECTION 22.1.6.5 "LIMITS ASSOCIATED WITH DATABASE OBJECTS IN NDB CLUSTER"
+#
+# IDENTIFIER QUALIFIERS
+#
+# Object names may be unqualified or qualified.
+#
+# An unqualified name is permitted in contexts where interpretation of the name is unambiguous.
+#
+# A qualified name includes at least one qualifier to clarify the interpretive context by overriding
+# a default context or providing missing context.
+#
+# For example, this statement creates a table using the unqualified name t1:
+#
+# 		CREATE TABLE t1 (i INT);
+#
+# Because t1 includes no qualifier to specify a database, the statement creates the table in the default database.
+# If there is no default database, an error occurs.
+#
+# This statement creates a table using the qualified name db1.t1:
+#
+# 		CREATE TABLE db1.t1 (i INT);
+#
+# Because db1.t1 includes a database qualifier db1, the statement creates t1 in the database named db1,
+# regardless of the default database.
+#
+# The qualifier MUST be specified if there is no default database.
+#
+# THe qualifier MAY be specified if there is a default database, to specify a database different from the
+# default, or to make the database explicit if the default is the same as the one specified.
+#
+# Qualifiers have these characteristics:
+#
+# 		) An unqualified name consists of a single identifier. A qualified name consists of multiple identifiers.
+#
+# 		) The components of a multiple-part name must be separated by period (.) characters.
+#
+# 			The initial parts of a multiple-part name act as qualifiers that affect the context
+# 			within which to interpret the final identifier.
+#
+# 		) The qualifier character is a separate token and need not be contiguous with the associated identifiers.
+#
+# 			For example, tbl_name.col_name and tbl_name . col_name are equivalent
+#
+# 		) If any components of a multiple-part name require quoting, quote them individually rather than quoting the name as a whole.
+#
+# 			For example, write `my-table`.`my-column`, not `my-table.my-column`
+#
+# 		) A reserved word that follows a period in a qualified name must be an identifier, so in that context it need not be quoted.
+#
+# The permitted qualifiers for object names depend on the object type:
+#
+# 		) A database name is fully qualified and takes no qualifier:
+#
+# 			CREATE DATABASE db1;
+#
+# 		) A table view, or stored program name may be given a database-name qualifier.
+# 			Examples of unqualified and qualified names in CREATE statements:
+#
+# 			CREATE TABLE mytable ---;
+# 			CREATE VIEW myview ---;
+# 			CREATE PROCEDURE myproc ---;
+# 			CREATE FUNCTION myfunc ---;
+# 			CREATE EVENT myevent ---;
+#
+# 			CREATE TABLE mydb.mytable ---;
+# 			CREATE VIEW mydb.myview ---;
+# 			CREATE PROCEDURE mydb.myproc ---;
+# 			CREATE FUNCTION mydb.myfunc ---;
+# 			CREATE EVENT mydb.myevent ---;
+#
+# 		) A trigger is associated with a table, so any qualifier applies to the table name:
+#
+# 			CREATE TRIGGER mytrigger --- ON mytable ---;
+#
+# 			CRAETE TRIGGER mytrigger --- ON mydb.mytable ---;
+#
+# 		) A column name may be given multiple qualifiers to indicate context in statements that reference it,
+# 			as shown in the following table.
+#
+# 			COLUMN REFERENCE 							MEANING
+#
+# 			col_name 									Column col_name from whichever table used in the statement contains a column of that name
+#
+# 			tbl_name.col_name 						Column col_name from table tbl_name of the default database
+#
+# 			db_name.tbl_name.col_name 				Column col_name from table tbl_name of the database db_name
+#
+# 			IN other words, a column name may be given a table-name qualifier, which itself may be given a database-name qualifier.
+#
+# 			Examples of unqualified and qualified column references in SELECT statements:
+#
+# 				SELECT c1 FROM mytable
+# 				WHERE c2 > 100;
+#
+# 				SELECT mytable.c1 FROM mytable
+# 				WHERE mytable.c2 > 100;
+#
+# 				SELECT mydb.mytable.c1 FROM mydb.mytable
+# 				WHERE mydb.mytable.c2 > 100;
+#
+# YOu need not specify a qualifier for an object reference in a statement unless the unqualified reference is ambiguous.
+#
+# Suppose that column c1 occurs only in table t1, c2 only in t2 and c in both t1 and t2.
+#
+# Any unqualified reference to c is ambiguous in a statement that refers to both tables and must be qualified
+# as t1.c or t2.c to indicate which table you mean:
+#
+# 		SELECT c1, c2, t1.c FROM t1 INNER JOIN t2
+# 		WHERE t2.c > 100;
+#
+# SImilarly, to retrieve from a table t in database db1 and from a table t in database db2 in the same statement,
+# you must qualify the table references:
+#
+# FOr references to columns in those tables, qualifiers are required only for column names that appear in both tables.
+#
+# SUppose that column c1 occurs only in table db1.t, c2 only in db2.t and c in both db1.t and db2.t
+#
+# In this case, c is ambiguous and must be qualified but c1 and c2 need not be:
+#
+# 		SELECT c1, c2, db1.t.c FROM db1.t INNER JOIN db2.t
+# 		WHERE db2.t.c > 100;
+#
+# Table aliases enable qualified column references to be written more simply:
+#
+# 		SELECT c1, c2, t1.c FROM db1.t AS t1 INNER JOIN db2.t AS t2
+# 		WHERE t2.c > 100;
+#
+# IDENTIFIER CASE SENSITIVITY
+#
+# In MySQL, databases correspond to directories within the data directory. Each table within a DB corresponds to
+# at least one file within the DB directory (and possibly more, depending on the storage engine)
+#
+# Triggers also correspond to files. Consequently, the case sensitivity of the underlying OS plays a part in the
+# case sensitivity of database, table and trigger names.
+#
+# This means such names are not case-sensitive in Windows, but are case-sensitive in most varieties of Unix.
+#
+# One notable exception is macOS, which is Unix-based but uses a default file system (HFS+) that is not case-sensitive.
+#
+# However, macOS also supports UFS volumes, which are case-sensitive just as on any Unix.
+#
+# The lower_case_table_names system variable also affects how the server handles identifier case sensitivity,
+# as described later in this section.
+#
+# NOTE:
+#
+# 		Although database, table and trigger names are not case sensitive on some platforms, you should not refer
+# 		to one of these using different cases within the same statement.
+#
+# 		The following statement would not work because it refers to a table both as my_table and as MY_TABLE:
+#
+# 			SELECT * FROM my_table WHERE MY_TABLE.col=1;
+#
+# COlumn, index, stored routine, event and resource group names are not case-sensitive on any platform, nor are column aliases.
+#
+# However, names of logfile groups are case-sensitive. This differs from standard SQL.
+#
+# By default, table aliases are case-sensitive on Unix, but not so on Windows or macOS.
+#
+# The following statement would not work on Unix, because it refers to the alias both as a and as A:
+#
+# 		SELECT col_name FROM tbl_name AS a
+# 		WHERE a.col_name = 1 OR A.col_name = 2;
+#
+# however, this statement is permitted on Windows.
+#
+# To avoid problems caused by such differences, it is best to adopt a consistent convention, such as always
+# creating and referring to databases and tables using lowercase names.
+#
+# This convention is recommended for maxmimum portability and ease of use.
+#
+# How table and database names are stored on disk and used in MySQL is affected by the lower_case_table_names system variable.
+#
+# Lower_case_table_names can take the values shown soon.
+#
+# This variable does NOT affect case sensitivity of trigger identifiers. On Unix, the default value of lower_case_table_names is 0.
+#
+# On Windows, it is 1. On macOS, it's 2.
+#
+# lower_case_table_name can only be configured when intializing the server.
+# Changing the lower_case_table_names setting after the server is initialized is prohibited.
+#
+# 	Value 				Meaning
+#
+# 0 			Table and database names are stored on disk using the lettercase specified in the CREATE_TABLE or CREATE_DATABSE statement.
+# 				Name comparisons are case sensitive.
+#
+# 				You should NOT set this variable to 0 if you are running MySQL on a system that has case-insensitive file names
+# 				(Such as Windows or macOS).
+#
+# 				If you force this variable to 0 with --lower-case-table-names=0 on a case-insensitive file system and access MyISAM
+# 				tablenames using different lettercases, and index corruption may result.
+#
+# 1 			Table names are stored in lowercase on disk and name comparisons are not case-sensitive.
+#
+# 				MySQL converts all table names to lowercase on storage and lookup.
+#
+# 				This behavior also applies to database names and table aliases.
+#
+# 2 			Table and database names are stored on disk using the lettercase specified in the CREATE_TABLE or
+# 				CREATE_DATABASE statement, but MySQL converts them to lowercase on lookup.
+#
+# 				Name comparisons are not case sensitive.
+#
+# 				This works ONLY on file systems that are not case-sensitive.
+#
+# 				InnoDB table names and view names are stored in lowercase, as for lower_case_table_names=1
+#
+# If you are using MySQL on only one platform, you do not normally have to use a lower_case_table_names setting
+# other than the default.
+#
+# However, you may encounter difficulties if you want to transfer tables between platforms that differ in file system
+# case sensitivity.
+#
+# For example, on Unix, you can have two different tables named my_table and MY_TABLE.
+#
+# But on Windows, these two names are considered identical. To avoid data transfer problems arising from
+# lettercase of database or table names, you have two options:
+#
+# 		) Use lower_case_table_names=1 on all systems. The main disadvantage with this is that when you use SHOW_TABLES
+# 			or SHOW_DATABASES, you do not see the names in their original lettercase.
+#
+# 		) Use lower_case_table_names=0 on Unix and lower_case_table_names=2 on Windows.
+#
+# 			This preserves the lettercase of database and table names. 
+#
+# 			The disadvantage of this is that you must ensure that your statements always refer to
+# 			your DB and table names with the correct lettercase on WIndows. 
+ 
+ # 		If you transfer yourr statements to UNix, where lettercase is signifgicant,.
+ # 		they do not work if the lettercase is incorrect.
+ #
+ # 		Exception:
+ #
+ # 			If you are using InnoDB tables and you are trying to avoid these data transfer problems,
+ # 			you should use lower_case_table_names=1 on all platforms to force names to be converted to lowercase.
+ #
+ # object names may be considered duplicates if their uppercase forms are equal according to a binary collation.
+ #
+ # That is true for names of cursors, conditions, procedures, functions, savepoints, stored routine parameters,
+ # stored program local variables, and plugins.
+ #
+ # It is not true for names of columns, constraints, databases, partitions, statements prepared with PREPARE,
+ # tables, triggers, users and user-defined variables.
+ #
+ # File system case sensitivity can affect searches in string columns of INFORMATION_SCHEMA tables.
+ # for more information, see SECTION 10.8.7, "USING COLLATION IN INFORMATION_SCHEMA SEARCHES"
+ #
+ # MAPPING OF IDENTIFIERS TO FILE NAMES
+ #
+ # There is a correspondance between database and table identifiers and names in the file system.
+ #
+ # For the basic structure, MySQL represents each database as a directory in the data directory,
+ # and depending upon the storage engine, each table may be represented by one or more files in the
+ # appropriate database directory.
+ #
+ # For the data and index files, the exact representation on disk is storage engine specific.
+ #
+ # These files may be stored in the database directory, or the information may be stored in a 
+ # separate file.
+ #
+ # InnoDB data is stored in the InnoDB data files.
+ #
+ # If you are using tablespaces with InnoDB, then the specific tablespace file you create are used
+ # instead.
+ #
+ # ANy character is legal in database or table identifiers, except ASCII NUL (X'00')
+ #
+ # MysQL encodes any characters that are problematic in the corresponding file system objects
+ # when it creates DB directories or table files:
+ #
+ # 		) Basic latin letters (a--zA--Z), digits (0--9) and underscore (_) are encoded as is.
+ #
+ # 			Consequently, their case sensitivity directly depends on file system features.
+ #
+ # 		) All other national letters from alphabets that have uppercase/lowercase mapping are encoded 
+ # 			as shown in the following table.
+ #
+ # 			values in the code range column are USC-2 values.
+ #
+ # 			Code Range 			Pattern 				Number 			Used 		UNused 		Blocks
+ #
+ # 			00C0--017F 			[@[0--4][g--z] 	5*20=100 		97 		3 				Latin-1 Supplement + Latin Extended-A
+ #
+ # 			0370--03FF 			[@[5--9][g--z] 	5*20=100 		88 		12 			Greek and Coptic
+ #
+ # 			0400--052F 			[@[g--z][0--6] 	20*7=140 		137 		3 				Cyrillic + Cyrillic supplement
+ #
+ # 			0530--058F 			[@[g--z][7--8] 	20*2=40 			38 		2 				Armenian
+ #
+ # 			2160--217F 			[@[g--z][9] 		20*1=20 			16 		4 				Number Forms
+ #
+ # 			0180--02AF 			[@[g--z][a--k] 	20*11=220 		203 		17 			Latin Extended-B + IPA Extensions
+ #
+ # 			1E00--1EFF 			[@[g--z][l--r] 	20*7=140 		136 		4 				Latin Extended Additional
+ #
+ # 			1F00--1FFF 			[@[g--z][s--z] 	20*8=160 		144 		16 			Greek extended
+ #
+ # 			--- --- 				[@][a--f][g--z] 	6*20=120 		0 			120 			RESERVED
+ #
+ # 			24B6--24E9 			[@][@][a--z] 		26 				26 		0 				Enclosed Alphanumerics
+ #
+ # 			FF21--FF5A 			[@][a--z][@] 		26 				26 		0 				Halfwidth and Fullwidth forms
+ #
+ # One of the bytes in the sequence encodes lettercase.
+ #
+ # For example: LATIN CAPITAL LETTER A WITH GRAVE is encoded as @0G, whereas LATIN SMALL LETTER A WITH GRAVE is encoded as @0g.
+ #
+ # Here the third byte (G or g) indicates lettercase. (On a case-insensitive file system, both letters will be treated as the same)
+ #
+ # For some blocks, such as Cyrllilic, the second byte determines lettercase.
+ #
+ # For other blocks, such as Latin1 Supplement, the third byte determines lettercase.
+ #
+ # If two bytes in the sequence are letters (as in Greek Extended), the leftmost letter character
+ # stands for lettercase.
+ #
+ # All other letter bytes must be in lowercase.
+ #
+ # 	) All nonletter characters except underscore (_), as well as letters from alphabets that do not have uppercase/lowercase mapping
+ # 		(such as Hebrew) are encoded using hexadecimal representations using lowercase letters for hexadecimal digits a--f:
+ #
+ # 			0x003F -> @003f
+ # 			0xFFFF -> @ffff
+ #
+ # 		The hexadecimal values correspond to character values in usc2 double-byte character set.
+ #
+ # On Windows, some names such as nul, prn and aux are encoded by appending @@@ to the name when the server
+ # creates the corresponding file or directory.
+ #
+ # This occurs on all platforms for portability of the corresponding database object between platforms.
+ #
+ # FUNCTION NAME PARSING AND RESOLUTION
+ #
+ # MySQL supports built-in (native) functions, user-defined functions (UDFs), and stored functions.
+ #
+ # This section describes how the server recognizes whether the name of a built-in function is used as
+ # a function call or as an identifier, and how the server determines which function to use in cases when
+ # functions of different types exists with a given name.
+ #
+ # BUILT-IN FUNCTION NAME PARSING
+ #
+ # THe parser uses default rules for parsing names of built-in functions.
+ #
+ # these rules can be changed by enabling the IGNORE_SPACE SQL mode.
+ #
+ # When the parser encounters a word that is the name of a built-in function, it must determines whether the
+ # name signifies a function call or instead a nonexpression reference to an identifier such as table or column name.
+ #
+ # For example, in the following statements, the first reference to count is a function call, whereas the second
+ # reference is a table name:
+ #
+ # 		SELECT COUNT(*) FROM mytable;
+ # 		CREATE TABLE count (i INT);
+ #
+ # THe parser should recognize the name of a built-in function as indicating a function call only
+ # when parsing what is expected to be an expression.
+ #
+ # That is, in nonexpression context, function names are permitted as identifiers.
+ #
+ # However, some built-in functions have special parsing or implementation considerations,
+ # so the parser uses the following rules by default to distinguish whether their names are being
+ # used as function calls or as identifiers in nonexpression context:
+ #
+ # 		) To use the name as a function call in an expression, there must be no whitespace between the name and the following ( paranthesis character.
+ #
+ # 		) Conversely, to use the function name as an identifier, it must not be followed immediately by a paranthesis.
+ #
+ # The requirement that function calls be written with no whitespace between the name and the parenthesis applies only to
+ # the built-in functions that have special considerations.
+ #
+ # COUNT is one such name.
+ #
+ # THe sql/lex.h source file lists the names of these special functions for which the following whitepace determines
+ # their interpretation:
+ #
+ # names defined by the SYM_FN() macro in the symbols[] array
+ #
+ # The following list names teh functions in MySQl >= 8.0 that are affected by the IGNORE_SPACE
+ # setting and listed as special in the sql/lex.h source file
+ #
+ # You may find it easiest to treat the no-whitespace requirement as applying to all function calls:
+ #
+ # 		) ADDDATE
+ #
+ # 		) BIT_AND
+ #
+ # 		) BIT_OR
+ #
+ # 		) BIT_XOR
+ #
+ # 		) CAST
+ #
+ # 		) COUNT
+ #
+ # 		) CURDATE
+ #
+ # 		) CURTIME
+ #
+ # 		) DATE_ADD
+ #
+ # 		) DATE_SUB
+ #
+ # 		) EXTRACT
+ #
+ # 		) GROUP_CONCAT
+ #
+ # 		) MAX
+ #
+ # 		) MID
+ #
+ # 		) MIN
+ #
+ # 		) NOW
+ #
+ # 		) POSITION
+ #
+ # 		) SESSION_USER
+ #
+ # 		) STD
+ #
+ # 		) STDDEV
+ #
+ # 		) STDDEV_POP
+ #
+ # 		) STDDEV_SAMP
+ #
+ # 		) SUBDATE
+ #
+ # 		) SUBSTR
+ #
+ # 		) SUM
+ #
+ # 		) SYSDATE
+ #
+ # 		) SYSTEM_USER
+ #
+ # 		) TRIM
+ #
+ # 		) VARIANCE
+ #
+ # 		) VAR_POP
+ #
+ # 		) VAR_SAMP
+ #
+ # For functions not listed as special in sql/lex.h, whitespace does not matter.
+ #
+ # They are interpreted as function calls only when used in expression context and may be used
+ # freely as identifiers otherwise.
+ #
+ # ASCII is one such name.
+ #
+ # However, for these nonaffected function names, interpretation may vary in expression context:
+ #
+ # 		func_name		() 
+ #
+ # is interpreted as a built-in function if there is one with the given name; if not, func_name 		() is interpreted
+ # as a user-defined function or stored function if one exists with that name.
+ #
+ # The IGNORE_SPACE SQL mode can be used to modify how the parser treats function names that are whitespace-sensitive:
+ #
+ # 	) With IGNORE_SPACE disabled, the parser interprets the name as a function call when there is no whitespace between
+ # 		the name nad the following paranthesis.
+ #
+ # 		This occurs even when the function name is used in nonexpression context:
+ #
+ # 			CREATE TABLE count(i INT);
+ # 			ERROR 1064 (42000): You have an error in your SQL syntax ---
+ # 			near 'count(i INT)'
+ #
+ # 		To eliminate the error and cause the name to be treated as an identifier, either use whitespace following the name
+ # 		or write it as a quoted identifier (or both):
+ #
+ # 			CREATE TABLE count (i INT);
+ # 			CREATE TABLE `count`(i INT);
+ # 			CREATE TABLE `count`  (i INT);
+#
+# 		) WIth IGNORE_SPACE enabled, the parser loosens the requriements that there be no whitespace between the function
+# 			name and the following paranthesis.
+#
+# 			This provides more flexibility in writing function calls.
+#
+# 		For example, either of the following function calls are legal:
+#
+# 			SELECT COUNT(*) FROM mytable;
+# 			SELECT COUNT (*) FROM mytable;
+#
+# 		However, enabling IGNORE_SPACE also has the side effect that hte parser treats the affected
+# 		function names as reserved words (see SECTION 9.3, "KEYWORDS AND RESERVED WORDS")
+#
+# 		This means that a space following the name no longer singifies its use as an identifer.
+#
+# 		The name can be used in function calls with or without following whitespace, but causes a syntax
+# 		error in nonexpression context unless it is quoted.
+#
+# 		For example, with IGNORE_SPACE enabled, both of hte following statements fail
+# 		with a syntax error because the parser interprets count as a reserved word:
+#
+# 			CREATE TABLE count(i INT);
+# 			CREATE TABLE count (i INT);
+#
+# 		To use the function name in nonexpression context, write it as a quoted identifier:
+#
+# 			CREATE TABLE `count`(i INT);
+# 			CREATE TABLE `count` (i INT);
+#
+# To enable the IGNORE_SPACE SQL mode, use this statement:
+#
+# 		SET sql_mode = 'IGNORE_SPACE';
+#
+# IGNORE_SPACE is also enabled by certain other composite modes such as ANSI that include it in their value:
+#
+# 		SET sql_mode = 'ANSI';
+#
+# Check Server SQL modes for more info to see which composite mode enables IGNORE_SPACE.
+#
+# To minimize the dpeendency of SQL code on the IGNORE_SPACE setting, use these guidelines:
+#
+# 		) Avoid creating UDFs or stored functions that have the same name as a built in function.
+#
+# 		) Avoid using function names in nonexpression context.
+#
+# 			For example, these statements use count (one of hte affected function names affected by IGNORE_SPACE)
+# 			so they fail with or without whitespace following the name if IGNORE_SPACE is enabled:
+#
+# 				CREATE TABLE count(i INT);
+# 				CREATE TABLE count (i INT);
+#
+# 			If  you must use a function name in a nonexpression context, write it as a quoted identifier:
+#
+# 				CREATE TABLE `count`(i INT);
+# 				CREATE TABLE `count` (i INT);
+#
+# FUNCTION NAME RESOLUTION
+#
+# The following rules describe hwo the server references to function names for function creation and invocation:
+#
+# 		) Built-in functions and user-defined functions
+#
+# 			An error occurs if you try to create a UDF with the same name as a built-in function.
+#
+# 		) Built-in functions and stored functions
+#
+# 			It is possible to create a stored function with the same name as a built-in function, but to invoke the
+# 			stored function it is necessary to qualify it with a schema name.
+#
+# 			FOr example, if you created a store function named PI in the test schema, invoke it as test.PI()
+# 			because the server resolves PI() without a qualifier as a reference to the built-in function.
+#
+# 			The server generates a warning if the stored function name collides with a built-in function name.
+#
+# 			The warning can be displayed with SHOW_WARNINGS.
+#
+# 		) User-defined functions and stored functions
+#
+# 			USer-defined functions and stored functions share the same namespace, so you cannot create a UDF and a stored function with the same name.
+#
+# 		The preceding function name resolution rules have implications for upgrading to versions of MySQL that implement new built-in functions:
+#
+# 			) IF you have already created a user-defined function with a given name and upgrade MySQL to a version that implements
+# 				a new built-in function with the same name, the UDF becomes inaccessible.
+#
+# 				To correct this, use DROP_FUNCTION to drop the UDF and CREATE_FUNCTION to re-create the UDF with a different
+# 				nonconflicitng name.
+#
+# 				Then modify any affected code to use the new name.
+#
+# 			) If a new version of MysQL implements a built-in function wih the same name as an existing stored function,
+# 				you have two choices:
+#
+# 				Rename the stored function to use a noncflicting name
+#
+# 				or
+#
+# 				change calls to the function so that they use a schema qualifier (that is, use schema_name.func_name() syntax)
+#
+# 				In either case, modify any affected code accordingly.
+#
+# KEYWORDS AND RESERVED WORDS
+#
+# Keywords are words that have significance in SQL.
+#
+# Certain keywords, such as SELECT, DELETE or BIGINT, are reserved and require special treatment for use as identifiers
+# such as table and column names.
+#
+# THis may also be ture for hte name of built-in functions.
+#
+# Nonreserved keywords are permitted as identifiers without quoting.
+#
+# Reserved words are permitted as identifiers if you quote them as described in SECTION 9.2 "SCHEMA OBJECT NAMES"
+#
+# 		CREATE TABLE interval (begin INT, end INT);
+# 		ERROR 1064 (42000): You have an error in your SQL synytax ---
+# 		near 'interval' (begin INT, end INT)'
+#
+# BEGIN and END are keywords, but not reserved.
+
+# Thus, their use as identifiers does not require quoting:
+# Interval is a reserved keyword and must be quoted to be used as an identifier:
+#
+# 		CREATE TABLE `interval` (begin INT, end INT);
+# 		Query OK, 0 rows affected (0.01 sec)
+#
+# Exception: A word that follows a period in a qualified name must be an identifier, so it need not be quoted
+# even if it is reserved:
+#
+# 		CREATE TABLE mydb.interval (begin INT, end INT);
+# 		Query OK, 0 rows affected (0.01 sec)
+#
+# Names of built-in functions are permitted as identifiers but may require care to be used as such.
+# For example, COUNT is acceptable as a column name.
+#
+# However, by default, no whitespace is permitted in function invocations between the function name
+# and the following ( character.
+#
+# THis requirement enables the parser to distinguish whether the name is used in a function call
+# or in nonfunction context.
+#
+# For further details on recognition of function names, see SECTION 9.2.4, "FUNCTION NAME PARSING AND RESOLUTION"
+#
+# The INFORMATION_SCHEMA.KEYWORDS table lists the words considered by MySQL and indicates whether
+# tehy are reserved.
+#
+# See SECTION 25.13 "THE INFORMATION_SCHEMA KEYWORDS TABLE"
+#
+# MySQL 8.0 KEYWORDS AND RESERVERD WORDS
+#
+# The following lists shows the keywords and reserverd words in MySQL 8.0, along with the changes
+# to individual words from verison to version.
+#
+# Reservered keywords are marked with (R).
+#
+# In addition, _FILENAME Is reserved.
+#
+# At some point, you might upgrade to a higehr version, so it is a good idea to have a look at future
+# reserverd words, too.
+#
+# You can find these in the manuals that cover higher versions of MysQL.
+#
+# MOst of the reserved words in the list are forbidden by standard SQL as column or table names
+# (for example, GROUP)
+#
+# A few are reserved because MySQL needs them and uses a yacc parser.
+#
+# -> A
+#
+# ACCESSIBLE (R)
+#
+# ACCOUNT
+#
+# ACTION
+#
+# ACTIVE; Added in 8.0.14
+#
+# ADD (R)
+#
+# ADMIN; Nonreserved in 8.0.12
+#
+# AFTER
+#
+# AGAINST
+#
+# AGGREGATE
+#
+# ALGORITHM
+#
+# ALL(R)
+#
+# ALTER(R)
+#
+# ALWAYS
+#
+# ANALYSE; Removed in 8.0.1
+#
+# ANALYZE(R)
+#
+# AND(R)
+#
+# ANY
+#
+# AS(R)
+#
+# ASC(R)
+#
+# ASCII
+#
+# ASENSITIVE(R)
+#
+# AT
+#
+# AUTOEXTEND_SIZE
+# 
+# AUTO_INCREMENT
+#
+# AVG
+#
+# AVG_ROW_LENGTH
+#
+# -> B
+#
+# BACKUP
+#
+# BEFORE(R)
+#
+# BEGIN
+#
+# BETWEEN(R)
+#
+# BIGINT(R)
+#
+# BINARY(R)
+#
+# BINLOG
+#
+# BIT
+#
+# BLOB(R)
+#
+# BLOCK
+#
+# BOOL
+#
+# BOOLEAN
+#
+# BOTH(R)
+#
+# BTREE
+#
+# BUCKETS; added in 8.0.2
+#
+# BY (R)
+#
+# BYTE
+#
+# -> C
+#
+# CACHE
+#
+# CALL(R)
+#
+# CASCADE (R)
+#
+# CASCADED 
+#
+# CASE(R)
+#
+# CATALOG_NAME
+#
+# CHAIN
+#
+# CHANGE(R)
+#
+# CHANNEL
+#
+# CHAR(R)
+#
+# CHARACTER(R)
+#
+# CHARSET
+#
+# CHECK(R)
+#
+# CHECKSUM
+#
+# CIPHER
+#
+# CLASS_ORIGIN
+#
+# CLIENT
+#
+# CLONE; added in 8.0.3 (nonreserved)
+#
+# CLOSE
+#
+# COALESCE
+#
+# CODE
+#
+# COLLATE (R)
+#
+# COLLATION
+#
+# COLUMNS
+#
+# COLUMN_FORMAT
+#
+# COLUMN_NAME
+#
+# COMMENT
+#
+# COMMIT
+#
+# COMMITTED
+#
+# COMPACT
+#
+# COMPLETION
+#
+# COMPONENT
+#
+# COMPRESSED
+#
+# COMPRESSION
+#
+# CONCURRENT
+#
+# CONDITION(R)
+#
+# CONNECTION
+#
+# CONSISTENT
+#
+# CONSTRAINT(R)
+#
+# CONSTRAINT_CATALOG
+#
+# CONSTRAINT_NAME
+#
+# CONSTRAINT_SCHEMA
+#
+# CONTAINS
+#
+# CONTEXT
+#
+# CONTINUE(R)
+#
+# CONVERT(R)
+#
+# CPU
+#
+# CREATE(R)
+#
+# https://dev.mysql.com/doc/refman/8.0/en/keywords.html
+# 			
 # 
 # 		
 # 		
