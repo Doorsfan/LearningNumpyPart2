@@ -61570,12 +61570,2014 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # CREATE(R)
 #
-# https://dev.mysql.com/doc/refman/8.0/en/keywords.html
-# 			
-# 
-# 		
-# 		
-# 		
+# CROSS(R)
 #
+# CUBE(R); Became reserved in 8.0.1
+#
+# CUME_DIST(R); Added in 8.0.2 (reserved)
+#
+# CURRENT
+#
+# CURRENT_DATE(R)
+#
+# CURRENT_TIME(R)
+#
+# CURRENT_TIMESTAMP(R)
+#
+# CURRENT_USER(R)
+#
+# CURSOR (R)
+#
+# CURSOR_NAME
+#
+# DATA
+#
+# DATABASE (R)
+#
+# DATABASES (R)
+#
+# DATAFILE
+#
+# DATE
+#
+# DATETIME
+#
+# DAY
+#
+# DAY_HOUR(R)
+#
+# DAY_MICROSECOND(R)
+#
+# DAY_MINUTE(R)
+#
+# DAY_SECOND(R)
+#
+# DEALLOCATE
+#
+# DEC(R)
+#
+# DECIMAL(R)
+#
+# DECLARE(R)
+#
+# DEFAULT(R)
+#
+# DEFAULT_AUTH
+#
+# DEFINER
+#
+# DEFINITION; added in 8.0.11 (nonreserved)
+#
+# DELAYED (R)
+#
+# DELAY_KEY_WRITE
+#
+# DELETE(R)
+#
+# DENSE_RANK(R); added in 8.0.2 (reserved)
+#
+# DESC (R)
+#
+# DESCRIBE (R)
+#
+# DESCRIPTION; added in 8.0.11 (nonreserved)
+#
+# DES_KEY_FILE; removed in 8.0.3
+#
+# DETERMINISTIC(R)
+#
+# DIAGNOSTICS
+#
+# DIRECTORY
+#
+# DISABLE
+#
+# DISCARD
+#
+# DISK
+#
+# DISTINCT (R)
+#
+# DISTINCTROW(R)
+#
+# DIV(R)
+#
+# DO
+#
+# DOUBLE(R)
+#
+# DROP (R)
+#
+# DUAL (R)
+#
+# DUMPFILE
+#
+# DUPLICATE 
+#
+# DYNAMIC
+#
+# EACH(R)
+#
+# ELSE (R)
+#
+# ELSEIF (R)
+#
+# EMPTY(R); added in 8.0.4 (reserved)
+#
+# ENABLE
+#
+# ENCLOSED(R)
+#
+# ENCRYPTION
+#
+# END
+#
+# ENDS
+#
+# ENGINE
+#
+# ENGINES
+#
+# ENUM
+#
+# ERROR
+#
+# ERRORS
+#
+# ESCAPE
+#
+# ESCAPED (R)
+#
+# EVENT
+#
+# EVENTS
+#
+# EVERY
+#
+# EXCEPT (R)
+#
+# EXCHANGE
+#
+# EXCLUDE; added in 8.0.2 (nonreserved)
+#
+# EXECUTE
+#
+# EXISTS(R)
+#
+# EXIT(R)
+#
+# EXPANSION
+#
+# EXPIRE
+#
+# EXPLAIN (R)
+#
+# EXPORT
+#
+# EXTENDED 
+#
+# EXTENT_SIZE
+#
+# FALSE(R)
+#
+# FAST
+#
+# FAULTS
+#
+# FETCH(R)
+#
+# FIELDS
+#
+# FILE
+#
+# FILE_BLOCK_SIZE
+#
+# FILTER
+#
+# FIRST
+#
+# FIRST_VALUE(R); added in 8.0.2 (reserved)
+#
+# FIXED
+#
+# FLOAT(R)
+#
+# FLOAT4(R)
+#
+# FLOAT8(R)
+#
+# FLUSH
+#
+# FOLLOWING; added in 8.0.2 (nonreserved)
+#
+# FOLLOWS
+#
+# FOR(R)
+#
+# FORCE(R)
+#
+# FOREIGN(R)
+#
+# FORMAT
+#
+# FOUND
+#
+# FROM(R)
+#
+# FULL
+#
+# FULLTEXT(R)
+#
+# FUNCTION(R); became reserved in 8.0.1
+#
+# GENERAL
+#
+# GENERATED (R)
+#
+# GEOMCOLLECTION; added in 8.0.11 (nonreserved)
+#
+# GEOMETRY
+#
+# GEOMETRYCOLLECTION
+#
+# GET(R)
+#
+# GET_FORMAT
+#
+# GET_MASTER_PUBLIC_KEY; added in 8.0.11 (nonreserved)
+#
+# GLOBAL
+#
+# GRANT(R)
+#
+# GRANTS
+#
+# GROUP(R)
+#
+# GROUPING(R); added in 8.0.1 (reserved)
+#
+# GROUPS(R); added in 8.0.2 (reserved)
+#
+# GROUP_REPLICATION
+#
+# HANDLER
+#
+# HASH
+#
+# HAVING(R)
+#
+# HELP
+#
+# HIGH_PRIORITY(R)
+#
+# HISTOGRAM; added in 8.0.2 (nonreserved)
+#
+# HISTORY; added in 8.0.3 (nonreserved)
+#
+# HOST
+#
+# HOSTS
+#
+# HOUR
+#
+# HOUR_MICROSECOND(R)
+#
+# HOUR_MINUTE(R)
+#
+# HOUR_SECOND(R)
+#
+# IDENTIFIED
+#
+# IF(R)
+#
+# IGNORE(R)
+#
+# IGNORE_SERVER_IDS
+#
+# IMPORT
+#
+# IN(R)
+#
+# INACTIVE; added in 8.0.14 (nonreserved)
+#
+# INDEX(R)
+#
+# INDEXES
+#
+# INFILE(R)
+#
+# INITIAL_SIZE
+#
+# INNER(R)
+#
+# INOUT(R)
+#
+# INSENSITIVE(R)
+#
+# INSERT(R)
+#
+# INSERT_METHOD
+#
+# INSTALL
+#
+# INSTANCE
+#
+# INT(R)
+#
+# INT1(R)
+#
+# INT2(R)
+#
+# INT3(R)
+#
+# INT4(R)
+#
+# INT8(R)
+#
+# INTEGER(R)
+#
+# INTERVAL(R)
+#
+# INTO(R)
+#
+# INVISIBLE
+#
+# INVOKER
+#
+# IO
+#
+# IO_AFTER_GTIDS(R)
+#
+# IO_BEFORE_GTIDS(R)
+#
+# IO_THREAD
+#
+# IPC
+#
+# IS(R)
+#
+# ISOLATION
+#
+# ISSUER
+#
+# ITERATE(R)
+#
+# JOIN(R)
+#
+# JSON
+#
+# JSON_TABLE(R); added in 8.0.4 (reserved)
+#
+# KEY(R)
+#
+# KEYS(R)
+#
+# KEY_BLOCK_SIZE
+#
+# KILL(R)
+#
+# LAG(R); added  in 8.0.2 (reserved)
+#
+# LANGUAGE
+#
+# LAST
+#
+# LAST_VALUE(R); added in 8.0.2 (reserved)
+#
+# LATERAL(R); added in 8.0.14 (reserved)
+#
+# LEAD(R); added in 8.0.2 (reserved)
+#
+# LEADING(R)
+#
+# LEAVE(R)
+#
+# LEAVES
+#
+# LEFT(R)
+#
+# LESS
+#
+# LEVEL
+#
+# LIKE(R)
+#
+# LIMIT(R)
+#
+# LINEAR(R)
+#
+# LINES(R)
+#
+# LINESTRING
+#
+# LIST
+#
+# LOAD(R)
+#
+# LOCAL
+#
+# LOCALTIME(R)
+#
+# LOCALTIMESTAMP(R)
+#
+# LOCK(R)
+#
+# LOCKED; added in 8.0.1 (nonreserved)
+#
+# LOCKS
+#
+# LOGFILE
+#
+# LOGS
+#
+# LONG(R)
+#
+# LONGBLOB(R)
+#
+# LONGTEXT(R)
+#
+# LOOP(R)
+#
+# LOW_PRIORITY(R)
+#
+# MASTER
+#
+# MASTER_AUTO_POSITION
+#
+# MASTER_BIND(R)
+#
+# MASTER_CONNECT_RETRY
+#
+# MASTER_DELAY
+#
+# MASTER_HEARTBEAT_PERIOD
+#
+# MASTER_HOST
+#
+# MASTER_LOG_FILE
+#
+# MASTER_LOG_POS
+#
+# MASTER_PASSWORD
+#
+# MASTER_PORT
+#
+# MASTER_PUBLIC_KEY_PATH; added in 8.0.11 (nonreserved)
+#
+# MASTER_RETRY_COUNT
+#
+# MASTER_SERVER_ID
+#
+# MASTER_SSL
+#
+# MASTER_SSL_CA
+#
+# MASTER_SSL_CAPATH
+#
+# MASTER_SSL_CERT
+#
+# MASTER_SSL_CIPHER
+#
+# MASTER_SSL_CRL
+#
+# MASTER_SSL_CRLPATH
+#
+# MASTER_SSL_KEY
+#
+# MASTER_SSL_VERIFY_SERVER_CERT(R)
+#
+# MASTER_TLS_VERSION
+#
+# MASTER_USER
+#
+# MATCH(R)
+#
+# MAXVALUE(R)
+#
+# MAX_CONNECTIONS_PER_HOUR
+#
+# MAX_QUERIES_PER_HOUR
+#
+# MAX_ROWS
+#
+# MAX_SIZE
+#
+# MAX_UPDATES_PER_HOUR
+#
+# MAX_USER_CONNECTIONS
+#
+# MEDIUM
+#
+# MEDIUMBLOB(R)
+#
+# MEDIUMINT(R)
+#
+# MEDIUMTEXT(R)
+#
+# MEMORY
+#
+# MERGE
+#
+# MESSAGE_TEXT
+#
+# MICROSECOND
+#
+# MIDDLEINT(R)
+#
+# MIGRATE
+#
+# MINUTE
+#
+# MINUTE_MICROSECONDS(R)
+#
+# MINUTE_SECOND(R)
+#
+# MIN_ROWS
+#
+# MOD(R)
+#
+# MODE
+#
+# MODIFIES(R)
+#
+# MODIFY
+#
+# MONTH
+#
+# MULTILINESTRING
+#
+# MULTIPOINT
+#
+# MULTIPOLYGON
+#
+# MUTEX
+#
+# MYSQL_ERRNO
+#
+# NAME
+#
+# NAMES
+#
+# NATIONAL
+#
+# NATURAL(R)
+#
+# NCHAR
+#
+# NDB
+#
+# NDBCLUSTER
+#
+# NESTED; added in 8.0.4 (nonreserved)
+#
+# NEVER
+#
+# NEW
+#
+# NEXT
+#
+# NO
+#
+# NODEGROUP
+#
+# NONE
+#
+# NOT(R)
+#
+# NOWAIT; added in 8.0.1 (nonreserved)
+#
+# NO_WAIT
+#
+# NO_WRITE_TO_BINLOG(R)
+#
+# NTH_VALUE(R); added in 8.0.2 (reserved)
+#
+# NTILE(R); added in 8.0.2 (reserved)
+#
+# NULL(R)
+#
+# NULLS; added in 8.0.2 (nonreserved)
+#
+# NUMBER
+#
+# NUMERIC(R)
+#
+# NVARCHAR
+#
+# OF(R); added in 8.0.1 (reserved)
+#
+# OFFSET
+#
+# OLD; added in 8.0.14 (nonreserved)
+#
+# ON(R)
+#
+# ONE
+#
+# ONLY
+#
+# OPEN
+#
+# OPTIMIZE(R)
+#
+# OPTIMIZER_COSTS(R)
+#
+# OPTION(R)
+#
+# OPTIONAL; added in 8.0.13 (nonreserved)
+#
+# OPTIONALLY (R)
+#
+# OPTIONS
+#
+# OR (R)
+#
+# ORDER (R)
+#
+# ORDINALITY; added in 8.0.4 (nonreserved)
+#
+# ORGANIZATION; added in 8.0.11 (nonreserved)
+#
+# OTHERS; added in 8.0.2 (nonreserved)
+#
+# OUT(R)
+#
+# OUTER(R)
+#
+# OUTFILE(R)
+#
+# OVER(R); added in 8.0.2 (reserved)
+#
+# OWNER
+#
+# PACK_KEYS
+#
+# PAGE
+#
+# PARSER
+#
+# PARTIAL
+#
+# PARTITION (R)
+#
+# PARTITIONING
+#
+# PARTITIONS
+#
+# PASSWORD
+#
+# PATH; added in 8.0.4 (nonreserved)
+#
+# PERCENT_RANK(R); added in 8.0.2 (reserved)
+#
+# PERSIST(R)
+#
+# PERSIST_ONLY(R); added in 8.0.2 (reserved)
+#
+# PHASE
+#
+# PLUGIN
+#
+# PLUGINS
+#
+# PLUGIN_DR
+#
+# POINT
+#
+# POLYGON
+#
+# PORT
+#
+# PRECEDES
+#
+# PRECEDING; added in 8.0.2 (nonreserved)
+#
+# PRECISION (R)
+#
+# PREPARE
+#
+# PRESERVE
+#
+# PREV
+#
+# PRIMARY(R)
+#
+# PRIVILEGES
+#
+# PROCEDURE(R)
+#
+# PROCESS; added in 8.0.11 (nonreserved)
+#
+# PROCESSLIST
+#
+# PROFILE
+#
+# PROFILES
+#
+# PROXY
+#
+# PURGE (R)
+#
+# QUARTER
+#
+# QUERY
+#
+# QUICK
+#
+# RANGE(R)
+#
+# RANK(R); added in 8.0.2 (reserved)
+#
+# READ(R)
+#
+# READS(R)
+#
+# READ_ONLY
+#
+# READ_WRITE(R)
+#
+# REAL(R)
+#
+# REBUILD
+#
+# RECOVER
+#
+# RECURSIVE(R); added in 8.0.1 (reserved)
+#
+# REDOFILE; removed in 8.0.3
+#
+# REDO_BUFFER_SIZE
+#
+# REDUNDANT
+#
+# REFERENCE; added in 8.0.11 (nonreserved)
+#
+# REFERENCES(R)
+#
+# REGEXP(R)
+#
+# RELAY
+#
+# RELAYLOG
+#
+# RELAY_LOG_FILE
+#
+# RELAY_LOG_POS
+#
+# RELAY_THREAD
+#
+# RELEASE(R)
+#
+# RELOAD
+#
+# REMOTE; added in 8.0.3 (nonreserved); removed in 8.0.14
+#
+# REMOVE
+#
+# RENAME(R)
+#
+# REORGANIZE
+#
+# REPAIR
+#
+# REPEAT(R)
+#
+# REPEATABLE
+#
+# REPLACE(R)
+#
+# REPLICATE_DO_DB
+#
+# REPLICATE_DO_TABLE
+#
+# REPLICATE_IGNORE_DB
+#
+# REPLICATE_IGNORE_TABLE
+#
+# REPLICATE_REWRITE_DB
+#
+# REPLICATE_WILD_DO_TABLE
+#
+# REPLICATE_WILD_IGNORE_TABLE
+#
+# REPLICATION
+#
+# REQUIRE (R)
+#
+# RESET
+#
+# RESIGNAL (R)
+#
+# RESOURCE; added in 8.0.3 (nonreserved)
+#
+# RESPECT; added in 8.0.2 (nonreserved)
+#
+# RESTART; added in 8.0.11 (nonreserved)
+#
+# RESTORE
+#
+# RESTRICT (R)
+#
+# RESUME
+#
+# RETAIN; added in 8.0.14 (nonreserved)
+#
+# RETURN (R)
+#
+# RETURNED_SQLSTATE
+#
+# RETURNS
+#
+# REUSE; added in 8.0.3 (nonreserved)
+#
+# REVERSE 
+#
+# REVOKE (R)
+#
+# RIGHT(R)
+#
+# RLIKE(R)
+#
+# ROLE; became nonreserved in 8.0.1
+#
+# ROLLBACK
+#
+# ROLLUP
+#
+# ROTATE
+#
+# ROUTINE
+#
+# ROW(R); became reserved in 8.0.2
+#
+# ROWS (R); became reserved in 8.0.2
+#
+# ROW_COUNT
+#
+# ROW_FORMAT
+#
+# ROW_NUMBER(R); added in 8.0.2 (reserved)
+#
+# RTREE
+#
+# SAVEPOINT
+#
+# SCHEDULE
+#
+# SCHEMA(R)
+#
+# SCHEMAS(R)
+#
+# SCHEMA_NAME
+#
+# SECOND
+#
+# SECONDARY_ENGINE; added in 8.0.13 (nonreserved)
+#
+# SECONDARY_LOAD; added in 8.0.13 (nonreserved)
+#
+# SECONDARY_UNLOAD; added in 8.0.13 (nonreserved)
+#
+# SECOND_MICROSECOND(R)
+#
+# SECURITY
+#
+# SELECT(R)
+#
+# SENSITIVE (R)
+#
+# SEPARATOR (R)
+#
+# SERIAL
+#
+# SERIALIZABLE
+#
+# SERVER
+#
+# SESSION
+#
+# SET(R)
+#
+# SHARE
+#
+# SHOW(R)
+#
+# SHUTDOWN
+#
+# SIGNAL(R)
+#
+# SIGNED
+#
+# SIMPLE
+#
+# SKIP; added in 8.0.1 (nonreserved)
+#
+# SLAVE
+#
+# SLOW
+#
+# SMALLINT(R)
+#
+# SNAPSHOT
+#
+# SOCKET
+#
+# SOME
+#
+# SONAME
+#
+# SOUNDS
+#
+# SOURCE
+#
+# SPATIAL(R)
+#
+# SPECIFIC(R)
+#
+# SQL(R)
+#
+# SQLEXCEPTION(R)
+#
+# SQLSTATE(R)
+#
+# SQLWARNING(R)
+#
+# SQL_AFTER_GTIDS
+#
+# SQL_AFTER_MTS_GAPS
+#
+# SQL_BEFORE_GTIDS
+#
+# SQL_BIG_RESULT(R)
+#
+# SQL_BUFFER_RESULT
+#
+# SQL_CACHE; removed in 8.0.3
+#
+# SQL_CALC_FOUND_ROWS(R)
+#
+# SQL_NO_CACHE
+#
+# SQL_SMALL_RESULT(R)
+#
+# SQL_THREAD
+#
+# SQL_TSI_DAY
+#
+# SQL_TSI_HOUR
+#
+# SQL_TSI_MINUTE
+#
+# SQL_TSI_MONTH
+#
+# SQL_TSI_QUARTER
+#
+# SQL_TSI_SECOND
+#
+# SQL_TSI_WEEK
+#
+# SQL_TSI_YEAR
+#
+# SRID; added in 8.0.3 (nonreserved)
+#
+# SSL(R)
+#
+# STACKED
+#
+# START
+#
+# STARTING (R)
+#
+# STARTS
+#
+# STATS_AUTO_RECALC
+#
+# STATS_PERSISTENT
+#
+# STATS_SAMPLE_PAGES
+#
+# STATUS
+#
+# STOP
+#
+# STORAGE
+#
+# STORED(R)
+#
+# STRAIGHT_JOIN(R)
+#
+# STRING
+#
+# SUBCLASS_ORIGIN
+#
+# SUBJECT
+#
+# SUBPARTITION
+#
+# SUBPARTITIONS
+#
+# SUPER
+#
+# SUSPEND
+#
+# SWAPS
+#
+# SWITCHES
+#
+# SYSTEM(R); added in 8.0.3 (reserved)
+#
+# TABLE(R)
+#
+# TABLES
+#
+# TABLESPACE
+#
+# TABLE_CHECKSUM
+#
+# TABLE_NAME
+#
+# TEMPORARY
+#
+# TEMPTABLE
+#
+# TERMINATED(R)
+#
+# TEXT
+#
+# THAN
+#
+# THEN(R)
+#
+# THREAD_PRIORITY; added in 8.0.3 (nonreserved)
+#
+# TIES; added in 8.0.2 (nonreserved)
+#
+# TIME
+#
+# TIMESTAMP
+#
+# TIMESTAMPADD
+#
+# TIMNESTAMPDIFF
+#
+# TINYBLOB(R)
+#
+# TINYINT(R)
+#
+# TINYTEXT(R)
+#
+# TO(R)
+#
+# TRAILING(R)
+#
+# TRANSACTION
+#
+# TRIGGER(R)
+#
+# TRIGGERS
+#
+# TRUE(R)
+#
+# TRUNCATE
+#
+# TYPE
+#
+# TYPES
+#
+# UNBOUNDED; added in 8.0.2 (nonreserved)
+#
+# UNCOMMITTED
+#
+# UNDEFINED
+#
+# UNDO(R)
+#
+# UNDOFILE
+#
+# UNDO_BUFFER_SIZE
+#
+# UNICODE
+#
+# UNINSTALL
+#
+# UNION (R)
+#
+# UNIQUE (R)
+#
+# UNKNOWN
+#
+# UNLOCK(R)
+#
+# UNSIGNED(R)
+#
+# UNTIL
+#
+# UPDATE(R)
+#
+# UPGRADE
+#
+# USAGE(R)
+#
+# USE(R)
+#
+# USER
+#
+# USER_RESOURCES
+#
+# USE_FRM
+#
+# USING(R)
+#
+# UTC_DATE(R)
+#
+# UTC_TIME(R)
+#
+# UTC_TIMESTAMP(R)
+#
+# VALIDATION
+#
+# VALUE
+#
+# VALUES(R)
+#
+# VARBINARY(R)
+#
+# VARCHAR(R)
+#
+# VARCHARACTER(R)
+#
+# VARIABLES
+#
+# VARYING(R)
+#
+# VCPU; added in 8.0.3 (nonreserved)
+#
+# VIEW
+#
+# VIRTUAL(R)
+#
+# VISIBLE
+#
+# WAIT
+#
+# WARNINGS
+#
+# WEEK
+#
+# WEIGHT_STRING
+#
+# WHEN(R)
+#
+# WHERE(R)
+#
+# WHILE(R)
+#
+# WINDOW(R); added in 8.0.2 (reserved)
+#
+# WITH(R)
+#
+# WITHOUT
+#
+# WORK
+#
+# WRAPPER
+#
+# WRITE(R)
+#
+# X509
+#
+# XA
+#
+# XID
+#
+# XML
+#
+# XOR(R)
+# 
+# YEAR
+#
+# YEAR_MONTH(R)
+#
+# ZEROFILL(R)
+#
+# MySQL 8.0 NEW KEYWORDS AND RESERVED WORDS
+#
+# THe following list shows the keywords and reserved words that are added in MySQL 8.0, compared
+# to MySQL 5.7.
+#
+# Reserved keywords are marked with (R)
+#
+# ACTIVE
+#
+# ADMIN
+#
+# BUCKETS
+#
+# CLONE
+
+# COMPONENT
+#
+# CUME_DIST(R)
+#
+# DEFINITION
+#
+# DENSE_RANK(R)
+#
+# DESCRIPTION
+#
+# EMPTY(R)
+#
+# EXCEPT(R)
+#
+# EXCLUDE
+#
+# FIRST_VALUE(R)
+#
+# FOLLOWING
+#
+# GEOMCOLLECTION
+#
+# GET_MASTER_PUBLIC_KEY
+#
+# GROUPING(R)
+#
+# GROUPS(R)
+#
+# HISTOGRAM
+#
+# HISTORY
+#
+# INACTIVE
+#
+# INVISIBLE
+#
+# JSON_TABLE(R)
+#
+# LAG(R)
+#
+# LAST_VALUE(R)
+#
+# LATERAL(R)
+#
+# LEAD(R)
+#
+# LOCKED
+#
+# MASTER_PUBLIC_KEY_PATH
+#
+# NESTED
+#
+# NOWAIT
+#
+# NTH_VALUE(R)
+#
+# NTILE(R)
+#
+# NULLS
+#
+# OF(R)
+#
+# OLD
+#
+# OPTIONAL
+#
+# ORDINALITY
+#
+# ORGANIZATION
+#
+# OTHERS
+#
+# OVER(R)
+#
+# PATH
+#
+# PERCENT_RANK(R)
+#
+# PERSIST(R)
+#
+# PERSIST_ONLY(R)
+#
+# PRECEDING 
+#
+# PROCESS
+#
+# RANK(R)
+#
+# RECURSIVE(R)
+#
+# REFERENCE
+#
+# RESOURCE
+#
+# RESPECT
+#
+# RESTART
+#
+# RETAIN
+#
+# REUSE
+#
+# ROLE
+#
+# ROW_NUMBER(R)
+#
+# SECONDARY_ENGINE
+#
+# SECONDARY_LOAD
+#
+# SECONDARY_UNLOAD
+#
+# SKIP
+#
+# SRID
+#
+# SYSTEM(R)
+#
+# THREAD_PRIORITY
+#
+# TIES
+#
+# UNBOUNDED
+#
+# VCPU
+#
+# VISIBLE
+#
+# WINDOW(R)
+#
+# MYSQL 8.0 REMOVED KEYWORDS AND RESERVED WORDS
+#
+# The following lists the keywords and reserverd words that are removed in MySQL 8.0, compared to 5.7
+#
+# Reserved words are marked with (R)
+#
+# ANALYSE
+#
+# DES_KEY_FILE
+#
+# PARSE_GCOL_EXPR
+#
+# REDOFILE
+#
+# SQL_CACHE
+#
+# USER-DEFINED VARIABLES
+#
+# You can store a value in a user-defined variable in one statement and refer to it later in another statement.
+#
+# This enables you to pass values from one statement to another.
+#
+# User variables are written as @var_name, where the variable name var_name consists of alphanumeric characters, ., _, and $
+#
+# A user variable name can contain other characters if you quote it as a string or identifier (for example, @'my-var', @"my-var", or @`my-var`)
+#
+# User-defined variables are session specific. A user variable defined by one client cannot be seen or used by other clients.
+# (Exception: A user with access to the Performance Schema user_variables_by_thread table can see all user variables for all sessions)
+#
+# All variables for a given client session are automatically freed when that client exits.
+#
+# User variable names are not case-sensitive. Names have a maximum length of 64 characters.
+#
+# One way to set a user-defined variable is by issuing a SET statement:
+#
+# 		SET @var_name = expr [, @var_name = expr] ---
+#
+# For SET, either = or := can be used as the assignment operator.
+#
+# User variables can be assigned a value from a limited set of data types: integer, decimal, floating-point, binary or nonbinary string, or NULL value.
+#
+# Assignment of decimal and real values does not preserve the precision of scale of the value.
+#
+# A value of a type other than one of the permissible types is converted to a permissible type.
+# For example, a value having a temporal or spatial data type is converted to a binary string.
+#
+# A value having the JSON data type is converted to a string with a character set of utf8mb4 and a collation of utf8mb4_bin
+#
+# If a user variable is assigned a nonbinary (character) string value, it has the same character set and collation
+# as the string.
+#
+# The coercibility of user variables is implicit.
+#
+# (This is the same coercibility as for table column values)
+#
+# HExadecimal or bit values assigned to user variables are treated as binary strings.
+# To assign a hexadecimal or bit value as a number to a user variable, use it in numeric
+# context.
+#
+# For example, add 0 or use CAST(--- AS UNSIGNED):
+#
+# 		SET @v1 = X'41';
+# 		SET @v2 = X'41'+0;
+# 		SET @v3 = CAST(X'41' AS UNSIGNED);
+# 		SELECT @v1, @v2, @v3;
+#
+# 		+---------+----------+----------+
+# 		| @v1 	 | @v2 	   | @v3 	  |
+# 		+---------+----------+----------+
+# 		| A 		 | 65 		| 65 		  |
+# 		+---------+----------+----------+
 #
 # 
+# 		SET @v1 = b'1000001';
+# 		SET @v2 = b'1000001'+0;
+# 		SET @v3 = CAST(b'1000001' AS UNSIGNED);
+# 		SELECT @v1, @v2, @v3;
+#
+# 		+--------+----------+-------------+
+# 		| @v1 	| @v2 	  | @v3 			 |
+# 		+--------+----------+-------------+
+# 		| A 		| 65 		  | 65 			 |
+# 		+--------+----------+-------------+
+#
+# If the value of a user variable is selected in a result set, it is returned ot hte client as a string.
+#
+# If you refer to a variable that has not been initialized, it has a value of NULL and a type of string.
+#
+# User variables may be used in most contexts where expressions are permitted.
+#
+# This does not currently include contexts that explicitly require a literal value, súch as in the
+# LIMIT clause of a SELECT statement, or the IGNORE N LINES clause of a LOAD_DATA statement.
+#
+# Previous releases of MySQL made it possible to assign a value to a user variable in statements
+# other than SET.
+#
+# This functionality is supported in MySQL 8.0 for backward compatbility but is subject to removal
+# in a future release of MySQL.
+#
+# WHen making an assignment in this way, you muse use := as the assignment operator, = is treated as
+# a comparison operator in statments other than SET.
+#
+# The order of evaluation of expressions involving user variables is undefined.
+#
+# For example, there is no guarantee that SELECT @a, @a:=@a+1 evaluates @a first and then performs the assignment.   
+#
+# In addition, the default result type of a variable is based on tis type at the beginning of the statement.
+#
+# THis may have unintended effects if a variable holds a value of one type at the beginning
+# of a statement in which it is also assigned a new value of a different type.
+#
+# To avoid problems with this behavior, either do not assign a value to and read the value of the same variable
+# within a single statement, or else set the variable to 0, 0.0 or '' to define its type before you use it.
+#
+# HAVING, GROUP BY and ORDER BY, when referring to a variable that is assigned a value in the select expression
+# list do not owkr as expected because the expression is evaluated on the client and thus can use stale column values
+# from a previous row.
+#
+# User variables are intended to provide data values. They cannot be used directly in an SQL statement as an identifier
+# or as part of an identifier, such as in contexts where a table or database name is expected, or as a reserved word such as SELECT.
+#
+# This is true even if the variable is quoted, as shown in the following example:
+#
+# 		SELECT c1 FROM t;
+# 		+-------+
+# 		| c1 	  |
+# 		+-------+
+# 		| 0 	  |
+# 		+-------+
+# 		| 1 	  |
+# 		+-------+
+# 		2 rows in set ( 0.00 sec )
+# 		
+# 		SET @col = "c1";
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		SELECT @col FROM t;
+# 		+--------+
+# 		| @col 	|
+# 		+--------+
+# 		| c1 	   |
+# 		+--------+
+# 		1 row in set (0.00 sec)
+#
+# 		SELECT `@col` FROM t;
+# 		ERROR 1054 (42S22): Unknown column '@col' in 'field list'
+#
+# 		SET @col = "`c1`";
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		SELECT @col FROM t;
+# 		+--------+
+# 		| @col   |
+# 		+--------+
+# 		| `c1`	|
+# 		+--------+
+# 		1 row in set (0.00 sec)
+#
+# An exception to this principle that user variables cannot be used to provide identifiers, is when you
+# are constructing a string for use as a prepared statement to execute later.
+#
+# In this case, user variables can be used to provide any part of the statement.
+# The following example illustrates how this can be done:
+#
+# 		SET @c = "c1";
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		SET @s = CONCAT("SELECT", @c, " FROM t");
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		PREPARE stmt FROM @s;
+# 		Query OK, 0 rows affected (0.04 sec)
+# 		Statement prepared
+#
+# 		EXECUTE stmt;
+# 		+------+
+# 		| c1   |
+# 		+------+
+# 		| 0 	 |
+# 		+------+
+# 		| 1 	 |
+# 		+------+
+# 		2 rows in set (0.00 sec)
+#
+# 		DEALLOCATE PREPARE stmt;
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# See SECTION 13.5, "PREPARED SQL STATEMENT SYNTAX" for more information.
+#
+# A similar technique can be used in application programs to construct SQL statements using
+# program variables, as shown here:
+#
+# <?PHP
+# 		$mysqli = new mysqli("localhost", "user", "pass", "test");
+#
+# 		if( mysqli_connect_errno()) )
+# 			die("Connection failed: %s\n", mysql_connect_error());
+#
+# 		$col = "c1";
+#
+# 		$query = "SELECT $col FROM t";
+#
+# 		$result = $mysqli->query($query);
+#
+# 		while($row = $result->fetch_assoc())
+# 		{
+# 			echo "<p>" . $row["$col"] . "</p>\n";
+# 		}
+#
+# 		$result->close();
+#
+# 		$mysqli->close();
+# ?>
+#
+# Assembling SQL like this, can be called Dynamic SQL.
+#
+# EXPRESSIONS
+#
+# This section lists the grammar rules that expressions must follow in MySQL and provides additional
+# information about the types of terms that may appear in expressions.
+#
+# EXPRESSION SYNTAX
+#
+# The following grammar rules define expression syntax in MySQL.
+#
+# The grammar shown here is based on that given in the sql/sql_yacc.yy file of MySQL
+# source distributions.
+#
+# For additional information about some of the expression terms, see Expression Term Notes.
+#
+# 		Expr:
+# 			expr OR expr
+# 		 | expr || expr
+# 		 | expr XOR expr
+# 		 | expr AND expr
+# 		 | expr && expr
+# 		 | NOT expr
+# 		 | ! expr
+# 		 | boolean_primary IS [NOT] {TRUE | FALSE | UNKNOWN}
+# 		 | boolean_primary
+#
+# 		boolean_primary:
+# 			boolean_primary IS [NOT] NULL
+# 		 | boolean_primary <=> predicate
+# 		 | boolean_primary comparison_operator predicate
+# 		 | boolean_primary comparison_operator {ALL | ANY} (subquery)
+# 		 | predicate
+#
+# 		comparison_operator: = | >= | > | <= | < | <> | !=
+#
+# 		predicate:
+# 			bit_expr [NOT] IN (subquery)
+# 		 | bit_expr [NOT] IN (expr [, expr] ---)
+# 		 | bit_expr [NOT] BETWEEN bit_expr AND predicate
+# 		 | bit_expr SOUNDS LIKE bit_expr
+# 		 | bit_expr [NOT] LIKE simple_expr [ESCAPE simple_expr]
+# 		 | bit_expr [NOT] REGEXP bit_expr
+# 		 | bit_expr
+#
+# 		bit_expr:
+# 			bit_expr | bit_expr
+# 		 | bit_expr & bit_expr
+# 		 | bit_expr << bit_expr
+# 		 | bit_expr >> bit_expr
+# 		 | bit_expr + bit_expr
+# 		 | bit_expr - bit_expr
+# 		 | bit_expr * bit_expr
+# 		 | bit_expr / bit_expr
+# 		 | bit_expr DIV bit_expr
+# 		 | bit_expr MOD bit_expr
+# 		 | bit_expr % bit_expr
+# 		 | bit_expr ^ bit_expr 
+# 		 | bit_expr + interval_expr
+# 		 | bit_expr - interval_expr
+# 		 | simple_expr
+#
+# 		simple_expr:
+# 		  literal
+# 		| identifier
+# 		| function_call
+# 		| simple_expr COLLATE collation_name
+# 		| param_marker
+# 		| variable
+# 		| simple_expr || simple_expr
+# 		| param_marker
+# 		| variable
+# 		| simple_expr || simple_expr
+# 	   | + simple_expr
+# 		| - simple_expr
+# 		| ~ simple_expr
+# 		| ! simple_expr
+# 		| BINARY simple_expr
+# 		| (expr [, expr] ---)
+# 		| ROW (expr, expr [, expr], ---)
+# 		| (subquery)
+# 		| EXISTS (subquery)
+# 		| {identifier expr}
+# 		| match_expr
+# 		| case_expr
+# 		| interval_expr
+#
+# For operator precedence, see SECTION 12.3.1, "OPERATOR PRECEDENCE".
+#
+# The precedence and meaning of some operators depends on the SQL mode:
+#
+# 		) By default || is a logical OR operator. WIth PIPES_AS_CONCAT enabled, || is string concatenation,
+# 			with a precedence between ^ and the unary operators.
+#
+# 		) By default, ! has a higher precedence than NOT. With HIGH_NOT_PRECEDENCE enabled, ! and NOT have teh same precedence.
+#
+# EXPRESSION TERM NOTES
+#
+# For literal value syntax, see SECTION 9.1, "LITERAL VALUES"
+#
+# For identifier syntax, see SECTION 9.2, "SCHEMA OBJECT NAMES"
+#
+# Variables can be user variables, system variables, or stored program local
+# variables or parameters:
+#
+# 		) User variables: Section 9.4, "USER-DEFINED VARIABLES"
+#
+# 		) System variables: Section 5.1.9, "Using System Variables"
+#
+# 		) Stored program local variables: SECTION 13.6.4.1 "LOCAL VARIABLE DECLARE SYNTAX" 	
+#
+# 		) Stored program parameters: SECTION 13.1.17 "CREATE PROCEDURE AND CREATE FUNCTION SYNTAX"
+#
+# param_marker is ? as used in prepared statements for placeholders. See SECTION 13.5.1, "PREPARE SYNTAX"
+#
+# (subquery) indicates a subquery that returns a single value; that is, a scalar subquery. See SECTION 13.2.11.1, "THE SUBQUERY AS SCALAR OPERAND"
+#
+# { identifier expr } is ODBC escape syntax and is accepted for ODBC compatibility.
+#
+# The value is expr. The { and } curly braces in the syntax should be written literally; they are not metasyntax
+# as used elsewhere in syntax descriptions.
+#
+# match_expr indicates a MATCH expression. See SECTION 12.9, "FULL-TEXT SEARCH FUNCTIONS"
+#
+# case_expr indicates a CASE expression. See SECTION 12.4, "CONTROL FLOW FUNCTIONS"
+#
+# interval_expr represents a temporal interval. See Temporal Intervals.
+#
+# TEMPORAL INTERVALS
+#
+# interval_expr in expressions represents a temporal interval. Intervals have this syntax:
+#
+# 		INTERVAL expr unit
+#
+# expr represents a quantity.
+#
+# Unit represents the unit for interpreting the quantity; it is a specifier such as HOUR,
+# DAY or WEEK.
+#
+# The INTERVAL keyword and the unit specifier are not case sensitive.
+#
+# The following table shows the expected form of the expr argument for each unit value.
+#
+# TEMPORAL INTERVAL EXPRESSION AND UNIT ARGUMENTS
+#
+# UNIT VALUE 			EXPECTED EXPR FORMAT
+#
+# MICROSECOND 			MICROSECONDS
+#
+# SECOND 				SECONDS
+#
+# MINUTE 				MINUTES
+#
+# HOUR 					HOURS
+#
+# DAY 					DAYS
+#
+# WEEK 					WEEKS
+#
+# MONTH 					MONTHS
+#
+# QUARTER 				QUARTERS
+#
+# YEAR 					YEARS
+#
+# SECOND_MICROSECOND 'SECONDS.MICROSECONDS'
+#
+# MINUTE_MICROSECOND 'MINUTES:SECONDS.MICROSECONDS'
+#
+# MINUTE_SECOND 		'MINUTES:SECONDS'
+#
+# HOUR_MICROSECOND 	'HOURS:MINUTES:SECONDS.MICROSECONDS'
+#
+# HOUR_SECOND 			'HOURS:MINUTES:SECONDS'
+#
+# HOUR_MINUTE 			'HOURS:MINUTES'
+#
+# DAY_MICROSECOND 	'DAYS HOURS:MINUTES:SECONDS.MICROSECONDS'
+#
+# DAY_SECOND 			'DAYS HOURS:MINUTES:SECONDS'
+#
+# DAY_MINUTE 			'DAYS HOURS:MINUTES'
+#
+# DAY_HOUR 				'DAYS HOURS'
+#
+# YEAR_MONTH 			'YEARS-MONTHS'
+#
+# MySQL permits any punctuation delimiter in the expr format.
+# THose shown in the table ar the suggested delimiters.
+#
+# Temporal intervals are used for certain functions, such as DATE_ADD() and DATE_SUB():
+#
+# 		SELECT DATE_ADD('2018-05-01', INTERVAL 1 DAY);
+# 			-> '2018-05-02'
+#
+# 		SELECT DATE_SUB('2018-05-01', INTERVAL 1 YEAR);
+# 			-> '2017-05-01'
+#
+# 		SELECT DATE_ADD('2020-12-31 23:59:59',
+# 			-> 			 INTERVAL 1 SECOND);
+# 				-> '2021-01-01 00:00:00'
+#
+# 		SELECT DATE_ADD('2018-12-31 23:59:59',
+# 			->				INTERVAL 1 DAY);
+# 				-> '2019-01-01 23:59:59'
+#
+# 		SELECT DATE_ADD('2100-12-31 23:59:59',
+# 			-> 			INTERVAL '1:1' MINUTE_SECOND);
+# 				-> '2101-01-01 00:01:00'
+#
+# 		SELECT DATE_SUB('2025-01-01 00:00:00'
+# 			->				INTERVAL '1 1:1:1' DAY_SECOND);
+# 		 		-> '2024-12-30 22:58:59'
+#
+# 		SELECT DATE_ADD('1900-01-01 00:00:00',
+# 			-> 			INTERVAL '-1 10' DAY_HOUR);
+# 				-> '1899-12-30 14:00:00'
+#
+# 		SELECT DATE_SUB('1998-01-02', INTERVAL 31 DAY);
+# 			-> '1997-12-02'
+#
+# 		SELECT DATE_ADD('1992-12-31 23:59:59.000002',
+# 			->			INTERVAL '1.999999' SECOND_MICROSECOND);
+# 				-> '1993-01-01 00:00:01.00001'
+#
+# Temporal arithmetic also can be performed in expressions using INTERVAL together with the + or - operator:
+#
+# 	date + INTERVAL expr unit
+# 	date - INTERVAL expr unit
+#
+# INTERVAL expr unit is permitted on either side of the + operator if the expression on the other side is a date
+# or datetime value.
+#
+# For the - operator, INTERVAL expr unit is permitted only on the right side, because it makes
+# no sense to subtract date or datetime value from an interval.
+#
+# SELECT '2018-12-31 23:59:59' + INTERVAL 1 SECOND;
+# 		-> '2019-01-01 00:00:00'
+# SELECT INTERVAL 1 DAY + '2018-12-31';
+# 		-> '2019-01-01'
+# SELECT '2025-01-01' - INTERVAL 1 SECOND;
+# 		-> '2024-12-31 23:59:59'
+#
+# The EXTRACT() function uses the same kinds of unit specifiers as DATE_ADD() or
+# DATE_SUB(), but extracts parts from the date rather than performing date arithmetic:
+#
+# 		SELECT EXTRACT(YEAR FROM '2019-07-02');
+# 			-> 2019
+#
+# 		SELECT EXTRACT(YEAR_MONTH FROM '2019-07-02 01:02:03');
+# 			-> 201907
+#
+# Temporal intervals can be used in CREATE_EVENT statements:
+#
+# 		CREATE EVENT myevent
+# 			ON SCHEDULE AT CURRENT_TIMESTAMP + INTERVAL 1 HOUR
+# 			DO
+# 				UPDATE myschema.mytable SET mycol = mycol + 1;
+#
+# If you specify an interval value that is too short (does not include all the interval parts that would be expected
+# from the unit keyword), MySQL assumes that you have left out the leftmost parts of the interval value.
+#
+# For example, if you specify a unit of DAY_SECOND, the value of expr is expected to have days, hours, minutes and
+# seconds parts.
+#
+# If you specify a value like '1:10', MySQL assumes that the days and hours parts are missing and the value represents
+# minutes and seconds.
+#
+# In other words, '1:10' DAY_SECOND is interpreted in such a way that is equivalent to '1:10' MINUTE_SECOND.
+#
+# This is analogous to the way that MySQL interprets TIME values as representing elapsed time rather than as
+# a time of day.
+#
+# expr is treated as a string, so be careful if you specify a nonstring value with INTERVAL.
+#
+# FOr example, with a interval specifier of HOUR_MINUTE, '6/4' is treated as 6 hours, four minutes,
+# whereas 6/4 evaluates to 1.5000 and is treated as 1 hour, 5000 minutes:
+#
+# 		SELECT '6/4', 6/4;
+# 			-> 1.5000
+#
+# 		SELECT DATE_ADD('2019-01-01', INTERVAL '6/4' HOUR_MINUTE);
+# 			-> '2019-01-01 06:04:00'
+#
+# 		SELECT DATE_ADD('2019-01-01', INTERVAL 6/4 HOUR_MINUTE);
+# 			-> '2019-01-04 12:20:00'
+#
+# To ensure interpretation of the interval value as you expect, a CAST() operation may be used.
+# To treat 6/4 as 1 hour 5 mins, cast it to a DECIMAL value with a single fractional digit:
+#
+# 		SELECT CAST(6/4 AS DECIMAL(3,1));
+# 			-> 1.5
+#
+# 		SELECT DATE_ADD('1970-01-01 12:00:00',
+# 			->				 INTERVAL CAST(6/4 AS DECIMAL(3,1)) HOUR_MINUTE);
+# 				-> '1970-01-01 13:05:00'
+#
+# If you add or subtract from a date value something that contains a time part,
+# the result is automatically converted to a datetime value:
+#
+# 		SELECT DATE_ADD('2023-01-01', INTERVAL 1 DAY);
+# 			-> '2023-01-02'
+# 		SELECT DATE_ADD('2023-01-01', INTERVAL 1 HOUR);
+# 			-> '2023-01-01 01:00:00'
+#
+# If you add MONTH, YEAR_MONTH, or YEAR and the resulting date has a day that is larger than
+# the maximum day for the new month, the day is adjusted to the maximum days in the new month:
+#
+# 		SELECT DATE_ADD('2019-01-30', INTERVAL 1 MONTH);
+# 			-> '2019-02-28'
+#
+# Date arithmetic operations require complete dates and do not work with incomplete date such as '2016-07-00' or badly
+# malformed dates:
+#
+# 		SELECT DATE_ADD('2016-07-00', INTERVAL 1 DAY);
+# 			-> NULL
+# 		SELECT '2005-03-32' + INTERVAL 1 MONTH;
+# 			-> NULL
+#
+# COMMENT SYNTAX
+#
+# MySQL Server supports three comment styles:
+#
+# 		) From a # character to end of line
+#
+# 		) From a -- sequence to the end of the line.
+#
+# 			In MySQL, the -- (double-dash) comment style requires the second dash to be followed by
+# 			at least one whitespace or control character (such as space, tab, newline, and so on).
+#
+# 			This syntax differs slightly from standard SQL comment syntax, as discussed in earlier.
+#
+# 		) from a /* sequence to the following */ sequence, as in the C programming language.
+#
+# 			This syntax enables a comment to extend over multiple lines because the
+# 			beginning and closing sequences need not be on the same line.
+#
+# THe following example demonstrates all three comment styles:
+#
+# 	SELECT 1+1; #This comment continues to end of line
+# 	SELECT 1+1; -- same
+# 	SELECT 1 /* inline comment */ + 1;
+# 	SELECT 1+
+# /*
+# multiline 
+# comment
+# */
+# 1;
+#
+# Nested comments are not supported, as they are dperecated.
+#
+# Under some conditions they are allowed, but usually not, thus, avoid them.
+#
+# MySQL server supports some variants of C-style comments.
+#
+# These enable you to write code that includes MySQL extensions, but is still portable,
+# by using comments of the following form:
+#
+# /*! MySQL-specific code */
+#
+# In this case, MySQL parses and executes the code within the comment as it would any other SQL statement,
+# but other SQL servers will ignore the extensions.
+#
+# For example, MySQL server recognizes the STRAIGHT_JOIN keyword in the following statment,
+# but other servers will not:
+#
+# 		SELECT /*! STRAIGHT_JOIN */ col1 FROM table1,table2 WHERE ---
+#
+# If you add a version number after the ! character, the syntax within the comment is executed
+# only if the MySQl version is greater than or equal to the specified version
+#
+# The KEY_BLOCK_SIZE keyword in the following comment is executed only by servers from MySQL 5.1.10 or higher:
+#
+# 		CREATE TABLE t1(a INT, KEY (a)) /*! 50110 KEY_BLOCK_SIZE=1024 */;
+#
+# The comment syntax just described applies to how the mysql parses SQL statements.
+#
+# The MySQL client program also performs some parsing of statements before sending them to
+# the server.
+#
+# (It does this to determine statement boundaries within a multiple-statement input line)
+#
+# Comments in this format /*!12345 --- */, are not stored on the server.
+#
+# If this format is used to comment stored routines, the comments will not be retained on
+# the server.
+#
+# Another variant of C-style comment syntax is used to specify optimizer hints.
+# Hint comments include a + character following the /* comment opening sequence.
+#
+# Example:
+#
+# 	SELECT /*+ BKA(t1) */ FROM ---;
+#
+# Fore more information, see SECTION 8.9.2, "OPTIMIZER HINTS"
+#
+# The use of short-form mysql commands such as \C within multiple line /* --- */ comments si not supported.
+#
+# CHARACTER SETS, COLLATIONS, UNICODE
+#
+# MySQL includes character set support that enables you to store data using a variety of character
+# sets and perform comparsions according to a variety of collations.
+#
+# You can specify character sets at the server, database, table and column level.
+#
+# This chapter discusses the following topics:
+#
+# 		) What are character sets and collations?
+#
+# 		) The multiple-level default system for character set assignment.
+#
+# 		) Syntax for specifying character sets and collations
+#
+# 		) Affected functions and operations.
+#
+# 		) Unicode support.
+#
+# 		) The character sets and collations that are available with notes.
+#
+# 		) Selecting the language for error messages
+#
+# 		) Selecting the locale for day and month names
+#
+# Character set issues affect not only data storage, but also communication between client programs
+# and the MySQL server.
+#
+# If you want the client program to communicate with the server using a character set different
+# from the default, you'll need to indicate which one.
+#
+# For example, to use the utf8 unicode character set, issue this statement after connecting to the server:
+#
+# 		SET NAMES 'utf8';
+#
+# For more information about configuring character sets for application use and character set-related
+# issues in client/server communication, see SECTION 10.5, "CONFIGURING APPLICATION CHARACTER SET AND COLLATION"
+#
+# SECTION 10.4, "CONNECTION CHARACTER SETS AND COLLATIONS"
+#
+# CHARACTER SETS AND COLLATIONS IN GENERAL
+#
+# A character set is a set of symbols and encodings.
+# A collation is a set of rules for comparing characters in a character set.
+#
+# Let's make the distinction clear with an example of an imaginary char set.
+#
+# Suppose that we have an alphabet of four letters:
+#
+# 		A, B, a, b
+#
+# We give each letter a number:
+#
+# 		A = 0
+#
+# 		B = 1
+#
+# 		a = 2
+#
+# 		b = 3
+#
+#  
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/charset-general.html
