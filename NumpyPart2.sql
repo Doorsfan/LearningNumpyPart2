@@ -63578,6 +63578,2008 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 #
 # 		b = 3
 #
-#  
+# The letter A is the symbol, the number 0 is the encoding for A, and the combination
+# of all four letters and their encodings is a character set.
+#
+# Suppose that we want to compare two string values, A and B.
+#
+# The simplest way to do this is to look at the encodings: 0 for A and 1 for B.
+#
+# Because 0 < 1, A is < B
+#
+# What we've just done thus, is to apply a collation to our character set.
+# The collation set is a set of rules (only one rule in this case):
+#
+# 		"compare the encodings"
+#
+# We call this simplest of all possible collations a binary collation
+#
+# But what if we want to say that the lowercase and uppercase letters are equivalent?
+# Then we would have at least two rules: 
+#
+# (1) treat the lowercase letter a and b as equivalent to A and B
+#
+# (2) then compare the encodings
+#
+# We call this a case-insensitive collation. It is a little more complex than a binary collation.
+#
+# In real life, most character sets have many characters: not just A and B but whole alphabets,
+# sometimes multiple alphabets or eastern writing systems with thousands of characters, along with many
+# special symbols and punctuation marks.
+#
+# Also in real life, most collations have many rules, not just for whether to distinguish
+# lettercase, but also for whether to distinguish accents (an "accent" is a mark attached to a character
+# as in a German Ö) and for multiple-character mappings (such as the rule that Ö = OE in one of the two
+# german collations)
+#
+# MySQL can do these things for you:
+#
+# 		Store strings using a variety of character sets
+#
+# 		Compare strings using a variety of collations
+#
+# 		Mix strings with different character sets or collations in the same server,
+# 		the same database, or even the same table
+#
+# 		Enable specification of character set and collation at any level
+#
+# To use these features effectively, you must know what character sets and collations
+# are available, how to change the defaults, and how they affect the behavior of string operators
+# and functions.
+#
+# CHARACTER SETS AND COLLATIONS IN MYSQL
+#
+# MySQL Server supports multiple character sets, including several Unicode character sets.
+#
+# To display the available character sets, use the INFORMATION_SCHEMA CHARACTER_SETS table or the
+# SHOW_CHARACTER_SET statement.
 # 
-# https://dev.mysql.com/doc/refman/8.0/en/charset-general.html
+# A partial listing follows. For more complete information, see SECTION 10.10 "SUPPORTED CHARACTER SETS
+# AND COLLATIONS"
+#
+# SHOW CHARACTER SET;
+# +------------+--------------------------------------------+-------------------------+-------------+
+# | Charset 	| Description 											| Default collation 	 	  | Maxlen 		 |
+# +------------+--------------------------------------------+-------------------------+-------------+
+# | big5 		| Big5 Traditional Chinese 					   | big5_chinese_ci 		  | 		2 	 	 |
+# | binary 	   | Binary pseudo charset 							| binary 					  | 		1 	    |
+# ---
+# | latin1 		| cp1252 West European 								| latin1_swedish_ci 		  | 		1 		 |
+# ---
+# | ucs2 		| UCS-2 Unicode 										| ucs2_general_ci 		  | 		2 		 |
+# ---
+# | utf8 		| UTF-8 Unicode 										| utf8_general_ci 		  | 		3 		 |
+# | utf8mb4 	| UTF-8 Unicode 										| utf8mb4_0900_ai_ci 	  | 		4 		 |
+# ---
+#
+# By default, the SHOW_CHARACTER_SET statement displays all available character sets.
+#
+# It takes an optional LIKE or WHERE clause that indicates which character set names to match.
+#
+# The following examples shows some of the Unicode character sets (those based on Unicode Transformation Format):
+#
+# 		SHOW CHARACTER SET LIKE 'utf%';
+# 		+------------+------------------------+---------------------+------------------+
+# 		| Charset 	 | Description 			  | Default collation 	| Maxlen 			 |
+# 		+------------+------------------------+---------------------+------------------+
+# 		| utf16 		 | UTF-16 Unicode 		  | utf16_general_ci  	| 		4 		   	 |
+# 		| utf16le 	 | UTF-16LE Unicode 		  | utf16le_general_ci  | 	   4 				 |
+# 		| utf32 		 | UTF-32 Unicode 		  | utf32_general_ci 	| 		4 				 |
+# 		| utf8 		 | UTF-8 Unicode 			  | utf8_general_ci 	   | 		3 				 |
+# 		| utf8mb4 	 | UTF-8 Unicode 			  | utf8mb4_0900_ai_ci 	| 		4 				 |
+# 		+------------+------------------------+---------------------+------------------+
+#
+# A given character set always has at least one collation, and most character sets have several.
+#
+# To list the display collations for a character set, use the INFORMATION_SCHEMA COLLATIONS table
+# or the SHOW_COLLATION statement.
+#
+# By default, the SHOW_COLLATION statement displays all available collations.
+#
+# It takes an optional LIKE or WHERE clause that indicates which collation names to display. 
+#
+# For example, to see the collations for the default character set, utf8mb4, use this statement:
+#
+# SHOW COLLATION WHERE Charset = 'utf8mb4';
+# +------------------------+---------+-----+------------+-------------+-------------+------------------+
+# | Collation 					| Charset | Id  | Default 	  | Compiled 	 | Sortlen 		| Pad_attribute 	 |
+# +------------------------+---------+-----+------------+-------------+-------------+------------------+
+# | utf8mb4_0900_ai_ci 		| utf8mb4 | 255 | Yes 		  | Yes 			 | 		0 		| NO PAD 			 |
+# | utf8mb4_0900_as_ci  	| utf8mb4 | 305 | 			  | Yes 			 | 		0 		| NO PAD 			 |
+# | utf8mb4_0900_as_cs  	| utf8mb4 | 278 | 			  | Yes 			 | 		0 	   | NO PAD 			 |
+# | utf8mb4_bin 				| utf8mb4 |  46 | 			  | Yes 			 | 		1 		| PAD SPACE 		 |
+# | utf8mb4_croatian_ci 	| utf8mb4 | 245 | 			  | Yes 			 | 		8 	   | PAD SPACE 		 |
+# | utf8mb4_cs_0900_ai_ci  | utf8mb4 | 266 | 			  | Yes 			 | 		0 	   | NO PAD 			 |
+# | utf8mb4_cs_0900_as_cs  | utf8mb4 | 289 | 			  | Yes 			 | 		0 		| NO PAD 			 |
+# | utf8mb4_czech_ci 		| utf8mb4 | 234 | 			  | Yes 			 | 		8 		| PAD SPACE 		 |
+# | utf8mb4_danish_ci 		| utf8mb4 | 235 | 			  | Yes 			 | 		8 		| PAD SPACE 		 |
+# | utf8mb4_da_0900_ai_ci 	| utf8mb4 | 267 | 			  | Yes 			 | 		0 		| NO PAD 			 |
+# | utf8mb4_da_0900_as_cs  | utf8mb4 | 290 | 			  | Yes 			 | 		0 		| NO PAD 			 |
+# | utf8mb4_de_pb_0900_ai_ci etc.
+# 
+# --- This carries on for all the different charsets ---
+#
+# For more information about those collations, see SECTION 10.10.1, "UNICODE CHARACTER SETS"
+#
+# Collations have these general characteristics:
+#
+# 		) Two different character sets cannot have the same collation
+#
+# 		) Each character set has a default collation.
+#
+# 			For example, the default collations for utf8mb4 and latin1 are utf8mb4_0900_ai_ci and latin1_swedish_ci, respectively.
+#
+# 			The INFORMATION_SCHEMA CHARACTER_SETS table and the SHOW_CHARACTER_SET statement indicate hte default collation
+# 			for each character set.
+#
+# 			The INFORMATION_SCHEMA COLLATIONS table and the SHOW_COLLATION statement have a column that indicates for each
+# 			collation whether it is the default for its character set (yes if so, empty if not)
+#
+# 		) Collation names start with the name of the character set with which they are associated, generally followed
+# 			by one or more suffixes indicating other collation characteristics.
+#
+# 			For additional information about naming conventions, see SECTION 10.3.1, "COLLATION NAMING CONVENTIONS"
+#
+# When a character set has multiple collations, it might not be clear which collation is most suitable for a given application.
+#
+# To avoid choosing an inappropriate collation, perform some comparisons with representative data values to make sure that a 
+# given collation sorts values the way you expect.
+#
+# CHARACTER SET REPETOIRE
+#
+# The repetoire of a character set is the collection of characters in the set.
+#
+# String expressions have a repetoire attribute, which can have two values:
+#
+# 		) ASCII: The expression can contain only characters in the Unicode range U+0000 to U+007F
+#
+# 		) UNICODE: The expression can contain characters in the Unicode range U+0000 to U+10FFFF
+#
+# 						This includes characters in the Basic Multilingual Plane (BMP) range (U+0000 to U+FFFF)
+# 						and supplementary characters outside the BMP range (U+10000 to U+10FFFF)
+#
+# The ASCII range is a subset of UNICODE range, so a string with ASCII repetoire can be converted safely without
+# loss of information to the character set of any string with UNICODE repetoire or to a character set that is
+# a superset of ASCII.
+#
+# (All MYSQL character sets are supersets of ASCII with the exception of swe7, which reuses some punctuation
+# 	characters for Swedish accented characters)
+#
+# The use of repetoire enables character set conversion in expressions for many cases where MySQL would
+# otherwise return an "illegal mix of collations" error
+#
+# The following discussion provides examples of expressions and their repetoires, and describes how the use
+# of repetoire changes string expression evaluation:
+#
+# 		) The repetoire for a string constant depends on string content and may differ from the repetoire of the string
+# 			character set.
+#
+# 			Consider these statements:
+#
+# 				SET NAMES utf8; SELECT 'abc';
+# 				SELECT _utf8'def';
+# 				SELECT N'MySQL';
+#
+# 			Although the character set is utf8 in each of the preceding cases, the strings do not actually
+# 			contain any characters outside the ASCII range, so their repetoire is ASCII rather than UNICODE.
+#
+# 		) A column having the ascii character set has ASCII repetoire because of its character set.
+#
+# 			In the following table, c1 has ASCII repetoire:
+#
+# 				CREATE TABLE t1 (c1 CHAR(1) CHARACTER SET ascii);
+#
+# 			The following example illustrates how repetoire enables a result to be determined in a case where
+# 			an error occurs without repetoire:
+#
+# 				CREATE TABLE t1 (
+# 					c1 CHAR(1) CHARACTER SET latin1,
+# 					c2 CHAR(1) CHARACTER SET ascii
+# 				);
+# 				INSERT INTO t1 VALUES ('a', 'b');
+# 				SELECT CONCAT(c1,c2) FROM t1;
+#
+# 			Without repetoire this error occurs:
+#
+# 				ERROR 1267 (HY000): Illegal mix of collations (latin1_swedish_ci, IMPLICIT)
+# 				and (ascii_general_ci, IMPLICIT) for operation 'concat'
+#
+# 			Using repetoire, subset to superset (ascii to latin1) conversion can occur and a result is returned:
+#
+# 				+-------------------+
+# 				| CONCAT(c1,c2) 	  |
+# 				+-------------------+
+# 				| ab 					  |
+# 				+-------------------+
+#
+# 		) Functions with one string argument inherit the repetoire of their argument.
+#
+# 			The result of UPPER( utf8'abc' ) has ASCII repetoire because its argument has ASCII
+# 			repetoire.
+#
+# 		) For functions that return a string but do not have string arguments and use character_set_connection
+# 			as the result character set, the result repetoire is ASCII if character_set_connection is ascii,
+# 			and UNICODE otherwise:
+#
+# 				FORMAT(numeric_column, 4);
+#
+# 			Use of repetoire changes how MySQL evaluates the following example:
+#
+# 				SET NAMES ascii;
+# 				CREATE TABLE t1 (a INT, b VARCHAR(10) CHARACTER SET latin1);
+# 				INSERT INTO t1 VALUES (1, 'b');
+# 				SELECT CONCAT(FORMAT(a, 4), b) FROM t1;
+#
+# 			Without repetoire, this error occurs:
+#
+# 				ERROR 1267 (HY000): Illegal mix of collations (ascii_general_ci, COERCIBLE)
+# 				and (latin1_swedish_ci, IMPLICIT) for operation 'concat'
+#
+# 			Without repetoire, a result is returned:
+#
+# 				+--------------------------------+
+# 				| CONCAT(FORMAT(a, 4), b) 			|
+# 				+--------------------------------+
+# 				| 1.0000b 								|
+# 				+--------------------------------+
+#
+# 		) Functions with two or more string arguments use the "widest" argument repetoire for the result
+# 			repetoire (UNICODE is wider than ASCII)
+#
+# 			Consider the following CONCAT() calls:
+#
+# 				CONCAT(_ucs2 X'0041', _ucs2 X'0042')
+# 				CONCAT(_ucs2 X'0041', _ucs2 X'00C2')
+#
+# 			For the first call, the repetoire is ASCII because both arguments are within the range of the ascii character set.
+# 			For the second call, the repetoire is UNICODE because the second argument is outside the ascii character set range.
+#
+# 		) The repetoire for function return values is determined based only on the repertoire of the arguments
+# 			that affect the result's character set and collation.
+#
+# 				IF(column1 < column2, 'smaller', 'greater')
+#
+# 			The result repetoire is ASCII because the two string arguments (the second argument and the third argument)
+# 			both have ASCII repetoire.
+#
+# 			The first argument does not matter for the result repetoire, even if the expression uses string values.
+#
+# UTF-8 FOR METADATA
+#
+# Metadata is "the data about the data". Anything that describes the DB, as opposed to being the contents of the db, is metadata.
+#
+# Thus column names, database names, user names, version names, and most of the string results from SHOW are metadata.
+#
+# This is also true of the contents of tables in INFORMATION_SCHEMA because those tables by definition contain
+# information about database objects.
+#
+# Representation of metadata must satisfy these requirements:
+#
+# 		) All metadata must be in the same character set.
+#
+# 			Otherwise, neither the SHOW statements nor SELECT statements for tables in INFORMATION_SCHEMA would work
+# 			properly because different rows in the same column of the results of these operations would be in different
+# 			character sets.
+#
+# 		) Metadata must include all characters in all languages. Otherwise, users would not be able to name columns and tables
+# 			using their own languages.
+#
+# To satisfy both requirements, MySQL stores metadata in a Unicode character set, namely UTF-8.
+#
+# This does not cause any disruption if you never use accented or non-Latin characters.
+#
+# But if you do, you should be aware that metqdata is in UTF-8.
+#
+# The metadata requirements mean that the return values of the USER(), CURRENT_USER(), SESSION_USER(),
+# SYSTEM_USER(), DATABASE() and VERSION() functions have the UTF-8 character set by default.
+#
+# The server sets the character_set_system system variable to the name of the metadata character set:
+#
+# 		SHOW VARIABLES LIKE 'character_set_system';
+# 		+-----------------------------+----------+
+# 		| Variable_name 					| Value 	  |
+# 		+-----------------------------+----------+
+# 		| character_set_system 			| utf8 	  |
+# 		+-----------------------------+----------+
+#
+# Storage of metadata using Unicode does NOT mean that the server returns headers of columns
+# and the results of DESCRIBE functions in the character_set_system character set by default.
+#
+# When you use SELECT column1 FROM t, the name column1 itself is returned from the server to the
+# client in the character set determined by the value of the character_set_results system variable,
+# which has a default value of utf8mb4.
+#
+# If you want the server to pass metadata results back in a different character set, use the SET_NAMES
+# statement to force the server to perform character set conversion.
+#
+# SET_NAMES sets the character_set_results and other related system variables.
+#
+# (See SECTION 10.4, "CONNECTION CHARACTER SETS AND COLLATIONS")
+#
+# Alternatively, a client program can perform the conversion after receiving the result from the
+# server.
+#
+# It is more efficient for the client to perform the conversion, but this option is not always available for all clients.
+#
+# If character_set_results is set to NULL, no conversion is performed and the server returns metadata
+# using its original character set (the set indicated by character_set_system)
+#
+# Error messages returned from the server to the client are converted to the client character set automatically, as with metadata.
+#
+# If you are using (for example) the USER() function for comparison or assignment within a single statement,
+# do not worry.
+#
+# MySQL performs some automatic conversion for you.
+#
+# 		SELECT * FROM t1 WHERE USER() = latin1_column;
+#
+# This works because the contents of latin1_column are automatically converted to
+# UTF-8 before the comparison.
+#
+# 		INSERT INTO t1 (latin1_column) SELECT USER();
+#
+# This works because the contents of USER() are automatically converted to latin1 before the
+# assignment.
+#
+# Although automatic conversion is not in the SQL standard, the standard does say that every character set
+# is (in terms of supported characters) a "subset" of Unicode.
+#
+# Because it is a well-known principle that "what applies to a superset can apply to a subset", we believe
+# that a collation for Unicode can apply for comparisons with non-Unicode strings.
+#
+# For more information about coercion of strings, see SECTION 10.8.4, "COLLATION COERCIBILITY IN EXPRESSIONS"
+#
+# SPECIFYING CHARACTER SETS AND COLLATIONS
+#
+# There are default settings for character sets and collations at four levels:
+#
+# 		server, database, table and column.
+#
+# The description in the following sections may appear complex, but it has been found in practice
+# that multiple-level defaulting leads to natural and obvious results.
+#
+# CHARACTER SET is used in clauses that specify a character set.
+#
+# CHARSET can be used as a synonym for CHARACTER SET.
+#
+# Character set issues affect not only data storage, but also communication between client
+# programs and the MySQL server.
+#
+# If you want the client program to communicate with the server using a character set different
+# from the default, you'll need to indicate which one.
+#
+# For example, to use the utf8mb4 Unicode character set, issue this statement after connecting
+# to the server:
+#
+# 		SET NAMES 'utf8mb4';
+#
+# For more information about character set set-related issues in client/server communication,
+# see SECTION 10.4, "CONNECTION CHARACTER SETS AND COLLATIONS"
+#
+# COLLATION NAMING CONVENTIONS
+#
+# MySQL collation names follow these conventions:
+#
+# 		) A collation name starts with the name of the character set with which it is associated,
+# 			generally followed by one or more suffixes indicating other collation characteristics.
+#
+# 			For example, utf8mb4_general_ci and latin1_swedish_ci are collations for the utf8mb4
+# 			and latin1 character sets, respectively.
+#
+# 			The binary character set has a single collation, also named binary, with no suffixes.
+#
+# 		) A language-specific collation includes a locale code or language name.
+#
+# 			For example, utf8mb4_tr_0900_ai_ci and utf8mb4_hu_0900_ai_ci sort characters for the
+# 			utf8mb4 character set using the rules of Turkish and Hungarian, respectively.
+#
+# 			utf8mb4_turkish_ci and utf8mb4_hungarian_ci are similar but based on a less recent
+# 			version of the Unicode Collation Algorithm
+#
+# 		) Collation suffixes indicate whether a collation is case and accent sensitive, or binary.
+#
+# 			The following table shows the suffixes used to indicate these characteristics.
+#
+# 			TABLE 10.1 COLLATION CASE/ACCENT SENSITIVITY SUFFIXES
+#
+# 			Suffix 		Meaning
+# 			_ai 			Accent insensitive
+# 			_as 			Accent sensitive
+# 			_ci 			Case insensitive
+#
+# 			_cs 			case-sensitive
+# 			_ks 			Kana sensitive
+# 			_bin 			Binary
+#
+# 			For nonbinary collation names that do not specify accent sensitivity, it is determined by case sensitivity.
+#
+# 			If a collation name does not contain _ai or _as, _ci in the name implies _ai and _cs in the name implies _as.
+#
+# 			For example, latin1_general_ci is explicitly case insensitive and implicitly accent insensitive,
+# 			latin1_general_cs is explicitly case sensitive and implicitly accent sensitive, and utf8mb4_0900_ai_ci
+# 			is explicitly case and accent insensitive.
+#
+# 			For Japanese collations, the _ks suffix indicates that a collation is kana sensitive; that is,
+# 			it distinguishes Katakana characters from Hiragana characters.
+#
+# 			Japanese collations without the _ks suffix are not kana sensitive and treat Katakana and Hiragana
+# 			characters equal for sorting.
+#
+# 			For the binary collation of the binary character set, comparisons are based on numeric byte values.
+#
+# 			For the _bin collation of a nonbinary character set, comparisons are based on numeric character code
+# 			values, which differ from byte values for multibyte characters.
+#
+# 			For more information, see SECTION 10.8.5, "THE BINARY COLLATION COMPARED TO _BIN COLLATIONS"
+#
+# 		) For Unicode character sets, collation names may include a version number to indicate the version of the
+# 			Unicode Collation Algorithm (UCA) on which the collation is based.
+#
+# 			UCA-based collations without a version number in the name use the version-4.0.0 UCA weight keys.
+#
+# 			For example (These have external links related to them - just not written here):
+#
+# 				) utf8mb4_0900_ai_ci is based on UCA 9.0.0 weight keys 
+#
+# 				) utf8mb4_unicode_520_ci is based on UCA 5.2.0 weight keys
+#
+# 				) utf8mb4_unicode_ci (with no version named) is based on UCA 4.0.0 weight keys 
+#
+# 		) For Unicode character sets, the xxx_general_mysql500_ci collations preserve the pre-5.1.24 ordering
+# 			of the original xxx_general_ci collations and permits upgrades for tables created before MySQL 5.1.24 (BUG #27877)
+#
+# 
+# SERVER CHARACTER SET AND COLLATION
+#
+# MySQL Server has a server character set and a server collation.
+#
+# These can be set at server startup on the command line or in an option file and changed at runtime.
+#
+# Initially, the server character set and collation depend on the options that you use when you start mysqld.
+#
+# You can use --character-set-server for the character set. Along with it, you can add --collation-server for the collation.
+#
+# If you do not specify a character set, that is the same as saying --character-set-server=utf8mb4.
+#
+# If you specify only a character set (for example, utf8mb4) but not a collation, that is the same as saying
+# --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci because utf8mb4_0900_ai_ci is the default
+# collation for utf8mb4.
+#
+# Therefore, the following three commands all have the same effect:
+#
+# 		mysqld
+# 		mysqld --character-set-server=utf8mb4
+# 		mysqld --character-set-server=utf8mb4 \
+# 			--collation-server=utf8mb4_0900_ai_ci
+#
+# One way to change the settings is by recompiling.
+#
+# To change the default server character set and collation when building from sources,
+# use the DEFAULT_CHARSET and DEFAULT_COLLATION options for CMake.
+#
+# For example:
+#
+# 		cmake . -DDEFAULT_CHARSET=latin1
+#
+# or
+#
+# 		cmake . -DDEFAULT_CHARSET=latin1 \
+# 			-DDEFAULT_COLLATION=latin1_german1_ci
+#
+# Both mysqld and CMake verify that the character set/collation combination is valid.
+# If not, each program displays an error message and terminates.
+#
+# The server character set and collation are used as default values if the database character
+# set and collation are not specified in CREATE_DATABASE statements.
+#
+# They have no other purpose.
+#
+# The current server character set and collation can be determined from the values of the
+# character_set_server and collation_server system variables.
+#
+# These variables can be changed at runtime.
+#
+# DATABASE CHARACTER SET AND COLLATION
+#
+# Every database has a database character set and a database collation.
+#
+# The CREATE_DATABASE and ALTER_DATABASE statements have optional clauses for specifying the
+# database character set and collation:
+#
+# 		CREATE DATABASE db_name
+# 			[[DEFAULT] CHARACTER SET charset_name]
+#  		[[DEFAULT] COLLATE collation_name]
+#
+# 		ALTER DATABASE db_name
+# 			[[DEFAULT] CHARACTER SET charset_name]
+# 			[[DEFAULT] COLLATE collation_name]
+#
+# The keyword SCHEMA can be used instead of DATABASE.
+#
+# The CHARACTER SET AND COLLATE clauses make it possible to create databases
+# with different character sets and collations on the same MySQL server.
+#
+# Database options are stored in the data dictionary and can be examined by checking the INFORMATION_SCHEMA.SCHEMATA table.
+#
+# Example:
+#
+# 		CREATE DATABASE db_name CHARACTER SET latin1 COLLATE latin1_swedish_ci;
+#
+# MySQL chooses the database character set and database collation in the following manner:
+#
+# 		) If both CHARACTER SET charset_name and COLLATE collation_name are specified, character set charset_name and collation collation_name are used.
+#
+# 		) If CHARACTER SET charset_name is specified without COLLATE, character set charset_name and its default collation are used.
+#
+# 			To see the default collation for each character set, use the SHOW_CHARACTER_SET statement or query
+# 			the INFORMATION_SCHEMA CHARACTER_SETS table
+#
+# 		) If COLLATE collation_name is specified without CHARACTER SET, the character set associated with collation_name and collation
+# 			collation_name are used.
+#
+# 		) Otherwise (neither CHARACTER SET nor COLLATE is specified), the server character set and server collation are used.
+#
+# The character set and collation for the default database can be determined from the values of the character_set_database
+# and collation_database system variables.
+#
+# The server sets these variables whenever the default database changes.
+#
+# If there is no default database, the variables have the same value as the corresponding server-level
+# system variables, character_set_server and collation_server.
+#
+# To see the default character set and collation for a given database, use these statements:
+#
+# 		USE db_name;
+# 		SELECT @@character_set_database, @@collation_database;
+#
+# Alternatively, to display the values without changing the default database:
+#
+# 		SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME
+# 		FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'db_name';
+#
+# The database character set and collation affect these aspects of server operation:
+#
+# 		) For CREATE_TABLE statements, the database character set and collation are used as default values for table definitions
+# 			if the table character set and collation are not specified.
+#
+# 			To override this, provide explicit CHARACTER SET and COLLATE table options.
+#
+# 		) For LOAD_DATA statements that include no CHARACTER SET clause, the server uses the character set indicated by the
+# 			character_set_database system variable to interpret the information in the file.
+#
+# 			To override this, provide an explicit CHARACTER SET clause.
+#
+# 		) For stored routines (procedures and functions), the database character set and collation in effect at
+# 			routine creation time are used as the character set and collation of character data parameters
+# 			for which the declaration includes no CHARACTER SET or COLLATE attribute.
+#
+# 			To override this, provide explicit CHARACTER SET and COLLATE attributes.
+#
+# TABLE CHARACTER SET AND COLLATION
+#
+# Every table has a table character set and a table collation. The CREATE_TABLE and ALTER_TABLE statements have optional clauses
+# for specifying the table character set and collation:
+#
+# 		CREATE TABLE tbl_name (column_list)
+# 			[[DEFAULT] CHARACTER SET charset_name]
+# 			[COLLATE collation_name]]
+#
+# 		ALTER TABLE tbl_name
+# 			[[DEFAULT] CHARACTER SET charset_name]
+# 			[COLLATE collation_name]
+#
+# Example:
+#
+# 		CREATE TABLE t1 ( --- )
+# 		CHARACTER SET latin1 COLLATE latin1_danish_ci;
+#
+# MySQL chooses the table character set and collation in the following manner:
+#
+# 		) If both CHARACTER SET charset_name and COLLATE collation_name are specified, character set charset_name and collation collation_name are used.
+#
+# 		) If CHARACTER SET charset_name is specified without COLLATE, character set charset_name and its default collation are used.
+#
+# 			To see the default collation for each character set, use the SHOW_CHARACTER_SET statement or query the INFORMATION_SCHEMA CHARACTER_SETS table
+#
+# 		) If COLLATE collation_name is specified without CHARACTER SET, the character set associated with collation_name and collation collation_name are used.
+#
+# 		) Otherwise (neither CHARACTER SET nor COLLATE is specified), the database character set and collation are used.
+#
+# The table character set and collation are used as default values for column definitions if the column character
+# set and collation are not specified in the individual column definitions.
+#
+# The table character set and collation are MySQL extensions; there are no such things in standard SQL.
+#
+# COLUMN CHARACTER SET AND COLLATION
+#
+# Every "character" column (that is, a column of type CHAR, VARCHAR or TEXT) has a column character set
+# and a column collation.
+#
+# Column definition syntax for CREATE_TABLE and ALTER_TABLE has optional clauses for specifying the column
+# character set and collation:
+#
+# 		col_name {CHAR | VARCHAR | TEXT} (col_length)
+# 			[CHARACTER SET charset_name]
+# 			[COLLATE collation_name]
+#
+# These clauses can also be used for ENUM and SET columns:
+#
+# 		col_name {ENUM | SET} (val_list)
+# 			[CHARACTER SET charset_name]
+# 			[COLLATE collation_name]
+#
+# Examples:
+#
+# 		CREATE TABLE t1
+# 		(
+# 			col1 VARCHAR(5)
+# 				CHARACTER SET latin1
+# 				COLLATE latin1_german1_ci
+# 		);
+#
+# 		ALTER TABLE t1 MODIFY
+# 			col1 VARCHAR(5)
+# 				CHARACTER SET latin1
+# 				COLLATE latin1_swedish_ci;
+#
+# MySQL chooses the column character set and collation in the following manner:
+#
+# 		) If both CHARACTER SET charset_name and COLLATE collation_name are specified, character set
+# 			charset_name and collation collation_name are used.
+#
+# 			CREATE TABLE t1
+# 			(
+# 				col1 CHAR(10) CHARACTER SET utf8 COLLATE utf8_unicode_ci
+# 			) CHARACTER SET latin1 COLLATE latin1_bin;
+#
+# 			The character set and collation are specified for the column, so they are used.
+#
+# 			The column has character set UTF8 and collation utf8_unicode_ci
+#
+# 		) If CHARACTER SET charset_name is specified without COLLATE, character set charset_name
+# 			and its default collation are used.
+#
+# 			CREATE TABLE t1
+# 			(
+# 				col1 CHAR(10) CHARACTER SET utf8
+# 			) CHARACTER SET latin1 COLLATE latin1_bin;
+#
+# 			The character set is specified for the column, but the collation is not.
+#
+# 			The column has character set utf8 and the default collation for utf8,
+# 			which is utf8_general_ci
+#
+# 			To see the default collation for each character set, use the SHOW_CHARACTER_SET
+# 			statement or query the INFORMATION_SCHEMA CHARACTER_SETS table.
+#
+# 		) If COLLATE collation_name is specified without CHARACTER SET, the character set associated
+# 			with collation_name and collation collation_name are used.
+#
+# 			CREATE TABLE t1
+# 			(
+# 				col1 CHAR(10) COLLATE utf8_polish_ci
+# 			) CHARACTER SET latin1 COLLATE latin1_bin;
+#
+# 			The collation is specified for the column, but the character set is not.
+#
+# 			The column has collation utf8_polish_ci and the character set is the one associated
+#			with the collation, which is utf8
+#
+# 		) Otherwise (neither CHARSET SET nor COLLATE is specified), the table character set and collation are used.
+#
+# 			CREATE TABLE t1
+# 			(
+# 				col1 CHAR(10)
+# 			) CHARACTER SET latin1 COLLATE latin1_bin;
+#
+# 			Neither the character set nor collation is specified for the column, so the table
+# 			defaults are used.
+#
+# 			The column has character set latin1 and collation latin1_bin
+#
+# The CHARACTER SET and COLLATE clause are standard SQL.
+#
+# If you use ALTER_TABLE to convert a column from one character set to another,
+# MySQL attempts to map the data values, but if the character set are incompatible - there may be data loss.
+#
+# CHARACTER STRING LITERAL CHARACTER SET AND COLLATION
+#
+# Every character string literal has a character set and a collation.
+#
+# For the simple SELECT 'string', the string has the connection default character set and collation defined
+# by the character_set_connection and collation_connection system variables.
+#
+# A character string literal may have an optional character set introducer and COLLATE clause, to designate it
+# as a string that uses a particular character set and collation:
+#
+# 		[_charset_name]'string' [COLLATE collation_name]
+#
+# The _charset_name expression is formally called an introducer.
+#
+# It tells the parser, "the string that follows uses character set charset_name"
+#
+# An introducer does not change the string to the introducer character set like CONVERT() would do.
+# It does not change the string value, although padding may occur.
+#
+# The introducer is just a signal. See SECTION 10.3.8, "CHARACTER SET INTRODUCERS"
+#
+# Examples:
+#
+# 		SELECT 'abc';
+# 		SELECT _latin1'abc';
+# 		SELECT _binary'abc';
+# 		SELECT utf8mb4'abc' COLLATE utf8mb4_danish_ci;
+#
+# Character set introducers and the COLLATE clause are implemented according to standard
+# SQL specifications.
+#
+# MySQL determines the character set and collation of a character string literal in the following manner:
+#
+# 		) If both _charset_name and COLLATE collation_name are specified, character set charset_name
+# 			and collation collation_name are used.
+#
+# 			collation_name must be a permitted collation for charset_name
+#
+# 		) If _charset_name is specified but COLLATE is not specified, character set charset_name and its
+# 			default collation are used.
+#
+# 			To see the default collation for each character set, use the SHOW_CHARACTER_SET statement or query
+# 			the INFORMATION_SCHEMA CHARACTER_SETS table.
+#
+# 		) If _charset_name is not specified but COLLATE collation_name is specified, the connection default character
+# 			set given by the character_set_connection system variable and collation collation_name are used.
+#
+# 			collation_name must be a permitted collation for the connection default character set.
+#
+# 		) Otherwise (neither _charset_name nor COLLATE collation_name is specified), the connection default
+# 			character set and collation given by the character_set_connection and collation_connection system
+# 			variables are used.
+#
+# Examples:
+#
+# 		) A nonbinary string with latin1 character set and latin1_german1_ci collation:
+#
+# 			SELECT _latin1'Müller' COLLATE latin1_german1_ci;
+#
+# 		) A nonbinary string with utf8mb4 character set and its default collation
+# 			(that is, utf8mb4_general_ci):
+#
+# 			SELECT _utf8mb4'Müller';
+#
+# 		) A binary string with binary character set and its default collation (that is, binary):
+#
+# 			SELECT _binary'Müller';
+#
+# 		) A nonbinary string with the connection default character set and utf8mb4_general_ci collation
+# 			(fails if the connection character set is not utf8mb4):
+#
+# 			SELECT 'Müller' COLLATE utf8mb4_general_ci;
+#
+# 		) A string with the connection default character set and collation:
+#
+# 			SELECT 'Müller';
+#
+# An introducer indicates the character set for the following string, but does not change how the parser
+# performs escape processing within the string.
+#
+# Escapes are always interpreted by the parser according to the character set given by character_set_connection
+#
+# The following examples show that escape processing occurs using character_set_connection even in the presence
+# of an introducer.
+#
+# The examples use SET_NAMES (which changes character_set_connection, as discussed in Section 10.4, "CONNECTION CHARACTER SETS AND COLLATIONS"),
+# and display the resulting strings using the HEX() function so that the exact string contents can be seen.
+#
+# Example 1:
+#
+# 		SET NAMES latin1;
+# 		SELECT HEX('à\n'), HEX(_sjis'à\n');
+# 		+-----------------+-------------------+
+# 		| HEX('à\n') 		| HEX(_sjis'à\n')   |
+# 		+-----------------+-------------------+
+# 		| E00A 				| E00A 				  |
+# 		+-----------------+-------------------+
+#
+# Here, à (hexadecimal value E0) is followed by \n, the escape sequence for newline.
+#
+# The escape sequence is interpreted using the character_set_connection value of 
+# latin1 to produce a literal newline (hexadecimal value 0A).
+#
+# This happens even for the second string. That is, the _sjis introducer does not affect
+# the parser's escape processing.
+#
+# Example 2:
+#
+# 		SET NAMES sjis;
+# 		SELECT HEX('à\n'), HEX(_latin1,'à\n');
+# 		+----------------+-------------------+
+# 		| HEX('à\n') 	  | HEX(_latin1'à\n') |
+# 		+----------------+-------------------+
+# 		| E05C6E 		  | E05C6E 				 |
+# 		+----------------+-------------------+
+#
+# Here, character_set_connection is sjis, a character set in which the sequence of à followed by
+# \ (hexadecimal values 05 and 5C) is a valid multibyte character.
+#
+# Hence, the first two bytes of the string are interpreted as a single sjis character, and the
+# \ is not interpreted as an escape character.
+#
+# The following n (hexadecimal value 6E) is not interpreted as part of an escape sequence.
+# This is true even for the second string; the _latin1 introducer does not affect escape processing.
+#
+# THE NATIONAL CHARACTER SET
+#
+# Standard SQL defines NCHAR or NATIONAL_CHAR as a way to indicate that a CHAR column should use some predefined
+# character set.
+#
+# MySQL uses utf8 as this predefined character set.
+#
+# For example, these data type declarations are equivalent:
+#
+# 		CHAR(10) CHARACTER SET utf8
+# 		NATIONAL CHARACTER(10)
+# 		NCHAR(10)
+#
+# As are these:
+#
+# 		VARCHAR(10) CHARACTER SET utf8
+# 		NATIONAL VARCHAR(10)
+# 		NCHAR VARCHAR(10)
+# 		NATIONAL CHARACTER VARYING(10)
+# 		NATIONAL CHAR VARYING(10)
+#
+# You can use N'literal' (or n'literal') to create a string in the national character set.
+# These statements are equivalent:
+#
+# 		SELECT N'some text';
+# 		SELECT n'some text';
+# 		SELECT _utf8'some text';
+#
+# CHARACTER SET INTRODUCERS
+#
+# A character string literal, hexadecimal literal or bit-value literal may have an optional character
+# set introducer and COLLATE clause, to designate it as a string that uses a particular character set and
+# collation:
+#
+# 		[_charset_name] literal [COLLATE collation_name]
+#
+# The _charset_name expression is formally called an introducer.
+#
+# IT tells the parser, "The string that follows uses character set charset_name"
+#
+# An introducer does not change the string to the introducer character set like CONVERT()
+# would do.
+#
+# It does not change the string value, although padding may occur.
+#
+# The introducer is just a signal.
+#
+# For character string literals, space between the introducer and the string is permitted but optional.
+#
+# Examples:
+#
+# 		SELECT 'abc';
+# 		SELECT _latin1'abc';
+# 		SELECT _binary'abc';
+#
+# 		SELECT _utf8mb4'abc' COLLATE utf8mb4_danish_ci;
+#
+# 		SELECT _latin1 X'4D7953514C';
+# 		SELECT _utf8mb4 0x4D7953514C COLLATE utf8mb4_danish_ci;
+#
+# 		SELECT _latin1 b'1000001';
+# 		SELECT _utf8mb4 0b1000001 COLLATE utf8mb4_danish_ci;
+#
+# Character set introducers and the COLLATE clause are implemented according to standard SQL specifications.
+#
+# Character string literals can be designated as binary strings by using the _binary introducer.
+#
+# Hexadecimal literals and bit-value literals are binary strings by default, so _binary is permitted,
+# but normally unnecessary.
+#
+# _binary may be useful to preserve a hexadecimal or bit literal as a binary string in contexts
+# for which the literal is otherwise treated as a number.
+#
+# For example, bit operations permit numeric or binary string arguments in MySQL 8.0 and higher,
+# but treat hexadecimal and bit literals as numbers by default.
+#
+# To explicitly specify binary string context for such literals, use a _binary introducer
+# for at least one of the arguments:
+#
+# 		SET @v1 = X'000D' | X'0BC0';
+# 		SET @v2 = _binary X'000D' | X'0BC0';
+# 		SELECT HEX(@v1), HEX(@v2);
+# 		+---------------+-----------------+
+# 		| HEX(@v1) 		 | HEX(@v2) 		 |
+# 		+---------------+-----------------+
+# 		| BCD 			 | 0BCD 				 |
+# 		+---------------+-----------------+
+#
+# The displayed result appears similar for both bit operations, but the result without _binary is a BIGINT value,
+# whereas the result with _binary is a binary string.
+#
+# Due to the difference in result types, the displayed values differ:
+#
+# 		High-order 0 digits are not displayed for the numeric result
+#
+# MySQL determines the character set and collation of a character string literal, hexadecimal literal or
+# bit-value literal in the following manner:
+#
+# 		) If both _charset_name and COLLATE collation_name are specified, character set charset_name and collation
+# 			collation_name are used.
+#
+# 			collation_name must be a permitted collation for charset_name
+#
+# 		) If _charset_name is specified but COLLATE is not specified, character set charset_name and its default
+# 			collation are used.
+#
+# 			To see the default collation for each character set, use the SHOW_CHARACTER_SET statement or query the
+# 			INFORMATION_SCHEMA CHARACTER_SETS table.
+#
+# 		) If _charset_name it not specified but COLLATE collation_name is specified:
+#
+# 			) For a character string literal, the connection default character set given by the character_set_connection
+# 				system variable and collation collation_name are used.
+#
+# 				collation_name must be permitted collation for the connection default character set.
+#
+# 			) For a hexadecimal literal or bit-value literal, the only permitted collation is binary because
+# 				these types of literals are binary strings by default.
+#
+# 		) Otherwise (neither _charset_name nor COLLATE collation_name is specified):
+#
+# 			) For a character string literal, the connection default character set and collation given by the 
+# 				character_set_connection and collation_connection system variables are used.
+#
+# 			) For a hexadecimal literal or bit-value literal, the character set and collation are binary.
+#
+# Examples:
+#
+# 		) Nonbinary strings with latin1 character set and latin1_german1_ci collation:
+#
+# 			SELECT _latin1'Müller' COLLATE latin1_german1_ci;
+# 			SELECT _latin1 X'0A0D' COLLATE latin1_german1_ci;
+# 			SELECT _latin1 b'0110' COLLATE latin1_german1_ci;
+#
+# 		) Nonbinary strings with utf8mb4 character set and its default collation (that is, utf8mb4_0900_ai_ci):
+#
+# 			SELECT _utf8mb4'Müller';
+# 			SELECT _utf8mb4 X'0A0D';
+# 			SELECT _utf8mb4 b'0110';
+#
+# 		) Binary strings with binary character set and its default collation (that is, binary):
+#
+# 			SELECT _binary'Müller';
+# 			SELECT X'0A0D';
+# 			SELECT b'0110';
+#
+# 			The hexadecimal literal and bit-value literal need no introducer because they are binary strings by default
+#
+# 		) A nonbinary string with the connection default character set and utf8mb4_general_ci collation
+# 			(fails if the connection character set is not utf8mb4):
+#
+# 			SELECT 'Múller' COLLATE utf8mb4_general_ci;
+#
+# 			This construction (COLLATE ONLY) does not work for hexadecimal literals or bit literals because their
+# 			character set is binary no matter the connection character set and binary is not compatible with
+# 			the utf8mb4_general_ci collation.
+#
+# 			The only permitted COLLATE clause in the absence of an introducer is COLLATE binary
+#
+# 		) A string with the connection default character set and collation:
+#
+# 			SELECT 'Müller';
+#
+# For character set literals, an introducer indicates the character set for the following string,
+# but does not change how the parser performs escape processing within the string.
+#
+# Escapes are always interpreted by the parser according to the character set given by
+# character_set_connection
+#
+# For additional discussion and examples, see SECTION 10.3.6 "CHARACTER STRING LITERAL CHARACTER SET AND COLLATION"
+#
+# EXAMPLES OF CHARACTER SET AND COLLATION ASSIGNMENT
+#
+# The following examples show how MySQL determines default character set and collation values.
+#
+# EXAMPLE 1: TABLE AND COLUMN DEFINITION
+#
+# 		CREATE TABLE t1
+# 		(
+# 			c1 CHAR(10) CHARACTER SET latin1 COLLATE latin1_german1_ci
+# 		) DEFAULT CHARACTER SET latin2 COLLATE latin2_bin;
+#
+# Here we have a column with a latin1 character set and a latin1_german_ci collation.
+#
+# the definition is explicit, so that is straightforward. Notice that htere is no problem
+# with storing a latin1 column in a latin2 table.
+#
+# EXAMPLE 2: TABLE AND COLUMN DEFINITION
+#
+# 		CREATE TABLE t1
+# 		(
+# 			c1 CHAR(10) CHARACTER SET latin1
+# 		) DEFAULT CHARACTER SET latin1 COLLATE latin1_danish_ci;
+#
+# 		THis time, we have a column with a latin1 character set and a default collation.
+#
+# 		Although it might seem natural, the default collation is not taken from the table level.
+#
+# 		INstead, because the default collation for latin1 is always latin1_swedish_ci, column c1 has a collation
+# 		of latin1_swedish_ci (not latin1_danish_ci)
+#
+# EXAMPLE 3: TABLE AND COLUMN DEFINITION
+#
+# 		CREATE TABLE t1
+# 		(
+# 			c1 CHAR(10)
+# 		) DEFAULT CHARACTER SET latin1 COLLATE latin1_danish_ci;
+#
+# 		We have a column with a default character set and a default collation.
+#
+# 		In this circumstance, MySQL checks the table level to determine the column char set
+# 		and collation.
+#
+# 		Consequently, the character set for column c1 is latin1 and its collation is latin1_danish_ci
+#
+# EXAMPLE 4: DATABASE, TABLE and COLUMN DEFINITION
+#
+# CREATE DATABASE d1
+# 		DEFAULT CHARACTER SET latin2 COLLATE latin2_czech_ci;
+# USE d1;
+# CREATE TABLE t1
+# (
+# 		c1 CHAR(10)
+# );
+#
+# We create a column without specifying its character set and collation.
+#
+# We're also not specifying a character set and a collation at the table level.
+#
+# In this circumstance, MySQL checks the database level to determine the table settings,
+# which thereafter become the column settings.
+#
+# Consequently, the character set for column c1 is latin2 and its collation is latin2_czech_ci
+#
+# COMPATBILITY WITH OTHER DBMSs
+#
+# For MaxDB compatbility these two statements are the same:
+#
+# 		CREATE TABLE t1 (f1 CHAR(N) UNICODE);
+# 		CREATE TABLE t1 (f1 CHAR(N) CHARACTER SET ucs2);
+#
+# CONNECTION CHARACTER SETS AND COLLATIONS
+#
+# A "connection" is what a client program makes when it connects to the server, to begin a session
+# within which it interacts with the server.
+#
+# The client sends SQL statements, such as queries, over the session connection.
+#
+# The server sends responses, such as result sets or error messages, over the connection
+# back to the client.
+#
+# CONNECTION CHARACTER SET AND COLLATION SYSTEM VARIABLES
+#
+# Several character set and collation system variables relate to a client's interaction
+# with the server.
+#
+# Some of these have been mentioned in earlier sections:
+#
+# 		) The character_set_server and collation_server system variables indicate the server
+# 			character set and collation.
+#
+# 			See SECTION 10.3.2, "SERVER CHARACTER SET AND COLLATION"
+#
+# 		) The character_set_database and collation_database system variables indicate the character
+# 			set and collation of the default database.
+#
+# 			See SECTION 10.3.3, "DATABASE CHARACTER SET AND COLLATION"
+#
+# Additional character set and collation system variables are involved in handling traffic for the
+# connection between a client and the server.
+#
+# Every client has a session-specific connection-related character set and collation system variables.
+#
+# These session system variable values are initialized at connect time, but can be changed within the
+# session.
+#
+# Several questions about character set and collation handling for client connections can be answered
+# in terms of system variables:
+#
+# 		) What character set are statements in when they leave the client?
+#
+# 			The server takes the character_set_client system variable to be the
+# 			character set in which statements are sent by the client.
+#
+# 				NOTE:
+#
+# 					Some characters sets cannot be used as the client character set. See IMPERMISSIBLE CLIENT CHARACTER SETS.
+#
+# 		) What character set should the server translate statements to after receiving them?
+#
+# 			To determine this, the server uses the character_set_connection and collation_connection system variables.
+#
+# 				) The server converts statements sent by the client from character_set_client to character_set_connection
+#
+# 				 	Exception: For string literals that have an introducer such as utf8mb4 or _latin2, the introducer
+# 					determines the character set. See SECTION 10.3.8, "CHARACTER SET INTRODUCERS"
+#
+# 				) collation_connection is important for comparisons of literal strings.
+#
+# 					For comparisons of strings with column values, collation_connection does not matter
+# 					because columns have their own collation, which has a higher collation precedence.
+#
+# 					(See SECTION 10.8.4, "COLLATION COERCIBILITY IN EXPRESSIONS")
+#
+# 		) What character set should the server translate query results to before shipping them back to the client?
+#
+# 			The character_set_results system variable indicates the character set in which the server
+# 			returns query results to the client.
+#
+# 			This includes result data such as column values, result metadata such as column names and errors messages.
+#
+# 			To tell the server to perform no conversion of result sets or error messages, set character_set_results
+# 			to NULL or binary.
+#
+# 				SET character_set_results = NULL;
+# 				SET character_set_results = binary;
+#
+# 			For more information about character sets and error messages, see SECTION 10.6, "ERROR MESSAGE CHARACTER SET"
+#
+# To see the values of the character set and collation system variables that apply to the current session,
+# use this statement:
+#
+# 		SELECT * FROM performance_schema.session_variables
+# 		WHERE VARIABLE_NAME IN (
+# 			'character_set_client', 'character_set_connection',
+# 			'character_set_results', 'collation_connection'
+# 		) ORDER BY VARIABLE_NAME;
+#
+# The following simpler statements also display the connection variables, but include other related variables
+# as well.
+#
+# They can be useful to see ALL character set and collation system variables:
+#
+# 		SHOW SESSION VARIABLES LIKE 'character\_set\_%';
+# 		SHOW SESSION VARIABLES LIKE 'collation\_%';
+#
+# Clients can fine-tune the settings for these variables, or depend on the defaults (in which case,
+# you can skip the rest of this section)
+#
+# If you do not use defaults, you must change the character settings for each connection to the server.
+#
+# IMPERMISSIBLE CLIENT CHARACTER SETS
+#
+# The character_set_client system variable cannot be set to certain character sets:
+#
+# 		ucs2
+# 		utf16
+# 		utf16le
+# 		utf32
+#
+# Attempting to use any of those character sets as the client character set produces an error:
+#
+# 		SET character_set_client = 'ucs2';
+# 		ERROR 1231 (42000): Variable 'character_set_client'
+# 		can't be set to the value of 'ucs2'
+#
+# The same error occurs if any of those character sets are used in the following contexts,
+# all of which result in an attempt to set character_set_client to the named character set:
+#
+# 		) The --default-character-set=charset_name command option used by MySQL client programs 
+# 			such as mysql and mysqladmin
+#
+# 		) The SET_NAMES_'charset_name' statement
+#
+# 		) The SET_CHARACTER_SET_'charset_name' statement
+#
+# CLIENT PROGRAM CONNECTION CHARACTER SET  CONFIGURATION
+#
+# When a client connects to the server, it indicates which character set it wants to use for
+# communication with the server.
+#
+# (Actually, the client indicates the default collation for that character set, from which
+# 	the server can determine the character set)
+#
+# The server uses this information to set the character_set_client, character_set_results,
+# character_set_connection system variables to the character set, and collation_connection to
+# the character set default collation.
+#
+# In effect, the server performs the equivalent of a SET_NAMES operation.
+#
+# If the server does not support the requested character set or collation, it falls back
+# to using the server character set and collation to configure the connection.
+#
+# For additional detail, about this fallback behavior, see CONNECTION CHARACTER SET ERROR HANDLING
+#
+# THe mysql, mysqladmin, mysqlcheck, mysqlimport and mysqlshow client programs determine the default
+# character set to use as follows:
+#
+# 		) In the absence of other information, each client uses the compiled-in default character set, usually utf8mb4
+#
+# 		) Each client can autodetect which character set to use based on the operating system setting, such as 
+# 			the value of the LANG or LC_ALL locale environment variable on Unix systems or the code page
+# 			setting on Windows systems.
+#
+# 			For systems on which the locale is available from the OS, the client uses it to set the default
+#  		character set rather than using the compiled-in default.
+#
+# 			For example, setting LANG to ru_RU.KOI8-R causes the koi8r character set to be used.
+#
+# 			Thus, users can configure the locale in their environment for use by MySQL clients.
+#
+# 			The OS character set is mapped to the closest MySQL character set if there is no exact match.
+#
+# 			IF the client does not support the matching character set, it uses the compiled-in default.
+#
+# 			FOr example, utf8 and utf-8 map to utf8mb4, and ucs2 is not supported as a connection
+# 			character set, so it maps to the compiled-in default.
+#
+# 			C applications can use character set autodetection based on the OS setting by invoking mysql_options()
+# 			as follows before connecting to the server:
+#
+# 				mysql_options(mysql,
+# 								  MYSQL_SET_CHARSET_NAME,
+# 								  MYSQL_AUTODETECT_CHARSET_NAME);
+#
+# 		) Each client supports a --default-character-set option, which enables users to specify the character set
+# 			explicitly to override whatever default the client otherwise determines.
+#
+# 				NOTE:
+#
+# 					Some character sets cannot be used as the client character set.
+#
+# 					Attempting to use them with --default-character-set produces an error.
+#
+# 					See IMPERMISSIBLE CLIENT CHARACTER SETS
+#
+# With the mysql client, to use a character set different from the default, you could explicitly execute
+# a SET_NAMES statement every time you connect to the server (see CLIENT PROGRAM CONNECTION CHARACTER SET CONFIGURATION)
+#
+# To accomplish the same result more easily, specify the character set in your option files.
+#
+# For example, the following option file setting changes the three connection-related character
+# set system variables set to koi8r each time you invoke mysql:
+#
+# 		[mysql]
+# 		default-character-set=koi8r
+#
+# If oyu are using the mysql client with auto-reconnect enabled (which is not recommended), it is
+# preferable to use the charset command rather than SET_NAMES.
+#
+# For example:
+#
+# 		charset koi8r
+# 		Charset changed
+#
+# The charset command issues a SET_NAMES statement, and also changes the default character set that
+# mysql uses when it reconnects after the connection has dropped.
+#
+# When configuring client programs, you must also consider the environment within which they execute.
+#
+# See SECTION 10.5 "CONFIGURING APPLICATION CHARACTER SET AND COLLATION"
+#
+# SQL STATEMENTS FOR CONNECTION CHARACTER SET CONFIGURATION
+#
+# After a connection has been established, clients can change the character set and collation system variables
+# for the current session.
+#
+# These variables can be changed individually using SET statements, but two more convenient statements affect hte
+# connection-related character set system variables as a group:
+#
+# 		) SET NAMES 'charset_name' [COLLATE 'collation_name']
+#
+# 			SET_NAMES indicates what character set the client will use to send SQL statements to the server.
+#
+# 			Thus, SET_NAMES_'cp1251' tells the server, "future incoming messages from this client are in the charset cp1251"
+#
+# 			It also specifies the character set that the server should use for sending results back to the client.
+#
+# 			(For example, it indicates what character set to use for column values if you use a SELECT statement that produces
+# 				a result set)
+#
+# 			A SET_NAMES_'charset_name' statement is equivalent to these three statements:
+#
+# 				SET character_set_client = charset_name;
+# 				SET character_set_results = charset_name;
+# 				SET character_set_connection = charset_name;
+#
+# 			Setting character_set_connection to charset_name also implicitly sets collation_connection to the default
+# 			collation for charset_name.
+#
+# 			It is unnecessary to set that collation explicitly.
+#
+# 			To specify a particular collation to use for collation_connection, add a COLLATE clause:
+#
+# 				SET NAMES 'charset_name' COLLATE 'collation_name'
+#
+# 		) SET CHARACTER SET 'charset_name'
+#
+# 			SET_CHARACTER_SET is similar to SET_NAMES but sets character_set_connection and collation_connection
+# 			to character_set_database and collation_database
+#
+# 			(which, as mentioned previously, indicate the character set and collation of the default DB)
+#
+# 			A SET_CHARACTER_SET_charset_name statement is equivalent to these three statements:
+#
+# 				SET character_set_client = charset_name;
+# 				SET character_set_results = charset_name;
+# 				SET collation_connection = @@collation_database;
+#
+# 			Setting collation_connection also implicitly sets character_set_connection to the character
+# 			set associated with the collation (equivalent to executing SET character_set_connection = @@character_set_database)
+#
+# 			It is unnecessary to set character_set_connection explicitly.
+#
+# 			NOTE:
+#
+# 				Some character sets cannot be used as the client character set.
+#
+# 				Attempting to use them with SET_NAMES or SET_CHARACTER_SET produces an error.
+#
+# 				See IMPERMISSIBLE CLIENT CHARACTER SETS
+#
+# Example: Suppose that column1 is defined as CHAR(5) CHARACTER SET latin2.
+#
+# If you do not say SET_NAMES or SET_CHARACTER_SET, then for SELECT column1 FROM t,
+# the server sends back all the values for column1 using the charset that was specified when connecting.
+#
+# On the other hand, if you say SET NAMES 'latin1' or SET CHARACTER SET 'latin1' before issuing the SELECT
+# statement, the server converts the latin2 values to latin1 just before sending results back.
+#
+# Conversion may be lossy for characters that are not in both character sets.
+#
+# CONNECTION CHARACTER SET ERROR HANDLING
+#
+# Attempts to use an inappropriate connection character set or collation can produce an error,
+# or cause the server to fall back to its default character set and collation for a given connection.
+#
+# This section describes problems that can occur when configuring the connection character set.
+#
+# THese problems can occur when establishing a connection or when changing the char set within an established connection.
+#
+# CONNECT-TIME ERROR HANDLING
+#
+# Some character sets cannot be used as the client character set, see IMPERMISSIBLE CLIENT CHARACTER SETS.
+#
+# If you specify a character set that is valid but not permitted as a client character set,
+# the server returns an error:
+#
+# 		mysql --default-character-set=ucs2
+# 		ERROR 1231 (42000): Variable 'character_set_client' can't be set to the value of 'ucs2'
+#
+# If you specify a character set that the client does not recognize, it produces an error:
+#
+# 		mysql --default-character-set=bogus
+# 		mysql: character set 'bogus' is not a compiled character set and is
+# 		not specified in the '/usr/local/mysql/share/charsets/Index.xml' file
+# 		ERROR 2019 (HY000): Can't initialize character set bogus
+# 		(path: /usr/local/mysql/share/charsets/)
+#
+# If you specify a character set that the client recognizes but the server does not,
+# the server falls back to its default character set and collation.
+#
+# Suppose that the server is configured to use latin1 and latin1_swedish_ci as its defaults,
+# and that it does not recognize gb18030 as a valid character set.
+#
+# A client that specifies --default-character-set=gb18030 is able to connect to the server,
+# but hte resulting character set is not what hte client wants:
+#
+# 		SHOW SESSION VARIABLES LIKE 'character\_set\_%';
+# 		+----------------------------------+------------+
+# 		| Variable_name 						  | Value 		|
+# 		+----------------------------------+------------+
+# 		| character_set_client 				  | latin1 		|
+# 		| character_set_connection 		  | latin1 	   |
+# 		---
+# 		| character_set_results 			  | latin1 		|
+# 		---
+# 		+----------------------------------+------------+
+#
+# 		SHOW SESSION VARIABLES LIKE 'collation_connection';
+# 		+------------------------+-------------------+
+# 		| Variable_name 			 | Value 			   |
+#		+------------------------+-------------------+
+# 		| collation_connection 	 | latin1_swedish_ci |
+# 		+------------------------+-------------------+
+#
+# YOu can see that the connection system variables have been set to reflect a character
+# set and collation of latin1 and latin1_swedish_ci
+#
+# This occurs because the server cannot satisfy the client char set request and falls back
+# to its defaults.
+#
+# In this case, the client cannot use the character set that it wants because the
+# server does not support it.
+#
+# The client must either be willing to use a different character set, or connect to a 
+# different server that supports the desired character set
+#
+# The same problem occurs in a more subtle context: When the client tells the server to use
+# a character set that hte server recognize, but the default collation for that
+# char set on the client side is not known on the server side.
+#
+# THis occurs, ofr example, when a MySQL 8.0 client wnats to connect to a MySQL 5.7 server
+# using utf8mb4 as the client character set.
+#
+# A client that specifies --default-character-set=utf8mb4 is able to connect to the server.
+#
+# However, as in the previous example, the server falls back to its default character set
+# and collation, not what the client requested:
+#
+# 		SHOW SESSION VARIABLES LIKE 'character\_set\_%';
+# 		+----------------------------------+--------------+
+# 		| Variable_name 						  | Value 		  |
+# 		+----------------------------------+--------------+
+# 		| character_set_client 				  | latin1 		  |
+# 		| character_set_connection 		  | latin1 		  |
+# 		---
+# 		| character_set_results 			  | latin1 		  |
+# 		---
+# 		+----------------------------------+--------------+
+#
+# 		SHOW SESSION VARIABLES LIKE 'collation_connection';
+# 		+-------------------------+-----------------------+
+# 		| Variable_name 			  | Value 					  |
+# 		+-------------------------+-----------------------+
+# 		| collation_connection 	  | latin1_swedish_ci 	  |
+# 		+-------------------------+-----------------------+
+#
+# Why?
+#
+# After all, utf8mb4 is known to 8.0 client and 5.7 server, so both of them recognize it.
+#
+# To understand this behavior, it is necessary to understand that when the client tells
+# the server which char set it wants to use, it really tells the server the default collation
+# for that character set.
+#
+# Therefore, the aformentioned behavior occurs due to a combination of factors:
+#
+# 		) The default collation for utf8mb4 differs between MySQL 5.7 and 8.0 (utf8mb4_general_ci for 5.7, utf8mb4_0900_ai_ci for 8.0)
+#
+# 		) When the 8.0 client requests a char set of utf8mb4, what it sends to the server is the default 8.0 utf8mb4 collation; that is,
+# 			the utf8mb4_0900_ai_ci
+#
+# 		) utf8mb4_0900_ai_ci is implemented only as of MysQL 8.0, so the 5.7 server does not recognize it
+#
+# 		) Because the 5.7 server does not recognize utf8mb4_0900_ai_ci, it cannot satisfy the client char set request,
+# 			and falls back to its default char set and collation (latin1 and latin1_swedish_ci)
+#
+# In this case, the client can still use utf8mb4 by issuing a SET NAMES 'utf8mb4' statement after connecting.
+#
+# The resulting collation is the 5.7 default utf8mb4 collation; that is, utf8mb4_general_ci 
+#
+# If the client additionally wants a collation of utf8mb4_0900_ai_ci, it cannot achieve that because
+# the server does not recognize that collation.
+#
+# The client must either be willing to use a different utf8mb4 collation, or connect to a server from
+# MySQL 8.0 or higher.
+#
+# RUNTIME ERROR HANDLING
+#
+# Within an estblished connection, the client can request a change of connection character set and collation
+# with SET_NAMES or SET_CHARACTER_SET
+#
+# Some character sets cannot be used as the client character set; see IMPERMISSIBLE CLIENT CHARACTER SETS.
+#
+# If you specify a character set that is valid, but not permitted as a client character set , the server returns an error:
+#
+# 		SET NAMES 'ucs2';
+# 		ERROR 1231 (42000): Variable 'character_set_client' can't be set to
+# 		the value of 'ucs2'
+#
+# If the server doesn ot recognize the character set (or the collation), it produces an error:
+#
+# 		SET NAMES 'bogus';
+# 		ERROR 1115 (42000): Unknown character set 'bogus'
+#
+# 		SET NAMES 'utf8mb4' COLLATE 'bogus';
+# 		ERROR 1273 (HY000): Unknown collation: 'bogus'
+#
+# TIP:
+#
+# 		A client that wants to verify whether its requested character set was honored by the server can execute
+# 		the following statement after connecting and checking that hte result is the expected character set:
+#
+# 			SELECT @@character_set_client;
+#
+# CONFIGURING APPLICATION CHARACTER SET AND COLLATION
+#
+# For applications that store data using the default MysQL character set and collation (utf8mb4, utf8mb4_0900_ai_ci),
+# no special configuration should be needed.
+#
+# If applications require data storage using a different character set or collation, you can configure character set
+# information in several ways:
+#
+# 		) Specify character settings per DB. For example, applications that use one database might use the default
+# 			of utf8mb4, whereas applications that use another database might use sjis
+#
+# 		) Specify character settings at server startup. This causes the server to use the given settings for all applications
+# 			that do not make other arrangements.
+#
+# 		) Specify character settings at configuration time, if you build MySQL from source.
+#
+# 			This causes the server to use the given settings as the defaults for all applications,
+# 			without having to specify them at server startup.
+#
+# When different applications require different character settings, the per-database techniques provides
+# a good deal of flexibility.
+#
+# If most or all applications use the same character set, specifying character settings at server startup 
+# or configuration time may be the most convenient.
+#
+# For the per-database or server-startup techniques, the settings control the character set for data storage.
+#
+# Applications must also tell the server which character set to use for client/server communications,
+# as described in the following instructions.
+#
+# The examples shown here assume use of the latin1 character set and latin1_swedish_ci collation
+# in particular contexts as an alternative to the defaults of utf8mb4 and utf8mb4_0900_ai_ci
+#
+# 		) Specify character settings per database.
+#
+# 			To create a database such that its tables will use a given default character set and collation
+# 			for data storage, use a CREATE_DATABASE statement as follows:
+#
+# 				CREATE DATABASE mydb
+# 					CHARACTER SET latin1
+# 					COLLATE latin1_swedish_ci;
+#
+# 			Tables created in the database will use latin1 and latin1_swedish_ci by default for any characer columns.
+#
+# 			APplications that use the datbase should also configure their connection to the server each time they connect.
+# 			THis can be done by executing a SET NAMES 'latin1' statement after connecting.
+#
+# 			THis statement can be used regardless of connection method (the mysql client, PHP scripts, and so forth)
+#
+# 			In some cases, it may be possible to configure the connection to use the desired char set some other way.
+#
+# 			For example, to connect using mysql, you can specify the --default-character-set=latin1 command-line option
+# 			to achieve the same effect as SET NAMES 'latin1'
+#
+# 			For more information about configuring client connections, see SECTION 10.4 "CONNECTION CHARACTER SETS AND COLLATIONS"
+#
+# 			NOTE:
+#
+# 				If you use ALTER_DATABASE to change the database default character set or collation,
+# 				existing stored routines in the database that use those defaults must be dropped
+# 				and recreated so that htey use the new defaults.
+#
+# 				(In a stored routine, variables with character data types use the database defaults
+# 				if the character set or collation are not specified explicitly.
+#
+# 				see SECTION 13.1.17, "CREATE PROCEDURE AND CREATION FUNCTION SYNTAX"
+#
+# 		) Specifying character settings at server startup.
+#
+# 			To select a character set and collation at server startup, use the --character-set-server
+# 			and --collation-server options.
+#
+# 			For example, to specify the option in an option file, include these lines:
+#
+# 				[mysqld]
+# 				character-set-server=latin1
+# 				collation-server=latin1_swedish_ci
+#
+# 			These settings apply server-wide and apply as the defaults for databases created by any application,
+# 			and for tables created in those datbases.
+#
+# 			It is still necessary for applications to configure their connection using SET_NAMES or equivalent
+# 			after they connect, as described previously.
+#
+# 			YOu might be tempted to start the server with the --init_connect="SET_NAMES_'latin1'" option to
+# 			cause SET_NAMES to be executed automatically for each client that connects.
+#
+# 			However, this may yield inconsistencies because the init_connect value is not executed for users who
+# 			have the CONNECTION_ADMIN or SUPER privilege.
+#
+# 		) Specify character settings at MySQL configuration time.
+#
+# 			To select a character set and collation if you configure and build MySQL from source,
+# 			use the DEFAULT_CHARSET and DEFAULT_COLLATION CMake options:
+#
+# 				cmake . -DDEFAULT_CHARSET=latin1 \
+# 					-DDEFAULT_COLLATION=latin1_swedish_ci
+#
+# 			THe resulting server uses latin1 and latin1_swedish_ci as the default for databases and tables and for
+# 			client connections.
+#
+# 			It is unnecessary to use --character-set-server and --collation-server to specify those defaults at server
+# 			startup.
+#
+# 			It is also unecessary for applications to configure their connection using SET_NAMES or equivalent
+# 			after they connect to the server.
+#
+# Regarldess of how you configure the MYSQL character set for application use, you must also consider the
+# environment within which those applications execute.
+#
+# FOr example, if oyu will send statements using UTF-8 text taken from a file that  you create in an editor,
+# you shoul dedit the file with the locale of your environment set to UTF-8 so that hte file 
+# encoding is correct and so that the operating system handles it correctly.
+#
+# If you use the mysql client from within a terminal window, the window must be configured to use UTF-8 or characters
+# may not display proeprly.
+#
+# For a script htat executes ina  web environment, the4 script must handle char encodings properly ofr its
+# interaction with the MySQl server, and it msut generate pages the correctly indicate the encoding so that
+# browsers know how to display the content of the pages.
+#
+# For example, you can include this <meta> tag within your <head> element:
+#
+# 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+#
+# ERROR MESSAGE CHARACTER SET
+#
+# THis section describes how the MySQL server uses char sets for constructing error messages.
+#
+# FOr information about the language of error messages (rather than the char set), see
+# SECTION 10.11 "SETTING THE ERROR MESSAGE LANGUAGE"
+#
+# FOr general information about configuring error logging, see SECTION 5.4.2 "THE ERROR LOG"
+#
+# CHARACTER SET FOR ERROR MESSAGE CONSTRUCTION
+#
+# The server constructs error messages as follows:
+#
+# 		) The message template uses UTF-8 (utf8mb3)
+#
+# 		) Parameters in the message template are replaced with values that apply to a specific error occurence:
+#
+# 			) Identifiers such as table or column names use UTF-8 internally so they are copied as is
+#
+# 			) Character (nonbinary) string values are converted from their character set to UTF-8
+#
+# 			) Binary string values are copied as is for bytes in the range 0x20 to 0x7E and using \x
+# 				hexadecimal encoding for bytes outside that range.
+#
+# 				For example, if a duplicate-key error occurs for an attempt to insert 0x41CF9F into a VARBINARY
+# 				unique column, the resulting error message uses UTF-8 with some bytes hexadecimal encoded:
+#
+# 					Duplicate entry 'A\xC3\x9F' for key 1
+#
+# CHARACTER SET FOR ERROR MESSAGE DISPOSITION
+#
+# An error message, once ocnstructed, can be written by the server to the error log or sent to clients:
+#
+# 		) IF the server writes the error message to the error log, it writes it in UTF-8 as constructed, without conversion
+# 			to another character set.
+#
+# 		) If the server sends the error message to a client program, the server converts it from UTF-8 to the character
+# 			set specified by the character_set_results system variable.
+#
+# 			If character_set_results have a value of NULL or binary, no conversion occurs.
+#
+# 			No conversion occurs if the variable value is utf8mb3 ot utf8mb4, either, because
+# 			those character sets have a repetoire that includes all UTF-8 characters used in message
+# 			construction.
+#
+# 			If characters cannot be represented in character_set_results, some encoding may occur during the conversion.
+#
+# 			The encoding uses Unicode code point values:
+#
+# 				) Characters in the Basic Multilingual Plane (BMP) range (0x0000 to 0xFFFF) are written using \nnnn notation
+#
+# 				) Characters outside the BMP range (0x10000 to 0x10FFFF) are written using \+nnnnnn notation
+#
+# 			Clients can set character_set_results to control the character set in which they receive error messages.
+#
+# 			THe variable can be set directly, or indireclty, by means such as SET_NAMES.
+#
+# 			For more information about character_set_results, see SECTION 10.4, "CONNECTION CHARACTER SETS AND COLLATIONS"
+#
+#
+# COLUMN CHARACTER SET CONVERSION
+#
+# To convert a binary or nonbinary string column to use a particular character set, use ALTER_tABLE.
+#
+# For successful conversion to occur, one of the following conditions must apply:
+#
+# 		) If the column has a binary data type (BINARY, VARBINARY, BLOB) - all the values that it contains must be encoded
+# 			using a single character set (the character set you are converting the column to)
+#
+# 			If you use a binary column to store information in multiple character sets, MySQL has no way to know which
+# 			values use which character set and cannot convert teh data propeprly.
+#
+# 		) If the column has a nonbinary data type (CHAR, VARCHAR, TEXT), its contents should be encoded
+# 			in the column character set, not some other character set.
+#
+# 			If the contents are encoded in a different character set, you can convert the column to use
+# 			a binary data type first, and then to nonbinary column with the desired char set.
+#
+# Suppose that a table t has a binary column named col1 defined as VARBINARY(50)
+#
+# Assuming that the information in the column is encoded using a single character set,
+# you can convert it to a nonbinary column that has that character set.
+#
+# For example, if col1 contains binary data representing chars in the greek char set, you can
+# convert it as follows:
+#
+# 		ALTER TABLE t MODIFY col1 VARCHAR(50) CHARACTER SET greek;
+#
+# If your original column type has a type of BINARY(50), you could convert it to CHAR(50),
+# but the resulting values will be padded with 0x00 bytes at the end, which may be
+# undesirable.
+#
+# TO remove these bytes, use the TRIM() function:
+#
+# 		UPDATE t SET col1 = TRIM(TRAILING 0x00 FROM col1);
+#
+# SUppose that table t has a nonbinary column named col1 defined as CHAR(50) CHARACTER SET latin1 but
+# you want to convert it to use utf8 so that you can store values from many languages.
+#
+# The following statement accomplishes this:
+#
+# 		ALTER TABLE t MODIFY col1 CHAR(50) CHARACTER SET utf8;
+#
+# Conversion may be lossy if the column contains chars that are not in both char sets.
+#
+# A special case occurs if you have old tables from < 4.1,, where a nonbinary column contains values
+# that actually are encoded in a char set different from the server's default char set.
+#
+# FOr example, an application might have stored sjis value in a column, even though MySQL's default
+# character set was different.
+#
+# iT is possible to convert the column to use the proper character set but an additional step is required.
+#
+# Suppose that hte server's default character set was latin1 and col1 is defined as CHAR(50), but its content
+# are sjis values.
+#
+# The first step is to convert the column to a binary data type, which removes existting char set information
+# without performing any char conversion:
+#
+# 		ALTER TABLE t MODIFY col1 BLOB;
+#
+# The next step is to convert the column to a nonbinary data type with the proper character set:
+#
+# 		ALTER TABLE t1 MODIFY col1 CHAR(50) CHARACTER SET sjis;
+#
+# This procedure might require that the table not have been modified already with statements such as INSERT
+# or UPDATE after an upgrade to 4.1 or later.
+#
+# In that case, MySQL would store new vlaues in the column using latin1, and the column will contain a mix of
+# sjis and latin1 values and cannot be converted properly.
+#
+# IF you specified attributes when creating a column intiially, you should also specify them when altering
+# the table with ALTER_TABLE 
+#
+# For example, if you specified NOT NULL and an explicit DEFAULT value, you should also provide them
+# in the ALTER_TABLE statement.
+#
+# Otherwise, the resulting column definiton will not include those attributes.
+#
+# To convert all characer columns in a table, the ALTER TABLE --- CONVERT TO CHARACTER SET charset statement
+# may be useful.
+#
+# See SECTION 13.1.9, "ALTER TABLE SYNTAX"
+#
+# COLLATION ISSUES
+#
+# The following section discusses various aspects of char set collations
+#
+# USING COLLATE IN SQL STATEMENTS
+#
+# With the COLLATE clause, you can override whathever the default collation is for a comparison.
+# COLLATE may be used in various parts of SQL statements.
+#
+# Here are some examples:
+#
+# 		) With ORDER BY:
+#
+# 				SELECT k
+# 				FROM t1
+# 				ORDER BY k COLLATE latin1_german2_ci;
+#
+# 		) With AS:
+#
+# 				SELECT k COLLATE latin1_german2_ci AS k1
+# 				FROM t1
+# 				ORDER BY k1;
+#
+# 		) With GROUP BY:
+#
+# 				SELECT k
+# 				FROM t1
+# 				GROUP BY k COLLATE latin1_german2_ci;
+#
+# 		) With aggregate functions:
+#
+# 				SELECT MAX(k COLLATE latin1_german2_ci)
+# 				FROM t1;
+#
+# 		) With DISTINCT:
+#
+# 				SELECT DISTINCT k COLLATE latin1_german2_ci
+# 				FROM t1;
+#
+# 		) With WHERE:
+#
+# 				SELECT
+# 				FROM t1
+# 				WHERE _latin1 'Müller' COLLATE latin1_german2_ci = k;
+#
+# 				SELECT
+# 				FROM t1
+# 				WHERE k LIKE _latin1 'Müller' COLLATE latin1_german2_ci;
+#
+# 		) With HAVING:
+#
+# 				SELECT k
+# 				FROM t1
+# 				GROUP BY k
+# 				HAVING k = _latin1 'Müller' COLLATE latin1_german2_ci;
+#
+# COLLATE CLAUSE PRECEDENCE
+#
+# The COLLATE clause has high precedence (higehr than binary OR ||), so the following
+# two expresisons are equivalent:
+#
+# 		x || y COLLATE z
+# 		x || (y COLLATE z)
+#
+# CHARACTER SET AND COLLATION COMPATIBILITY
+#
+# Each character set has one or more collations,, but each collation is associated
+# with one and only one character set.
+#
+# Therefore, the following statement causes an error message
+# because the latin2_bin collation is not legal with the latin1 char set:
+#
+# 		SELECT _latin1 'x' COLLATE latin2_bin;
+# 		ERROR 1253 (42000): COLLATION 'latin2_bin' is not valid
+# 		for CHARACTER SET 'latin1'
+#
+# COLLATION COERCIBILITY IN EXPRESSIONS
+#
+# In the great majority of statements, it is obvious what collation MySQL uses to resolve
+# a comparison operation.
+#
+# FOr example, in the following cases, it should be clear that the collation is the
+# collation of column x:
+#
+# 		SELECT x FROM T ORDER BY x;
+# 		SELECT x FROM T WHERE x = x;
+# 		SELECT DISTINCT x FROM T;
+#
+# However, with multiple operands, there can be ambiguity.
+#
+# For example:
+#
+# 		SELECT x FROM T WHERE x = 'Y';
+#
+# SHould the comparison use the collation of the column x, or of the string literal y?
+#
+# Both x and y have collations, so which one takes precedence?
+#
+# A mix of collations may also occur in contexts other than comparison.
+#
+# For example, a multiple-argument concatenation operation such as CONCAT(x, 'Y') combines
+# its arguments to produce a single string.
+#
+# To resolve this, MySQL checks whether the collation of one item can be coerced to hte collation
+# of the other.
+#
+# MySQL assigns coercibility values as follows:
+#
+# ) An explicit COLLATE clause has a coercibbility of 0 (not coercible at all)
+#
+# ) The concatenation of two strings with different collations has a coercibility of 1
+#
+# ) The collation of a column or a stored routine parameter or local variable has a coercibility of 2
+#
+# ) A "system constant" (the string returned by functions such as USER() or VERSION()) has a coercibility of 3
+#
+# ) The collation of a literal has a coercibility of 4
+#
+# ) The collation of a numeric or temporal value has a coercibility of 5
+#
+# ) NULL or an expression that is derived from NULL has a coercibility of 6
+#
+# MySQL uses the coercibility values within the following rules to resolve ambiguiteis:
+#
+# 	) Use the collation with the lowest coercibility value
+#
+# 	) If both sides have the same coercibility, then:
+#
+# 		) If both sides are Unicode, or both sides are not Unicode, it is an error.
+#
+# 		) If one of the sides has a Unicode character set, and another side has a non-Unicode character set,
+# 			the side with Unicode char set wins, and automatic char set conversion is applied to the
+# 			non-Unicode side.
+#
+# 			For example, the following statement does not retur nan error:
+#
+# 				SELECT CONCAT(utf8_column, latin1_column) FROM t1;
+#
+# 			It returns a result that has a character set of utf8 and the same collation
+# 			as utf8_column.
+#
+# 			Values of latin1_column are automatically converted to utf8 before concatenating.
+#
+# 		) For an operation with operands from the same character set but that mix a _bin collation
+# 			and a _ci or _cs collation, the _bin collation is used.
+#
+# 			THis is similar to how operations that mix nonbinary and binary strings,
+# 			evaluate the operands as binary strings, excpet that it is for collations rather than data types.
+#
+# Although automatic conversion is not in the SQL standard, the standard does say that every character
+# set is (in terms of supported characters) a "subset" of Unicode.
+#
+# BEcause it is well-known priciple that "what applies to a supsetcan apply to a subset";
+# we belive that a collation for Unicode can apply for comparisons with non-Unicode strings.
+#
+# The following table illustrates some applications of hte preceding rules:
+#
+# 		COMPARISON 							COLLATION USED
+#
+# column1 = 'A' 					Use collation of column1
+#
+# column1 = 'A' COLLATE x 		Use collation of 'A' COLLATE x
+#
+# column1 COLLATE x = 'A' COLLATE Y    	Error
+#
+# To determine the coercibility of a string expression, use the COERCIBILITY() function,
+# see SECTION 12.15 "INFORMATION FUNCTIONS"
+#
+# SELECT COERCIBILITY('A' COLLATE latin1_swedish_ci);
+# 		-> 0
+# SELECT COERCIBILITY(VERSION());
+# 		-> 3
+# SELECT COERCIBILITY('A');
+# 		-> 4
+# SELECT COERCIBILITY(1000);
+# 		-> 5
+#
+# For implicit conversion of a numeric or temporal value to a string, such as occurs
+# for the argument 1 in the expression CONCAT(1, 'abc'), the result is a character (nonbinary)
+# that has a character set and collation determined by the character_set_connection 
+# and collation_connection system variables.
+#
+# See SECTION 12.2 "TYPE CONVERSION IN EXPRESSIONE VALUATION"
+#
+# THE BINARY COLLATION COMPARED TO _BIN COLLATIONS
+#
+# This section describes how the binary collation for binary strings
+# compares to the _bin collations for nonbinary strings.
+#
+# Binary strings (as stored using the BINARY, VARBINARY, and BLOB data types) have a character
+# set and collation named binary.
+#
+# Binary strings are sequences of bytes and the numeric values of those bytes determine
+# comparison and sort order.
+#
+# Nonbinary strings (as stored using the CHAR, VARCHAR and TEXT data types) have a character
+# and collation other than binary.
+#
+# A given nonbinary character set can ahve several collations, each of which defines a particular
+# comparison and sort order for the characters in the set.
+#
+# One of these is the binary collation for the character set, indicated by a _bin suffix
+# in the collation name.
+#
+# For example, the binary collations for latin1 and utf8 are named latin1_bin and utf8_bin, respectively.
+#
+# The binary collation differs from the _bin collations in several respects.
+#
+# The unit for comparison and sorting.
+#
+# Binary strings are sequenceso f bytes. For the binary collation, comparison and sortinga re based
+# on numeric byte values.
+#
+# Nonbinary strings are sequences of characters, which might be multibyte. Collations for nonbinary strings
+# defines an ordering of the character values for comparison and sorting.
+#
+# FOr the _bin collation, this ordering is based on numeric character code values, which is similar
+# to ordering for binary strings except that character code values might be multibyte.
+#
+# Character set conversion.
+#
+# A nonbinary string has a character set and is automatically converted to another character
+# set in many cases, even when the string has a _bin collation:
+#
+# 		) When assigning column values from another column that has a different character set:
+#
+# 			UPDATE t1 SET utf8_bin_column=latin1_column;
+# 			INSERT INTO t1 (latin1_column) SELECT utf8_bin_column FROM t2;
+#
+# 		) https://dev.mysql.com/doc/refman/8.0/en/charset-binary-collations.html
+# 				
