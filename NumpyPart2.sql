@@ -65581,5 +65581,2018 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 			UPDATE t1 SET utf8_bin_column=latin1_column;
 # 			INSERT INTO t1 (latin1_column) SELECT utf8_bin_column FROM t2;
 #
-# 		) https://dev.mysql.com/doc/refman/8.0/en/charset-binary-collations.html
+# 		) When assigning column values for INSERT or UPDATE using a string literal:
+#
+# 			SET NAMES latin1;
+# 			INSERT INTO t1 (utf8_bin_column) VALUES ('string-in-latin1');
+#
+# 		) When sending results from the server to a client:
+#
+# 			SET NAMES latin1;
+# 			SELECT utf8_bin_column FROM t2;
+#
+# For binary string columns, no conversion occurs.
+# For the preceding cases, the string value is copied byte-wise.
+#
+# Lettercase conversion. Collations for nonbinary character sets provide information
+# about lettercase of characters, so characters in a nonbinary string can be converted
+# from one lettercase to another, even for _bin collations that ignore lettercase for ordering:
 # 				
+#
+#  	SET NAMES latin1 COLLATE latin1_bin;
+# 		SELECT LOWER('aA'), UPPER('zZ');
+# 		+-----------------+------------------+
+# 		| LOWER('aA') 		| UPPER('zZ') 		 |
+# 		+-----------------+------------------+
+# 		| aa 					| ZZ 					 |
+# 		+-----------------+------------------+
+#
+# The concept of lettercase does not apply to bytes in a binary string.
+# To perform lettercase conversion, the string must be converted to a nonbinary string:
+#
+# 		SET NAMES binary;
+# 		SELECT LOWER('aA'), LOWER(CONVERT('aA' USING latin1));
+# 		+-----------------+-----------------------------------+
+# 		| LOWER('aA') 	   | LOWER(CONVERT('aA' USING latin1)) |
+# 		+-----------------+-----------------------------------+
+# 		| aA 					| aa 											|
+# 		+-----------------+-----------------------------------+
+#
+# Trailing space handling in comparisons.
+#
+# Most MySQL collations have a pad attribute of PAD SPACE.
+# The exceptions are Unicode collations based on UCA 9.0.0 and higher, which have
+# a pad attribute of NO PAD.
+#
+# (See SECTION 10.10.1, "UNICODE CHARACTER SETS")
+#
+# To determine the pad attribute for a collation, use the INFORMATION_SCHEMA COLLATIONS
+# table, which has a PAD_ATTRIBUTE column.
+#
+# The pad attribute determines how trailing spaces are treated for comparison of nonbinary
+# strings (CHAR, VARCHAR and TEXT values)
+#
+# NO PAD collations treat spaces at the end of the string like any other character.
+#
+# For PAD SPACE collations, trailing spaces are insignificant in comparisons; strings
+# are compared without regard to any trailing spaces:
+
+# SET NAMES utf8 COLLATE utf8_bin;
+# SELECT 'a ' = 'a';
+#
+# 	+--------------------+
+# 	| 'a ' = 'a' 		   |
+# 	+--------------------+
+# 	| 			1 				|
+# 	+--------------------+
+#
+# For binary strings, all characters are significant in comparisons, including trailing spaces:
+#
+# 	SET NAMES binary;
+# 	SELECT 'a ' = 'a';
+#
+# 	+-----------------+
+# 	| 'a ' = 'a' 		|
+# 	+-----------------+
+# 	| 		0 				|
+# 	+-----------------+
+#
+# Trailing space handling for inserts and retrievals.
+#
+# CHAR(N) columns store nonbinary strings. Values shorter than N characters are extended
+# with spaces on insertion.
+#
+# For retrieval, trailing spaces are removed.
+#
+# BINARY(N) columns store binary strings. Values shorter than N bytes are extended with
+# 0x00 bytes on insertion.
+#
+# For retrieval, nothing is removed; a value of the declared length is always returned.
+#
+# CREATE TABLE t1 (
+# 		a CHAR(10) CHARACTER SET utf8 COLLATE utf8_bin,
+# 		b BINARY(10)
+# 	 );
+# INSERT INTO t1 VALUES ('a', 'a');
+# SELECT HEX(a), HEX(b) FROM t1;
+#
+# +-------------+----------------------------+
+# | HEX(a) 	    | HEX(b) 						   |
+# +-------------+----------------------------+
+# | 61 			 | 6100000000000000000000 		|
+# +-------------+----------------------------+
+#
+# EXAMPLES OF THE EFFECT OF COLLATION
+#
+# EXAMPLE 1: Sorting German Umlauts
+#
+# Suppose that column X in table T has these latin1 column values:
+#
+# 		Muffler
+# 		Müller
+# 		MX Systems
+# 		MySQL
+#
+# Suppose also that the column values are retrieved using the following statement:
+#
+# 		SELECT X FROM T ORDER BY X COLLATE collation_name;
+#
+# The following table shows the resulting order of the values if we use ORDER BY with
+# different collations.
+#
+# latin1_swedish_ci 		latin1_german1_ci 		latin1_german2_ci
+# Muffler 					Muffler 						Müller
+# MX Systems 				Müller 						Muffler
+# Müller 					MX Systems 					MX Systems
+# MySQL 						MySQL 						MySQL
+#
+# The character that causes the different sort orders in this example is the U (Ü), which is the "U-umlaut"
+#
+# 		) The first column shows the result of the SELECT using the Swedish/Finnish collating rule, which says that
+# 			U-umlaut sorts with Y
+#
+# 		) The second column shows the result of the SELECT using the German DIN-1 rule, which says that U-umlaut sorts with U
+#
+# 		) The third column shows the result of the SELECT using the German DIN-2 rule, which says that U-umlaut sorts with UE
+#
+# EXAMPLE 2: SEARCHING FOR GERMAN UMLAUTS
+#
+# SUppose that you have three tables that differ only by the character set and collation used:
+#
+# 		SET NAMES utf8;
+# 		CREATE TABLE german1 (
+# 			c CHAR(10)
+# 		) CHARACTER SET latin1 COLLATE latin1_german1_ci;
+#
+# 		CREATE TABLE german2 (
+# 			c CHAR(10)
+# 		) CHARACTER SET latin1 COLLATE latin1_german2_ci;
+#
+# 		CREATE TABLE germanutf8 (
+# 			c CHAR(10)
+# 		) CHARACTER SET utf8 COLLATE utf8_unicode_ci;
+#
+# Each table contains two records:
+#
+# 		INSERT INTO german1 VALUES ('Bar'), ('Bör');
+# 		INSERT INTO german2 VALUES ('Bar'), ('Bör');
+# 		INSERT INTO germanutf8 VALUES ('Bar'), ('Bär');
+#
+# Two of the above collations have an A = Ä equality, and one has no such equality
+# (latin1_german2_ci)
+#
+# For that reason, you'll get these results in comparisons:
+#
+# 		SELECT * FROM german1 WHERE c = 'Bär';
+# 		+-----------+
+# 		| c 			|
+# 		+-----------+
+# 		| Bar 		|
+# 		| Bär 		|
+# 		+-----------+
+#
+# 		SELECT * FROM german2 WHERE c = 'Bör';
+# 		+-----------+
+# 		| c 			|
+# 		+-----------+
+# 		| Bär 		|
+# 		+-----------+
+#
+# 		SELECT * FROM germanutf8 WHERE c = 'Bär';
+# 		+------------+
+# 		| c 			 |
+# 		+------------+
+# 		| Bar 		 |
+# 		| Bär 		 |
+# 		+------------+
+#
+# This is not a bug rather a consequence of the sorting properties of latin1_german1_ci and
+# utf8_unicode_ci (the sorting shown is done according to the German DIN 5007 standard)
+#
+# USING COLLATION IN INFORMATION_SCHEMA SEARCHES
+#
+# String columns in INFORMATION_SCHEMA tables have a collation of utf8_general_ci, which is
+# case insensitive.
+#
+# However, for valuews that correspond to objects that are represented in the file system,
+# such as databases and tables, searches in INFORMATION_SCHEMA string columns can be 
+# case-sensitive or insensitive, depending on the characteristics of the underlying file system
+# and the lower_case_table_names system variable setting.
+#
+# For example, searches may be case-sensitive if the file system is case-sensitive.
+#
+# This section describes this behavior and how to modify it if necessary.
+#
+# Suppose that a query searches the SCHEMATA.SCHEMA_NAME column for the test database.
+#
+# On Linux, file systems are case-sensitive, so comparisons of SCHEMATA.SCHEMA_NAME with
+# 'test' match, but comparisons with 'TEST' do not:
+#
+# 		SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'test';
+# 		+----------------+
+# 		| SCHEMA_NAME 	  |
+# 		+----------------+
+# 		| test 		 	  |
+# 		+----------------+
+#
+# 		SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'TEST';
+# 		Empty set (0.00 sec)
+#
+# These results occur if the lower_case_table_names system variable set to 0.
+#
+# A lower_case_table_names setting 1 or 2 causes the secondary query to return the
+# same (nonempty) results as the first query.
+#
+# NOTE:
+#
+# 		It is prohibited to start the server with a lower_case_table_names setting that is different
+# 		from the setting used when the server was initialized.
+#
+# On Windows or macOS, file systems are not case-sensitive, so comparisons match both
+# 'test' and 'TEST':
+#
+# 		SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'test';
+# 		+---------------+
+# 		| SCHEMA_NAME 	 |
+# 		+---------------+
+# 		| test 			 |
+# 		+---------------+
+#
+# 		SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'TEST';
+# 		+---------------+
+# 		| SCHEMA_NAME 	 |
+# 		+---------------+
+# 		| TEST 			 |
+# 		+---------------+
+#
+# The value of lower_case_table_names makes no difference in this context.
+#
+# The preceding behavior occurs because the utf8_general_ci collation is not used for
+# INFORMATION_SCHEMA queries when searching for values that correspond to objects
+# represented in the file system.
+#
+# If the result of a string operation on an INFORMATION_SCHEMA column differs from expectations,
+# a workaround is to use an explicit COLLATE clause to force a suitable collation.
+#
+# See SECTION 10.8.1, "USING COLLATE IN SQL STATEMENTS"
+#
+# For example, to perform a case-insensitive search, use COLLATE with the INFORMATION_SCHEMA
+# column name:
+#
+# 		SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA
+# 		WHERE SCHEMA_NAME COLLATE utf8_general_ci = 'test';
+# 		+-------------------+
+# 		| SCHEMA_NAME 		  |
+# 		+-------------------+
+# 		| test 				  |
+# 		+-------------------+
+#
+# 		SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA
+# 		WHERE SCHEMA_NAME COLLATE utf8_general_ci = 'TEST';
+# 		+-------------------+
+# 		| SCHEMA_NAME 		  |
+# 		+-------------------+
+# 		| test 				  |
+# 		+-------------------+
+#
+# You can also use the UPPER() or LOWER() function:
+#
+# 		WHERE UPPER(SCHEMA_NAME) = 'TEST'
+# 		WHERE LOWER(SCHEMA_NAME) = 'test'
+#
+# Although a case-insensitive comparison can be performed even on platforms with
+# case-sensitive file systems, as just shown, it is not necessarily always the right
+# thing to do.
+#
+# On such platforms, it is possible to have multiple objects with names that differ only
+# in lettercase.
+#
+# For example, tables named city, CITY and City can all exist simultaneously.
+#
+# Consider whether a search should match all such names or just one and write queries
+# accordingly.
+#
+# The first of the following comparisons (with utf8_bin) is case sensitive;
+# the others are not:
+#
+# 		WHERE TABLE_NAME COLLATE utf8_bin = 'City'
+# 		WHERE TABLE_NAME COLLATE utf8_general_ci = 'city'
+# 		WHERE UPPER(TABLE_NAME) = 'CITY'
+# 		WHERE LOWER(TABLE_NAME) = 'city'
+#
+# Searches in INFORMATION_SCHEMA string columns for values that refer to INFORMATION_SCHEMA itself
+# do use the utf8_general_ci collation because INFORMATION_SCHEMA is a "virtual" database not represented
+# in the file system.
+#
+# For example, comparisons with SCHEMATA.SCHEMA_NAME match 'information_schema' or 'INFORMATION_SCHEMA'
+# regardless of platform:
+#
+# 		SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA
+# 		WHERE SCHEMA_NAME = 'information_schema';
+# 		+---------------------+
+# 		| SCHEMA_NAME 			 |
+# 		+---------------------+
+# 		| information_schema  |
+# 		+---------------------+
+#
+# 		SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA
+# 		WHERE SCHEMA_NAME = 'INFORMATION_SCHEMA';
+# 		+----------------------+
+# 		| SCHEMA_NAME 			  |
+# 		+----------------------+
+# 		| information_schema   |
+# 		+----------------------+
+#
+# UNICODE SUPPORT
+#
+# The Unicode Standard includes characters from the Basic Multilingual Plane (BMP) and supplementary
+# characters that lie outside the BMP.
+#
+# This section describes support for Unicode in MySQL. For information about the Unicode Standard itself,
+# visit the Unicode Consortium website.
+#
+# BMP characters have these characteristics:
+#
+# 		) Their code point values are between 0 and 65535 (or U+0000 and U+FFFF)
+#
+# 		) They can be encoded in a variable-length encoding using 8, 16, or 24 bits (1 to 3 bytes)
+#
+# 		) They can be encoded in a fixed-length encoding using 16 bits (2 bytes)
+#
+# 		) They are sufficient for almost all characters in major languages.
+#
+# Supplementary characters lie outside the BMP:
+#
+# 		) Their code point values are between U+10000 AND U+10FFFF
+#
+# 		) Unicode support for supplementary characters requires character sets that have a range outside
+# 			BMP characters and therefore take more space than BMP characters (up to 4 bytes per character)
+#
+# The UTF-8 (Unicode Transformation Format with 8-bit units) method for encoding Unicode data is implemented
+# according to RFC 3629, which describes encoding sequences that take from one to four bytes.
+#
+# The idea of UTF-8 is that various Unicode characters are encoded using byte sequences of different lengths:
+#
+# 		) Basic Latin letters, digits, and punctuation signs use one byte.
+#
+# 		) Most European and Middle East script letters fit into a 2-byte sequence:
+#
+# 			extended Latin letters (with tilde, macron, acute, grave and other accents), Cyrillic,
+# 			Greek, Armenian, Hebrew, Arabic, Syriac and others.
+#
+# 		) Korean, Chinese, and Japanese ideographs use 3-byte or 4-byte sequences.
+#
+# MySQL supports these Unicode character sets:
+#
+# 		) utf8mb4: A UTF-8 encoding of the Unicode character set using one to four bytes per character.
+#
+# 		) utf8mb3: A UTF-8 encoding of the Unicode character set using one to three bytes per character.
+#
+# 		) utf8: An alias for utf8mb3
+#
+# 		) ucs2: The UCS-2 encoding of the Unicode character set using two bytes per character.
+#
+# 		) utf16: The UTF-16 encoding for the Unicode character set using two or four bytes per character.
+#
+# 				Like ucs2 but with an extension for supplementary characters.
+#
+# 		) utf16le: The UTF-16LE encoding for the Unicode character set.
+#
+# 				Like utf16 but little-endian rather than big-endian.
+#
+# 		) utf32: The UTF-32 encoding for the Unicode character set using four bytes per character.
+#
+# 			NOTE:
+#
+# 				The utf8mb3 character set is deprecated and will be removed in a future MySQL release.
+#
+# 				Please use utf8mb4 instead. although utf8 is currently an alias for utf8mb3, it will be a reference to utf8mb4.
+#
+# 				To avoid ambiguity about the meaning of utf8, consider specifying utf8mb4 explicitly for character
+# 				set references instead of utf8.
+#
+# TABLE 10.2, "UNICODE CHARACTER SET GENERAL CHARACTERISTICS", summarizes the general characteristics of Unicode characters
+# sets supported by MySQL.
+#
+# TABLE 10.2 UNICODE CHARACTER SET GENERAL CHARACTERISTICS
+#
+# CHARACTER SET 		SUPPORTED CHARACTERS 				REQUIRED STORAGE PER CHARACTER
+#
+# utf8mb3, utf8 		BMP only 								1, 2, or 3 bytes
+#
+# ucs2 					BMP only 								2 bytes
+#
+# utf8mb4 				BMP and supplementary 				1, 2, 3 or 4 bytes
+#
+# utf16 					BMP and supplementary 				2 or 4 bytes
+#
+# utf16le 				BMP and supplementary 				2 or 4 bytes
+#
+# utf32 					BMP and supplementary 				4 bytes
+#
+# Characters outside the BMP compare as REPLACEMENT CHARACTER and convert to '?' when converted to a Unicode
+# character set that supports only BMP characters (utf8mb3 or ucs2)
+#
+# If you use character sets that support supplementary characters and thus are "wider" than the BMP-only
+# utf8mb3 and ucs2 character sets, there are potential incompatibility issues for your applications;
+#
+# See SECTION 10.9.8, "CONVERTING BETWEEN 3-BYTE AND 4-BYTE UNICODE CHARACTER SETS"
+#
+# That section also describes how to convert tables from the (3-byte) utf8mb3 to the (4-byte)
+# utf8mb4, and what constraints may apply in doing so.
+#
+# A similar set of collations is available for most Unicode character sets.
+#
+# For example, each has a Danish collation, the names of which are utf8mb4_danish_ci,
+# utf8mb3_danish_ci, utf8_danish_ci, ucs2_danish_ci, utf16_danish_ci and utf32_danish_ci.
+#
+# The exception is utf16le, which has only two collations.
+#
+# For information about Unicode collations and their differentiating properties, including
+# collation properties for supplementary characters, see SECTION 10.10.1, "UNICODE CHARACTER SETS"
+#
+# The MySQL implementation of UCS-2, UTF-16 and UTF-32 stores characters in big-endian byte
+# order and does not use a byte order mark (BOM) at the beginning of values.
+#
+# Other database systems might use little-endian byte order or a BOM.
+#
+# In such cases, conversion of values will need to be performed when transferring data between
+# those systems and MySQL.
+#
+# The implementation of UTF-16LE is little-endian
+#
+# MySQL uses no BOM for UTF-8 values.
+#
+# Client applications that communicate with the server using Unicode should set the
+# client character set accordingly; for example, by issuing a SET NAMES 'utf8mb4' statement.
+#
+# Some character sets cannot be used as the client character set.
+# Attempting to use them with SET_NAMES or SET_CHARACTER_SET produces an error.
+#
+# See IMPERMISSIBLE CLIENT CHARACTER SETS.
+#
+# The following sections provide additional detail on the Unicode character sets
+# in MySQL.
+#
+# THE UTF8MB4 CHARACTER SET (4-BYTE UTF-8 UNICODE ENCODING)
+#
+# The utf8mb4 character set has these characteristics:
+#
+# 		) Supports BMP and supplementary characters
+#
+# 		) Requires a maximum of four bytes per multibyte character.
+#
+# utf8mb4 contrasts with the utf8mb3 character set, which supports only BMP characters
+# and uses a maximum of three bytes per character:
+#
+# 		) For a BMP character, utf8mb4 and utf8mb3 have identical storage characteristics: same code values,
+# 			same encoding, same length.
+#
+# 		) For a supplementary character, utf8mb4 requires four bytes to store it, whereas utf8mb3 cannot store the
+# 			character at all.
+#
+# 			When converting utf8mb3 columns to utf8mb4, you need not worry about converting supplementary characters
+# 			because there will be none.
+#
+# utf8mb4 is a superset of utf8mb3, so for an opperation such as the following concatenation, the result
+# has character set utf8mb4 and the collation of utf8mb4_col:
+#
+# 		SELECT CONCAT(utf8mb3_col, utf8mb4_col);
+#
+# Similarly, the following comparison in the WHERE clause works according to the collation of utf8mb4_col:
+#
+# 		SELECT * FROM utf8mb3_tbl, utf8mb4_tbl
+# 		WHERE utf8mb3_tbl.utf8mb3_col = utf8mb4_tbl.utf8mb4_col;
+#
+# For information about data type storage as it relates to multibyte character sets,
+# see STRING TYPE STORAGE REQUIREMENTS.
+#
+# THE UTF8MB3 CHARACTER SET (3-BYTE UTF-8 UNICODE ENCODING
+#
+# The utf8mb3 character set has these characteristics:
+#
+# 		) Supports BMP characters only (no support for supplementary characters)
+#
+# 		) Requires a maximum of three bytes per multibyte character.
+#
+# Applications that use UTF-8 data but require supplementary character support should use
+# utf8mb4 rather than utf8mb3 (see SECTION 10.9.1, "THE UTF8MB4 CHARACTER SET (4-BYTE UTF-8 UNICODE ENCODING)"
+#
+# Exactly the same set of characters is available in utf8mb3 and ucs2. That is, they have the same repetoire.
+#
+# utf8 is an alias for utf8mb3; the character limit is implicit, rather than explicit in the name.
+#
+# 		NOTE:
+#
+# 			The utf8mb3 character set is deprecated and will be removed in a future MySQL release.
+#
+# 			Please use utf8mb4 instead. Although utf8 is currently an alias for utf8mb3, at that
+# 			point utf8 will become a reference to utf8mb4.
+#
+# 			To avoid ambiguity about the meaning of utf8, consider specifying utf8mb4 explicitly
+# 			for character set references instead of utf8.
+#
+# utf8mb3 can be used in CHARACTER SET clauses, and utf8mb3_collation_substring in COLLATE clauses,
+# where collation_substring is bin, czech_ci, danish_ci, esperanto_ci, estonian_ci and so forth.
+#
+# For example:
+#
+# 		CREATE TABLE t (s1 CHAR(1) CHARACTER SET utf8mb3;
+# 		SELECT * FROM t WHERE s1 COLLATE utf8mb3_general_ci = 'x';
+#
+# 		DECLARE x VARCHAR(5) CHARACTER SET utf8mb3 COLLATE utf8mb3_danish_ci;
+# 		SELECT CAST('a' AS CHAR CHARACTER SET utf8) COLLATE utf8_czech_ci;
+#
+# MySQL immediately converts instances of utf8mb3 in statements to utf8, so in statements
+# such as SHOW CREATE TABLE or SELECT CHARACTER_SET_NAME FROM INFORMATION_SCHEMA.COLUMNS
+# or SELECT COLLATION_NAME FROM INFORMATION_SCHEMA.COLUMNS, users will see the name 
+# utf8 or utf8_collation_substring.
+#
+# utf8mb3 is also valid in contexts other than CHARACTER SET clauses.
+#
+# For example:
+#
+# 		mysqld --character-set-server=utf8mb3
+#
+# 		SET NAMES 'utf8mb3'; /* and other SET statements that have similar effect */
+# 		SELECT _utf8mb3 'a';
+#
+# For information about data type storage as it relates to multibyte character sets,
+# see STRING TYPE STORAGE REQUIREMENTS.
+#
+# THE UTF8 CHARACTER SET (ALIAS FOR UTF8MB3)
+#
+# utf8 is an alias for the utf8mb3 character set.
+#
+# For more information, see SECTION 10.9.2, "THE UTF8MB3 CHARACTER SET (3-BYTE UTF-8 UNICODE ENCODING"
+#
+# 		NOTE:
+#
+# 			The utf8mb3 character set is deprecated, etc. - use utf8mb4 explicitly 
+#
+# THE UCS2 CHARACTER SET (UCS-2 UNICODE ENCODING)
+#
+# In UCS-2, every character is represented by a 2-byte Unicode code with the most significant byte first.
+#
+# For example: LATIN CAPITAL LETTER A has the code 0x0041 and it is stored as a 2-byte sequence:
+#
+# 		0x00 0x41
+#
+# CYRILLIC SMALL LETTER YERU (Unicode 0x044B) is stored as a 2-byte sequence: 0x04 0x4B
+#
+# For Unicode characters and their codes, please refer to the Unicode Consortium website.
+#
+# The ucs2 character set has these characteristics:
+#
+# 		) Supports BMP characters only (no support for supplementary characters)
+#
+# 		) Uses a fixed-length 16-bit encoding and requires two bytes per character.
+#
+# THE UTF16 CHARACTER SET (UTF-16 UNICODE ENCODING)
+#
+# The utf16 character set is the ucs2 character set with an extension that enables
+# encoding of supplementary characters:
+#
+# 		) For a BMP character, utf16 and ucs2 have identical storage characteristics: same code values, same encoding,
+# 			same length.
+#
+# 		) For a supplementary character, utf16 has a special sequence for representing the character using 32 bits.
+#
+# 			This is called the "surrogate" mechanism: For a number greater than 0xffff, take 10 bits and add them
+# 			to 0xd800 and put them in the first 16-bit word, take 10 more bits and add them to 0xdc00 and pput them
+# 			in the next 16-bit word.
+#
+# 			Consequently, all supplementary characters requires 32 bits, where the first 16 bits are a number between
+# 			0xd800 and 0xdbff, and the last 16 bits are a number between 0xdc00 and 0xdfff
+#
+# 			Examples are in SECTION 15.5 SURROGATES AREA of the Unicode 4.0 document
+#
+# Because utf16 supports surrogates and ucs2 does not, there is a validity check that applies only in utf16:
+#
+# 		You cannot insert a top surrogate without a bottom surrogate, or vice versa.
+#
+# For example:
+#
+# 		INSERT INTO t (ucs2_column) VALUES (0xd800); /* legal */
+# 		INSERT INTO t (utf16_column) VALUES (0xd800); /* Illegal */
+#
+# There is no validity check for characters that are technically valid, but are not true
+# Unicode (that is, characters that Unicode considers to be "unassigned code points" or "private use" characters
+# or even "illegals")
+#
+#
+# Because MySQL must allow for the worst case (that one character requires four bytes) the maximum length
+# of a utf16 column or index is only half of the maximum length for a ucs2 column or index.
+#
+# For example, the maximum length of a MEMORY table index key is 3072 bytes, so these statements
+# create tables with the longest permitted indexes for ucs2 and utf16 columns:
+#
+# 		CREATE TABLE tf (s1 VARCHAR(1536) CHARACTER SET ucs2) ENGINE=MEMORY;
+# 		CREATE INDEX i ON tf (s1);
+#
+# 		CREATE TABLE tg (s1 VARCHAR(768) CHARACTER SET utf16) ENGINE=MEMORY;
+# 		CREATE INDEX i ON tg (s1);
+#
+# THE UTF16LE CHARACTER SET (UTF-16LE UNICODE ENCODING)
+#
+# This is the same as utf16 but is little-endian rather than big-endian.
+#
+# THE UTF32 CHARACTER SET (UTF-32 UNICODE ENCODING)
+#
+# The utf32 character set is fixed length (like ucs2 and unlike utf16).
+#
+# utf32 uses 32 bits for every character, unlike ucs2 (which uses 16 bits for every character),
+# and unlike utf16 (which uses 16 bits for some characters and 32 bits for others)
+#
+# utf32 takes twice as much space as ucs2 and more space than utf16, but utf32 has teh same
+# advantage as ucs2 that it is predictable for storage:
+#
+# 		The required number of bytes for utf32 equals the number of characters times 4.
+#
+# Also, unlike utf16, there are no tricks for encoding in utf32, so the stored value
+# equals the code value.
+#
+# To demonstrate how the latter advantage is useful, here is an example that shows how
+# to determine a utf8mb4 value given the utf32 code value:
+#
+# 		/* Assume code value = 100cc LINEAR B WHEELED CHARIOT */
+# 		CREATE TABLE tmp (utf32_col CHAR(1) CHARACTER SET utf32,
+# 								utf8mb4_col CHAR(1) CHARACTER SET utf8mb4);
+#
+# 		INSERT INTO tmp VALUES (0x000100cc, NULL);
+# 		UPDATE tmp SET utf8mb4_col = utf32_col;
+# 		SELECT HEX(utf32_col), HEX(utf8mb4_col) FROM tmp;
+#
+# MySQL is very forgiving about additions of unassigned Unicode characters or private-use-area
+# characters.
+#
+# There is in fact only one validity check for utf32; No code value may be greater than
+# 0x10ffff
+#
+# For example, this is illegal:
+#
+# 		INSERT INTO t (utf32_column) VALUES (0x110000); /* illegal */
+#
+# CONVERTING BETWEEN 3-BYTE AND 4-BYTE UNICODE CHARACTER SETS
+#
+# This section describes issues that you may face when converting character data between
+# the utf8mb3 and utf8mb4 character sets.
+#
+# 		NOTE:
+#
+# 			This discussion focuses primarily on converting between utf8mb3 and utf8mb4, but similar principles
+# 			apply to converting between the ucs2 character set and character sets such as utf16 or utf32.
+#
+# The utf8mb3 and utf8mb4 character sets differ as follows:
+#
+# 		) utf8mb3 supports only characters in the Basic Multilingual Plane (BMP).
+#
+# 			utf8mb4 additionally supports supplementary characters that lie outside the BMP.
+#
+# 		) utf8mb3 uses a maximum of three bytes per character. utf8mb4 uses a maximum of four bytes per character.
+#
+# NOTE:
+#
+# 		This discussion refers to the utf8mb3 and utf8mb4 character set names to be explicit about
+# 		referring to 3-byte and 4-byte UTF-8 character set data.
+#
+# 		The exception is that in table definitions, utf8 is used because MySQL converts instances of
+# 		utf8mb3 specified in such definitions to utf8, which is an alias for utf8mb3.
+#
+# One advantage of converting from utf8mb3 to utf8mb4 is that this enables applications to use
+# supplementary characters.
+#
+# One tradeoff is that this may increase data storage space requirements.
+#
+# In terms of table content, conversion from utf8mb3 to utf8mb4 presents no problems:
+#
+# 		) For a BMP character, utf8mb4 and utf8mb3 have identical storage characteristics; same code values, same encoding, same length
+#
+# 		) For a supplementary character, utf8mb4 requires four bytes to store it, whereas utf8mb3 cannot store the character at all.
+#
+# 			When converting utf8mb3 columns to utf8mb4, you need not worry about converting supplementary characters because there will be none.
+#
+# In terms of table structure, these are the primary potentional incompatibilities:
+#
+# 		) For the variable-length character data types (VARCHAR and the TEXT types), the maximum permitted length
+# 			in characters is less for utf8mb4 columns than for utf8mb3 columns.
+#
+# 		) For all character data types (CHAR, VARCHAR and the TEXT types), the maximum number of characters that can be
+# 			indexed is less for utf8mb4 columns than for utf8mb3 columns.
+#
+# Consequently, to convert tables from utf8mb3 to utf8mb4, it may be necessary to change some column or index
+# definitions.
+#
+# Tables can be converted from utf8mb3 to utf8mb4 by using ALTER_TABLE. Suppose that a table has this definition:
+#
+# 		CREATE TABLE t1 (
+# 			col1 CHAR(10) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL,
+# 			col2 CHAR(10) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL
+# 		) CHARACTER SET utf8;
+#
+# The following statement converts t1 to use utf8mb4:
+#
+# 		ALTER TABLE t1
+# 			DEFAULT CHARACTER SET utf8mb4,
+# 			MODIFY col1 CHAR(10)
+# 				CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+# 			MODIFY col2 CHAR(10)
+# 				CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL;
+#
+# The catch when converting from utf8mb3 to utf8mb4 is that the maximum length of a column or index key
+# is unchanged in terms of bytes.
+#
+# Therefore, it is smaller in terms of characters because the maximum length of a character
+# is four bytes instead of three.
+#
+# For the CHAR, VARCHAR and TEXT data types, watch for these issues when converting your MySQL tables:
+#
+# 		) Check all definitions of utf8mb3 columns and make sure they will not exceed the maximum length for the storage engine.
+#
+# 		) Check all indexes on utf8mb3 columns and make sure they will not exceed the maximum length for the storage engine.
+#
+# 			Sometimes the maximum can change due to storage engine enhancements.
+#
+# If the preceding conditions apply, you must either reduce the defined length of columns or indexes,
+# or continue to use utf8mb3 rather than utf8mb4.
+#
+# Here are some examples where structural changes may be needed:
+#
+# 		) a TINYTEXT column can hold up to 255 bytes, so it can hold up to 85 3-byte or 63 4-byte characters.
+#
+# 			Suppose that you have a TINYTEXT column that uses utf8mb3 but must be able to contain more than
+# 			63 chars.
+#
+# 			YOu cannot convert it to utf8mb4 unless you also change the data type to a longer type such as TEXT.
+#
+# 			Similarly, a very long VARCHAR column may need to be changed to one of the longer TEXT types if you
+# 			want to convert it from utf8mb3 to utf8mb4
+#
+# 		) InnoDB has a maximum index length of 767 bytes for tables that use COMPACT or REDUNDANT row format, so for
+# 			utf8mb3 or utf8mb4 columns, you can index a maximum of 255 or 191 characters, respectively.
+#
+# 			If you currently have utf8mb3 columns with indexes longer than 191 characters, you must
+# 			index a smaller number of characters.
+#
+# 			In an InnoDB table that uses COMPACT or REDUNDANT row format, these column and index definitions are legal:
+#
+# 				col1 VARCHAR(500) CHARACTER SET utf8, INDEX (col1(255))
+#
+# 			To use utf8mb4 instead, the index must be smaller:
+#
+# 				col1 VARCHAR(500) CHARACTER SET utf8mb4, INDEX (col1(191))
+#
+# 				NOTE:
+#
+# 					For InnoDB tables that use COMPRESSED or DYNAMIC row format, index key prefixes longer
+# 					than 767 bytes (up to 3072 bytes) are permitted.
+#
+# 					Tables created with these row formats enable you to index a maximum of 1024 or 768 characters
+# 					for utf8mb3 or utf8mb4 columns, respectively.
+#
+# 					For related information, see SECTION 15.6.1.7 "LIMITS ON INNODB TABLES"
+#
+# 					and
+#
+# 					SECTION 15.10.3 "DYNAMIC AND COMPRESSED ROW FORMATS"
+#
+# The preceding types of changes are most likely to be required only if you have very long columns or indexes.
+#
+# Otherwise, you should be able to convert your tables from utf8mb3 to utf8mb4 without problems,
+# using ALTER_TABLE as described previously.
+#
+# The following items summarize other potential incompatibilities:
+#
+# 		) SET NAMES 'utf8mb4' causes use of the 4-byte character set for connection character sets.
+#
+# 			As long as no 4-byte characters are sent from the server, there should be
+# 			no problems.
+#
+# 			Otherwise, applications that expect to receive a maximum of three bytes per character
+# 			may have problems.
+#
+# 			Conversely, applications that expect to send 4-byte characters must ensure that the server understands them.
+#
+# 		) For replication, if character sets that support supplementary characters are to be used on the master,
+# 			all slaves must understand them as well.
+#
+# 			Also, keep in mind the general principle that if a table has different definitions on the master and slave,
+# 			this can lead to unexpected results.
+#
+# 			For example, the differences in maximum index key length make it risky to use utf8mb3 on the master
+# 			and utf8mb4 on the slave.
+#
+# If you have converted to utf8mb4, utf16, utf16le or utf32, and then decide to convert back to utf8mb3
+# or ucs2 (for example, to downgrade to an older version of MysQL), these considerations apply:
+#
+# 		) utf8mb3 and ucs2 data should present no problems.
+#
+# 		) The server must be recent enough to recognize definitions referring to the character set
+# 			from which you are converting.
+#
+# 		) For object definitions that refer to the utf8mb4 character set, you can dump them with mysqldump
+# 			prior to downgrading, eidt the dump file to change instances of utf8mb4 to utf8, and reload the
+# 			file in the older server, as long as there are no 4-byte characters in the data.
+#
+# 			The older server will see utf8 in the dump file object definitions and create new objects
+# 			that use the (3-byte) utf8 character set.
+#
+# SUPPORTED CHARACTER SETS AND COLLATIONS
+#
+# This section indicates which character sets MySQL supports.
+# There is one subsection for each group of related character sets.
+#
+# For each character set, the permissible collations are listed.
+#
+# To list the available character sets and their default collations, use the SHOW_CHARACTER_SET
+# statement or query the INFORMATION_SCHEMA CHARACTER_SETS table.
+#
+# For example:
+#
+# 		SHOW CHARACTER SET;
+# 		+----------------+-------------------------------------------------------+-------------------------+---------------+
+# 		| Charset 		  | Description 														 | Default collation 		| 	Maxlen   	 |
+# 		+----------------+-------------------------------------------------------+-------------------------+---------------+
+# 		| armscii8 		  | ARMSCII-8 Armenian 												 | armscii8_general_ci 		| 1 				 |
+# 		| ascii 			  | US ASCII 															 | ascii_general_ci 		   | 1 				 |
+# 		| big5 			  | Big5 Traditional Chinese 										 | big5_chinese_ci 			| 2 				 |
+# 		| binary 		  | Binary pseudo charset 											 | binary 						| 1 				 |
+# 		| cp1250 		  | Windows Central European 										 | cp1250_general_ci 		| 1 				 |
+# 		| cp1251 		  | Windows Cyrillic 												 | cp1251_general_ci 		| 1 				 |
+# 		| cp1256 		  | Windows Arabic 													 | cp1256_general_ci 		| 1 				 |
+# 		| cp1257 		  | Windows Baltic 													 | cp1257_general_ci 		| 1 				 |
+# 		| cp850 			  | DOS West European 												 | cp850_general_ci 			| 1 				 |
+# 		| cp852 			  | DOS Central European 											 | cp852_general_ci 			| 1 				 |
+# 		| cp866 			  | DOS Russian 														 | cp866_general_ci 			| 1 				 |
+# 		| cp932 			  | SJIS for Windows Japanese 									 | cp932_japanese_ci 		| 2 				 |
+# 		| dec8 			  | DEC West European 												 | dec8_swedish_ci 			| 1 				 |
+# 		| eucjpms 		  | UJIS for Windows Japanese 									 | eucjpms_japanese_ci 		| 3 				 |
+# 		| euckr 			  | EUC-KR Korean 													 | euckr_korean_ci 			| 2 				 |
+# 		| gb18030 		  | China National Standard GB18030 						    | gb18030_chinese_ci 		| 4 				 |
+# 		| gb2312 		  | GB2312 Simplified Chinese 									 | gb2312_chinese_ci 		| 2 				 |
+# 		| gbk 			  | GBK Simplified Chinese 										 | gbk_chinese_ci 			| 2 				 |
+# 		| geostd8 		  | GEOSTD8 Georgian 												 | geostd8_general_ci 		| 1 				 |
+# 		| greek 			  | ISO 8859-7 Greek 												 | greek_general_ci 			| 1 				 |
+# 		| hebrew 		  | ISO 8859-8 Hebrew 												 | hebrew_general_ci 		| 1 				 |
+# 		| hp8 			  | HP West European 												 | hp8_english_ci 			| 1 				 |
+# 		| keybcs2 		  | DOS Kamenicky Czech-Slovak 									 | keybcs2_general_ci 		| 1 				 |
+# 		| koi8r 			  | KOI8-R Relcom Russian 											 | koi8r_general_ci 			| 1 				 |
+# 		| koi8u 			  | KOI8-U Ukranian 													 | koi8u_general_ci 			| 1 				 |
+# 		| latin1 		  | cp1252 West European 											 | latin1_swedish_ci 		| 1 				 |
+# 		| latin2 		  | ISO 8859-2 Central European 									 | latin2_general_ci 		| 1 				 |
+# 		| latin5 		  | ISO 8859-9 Turkish 												 | latin5_turkish_ci 		| 1 				 |
+# 		| latin7 		  | ISO 8859-13 Baltic 												 | latin7_general_ci 		| 1 				 |
+# 		| macce 			  | Mac Central European 											 | macce_general_ci 			| 1 				 |
+# 		| macroman 		  | Mac West European 												 | macroman_general_ci 		| 1 				 |
+# 		| sjis 			  | Shift-JIS Japanese 												 | sjis_japanese_ci 			| 2 				 |
+# 		| swe7 			  | 7bit Swedish 														 | swe7_swedish_ci 			| 1 				 |
+# 		| tis620 		  | TIS620 Thai 														 | tis620_thai_ci 			| 1 				 |
+# 		| ucs2 			  | UCS-2 Unicode 													 | ucs2_general_ci 		   | 2 				 |
+# 		| ujis 			  | EUC-JP Japanese 													 | ujis_japanese_ci 			| 3 				 |
+# 		| utf16 			  | UTF-16 Unicode 													 | utf16_general_ci 			| 4 				 |
+# 		| utf16le 		  | UTF-16LE Unicode 												 | utf16le_general_ci 		| 4 				 |
+# 		| utf32 			  | UTF-32 Unicode 													 | utf32_general_ci 			| 4 				 |
+# 		| utf8 			  | UTF-8 Unicode 													 | utf8_general_ci 			| 3 				 |
+# 		| utf8mb4 		  | UTF-8 Unicode 													 | utf8mb4_0900_ai_ci 		| 4 				 |
+# 		+----------------+-------------------------------------------------------+-------------------------+---------------+
+#
+# In cases where a character set has multiple collations, it might not be clear which collation is most suitable
+# for a given application.
+#
+# To avoid choosing the wrong collation, it can be helpful to perform some comparisons with representative data values to make sure
+# that a given collation sorts values the way you expect.
+#
+# UNICODE CHARACTER SETS
+#
+# MySQL supports multiple Unicode character sets:
+#
+# 		) utf8mb4: A UTF-8 encoding of the Unicode character set using one to four bytes per character
+#
+# 		) utf8mb3: A UTF-8 encoding of the Unicode character set using one to three bytes per character
+#
+# 		) utf8: An alias for utf8mb3
+#
+# 		) ucs2: The UCS-2 encoding of the Unicode character set using two bytes per  character.
+#
+# 		) utf16: The uTF-16 encoding for the Unicode character set using two or four bytes per character.
+# 		
+# 					Like ucs2 but with an extension for supplementary characters.
+#
+# 		) utf16le: The UTF-16LE encoding for the Unicode character set. Like utf16 but little-endian rather than big-endian
+#
+# 		) utf32: The UTF-32 encoding for the Unicode character set using four bytes per character
+#
+# NOTE:
+#
+# 		The utf8mb3 character set is deprecated, use explicit reference to utf8mb4 instead.
+#
+# utf8 and ucs2 support Basic Multilingual Plane (BMP) characters.
+# utf8mb4, utf16, utf16le and utf32 support BMP and supplementary characters.
+#
+# This section describes the collations available for Unicode character sets and their
+# differentiating properties.
+#
+# For general information about Unicode, see SECTION 10.9, "UNICODE SUPPORT"
+#
+# Most Unicode character sets have a general collation (indicated by _general in the name or by
+# the absence of a language specifier), a binary collation (indicated by _bin in the name),
+# and several language-specific collations (indicated by language specifiers).
+#
+# For example, for utf8, utf8_general_ci and utf8_bin are its general and binary collations,
+# and utf8_danish_ci is one of its language-specific collations.
+#
+# Collation support for utf16le is limited.
+#
+# The only collations available are utf16le_general_ci and utf16le_bin.
+#
+# These are similar to utf16_general_ci and utf16_bin
+#
+# A locale code or language name shown in the following table indicates a language-specific
+# collation.
+#
+# Unicode character sets may include collations for one or more of these languages.
+#
+# TABLE 10.3 UNICODE COLLATION LANGUAGE SPECIFIERS
+#
+# 	Language 				Language Specifier
+#
+# Classical Latin 		la or roman
+#
+# Croatian 					hr or croatian
+#
+# Czech 						cs or czech
+#
+# Danish 					da or danish
+#
+# Esperanto 				eo or esperanto
+#
+# Estonian 					et or estonian
+#
+# German phone book 		de_pb or german2
+# order
+#
+# Hungarian 				hu or hungarian
+#
+# Icelandic 				is or icelandic
+#
+# Japanese 					ja
+#
+# Latvian 					lv or latvian
+#
+# Lithuanian 				lt or lithuanian
+#
+# Persian 					persian
+#
+# Polish 					pl or polish
+#
+# Romanian 					ro or romanian
+#
+# Russian 					ru
+#
+# Sinhala 					sinhala
+#
+# Slovak 					sk or slovak
+#
+# Slovenian 				sl or slovenian
+#
+# Modern Spanish 			es or spanish
+#
+# Traditional Spanish 	es_trad or spanish2
+#
+# Swedish 					sv or Swedish
+#
+# Turkish 					tr or turkish
+#
+# Vietnamese 				vi or vietnamese
+#
+# Croatian collations are tailored for specific Croatian letters.
+#
+# Danish collations may also be used for Norweigan.
+#
+# For japanese, the utf8mb4 character set includes utf8mb4_ja_0900_as_cs and utf8mb4_ja_0900_as_cs_ks collations.
+#
+# Both collations are accent sensitive and case-sensitive.
+#
+# utf8mb4_ja_0900_as_cs_ks is also kana sensitive and distinguishes Katakana characters
+# from Hiragana characters, whereas utf8mb4_ja_0900_as_cs treats Katakana and Hiragana
+# characters as equal for sorting.
+#
+# Applications that require Japanese collation but not kana sensitivity may use utf8mb4_ja_0900_as_cs
+# for better sort performance.
+#
+# utf8mb4_ja_0900_as_cs uses three weight levels for sorting: utf8mb4_ja_0900_as_cs_ks uses four.
+#
+# For Classical Latin collations that are accent insensitive, I and J compare as equal, and U
+# and V compare as equal.
+#
+# I and J, U and V compare as equal on the base letter level.
+#
+# IN other words, J is regarded as an accented I, and U is regarded as an accented V.
+#
+# Spanish collations are available for modern and traditional Spanish.
+# For both n-tilde is a separate letter between n and o.
+#
+# In addition, for traditional Spanish, ch is separate letter between
+# c and d, and ll is a separate letter between l and m.
+#
+# Traditional Spanish collations may also be used for Austrian and Galician.
+#
+# Swedish collations include Swedish rules. For example, in Swedish, the following relationship
+# holds, which is not something expected by German or French:
+#
+# 		Ü = Y < Ö
+#
+# FOr questions about particular langauge orderings, unicode provides Common Locale Data
+# Repositories (CLDR) collation charts.
+#
+# The xxx_general_mysql500_ci collations preserve the pre-5.1.24 ordering of the original
+# xxx_general_ci collations and permits upgrades for tables created before 5.1.24 (A bug, #27877)
+#
+# MySQL implements the xxx_unicode_ci collations according to the Unicode Collation Algorithm
+# (UCA).
+#
+# The collation uses the version-4.0.0 UCA weight keys.
+#
+# The xxx_unicode_ci collations have only partial support for the Unicode Collation Algorithm.
+#
+# Some characters are not supported, and combining marks are not fully supported.
+#
+# This affects primarily  Vietnamese, Yoruba and some smaller languages such as Navajo.
+#
+# A combined character is considered different from the same character written with a single
+# unicode character in string comparisons, and the two characters are considered to have
+# a different length (for example, as returned by the CHAR_LENGTH() function or in result set metadata)
+#
+# Unicode collations based on UCA versions later than 4.0.0 include the version in the
+# collation name.
+#
+# Thus, utf8mb4_unicode_520_ci is based on UCA 5.2.0 weight keys, where as utf8mb4_0900_ai_ci
+# is based on UCA 9.0.0 weight keys
+#
+# Collations based on UCA 9.0.0 and higher are faster than collations based on UCA versions below
+# 9.0.0
+#
+# They also have a PAD attribute of NO PAD, in contrast to PAD SPACE as used in collations
+# based on UCA versions below 9.0.0
+#
+# NO PAD collations treat spaces at the end of the strings like any other character.
+#
+# To determine the pad attribute for a collation, use the INFORMATION_SCHEMA COLLATIONS
+# table, which has a PAD_ATTRIBUTE column.
+#
+# Comparisons of VARCHAR columns that have a NO PAD collation differ from other collations
+# with respect to trailing spaces.
+#
+# For example, 'a' and 'a ' compare as different strings, not the same string.
+#
+# MySQL implements language-specific Unicode collations if the ordering based only on
+# UCA does not work well for a language.
+#
+# Language-specific collations are UCA-based, with additional language tailoring rules.
+#
+# For example, the nonlanguage-specific utf8mb4_0900_ai_ci and language-specific utf8mb4_LOCALE_0900_ai_ci
+# Unicode collations each have these characteristics:
+#
+# 		) The collation is based on Unicode Collation Algorithm (UCA) 9.0.0 and Common Locale Data Repository (CLDR)v30,
+# 			is accent insensitive and case insensitive.
+#
+# 			These characteristics are indicated by _0900_ai and _ci in the collation name.
+#
+# 			Exception: utf8mb4_la_0900_ai_ci is not based on CLDR because Classical Latin is not definded in CLDR.
+#
+# 		) The collation works for all characters in the range [U+0, U+10FFFF]
+#
+# 		) If the collation is not language specific, it sorts all characters, including supplementary characters,
+# 			in default order (described following).
+#
+# 			If the collation is language specific, it sorts characters of the language correctly according to
+# 			to language-specific rules, and characters not in the language in default order.
+#
+# 		) By default, the collation sorts characters having a code point listed in teh DUCET table (Default Unicode Collation Element Table)
+# 			according to the weight value assigned in the table.
+#
+# 			The collation sorts characters not having a code point listed in the DUCET table using their
+# 			implicit weight value, which is constructed according to the UCA.
+#
+# 		) For non-language-specific collations, characters in contraction sequences are treated as separate characters.
+#
+# 			For language-specific collations, contractions might change character sorting order.
+#
+# LOWER() and UPPER() perform case folding according to the collation of their argument.
+#
+# A character that has uppercase and lowercase versions only in a Unicode version more recent
+# than 4.0.0 is converted by these functions only if the argument has a collation that uses a 
+# recent enough UCA version.
+#
+# For any Unicode character set, operations performed using the xxx_general_ci collation are
+# faster than those for the xxx_unicode_ci collation.
+#
+# For example, comparisons for the utf8_general_ci collation are faster, but slightly less correct,
+# than comparisons for utf8_unicode_ci.
+#
+# The reason for this is that utf8_unicode_ci supports mapping such as expansions; that is, when one
+# character compares as equal to combinations of other characters.
+#
+# For example, in German and some other language the german S is equal to ss.
+#
+# utf8_unicode_ci also supports contractions and ignorable characters.
+#
+# utf8_general_ci is a legacy collation that does not support expansions,
+# contractions, or ignorable characters.
+#
+# It can make only one-to-one comparisons between characters.
+#
+# To further illustrate, the following equalities hold in both utf8_general_ci and utf8_unicode_ci
+# (for the effect of this in comparisons or searches, see SECTION 10.8.6 "EXAMPLES OF THE EFFECT OF COLLATION"):
+#
+# 		Ä = A
+# 		Ö = O
+# 		Ü = U
+#
+# A difference between collations is that htis is true for utf8_general_ci:
+#
+# 		[german s] = s
+#
+# Whereas this is  true for utf8_unicode_ci, which supports the German DIN-1 ordering
+# (also known as dictionary order):
+#
+# 		[german s] = ss
+#
+# MySQL implements utf8 language-specific collations if the ordering with utf8_unicode_ci does not
+# work well for a language.
+#
+# For example, utf8_unicode_ci works fine for German dictionary order and French, so there is no
+# need to create special utf8 collations.
+#
+# utf8_general_ci also is satisfactory for both German and French, except that [german s] is equal
+# to s and not ss.
+#
+# If this is acceptable in the app, you should use utf8_general_ci because its faster.
+#
+# If this is not acceptable, i.e, requiring German dictionary order, use utf8_unicode_ci because
+# it is more accurate.
+#
+# If you require German DIN-2 (phone book) ordering, use the utf8_german2_ci collation,
+# which compares the following sets of characters equal:
+#
+# 		Ä = [AE] = AE
+# 		Ö = [OE] = OE
+# 		Ü = UE
+# 		[German S] = ss
+#
+# utf8_german2_ci is similar to latin1_german2_ci, but hte latter does not compare [AE] equal
+# to AE or [OE] equal to OE.
+#
+# There is no utf8_german_ci corresponding to latin1_german_ci for German dictionary order
+# because utf8_general_ci suffices.
+#
+# For all Unicode collations except the binary (_bin) collations, MySQL performs a table lookup
+# to find a characters collating weight.
+#
+# This weight can be displayed using the WEIGHT_STRING() function.
+#
+# See SECTION 12.5, "STRING FUNCTIONS"
+#
+# If a character is not in the table (for example, because it is a "new" character),
+# collating weight determination becomes more complex:
+#
+# 		) For BMP characters in general collations (xxx_general_ci), weight = code point
+#
+# 		) For BMP characters in UCA collations (for example, xxx_unicode_ci and language-specific collations),
+# 			the following algorithm applies:
+#
+	# 			if (code >= 0x3400 && code <= 0x4DB5)
+	# 				base= 0xFB80; /* CJK Ideograph Extension */
+	# 			else if (code >= 0x4E00 && code <= 0x9FA5)
+	# 				base= 0xFB40; /* CJK Ideograph */
+	# 			else
+	# 				base= 0xFBC0; /* All other characters */
+	# 			aaaa= base + (code >> 15);
+	# 			bbbb= (code & 0x7FFF) | 0x8000;
+#
+# 			The result is a sequence of two collating elements, aaaa followed by bbbb.
+#
+# 			For example:
+#
+# 				SELECT HEX(WEIGHT_STRING(_ucs2 0x04CF COLLATE ucs2_unicode_ci));
+# 				+-------------------------------------------------------------------+
+# 				| HEX(WEIGHT_STRING(_ucs2 0x04CF COLLATE ucs2_unicode_ci)) 			  |
+# 				+-------------------------------------------------------------------+
+# 				| FBC084CF 																			  |
+# 				+-------------------------------------------------------------------+
+#
+# 			Thus, U+04cf CYRILLIC SMALL LETTER PALOCHKA is, with all UCA 4.0.0 collations,
+# 			greater than U+04c0 CYRILLIC LETTER PALOCHKA.
+#
+# 			With UCA 5.2.0 collations, all palochkas sort together.
+#
+# 		) FOr supplementary characters in general collations, the weight is the weight for
+# 			0xfffd REPLACEMENT CHARACTER.
+#
+# 			For supplementary characters in UCA 4.0.0 collations, their collating weight
+# 			is 0xfffd.
+#
+# 			That is, to MySQL, all supplementary characters are equal to each other, and greater than
+# 			almost all BMP characters.
+#
+# 			An example with Deseret characters and COUNT(DISTINCT):
+#
+# 				CREATE TABLE t (s1 VARCHAR(5) CHARACTER SET utf32 COLLATE utf32_unicode_ci);
+# 				INSERT INTO t VALUES (0xfffd); /* REPLACEMENT CHARACTER */
+# 				INSERT INTO t VALUES (0x010412); /* DESERET CAPITAL LETTER BEE */
+# 				INSERT INTO t VALUES (0x010413); /* DESERET CAPITAL LETTER TEE */
+# 				SELECT COUNT(DISTINCT s1) FROM t;
+#
+# 			The result is 2 because the MySQL xxx_unicode_ci collations, the replacement character has
+# 			a weight of 0x0dc6, whereas Deseret Bee and Deseret Tee both have a weight of
+# 			0xfffd.
+#
+# 			(Were the utf32_general_ci collation used instead, the result is 1 because all three characters
+# 			have a weight of 0xfffd in that collation)
+#
+# 			An example with cuneiform characters and WEIGHT_STRING():
+#
+# 				/*
+# 				The four characters in the INSERT string are
+# 				00000041 	# LATIN CAPITAL LETTER A
+# 				0001218F 	# CUNEIFORM SIGN KAB
+# 				000121A7 	# CUNEIFORM SIGN KISH
+# 				00000042 	# LATIN CAPITAL LETTER B
+# 				*/
+# 				CREATE TABLE t (s1 CHAR(4) CHARACTER SET utf32 COLLATE utf32_unicode_ci);
+# 				INSERT INTO t VALUES (0x000000410001218f000121a700000042);
+# 				SELECT HEX(WEIGHT_STRING(s1)) FROM t;
+#
+# 			The result is:
+#
+# 				0E33 FFFD FFFD 0E4A
+#
+# 			0E33 and 0E4A are primary weights as in UCA 4.0.0. FFFD is the weight for KAB and also for KISH.
+#
+# 			The rule that all supplementary characters are equal to each other is nonoptimal but is not expected
+# 			to cause trouble.
+#
+# 			These characters are very rare, so it is rare that a multi-character string consists entirely of
+# 			supplementery characters.
+#
+# 			In Japan, since the supplementary characters are obscure Kanji ideographs, the typical user
+# 			does not care what order they are in.
+#
+# 			If you really want rows sorted by the MySQL rule and secondarily by code point value:
+#
+# 				ORDER BY s1 COLLATE utf32_unicode_ci, s1 COLLATE utf32_bin
+#
+# 		) For supplementary characters based on UCA versions higher than 4.0.0 (for example, xxx_unicode_520_ci),
+# 			supplementary characters do not necessarily all have the same collation weight.
+#
+# 			Some have explicit weights from the UCA allkeys.txt file.
+#
+# 			Others have weights calculated from this algorithm:
+#
+# 				aaaa= base + (code >> 15);
+# 				bbbb= (code & 0x7FFF) | 0x8000;
+#
+# There is a difference between "Ordering by the character's code value" and "ordering by the character's binary representation",
+# a difference that only appears with utf16_bin, because of surrogates.
+#
+# Suppose that utf16_bin (the binary collation for utf16) was a binary comparison "byte by byte" rather than
+# "character by character".
+#
+# If that were so, the order of characters in utf16_bin would differ from the order in utf8_bin.
+#
+# For example, the following chart shows two rare characters.
+#
+# The first character is in the range E000-FFFF, so it is greater than a surrogate
+# but less than a supplementary.
+#
+# The second character is a supplementary:
+#
+# 		CODE POINT 		CHARACTER 								UTF8 						UTF16
+# 		-------------- --------------- 						----- 					-----
+# 		0FF9D 			HALFWIDTH KATAKANA LETTER N 		EF BE 9D 				FF 9D
+# 		10384 			UGARITIC LETTER DELTA 				F0 90 BE 84 			D8 00 DF 84
+#
+# The two characters in the chart are in order by code point values because 0xff9d < 0x10384.
+#
+# And they are in order by utf8 value because 0xef < 0xf0
+#
+# But they are not in order by utf16 value, if we use a byte-by-byte comparison, because 0xff > 0xd8
+#
+# So MySQL's utf16_bin collation is not "byte by byte". It is by "code point".
+#
+# When MySQL sees a supplementary-character encoding in utf16, it converts the character's code-point value,
+# and then compares.
+#
+# Therefore, utf8_bin and utf16_bin are the same ordering.
+#
+# THis is consistent with the SQL:2008 standard requirement for a UCS_BASIC collation:
+#
+# "UCS_BASIC is a collation in which the ordering is determined entirely by the Unicode scalar
+# values of the characters in the strings being sorted.
+#
+# IT is applicable to the UCS character repertoire. Since every character repertoire is a subset
+# of the UCS repertoire, the UCS_BASIC collation is potentionally applicable to every character set.
+#
+# NOTE:
+#
+# 		The Unicode scalar value of a character is its code point treated as an unsigned integer."
+#
+# If the character set is ucs2, comparison is byte-by-byte, but ucs2 strings should
+# not contain surrogates, anyway.
+#
+# WEST EUROPEAN CHARACTER SETS
+#
+# Western European character sets cover most West European languages, such as French,
+# Spanish, Catalan, Basque, Portuguese, Italian, Albanian, Dutch, German, Danish,
+# Swedish, Norweigan, Finnish, Faroese, Icelandic, Irish, Scottish and English.
+#
+# 		) ascii (US ASCII) collations:
+#
+# 			) ascii_bin
+#
+# 			) ascii_general_ci (default)
+#
+# 		) cp850 (DOS West European) collations:
+#
+# 			) cp850_bin
+#
+# 			) cp850_general_ci (default)
+#
+# 		) dec8 (DEC Western European) collations:
+#
+# 			) dec8_bin
+#
+# 			) dec8_swedish_ci (default)
+#
+# 		) hp8 (HP Western European) collations:
+#
+# 			) hp8_bin
+#
+# 			) hp8_english_ci (default)
+#
+# 		) latin1 (cp1252 West European) collations:
+#
+# 			) latin1_bin
+#
+# 			) latin1_danish_ci
+#
+# 			) latin1_general_ci
+#
+# 			) latin1_general_cs
+#
+# 			) latin1_german1_ci
+#
+# 			) latin1_german2_ci
+#
+# 			) latin1_spanish_ci
+#
+# 			) latin1_swedish_ci (default)
+#
+# latin1 is the default character set. MySQL's latin1 is the same as the WIndows cp1252 cahracter set.
+#
+# This means it is the same as the official ISO 8859-1 or IANA (Internet Assigned Numbers Authority) latin1,
+# except that IANA latin1 treats the code points between 0x80 and 0x9f as "undefined",
+# whereas cp1252, and therefore MySQL's latin1 - assigns characters for those positions.
+#
+# For example, 0x80 is the Euro sign.
+#
+# For the "undefined" entries in cp1252, MySQL translates 0x81 to Unicode
+# 0x0081, 0x8d to 0x008d, 0x8f to 0x008f, 0x90 to 0x0090 and 0x9d to 0x009d.
+#
+# The latin1_swedish_ci collation is the default that probably is used by the
+# majority of MySQL customers.
+#
+# Although it is frequently said that it is based on the Swedish/Finnish collation rules,
+# there are discussions on this.
+#
+# The latin1_german1_ci and latin1_german2_ci collations are based on the DIN-1 and DIN-2 standards,
+# where DIN stands for Deutsches Institut Für Normung.
+#
+# DIN-1 is called the "dictionary collation" and DIN-2 is called the "phone book collation".
+#
+# For an example of the effect this has in comparisons or when doing searches,
+# see SECTION 10.8.6, "EXAMPLES OF THE EFFECT OF COLLATION"
+#
+# 		) latin1_german1_ci (dictionary) rules:
+#
+# 				Ä = A
+# 				Ö = O
+# 				Ü = U
+# 				[German s] = s
+#
+# 		) latin1_german2_ci (phone-book) rules:
+#
+# 				Ä = AE
+# 				Ö = OE
+# 				Ü = UE
+# 				[German s] = ss
+#
+# 			In the latin1_spanish_ci collation, n-tilde is a separate letter between n and o.
+#
+# 		) macroman (Mac West European) collations:
+#
+# 			) macroman_bin
+#
+# 			) macroman_general_ci (default)
+#
+# 		) swe7 (7bit Swedish) collations:
+#
+# 			) swe7_bin
+#
+# 			) swe7_swedish_ci (default)
+#
+# CENTRAL EUROPEAN CHARACTER SETS
+#
+# MySQL provides some support for character sets used in the Czech Republic,
+# Slovakia, Hungary, Romania, Slovenia, Croatia, Poland and Serbia (Latin)
+#
+# 		) cp1250 (Windows Central European) collations:
+#
+# 			) cp1250_bin
+#
+# 			) cp1250_coratian_ci
+#
+# 			) cp1250_czech_cs
+#
+# 			) cp1250_general_ci (default)
+#
+# 			) cp1250_polish_ci
+#
+# 		) cp852 (DOS Central European) collations:
+#
+# 			) cp852_bin
+#
+# 			) cp852_general_ci (default)
+#
+# 		) keybcs2 (DOS Kamenicky Czech-Slovak) collations:
+#
+# 			) keybcs2_bin
+#
+# 			) keybcs2_general_ci (default)
+#
+# 		) latin2 (ISO 8859-2 Central European) collations:
+#
+# 			) latin2_bin
+#
+# 			) latin2_croatian_ci
+#
+# 			) latin2_czech_cs
+#
+# 			) latin2_general_ci (default)
+#
+# 			) latin2_hungarian_ci
+#
+# 		) macce (Mac Central European) collations:
+#
+# 			) macce_bin
+#
+# 			) macce_general_ci (default)
+#
+# SOUTH EUROPEAN AND MIDDLE EAST CHARACTER SETS
+#
+# South European and Middle Eastern character sets supported by MySQL include Armenian,
+# Arabic, Georgian, Greek, Hebrew and Turkish.
+#
+# 		) armscii8 (ARMSCII-8 Armenian) collations:
+#
+# 			) armscii8_bin
+#
+# 			) armscii8_general_ci (default)
+#
+# 		) cp1256 (Windows Arabic) collations:
+#
+# 			) cp1256_bin
+#
+# 			) cp1256_general_ci (default)
+#
+# 		) geostd8 (GEOSTD8 Georgian) collations:
+#
+# 			) geostd8_bin
+#
+# 			) geostd8_general_ci (default)
+#
+# 		) greek (ISO 8859-7 Greek) collations:
+#
+# 			) greek_bin
+#
+# 			) greek_general_ci (default)
+#
+# 		) hebrew (ISO 8859-8 Hebrew) collations:
+#
+# 			) hebrew_bin
+#
+# 			) hebrew_general_ci (default)
+#
+# 		) latin5 (ISO 8859-9 Turkish) collations:
+#
+# 			) latin5_bin
+#
+# 			) latin5_turkish_ci (default)
+#
+# BALTIC CHARACTER SETS
+#
+# The Baltic character sets cover Estonian, latvian and Lithuanian languages.
+#
+# 		) cp1257 (Windows Baltic) collations:
+#
+# 			) cp1257_bin
+#
+# 			) cp1257_general_ci (default)
+#
+# 			) cp1257_lithuanian_ci
+#
+# 		) latin7 (ISO 8859-13 Baltic) collations:
+#
+# 			) latin7_bin
+#
+# 			) latin7_estonian_cs
+#
+# 			) latin7_general_ci (default)
+#
+# 			) latin7_general_cs
+#
+# CYRILLIC CHARACTER SETS
+#
+# The  Cyrllic character sets and collations are for use with Belarusian,
+# Bulgarian, Russian, Ukrainian, and Serbian (Cyrillic) languages.
+#
+# 		) cp1251 (Windows Cyrillic) collations:
+#
+# 			) cp1251_bin
+#
+# 			) cp1251_bulgarian_ci
+#
+# 			) cp1251_general_ci (default)
+#
+# 			) cp1251_general_cs
+#
+# 			) cp1251_ukrainian_ci
+#
+# 		) cp866 (DOS Russian) collations:
+#
+# 			) cp866_bin
+#
+# 			) cp866_general_ci (default)
+#
+# 		) koi8r (KOI8-R Relcom Russian) collations:
+#
+# 			) koi8r_bin
+#
+# 			) koi8r_general_ci (default)
+#
+# 		) koi8u (KOI8-U Ukranian) collations:
+#
+# 			) koi8u_bin
+#
+# 			) koi8u_general_ci (default)
+#
+# ASIAN CHARACTER SETS
+#
+# The Asian character sets that we support include Chinese, Japanese, Korean and Thai.
+#
+# These can be complicated. For example, the Chinese sets must allow for thousands of different
+# characters.
+#
+# See SECTION 10.10.7.1, "THE CP932 CHARACTER SET", for additional information about the cp932 and
+# sjis character sets.
+#
+# See SECTION 10.10.7.2, "THE GB 18030 CHARACTER SET", for additional information about character
+# set support for the Chinese National Standard GB 18030.
+#
+# For answers to some common questions and problems relating support for Asian character sets
+# in MySQL - see SECTION A. 11, "MySQL 8.0 FAQ: MySQL Chinese, Japanese, and Korean Character Sets"
+#
+# 		) big5 (Big5 Traditional Chinese) collations:
+#
+# 			) big5_bin
+#
+# 			) big5_chinese_ci (default)
+#
+# 		) cp932 (SJIS for Windows Japanese) collations:
+#
+# 			) cp932_bin
+#
+# 			) cp932_japanese_ci (default)
+#
+# 		) eucjpms (UJIS for Windows Japanese) collations:
+#
+# 			) eucjpms_bin
+#
+# 			) eucjpms_japanese_ci (default)
+#
+# 		) euckr (EUC-KR Korean) collations:
+#
+# 			) euckr_bin
+#
+# 			) euckr_korean_ci (default)
+#
+# 		) gb2312 (GB2312 Simplified Chinese) collations:
+#
+# 			) gb2312_bin
+#
+# 			) gb2312_chinese_ci (default)
+#
+# 		) gbk (GBK Simplified Chinese) collations:
+#
+# 			) gbk_bin
+#
+# 			) gbk_chinese_ci (default)
+#
+# 		) gb18030 (China National Standard GB18030) collations:
+#
+# 			) gb18030_bin
+#
+# 			) gb18030_chinese_ci (default)
+#
+# 			) gb18030_unicode_520_ci
+#
+# 		) sjis (Shift-JIS Japanese) collations:
+#
+# 			) sjis_bin
+#
+# 			) sjis_japanese_ci (default)
+#
+# 		) tis620 (TIS620 Thai) collations:
+#
+# 			) tis620_bin
+#
+# 			) tis620_thai_ci (default)
+#
+# 		) ujis (EUC-JP Japanese) collations:
+#
+# 			) ujis_bin
+#
+# 			) ujis_japanese_ci (default)
+#
+# The big5_chinese_ci collation sorts on number of strokes.
+#
+# 10.10.7.1 THE CP932 CHARACTER SET
+#
+# In MySQL, the sjis character set corresponds to the Shift_JIS character set defined by IANA,
+# which supports JIS X0201 and JIS X0208 characters.
+#
+# However, the meaning of "SHIFT JIS" as a descriptive term has become very vague and it often
+# includes the extensions to Shift_JIS that are defined by various vendors.
+#
+# For example, "SHIFT JIS" used in Japanese Windows environments is a Microsoft extension of
+# Shift_JIS and its exact name is Microsoft Windows Codepage : 932 or cp932
+#
+# IN addition to the characters supported by Shift_JIS, cp932 supports extension characters
+# such as NEC special characters, NEC selected - IBM extended characters, and IBM Selected characters.
+#
+# Many Japanese users have experienced problems using these extension characters.
+#
+# These problems stem from the following factors:
+#
+# 		) MySQL automatically converts character sets
+#
+# 		) Character sets are converted using Unicode (ucs2)
+#
+# 		) The sjis character set does not support the conversion of these extension characters.
+#
+# 		) There are several conversion rules from so-called "SHIFT JIS" to Unicode, and some characters
+# 			are converted to Unicode differently depending on the conversion rule.
+#
+# 			MySQL supports only one of these rules (described later)
+#
+# The MySQL cp932 character set is designed to solve tehse problems.
+#
+# Because MySQL supports character set conversion, it is important to separate IANA Shift_JIS and cp932
+# into two different character sets because they provide different conversion rules.
+#
+# HOW DOES CP932 DIFFER FROM SJIS
+#
+# The cp932 character set differs from sjis in the following ways:
+#
+# 		) cp932 supports NEC special characters, NEC selected - IBM extended characters, and IBM selected characters.
+#
+# 		) Some cp932 characters have two different code points, both of which converts to the same Unicode code point.
+#
+# 			When converting from Unicode back to cp932, one of the code points must be selected.
+# 			For this "round trip conversion", the rule recommended by Microsoft is used. 
+#
+# 			The conversion rule works like this:
+#
+# 				) If the character is in both JIS X 0208 and NEC special characters, use the code point of JIS X 0208
+#
+# 				) If the character is in both NEC special characters and IBM Selected characters, use the code point of NEC special characters.
+#
+# 				) If the character is in both IBM selected characters and NEC selected - IBM extended characters,
+# 					use the code point of IBM extended characters.
+#
+# 			The table shown at <link> provides information about the Unicode values of cp932 characters.
+#
+# 			For cp932 table entries with characters under which a four-digit number appears,
+# 			the number represents the corresponding Unicode (ucs2) encoding.
+#
+# 			For tables entries with an underlined two-digit value appears, there is a range of cp932 char values that
+# 			begin with those two digits.
+#
+# 			Clicking such a table entry takes you to a page that displays the Unicode value for each of the
+# 			cp932 character that begin with those digits.
+#
+# 			The following links are of special interest.
+#
+# 			They correspond to the encodings for the following sets of characters:
+#
+# 				) NEC special characters (lead byte 0x87):
+#
+# 					<link>
+#
+# 				) NEC selected - IBM extended characters (lead byte 0xED and 0xEE):
+#
+# 					<link>
+# 					<link>
+#
+# 				) IBM selected characters (lead byte 0xFA, 0xFB, 0xFC):
+#
+# 					<link>
+# 					<link>
+# 					<link>
+#
+# 		) cp932 supports conversion of user-defined characters in combination with eucjpms, and solves
+# 			the problems with sjis/ujis conversion.
+#
+# 			For details, please refer to <link>
+#
+# For some characters, conversion to and from ucs2 is different for sjis and cp932.
+#
+# The following tables illustrate these differences.
+#
+# Conversion to ucs2:
+#
+# 		sjis/cp932 Value 			sjis -> ucs2 Conversion 		cp932 -> ucs2 Conversion
+#
+# 		5C 							005C 									005C
+# 
+# 		7E 							007E 									007E
+#
+# 		815C 							2015 									2015
+#
+# 		815F 							005C 									FF3C
+#
+# 		8160 							301C 									FF5E
+#
+# 		8161 							2016 									2225
+#
+# 		817C 							2212 									FF0D
+#
+# 		8191 							00A2 									FFE0
+#
+# 		8192 							00A3 									FFE1
+#
+# 		81CA 							00AC 									FFE2
+#
+# Conversion from ucs2:
+#
+# 		ucs2 Value 					ucs2 -> sjis Conversion 		ucs2 -> cp932 Conversion
+#
+# 		005C 							815F 									5C
+#
+# 		007E 							7E 									7E
+#
+# 		00A2 							8191 									3F
+#
+# 		00A3 							8192 									3F
+#
+# 		00AC 							81CA 									3F
+#
+# 		2015 							815C 									815C
+#
+# 		2016 							8161 									3F
+#
+# 		2212 							817C 									3F
+#
+# 		2225 							3F 									8161
+#
+# 		301C 							8160 									3F
+#
+# 		FF0D 							3F 									817C
+#
+# 		FF3C 							3F 									815F
+#
+# 		FF5E 							3F 									8160
+#
+# 		FFE0 							3F 									8191
+#
+# 		FFE1 							3F 									8192
+#
+# 		FFE2 							3F 									81CA
+#
+# Users of any Japanese character sets should be aware that using --character-set-client-handshake
+# (or --skip-character-set-client-handshake) has an important effect.
+#
+# See earlier, under SECTION 5.1.7, "SERVER COMMAND OPTIONS"
+#
+# 10.10.7.2 THE GB18030 CHARACTER SET
+#
+# In MySQL, the gb18030 character set correspond to the "Chinese National Standard GB 18030-2005: information technology - chinese coded char set",
+# which is the official char set of the People's Republic of China (PRC)
+#
+# Characteristics of the MySQL gb18030 Character Set
+#
+# 		) Supports all code points defined by the GB 18030-2005 standard.
+#
+# 			Unassigned code points in the ranges (GB+8431A439, GB+90308130) and
+# 			(GB+E3329A36, GB+EF39EF39) are treated as '?' (0x3F).
+#
+# 			Conversion of unassigned code points return '?'
+#
+# 		) Supports UPPER and LOWER conversion for all GB18030 code points.
+#
+# 			Case folding defined by Unicode is also supported (based on CaseFolding-6.3.0.txt)
+#
+# 		) Supports Conversion of data to and from other character sets.
+#
+# 		) Supports SQL statements such as SET_NAMES
+#
+# 		) Supports comparison between gb18030 strings, and between gb18030 strings and strings of other
+# 			character sets.
+#
+# 			There is a conversion if strings have different character sets.
+#
+# 			Comparisons that include or ignore trailing spaces are also supported.
+#
+# 		) The private use area (U+E000, U+F8FF) in Unicode is mapped to gb18030.
+#
+# 		) There is no mapping between (U+D800, U+DFFF) and GB18030.
+#
+# 			Attempted conversion of code points in this range returns '?'
+#
+# 		) If an incoming sequence is illegal, an error or warning is returned.
+#
+# 			If an illegal sequence is used in CONVERT(), an error is returned.
+#
+# 			Otherwise, a warning is returned.
+#
+# 		) For consistency with utf8 and utf8mb4, UPPER is not supported for ligatures.
+#
+# 		) Searches for ligatures also match uppercase ligatures when using the gb18030_unicode_520_ci collation.
+#
+# 		) If a character has more than one uppercase character, the chosen uppercase character
+# 			is the one whose lowercase is the character itself.
+#
+# 		) The minimum multibyte length is 1 and the maximum is 4.
+#
+# 			The character set determines the length of a sequence using the first 1 or 2 bytes.
+#
+# SUPPORTED COLLATIONS
+#
+# 		) gb18030_bin: A binary collation.
+#
+# 		) gb18030_chinese_ci: The default collation, which supports Pinyin.
+#
+# 			SOrting of non-Chinese characters is based on the order of the original sort key.
+#
+# 			The original sort key is GB(UPPER(ch)) if UPPER(ch) exists.
+#
+# 			Otherwise, the original sort key is GB(ch). Chinese characters are sorted according to
+# 			the Pinyin collation defined in the Unicode Common Locale Data Repository (CLDR 24).
+#
+# 			Non-Chinese characters are sorted before Chinese characters with the exception of
+# 			GB+FE39FE39, which is the code point maximum.
+#
+# 		) gb18030_unicode_520_ci: A Unicode collation: Use this collation if you need to ensure that ligatures
+# 			are sorted correctly.
+#
+# THE BINARY CHARACTER SET
+#
+# The binary character set is the character set of bianry strings, which are sequences of bytes.
+#
+# The binary character set has one collation, also named binary.
+#
+# Comparison and sorting are based on numeric byte values.
+#
+# The effect is that lettercase and accent differences are significant in comparisons.
+# That is, the binary collation is case-sensitive and accent sensitive.
+#
+# 		SET NAMES 'binary';
+# 		SELECT CHARSET('abc'), COLLATION('abc');
+# 		+--------------------+-----------------------+
+# 		| CHARSET('abc') 		| COLLATION('abc') 		|
+# 		+--------------------+-----------------------+
+# 		| binary 				| binary 					|
+# 		+--------------------+-----------------------+
+#
+# 		SELECT 'abc' = 'ABC', 'a' = 'ä';
+# 		+---------------------+-----------------------+
+# 		| 'abc' = 'ABC' 	    | 'a' = 'ä' 				 |
+# 		+---------------------+-----------------------+
+# 		| 		0 					 | 		0 					 |
+# 		+---------------------+-----------------------+
+#
+# For information about the differences between the binary collation of the binary character set
+# and the _bin collations of nonbinary character sets, see SECTION 10.8.5, "THE BINARY COLLATION COMPARED TO _BIN COLLATIONS"
+#
+# To convert a string expression to a binary string, any of these constructs are equivalent:
+#
+# 		BINARY expr
+# 		CAST(expr AS BINARY)
+# 		CONVERT(expr USING BINARY)
+#
+# If expr is a character string literal, the _binary introducer may be used to designate it as a bianry string.
+# For example:
+#
+# 		_binary 'a'
+#
+# The _binary introducer is permitted for hexadecimal literals and bit-value literals as well, but uncalled for.
+#
+# Such literals are binary strings by default.
+#
+# For more information about introducers, see SECTION 10.3.8, "CHARACTER SET INTRODUCERS"
+#
+# 10.11 SETTING THE ERROR MESSAGE LANGUAGE
+#
+# By default, mysqld produces error messages in English, but they can be displayed
+# instead in any of several other languages: Czech, Danish, Dutch, Estonian, French,
+# German, Greek, Hungarian, Italian, Japanese, Korean, Norweigan, Norweigan-ny, Polish,
+# Portuguese, Romanian, Russian, Slovak, Spanish or Swedish.
+#
+# THis applies to messages the server writes to the error log and sends to clients.
+#
+# To select the language in which the server writes error messages, follow the instructions
+# in this section.
+#
+# For information about changing the character set for error messages (rather than the language),
+# see SECTION 10.6, "ERROR MESSAGE CHARACTER SET"
+#
+# For general information about configuring error logging, see SECTION 5.4.2, "THE ERROR LOG"
+#
+# The server searches for the error message file using these rules:
+#
+# 		) It looks for the file in a directory constructed from two system variable values,
+# 			lc_messages_dir and lc_messages, with the latter converted to a language name.
+#
+# 			Suppose that you start the server using this command:
+#
+# 				mysqld --lc_messages_dir=/usr/share/mysql --lc_messages=fr_FR
+#
+# 			in this case, Mysqld maps the locale fr_FR to the language french and looks for the
+# 			error file in the /usr/share/mysql/french directory.
+#
+# 			By default, the language files are located in the share/mysql/LANGUAGE directory under
+# 			the MySQL base directory.
+#
+# 		) If the message file cannot be found in the directory constructed as just described,
+# 			the server ignores the lc_messages value and uses only the lc_messages_dir value
+# 			as the location in which to look.
+#
+# 		) If the server cannot find the configured message file, it writes a message to the error log file
+# 			to indicate the problem and defaults to built-in English messages.
+#
+# The lc_messages_dir system variable can be set only at server startup and has only a global
+# read-only value at runtime.
+#
+# lc_messages can be set at server startup and has globlal and session values that can be 
+# modified at runtime.
+#
+# Thus, the error message language can be changed while the server is running, and each
+# client can have its own error message language by setting its session lc_messages value
+# to the desired locale name.
+#
+# FOr example, if the server is using the fr_FR locale for error messages,
+# a client can execute this statement to receive error messages in English:
+#
+# 		SET lc_messages = 'en_US';
+#
+# ADDING A CHARACTER SET
+#
+# THis section discusses the procedure for adding a character set to MySQL.
+# For proper procedure depends on whether the character set is simple or complex:
+#
+# 		) If the character set does not need special string collating routines for sorting
+# 			and does not need multibyte character support, it is simple.
+#
+# 		) IF the character set needs either of those features, it is complex.
+#
+# For example, greek and swe7 are simple character sets, whereas big5 and czech are complex.
+#
+# TO use the following instructions, you must have a MySQL source distrib.
+#
+# In the instructions, MYSET represents hte name of the char set that you want to add.
+#
+# 		1. Add a <charset> element for MYSET to the sql/share/charsets/Index.xml file
+#
+# 			Use the existing contents in the file as a guide to adding new contents.
+#
+# 			A partial listing for the latin1 <charset> element follows:
+#
+# 				<charset name="latin1">
+# 					<family>Western</family>
+# 					<description>cp1252 West European</description>
+# 					---
+# 					<collation name="latin1_swedish_ci" id="8" order="Finnish, Swedish">
+# 						<flag>primary</flag>
+# 						<flag>compiled</flag>
+#  				</collation>
+# 					<collation name="latin1_danish_ci" id="15" order="Danish"/>
+# 					---
+# 					<collation name="latin1_bin" id="47" order="Binary">
+# 						<flag>binary</flag>
+# 						<flag>compiled</flag>
+# 					</collation>
+# 					---
+# 				</charset>
+#
+# https://dev.mysql.com/doc/refman/8.0/en/adding-character-set.html
+#
