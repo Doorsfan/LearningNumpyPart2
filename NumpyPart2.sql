@@ -55,18 +55,18 @@ mysql> - is ready for a new query
 
 */
 
-SHOW DATABASES;
+#SHOW DATABASES;
 
 /* Covering some basics of Syntax interactions
 
 Do note - that if you do not yield the privleges or rights to view a database, it is not shown by this command. */
 
-USE world; 
+#USE world; 
 
 /* Use, akin to Quit - does not need a semicolon, as it's a special designation command. 
 It must be used on one line. */
 
-GRANT ALL ON world TO 'root'@'localhost';
+#GRANT ALL ON world TO 'root'@'localhost';
 
 /* Whilst granting full rights to the base Root user is not a wise move, this is done here to just illustrate the process */
 
@@ -76,16 +76,16 @@ GRANT ALL ON world TO 'root'@'localhost';
 
 /* Where of we can create tables as well, if we so wish */
 
-USE illustration;
+#USE illustration;
 
-SET sql_notes = 0;  
+#SET sql_notes = 0;  
 /* The above turns off storing and messaging in terms of warning messages 
 
 Meaning, if you run SHOW WARNINGS; - it won't have anything to show, even if any triggered, as it won't
 register them or catalog them. */
 
 /*In case of changing attributes, we can utilize ALTER_TABLE statements. */
-CREATE TABLE IF NOT EXISTS example (name VARCHAR(20), x_attribute INTEGER(10), y_attribute INTEGER(10));
+#CREATE TABLE IF NOT EXISTS example (name VARCHAR(20), x_attribute INTEGER(10), y_attribute INTEGER(10));
 
 
 /* In terms of the Create if not exists attribute, it mainly applies to checking for table existence. */
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS example (name VARCHAR(20), x_attribute INTEGER(10), y
 
 /*If we wish, ,we can denote to find out what the attributes of a Table is, with Describe. */
 
-DESCRIBE example;
+#DESCRIBE example;
 
 /* Little bit of a note about the Local notation in the following:
 
@@ -115,7 +115,7 @@ We can also utilize things akin to exec()
 As of such, we can adhere to this, by running the showing of secure_file_priv - to then write to that file or upload,
 as it's adhered to being safe. */
 
-SHOW VARIABLES LIKE "secure_file_priv";
+#SHOW VARIABLES LIKE "secure_file_priv";
 
 #LOAD DATA INFILE 'D:/loadintodb.txt' INTO TABLE example; NOT ALLOWED BECAUSE OF SAFETY PRIVS OF FOLDERINGS
 #Have to save to C:\ProgramData\MySQL\MySQL Server 8.0\Uploads\ \n
@@ -137,9 +137,9 @@ Need be, i will change this for upcoming repeated cases. */
 
 /* We can of course, commit to having insertions of tables as well. */
 
-DELETE FROM example; #Just clear out the Table
+#DELETE FROM example; #Just clear out the Table
 
-INSERT IGNORE INTO example VALUES ('Example_1', 10, 15);
+#INSERT IGNORE INTO example VALUES ('Example_1', 10, 15);
 #Etc. Also, a small difference between Insert and Load Data, is that Load Data represents NULL with /N
 #Whilst, if we wish to have NULL in terms of Insert, we can simply state it as NULL.
 
@@ -152,27 +152,27 @@ INSERT IGNORE INTO example VALUES ('Example_1', 10, 15);
 
 #Where of we can of course, specify this and performs updates etc.
 
-UPDATE example SET x_attribute = 30 WHERE name = 'Example_1';
+#UPDATE example SET x_attribute = 30 WHERE name = 'Example_1';
 #We can of course, modify more and update the conditions, involve operators etc.
 #We will cover that later.
 
 #SELECT * FROM example;
 
-INSERT IGNORE INTO example VALUES ('Example_2', 55, NULL);
-INSERT IGNORE INTO example VALUES ('Example_Two', 3, NULL);
-INSERT IGNORE INTO example VALUES ('Testiiiiiiiing', 3, NULL);
-INSERT IGNORE INTO example VALUES ('aaaaaaaaa', 3, NULL);
+#INSERT IGNORE INTO example VALUES ('Example_2', 55, NULL);
+#INSERT IGNORE INTO example VALUES ('Example_Two', 3, NULL);
+#INSERT IGNORE INTO example VALUES ('Testiiiiiiiing', 3, NULL);
+#INSERT IGNORE INTO example VALUES ('aaaaaaaaa', 3, NULL);
 
-INSERT IGNORE INTO example VALUES ('Some_Tricky', NULL, 1003);
-INSERT IGNORE INTO example VALUES ('Some_Thing', NULL, 55);
-INSERT IGNORE INTO example VALUES ('Some_Trick', NULL, 10000);
-INSERT IGNORE INTO example VALUES ('Some_Trick', NULL, 10000);
-INSERT IGNORE INTO example VALUES ('Some_Trick', NULL, 10000);
-INSERT IGNORE INTO example VALUES ('Some_Trick', NULL, 10000); 
-INSERT IGNORE INTO example VALUES ('Some_Trick', NULL, 10000);
+#INSERT IGNORE INTO example VALUES ('Some_Tricky', NULL, 1003);
+#INSERT IGNORE INTO example VALUES ('Some_Thing', NULL, 55);
+#INSERT IGNORE INTO example VALUES ('Some_Trick', NULL, 10000);
+#INSERT IGNORE INTO example VALUES ('Some_Trick', NULL, 10000);
+#INSERT IGNORE INTO example VALUES ('Some_Trick', NULL, 10000);
+#INSERT IGNORE INTO example VALUES ('Some_Trick', NULL, 10000); 
+#INSERT IGNORE INTO example VALUES ('Some_Trick', NULL, 10000);
 
 
-SELECT * FROM example WHERE name LIKE '%xam%';
+#SELECT * FROM example WHERE name LIKE '%xam%';
 
 #We can basically utilize different forms of Regex or pattern recognition applications akin to % denotations to showcase, anything that fits
 #along the designation of xam goes into the string.
@@ -187,15 +187,15 @@ SELECT * FROM example WHERE name LIKE '%xam%';
 #We can also utilize regex to locate for beginning and end, with ^ and $, where each is beginning/end respectively
 #SELECT * FROM example WHERE REGEXP_LIKE(name, '^E');
 
-SELECT * FROM example WHERE REGEXP_LIKE(name, 'k$'); #Ends with k
+#SELECT * FROM example WHERE REGEXP_LIKE(name, 'k$'); #Ends with k
 
-SELECT * FROM example WHERE REGEXP_LIKE(name, '^.{3,9}$'); #Checks a range of length of the name attribute from beginning to end, length interval of 3 to 9
+#SELECT * FROM example WHERE REGEXP_LIKE(name, '^.{3,9}$'); #Checks a range of length of the name attribute from beginning to end, length interval of 3 to 9
 
-SELECT DISTINCT name FROM example WHERE REGEXP_LIKE(name, '^.{3,9}$');
+#SELECT DISTINCT name FROM example WHERE REGEXP_LIKE(name, '^.{3,9}$');
 
 #We could keep compounding different operations to check for values, patterns etc.
 
-SELECT DISTINCT name, x_attribute FROM example WHERE x_attribute < 100 ORDER BY x_attribute ASC, name ASC;
+#SELECT DISTINCT name, x_attribute FROM example WHERE x_attribute < 100 ORDER BY x_attribute ASC, name ASC;
 
 #The ordering in terms of Descending and Ascending is a matter of a compounded stature where we can just throw on more and more
 #orders of operations in terms of integrations of Structure and differentiate how they should be partitioned.
@@ -203,24 +203,24 @@ SELECT DISTINCT name, x_attribute FROM example WHERE x_attribute < 100 ORDER BY 
 #If we were interested, we could ordane TIMESTAMPDIFF to integrate accessing of Date denotations akin to CURDATE()
 
 #For instance, in the documentation it is showcased as:
-SELECT name, birth, CURDATE(), TIMESTAMPDIFF(YEAR, birth, CURDATE()) AS age FROM pet;
+#SELECT name, birth, CURDATE(), TIMESTAMPDIFF(YEAR, birth, CURDATE()) AS age FROM pet;
 #
 # Where the mosti mportant part is just to denote the CURDATE() function and the TIMESTAMPDIFF() which interacts with date stamps
 #Computing a differential
 
-CREATE TABLE IF NOT EXISTS datestuff (name VARCHAR(20), age INTEGER(20), first_date DATE, second_date DATE);
+#CREATE TABLE IF NOT EXISTS datestuff (name VARCHAR(20), age INTEGER(20), first_date DATE, second_date DATE);
 
 #DELETE FROM datestuff;
-DELETE FROM datestuff;
+#DELETE FROM datestuff;
 
-INSERT IGNORE INTO datestuff VALUES ('Base_1', 100, '2018-10-10', CURDATE()); #Insert some basic date operations
-INSERT IGNORE INTO datestuff VALUES ('Base_2', 15, '2018-09-11', CURDATE()); 
-INSERT IGNORE INTO datestuff VALUES ('Base_3', NULL, '2018-05-11', CURDATE());
-INSERT IGNORE INTO datestuff VALUES ('Base_4', 5, '2011-01-11', CURDATE());
-INSERT IGNORE INTO datestuff VALUES ('Base_5', 100, NULL, CURDATE());  
+#INSERT IGNORE INTO datestuff VALUES ('Base_1', 100, '2018-10-10', CURDATE()); #Insert some basic date operations
+#INSERT IGNORE INTO datestuff VALUES ('Base_2', 15, '2018-09-11', CURDATE()); 
+#INSERT IGNORE INTO datestuff VALUES ('Base_3', NULL, '2018-05-11', CURDATE());
+#INSERT IGNORE INTO datestuff VALUES ('Base_4', 5, '2011-01-11', CURDATE());
+#INSERT IGNORE INTO datestuff VALUES ('Base_5', 100, NULL, CURDATE());  
 
-SELECT name AS variable_name, age AS x_variable, TIMESTAMPDIFF(MONTH, first_date, second_date) AS months_differing FROM datestuff 
-WHERE TIMESTAMPDIFF(MONTH, first_date, second_date) IS NOT NULL ORDER BY name; 
+#SELECT name AS variable_name, age AS x_variable, TIMESTAMPDIFF(MONTH, first_date, second_date) AS months_differing FROM datestuff 
+#WHERE TIMESTAMPDIFF(MONTH, first_date, second_date) IS NOT NULL ORDER BY name; 
 #As shown above, we can compute more and more "compounded" statements based on the Query Structure.
 #
 #The hiearchial principle of subcomposition in the query is based on the complexity of the Query, as we can chain the commands.
@@ -229,11 +229,11 @@ WHERE TIMESTAMPDIFF(MONTH, first_date, second_date) IS NOT NULL ORDER BY name;
 #We can subaccess the different dates by virtue of Month, Year, day, and intervals etc.
 
 #In terms of Truth values - we run with binary denotation of truth/false values
-SELECT first_date IS NOT NULL FROM datestuff; #0 denotes a False outcome, 1 is a True outcome
+#SELECT first_date IS NOT NULL FROM datestuff; #0 denotes a False outcome, 1 is a True outcome
 
 #As far as Operations of Regex goes, we can utilize Grep, vi and sed of which are extensions
 
-SELECT name, COUNT(*) FROM datestuff GROUP BY age; #Now, if we had different structures and different parts of which we wish to
+#SELECT name, COUNT(*) FROM datestuff GROUP BY age; #Now, if we had different structures and different parts of which we wish to
 #integrate - we can do so - by better sub partitioning in the pattern of different structure pieces.
 #To which we can perform count across a specific axis etc.
 
@@ -243,25 +243,25 @@ SELECT name, COUNT(*) FROM datestuff GROUP BY age; #Now, if we had different str
 #If the ONLY_FULL_GROUP_BY is not activated, the query is as if all the rows are a single group.
 #But the nature of the naming of each column is nondeterministic.
 
-CREATE TABLE IF NOT EXISTS secondtable (name VARCHAR(20), age INTEGER(20), misc VARCHAR(20) , third_date DATE);
+#CREATE TABLE IF NOT EXISTS secondtable (name VARCHAR(20), age INTEGER(20), misc VARCHAR(20) , third_date DATE);
 
-DELETE FROM secondtable;
+#DELETE FROM secondtable;
 
 
-INSERT IGNORE INTO secondtable VALUES ('SecondBase_1', 100, 'Example_1', CURDATE());
-INSERT IGNORE INTO secondtable VALUES ('SecondBase_2', 100, 'Example_2', CURDATE());
-INSERT IGNORE INTO secondtable VALUES ('SecondBase_3', 100, 'Example_3', CURDATE());
-INSERT IGNORE INTO secondtable VALUES ('SecondBase_4', 100, 'Example_4', CURDATE());
-INSERT IGNORE INTO secondtable VALUES ('SecondBase_5', 100, 'Example_5', CURDATE());
+#INSERT IGNORE INTO secondtable VALUES ('SecondBase_1', 100, 'Example_1', CURDATE());
+#INSERT IGNORE INTO secondtable VALUES ('SecondBase_2', 100, 'Example_2', CURDATE());
+#INSERT IGNORE INTO secondtable VALUES ('SecondBase_3', 100, 'Example_3', CURDATE());
+#INSERT IGNORE INTO secondtable VALUES ('SecondBase_4', 100, 'Example_4', CURDATE());
+#INSERT IGNORE INTO secondtable VALUES ('SecondBase_5', 100, 'Example_5', CURDATE());
 
 
 
 
 #We can access the hierarchy in terms of the databases with the class names and the sub attribute namings etc.
 
-SELECT illustration.datestuff.name as datestuff_name, illustration.secondtable.name as second_table_name,
-illustration.secondtable.age as cross_over_age
-FROM illustration.datestuff, illustration.secondtable WHERE illustration.datestuff.age = illustration.secondtable.age;
+#SELECT illustration.datestuff.name as datestuff_name, illustration.secondtable.name as second_table_name,
+#illustration.secondtable.age as cross_over_age
+#FROM illustration.datestuff, illustration.secondtable WHERE illustration.datestuff.age = illustration.secondtable.age;
 
 # The above causes the inherent pattern of querying across:
 # Cycle from every element on base table -> Cycle through across every element of target Table
@@ -299,79 +299,79 @@ FROM illustration.datestuff, illustration.secondtable WHERE illustration.datestu
 
 #Showcasing some basic structural composition of base integrations
 
-CREATE TABLE IF NOT EXISTS Shoes (
-	Size INT(4) UNSIGNED ZEROFILL DEFAULT '0000' NOT NULL, #The base it goes for is 0000, numeral designated will simply inject unto the beginning
-	owner  CHAR(20) 					   DEFAULT '' 		NOT NULL, #The base string appended to, is ''
-	price   DOUBLE(16,2) 				DEFAULT '0.00' NOT NULL, #The default in terms of Pricing is just a 0.00
-	PRIMARY KEY(Size, owner));                            #The primary keys bound to the table
+#CREATE TABLE IF NOT EXISTS Shoes (
+#	Size INT(4) UNSIGNED ZEROFILL DEFAULT '0000' NOT NULL, #The base it goes for is 0000, numeral designated will simply inject unto the beginning
+#	owner  CHAR(20) 					   DEFAULT '' 		NOT NULL, #The base string appended to, is ''
+#	price   DOUBLE(16,2) 				DEFAULT '0.00' NOT NULL, #The default in terms of Pricing is just a 0.00
+#	PRIMARY KEY(Size, owner));                            #The primary keys bound to the table
 
-CREATE TABLE IF NOT EXISTS People (
-	Age INT(4) UNSIGNED ZEROFILL DEFAULT '00' NOT NULL,
-	Name CHAR(20) 					  DEFAULT '' NOT NULL,
-	Last_Name CHAR(20) 			  DEFAULT '' NOT NULL,
-	PRIMARY KEY(Name, Last_Name));
+#CREATE TABLE IF NOT EXISTS People (
+#	Age INT(4) UNSIGNED ZEROFILL DEFAULT '00' NOT NULL,
+#	Name CHAR(20) 					  DEFAULT '' NOT NULL,
+#	Last_Name CHAR(20) 			  DEFAULT '' NOT NULL,
+#	PRIMARY KEY(Name, Last_Name));
 
-INSERT IGNORE INTO People VALUES
-	(30, 'Adrian', 'Markovich'), (50, 'Bonny', 'Taylor'), (60, 'Camille', 'Johnsonn'), (10, 'Zoe', 'Quinn'),
-	(15, 'Alexander', 'The Great'), (49, 'Alice', 'Cooper'), (100, 'Daniel', 'Markov'), (18, 'Alexander', 'The Great'),
-	(150, 'Daniel', 'Markov'); #Since Name and Last_Name are primary keys, they are implicitly Unique. I.e, duplications are ignored.
+#INSERT IGNORE INTO People VALUES
+#	(30, 'Adrian', 'Markovich'), (50, 'Bonny', 'Taylor'), (60, 'Camille', 'Johnsonn'), (10, 'Zoe', 'Quinn'),
+#	(15, 'Alexander', 'The Great'), (49, 'Alice', 'Cooper'), (100, 'Daniel', 'Markov'), (18, 'Alexander', 'The Great'),
+#	(150, 'Daniel', 'Markov'); #Since Name and Last_Name are primary keys, they are implicitly Unique. I.e, duplications are ignored.
 
 
-INSERT IGNORE INTO Shoes VALUES
-	(34, 'Adrian', 3.45), (33, 'Bonny', 5.99), (32, 'Camille', 12.55), (35, 'Quinn', 1.10),
-	(41, 'Alexander', 10.00), (44, 'Alice', 12.33), (43, 'Daniel', 23.31);
+#INSERT IGNORE INTO Shoes VALUES
+#	(34, 'Adrian', 3.45), (33, 'Bonny', 5.99), (32, 'Camille', 12.55), (35, 'Quinn', 1.10),
+#	(41, 'Alexander', 10.00), (44, 'Alice', 12.33), (43, 'Daniel', 23.31);
 	
-SELECT MAX(Size) AS Largest_Shoe_Size FROM Shoes;
+#SELECT MAX(Size) AS Largest_Shoe_Size FROM Shoes;
 
 #We can, if we so wish - denote to structure sub-queries of selectional structure.
 
-SELECT illustration.Shoes.Size AS size, illustration.Shoes.Price AS price, illustration.Shoes.owner AS owner_name FROM illustration.people, illustration.Shoes 
-WHERE illustration.people.name = illustration.Shoes.owner ORDER BY price LIMIT 2; #We can impose limits as well 
+#SELECT illustration.Shoes.Size AS size, illustration.Shoes.Price AS price, illustration.Shoes.owner AS owner_name FROM illustration.people, illustration.Shoes 
+#WHERE illustration.people.name = illustration.Shoes.owner ORDER BY price LIMIT 2; #We can impose limits as well 
 
-SELECT owner AS owner_name, size AS largest_size FROM Shoes ORDER BY size DESC LIMIT 1; #Find the person with the biggest shoe size
+#SELECT owner AS owner_name, size AS largest_size FROM Shoes ORDER BY size DESC LIMIT 1; #Find the person with the biggest shoe size
 
 #there is ways to circumvent the denotation of selecting the whole set and simply do a more specific Query in terms of Sorting and Grouping
 #Albeit, that is a more advanced partition.
 
 
-SELECT name, last_name, Age, size FROM People, Shoes WHERE name = illustration.Shoes.owner AND age % 5 = 0;
+#SELECT name, last_name, Age, size FROM People, Shoes WHERE name = illustration.Shoes.owner AND age % 5 = 0;
 #We can also involve operators in our selection of AND statements.
 
 #If we wish, we can implement further denotations in terms of assigned variables
 
 #Runs assignment from selected variables
-SELECT @min_size:=MIN(size), @max_size:=MAX(size) FROM Shoes;
+#SELECT @min_size:=MIN(size), @max_size:=MAX(size) FROM Shoes;
 
-SELECT * FROM Shoes WHERE size=@min_size OR size=@max_size; #Get all the columns that trigger on having the size of assigned variables, in a or fashion
+#SELECT * FROM Shoes WHERE size=@min_size OR size=@max_size; #Get all the columns that trigger on having the size of assigned variables, in a or fashion
 
 #In terms of creations of Tables - if we denote a References clause - that's a ignored section which only acts a indirecty way of comment or reminder.
 
 #If we were to search based on optimized standardization of Query parsing - We can use an OR, bound to a single key
 #Another way, is to do a Union between two Queries of Selects
 
-SELECT size FROM Shoes WHERE size > 10
-UNION
-SELECT owner FROM Shoes WHERE owner LIKE '%onn%';
+#SELECT size FROM Shoes WHERE size > 10
+#UNION
+#SELECT owner FROM Shoes WHERE owner LIKE '%onn%';
 #Kind of a poor example, but combines the two queries of performing where Size and owner is checked up on.
 
-CREATE TABLE IF NOT EXISTS purchased_ice_cream (name CHAR(20), price INT(4) UNSIGNED ZEROFILL, date_of_purchase DATE);
+#CREATE TABLE IF NOT EXISTS purchased_ice_cream (name CHAR(20), price INT(4) UNSIGNED ZEROFILL, date_of_purchase DATE);
 
 #Omit ignore into, to allow for duplications
-INSERT INTO purchased_ice_cream VALUES("Vanilla", 10, "2018-08-01");
-INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-08-02");
-INSERT INTO purchased_ice_cream VALUES("Strawberry", 20, "2017-07-03");
-INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-08-04");
-INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-08-05");
-INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-08-06");	
+#INSERT INTO purchased_ice_cream VALUES("Vanilla", 10, "2018-08-01");
+#INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-08-02");
+#INSERT INTO purchased_ice_cream VALUES("Strawberry", 20, "2017-07-03");
+#INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-08-04");
+#INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-08-05");
+#INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-08-06");	
 							
-INSERT INTO purchased_ice_cream VALUES("Caramell", 30, "2011-09-07");
-INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-02-08");
-INSERT INTO purchased_ice_cream VALUES("Strawberry", 20, "2015-03-09");
-INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2016-04-10");
-INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-06-11");
-INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2011-08-12");
+#INSERT INTO purchased_ice_cream VALUES("Caramell", 30, "2011-09-07");
+#INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-02-08");
+#INSERT INTO purchased_ice_cream VALUES("Strawberry", 20, "2015-03-09");
+#INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2016-04-10");
+#INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2018-06-11");
+#INSERT INTO purchased_ice_cream VALUES("Chocolate", 15, "2011-08-12");
 
-SELECT name, price, BIT_COUNT(BIT_OR(1<<DAY(date_of_purchase))) AS Unique_dates_of_purchase, COUNT(DAY(date_of_purchase)) AS amount_of_purchases FROM purchased_ice_cream GROUP BY name, price;
+#SELECT name, price, BIT_COUNT(BIT_OR(1<<DAY(date_of_purchase))) AS Unique_dates_of_purchase, COUNT(DAY(date_of_purchase)) AS amount_of_purchases FROM purchased_ice_cream GROUP BY name, price;
 #The above showcases that we can run Queries against amount of purchases, on what amount of different days, unique or not, etc.
 #We can of course also designate to be a factor of uniqueness to count in terms of BIT_COUNT, but we could also count by virtue of
 #other methods.
@@ -379,32 +379,32 @@ SELECT name, price, BIT_COUNT(BIT_OR(1<<DAY(date_of_purchase))) AS Unique_dates_
 #And we can, if we so wish - utilize Auto_Increment - which interplays so that it defaults to what value was designated last
 #based on insertion operations
 
-CREATE TABLE IF NOT EXISTS example_of_auto_increment(id INT(10) NOT NULL AUTO_INCREMENT,
-	name CHAR(30) NOT NULL,
-	x_attribute CHAR(30) DEFAULT '' NOT NULL,
-	y_attribute CHAR(30) DEFAULT '' NOT NULL,
-	PRIMARY KEY (id)
-);
+#CREATE TABLE IF NOT EXISTS example_of_auto_increment(id INT(10) NOT NULL AUTO_INCREMENT,
+#	name CHAR(30) NOT NULL,
+#	x_attribute CHAR(30) DEFAULT '' NOT NULL,
+#	y_attribute CHAR(30) DEFAULT '' NOT NULL,
+#	PRIMARY KEY (id)
+#);
 #When something is a Numerical akin to ID and we have auto_increment,
 #We do not need to have a default designation - as the handle in terms of defaulting is implicit
 #in designation to last numerical call or 0, depending on context.
 
-INSERT IGNORE INTO example_of_auto_increment (id, name, x_attribute) VALUES
-	(1, 'Shoe', 'Brown'),
-	(2, 'Pasta', 'Tasty'),
-	(3, 'Mug', 'Cheramic'),
-	(1001, 'Sickle', 'Ripping'),
-	(5, 'Frown', 'Sad'),
-	(100, 'Locks', 'Unbreakable'),
-	(10, 'Fox', 'Jumped over the Rice'),
-	(11, 'Box', 'Square');
+#INSERT IGNORE INTO example_of_auto_increment (id, name, x_attribute) VALUES
+#	(1, 'Shoe', 'Brown'),
+#	(2, 'Pasta', 'Tasty'),
+#	(3, 'Mug', 'Cheramic'),
+#	(1001, 'Sickle', 'Ripping'),
+#	(5, 'Frown', 'Sad'),
+#	(100, 'Locks', 'Unbreakable'),
+#	(10, 'Fox', 'Jumped over the Rice'),
+#	(11, 'Box', 'Square');
 
-INSERT INTO example_of_auto_increment (name) VALUES
-	('Shoe');
-INSERT INTO example_of_auto_increment (name) VALUES
-	('Shoe_box');
-INSERT INTO example_of_auto_increment (id, name) VALUES
-	(NULL,'Glove_box');
+#INSERT INTO example_of_auto_increment (name) VALUES
+#	('Shoe');
+#INSERT INTO example_of_auto_increment (name) VALUES
+#	('Shoe_box');
+#INSERT INTO example_of_auto_increment (id, name) VALUES
+#	(NULL,'Glove_box');
 #Simply runs auto-increment to reflect of where the last designated default handle was put in terms of Value designation
 #We can also designate Null values as auto_increment generation if NOT NULL has been designated.
 
@@ -412,19 +412,19 @@ INSERT INTO example_of_auto_increment (id, name) VALUES
 
 #We can further Enumerate structures by virtue of utilizing the MyISAM Engine designation of Tables.
 
-CREATE TABLE IF NOT EXISTS isam_example (
-	groupings ENUM('Shoe', 'Sock', 'Pants') NOT NULL,
-	id INT NOT NULL AUTO_INCREMENT,
-	color CHAR(30) NOT NULL,
-	PRIMARY KEY (groupings,id)
-) ENGINE=MyISAM;
+#CREATE TABLE IF NOT EXISTS isam_example (
+#	groupings ENUM('Shoe', 'Sock', 'Pants') NOT NULL,
+#	id INT NOT NULL AUTO_INCREMENT,
+#	color CHAR(30) NOT NULL,
+#	PRIMARY KEY (groupings,id)
+#) ENGINE=MyISAM;
 
-INSERT IGNORE INTO isam_example (groupings, color) VALUES
-	('Shoe', 'Brown'), ('Shoe', 'Green'), ('Shoe', 'Yellow'),
-	('Sock', 'Rainbow'), ('Sock', 'White'),
-	('Pants', 'Black'), ('Pants', 'Grey'),('Pants', 'Red'), ('Pants', 'Green');
+#INSERT IGNORE INTO isam_example (groupings, color) VALUES
+#	('Shoe', 'Brown'), ('Shoe', 'Green'), ('Shoe', 'Yellow'),
+#	('Sock', 'Rainbow'), ('Sock', 'White'),
+#	('Pants', 'Black'), ('Pants', 'Grey'),('Pants', 'Red'), ('Pants', 'Green');
 
-SELECT * FROM isam_example ORDER BY groupings, id;
+#SELECT * FROM isam_example ORDER BY groupings, id;
 
 #If we wish to configure the Apache logging format to adhere to MySQL's structure - we can do so by virtue of
 #putting the following into the Apache configuration file:
@@ -67594,5 +67594,2011 @@ SELECT * FROM isam_example ORDER BY groupings, id;
 # 					---
 # 				</charset>
 #
-# https://dev.mysql.com/doc/refman/8.0/en/adding-character-set.html
+# 			The <charset> element must list all the collations for the character set.
+# 			
+# 			These must include at least a binary collation and a default (primary) collation.
+# 			The default collation is often named using a suffix of general_ci (general, case insensitive).
+#
+# 			It is possible for the binary collation to be the default collation,
+# 			but usually they are different.
+#
+# 			The default collation should have a primary flag. The binary collation should have a binary flag.
+#
+# 			You must assign a unique ID number to each collation.
+#
+# 			The range of IDs from 1024 to 2047 is reserved for user-defined collations.
+# 			To find the maximum of the currently used collation IDs, use this query:
+#
+# 				SELECT MAX(ID) FROM INFORMATION_SCHEMA.COLLATIONS;
+#
+# 		2. This step depends on whether you are adding a simple or complex character set.
+#
+# 			A simple character set requires only a configuration file, whereas a complex character
+# 			set requires C source file that defines collation functions, multibyte functions, or both.
+#
+# 			For a simple character set, create a configuration file, MYSET.xml, that describes the
+# 			character set properties.
+#
+# 			Create this file in the sql/share/charsets directory. 
+# 			You can use a copy of latin1.xml as the basis for this file.
+#
+# 			The syntax for the file is very simple:
+#
+# 				) Comments are written as ordinary XML comments (<!-- text -->)
+#
+# 				) Words within <map> array elements are separated by arbitrary amounts of whitespace.
+#
+# 				) Each word within <map> array elements must be a number in hexadecimal format.
+#
+# 				) The <map> array element for the <ctype> element has 257 words.
+#
+# 					The other <map> array elements after that have 256 words.
+#
+# 					See SECTION 10.12.1, "CHARACTER DEFINITION ARRAYS"
+#
+# 				) For each collation listed in the <charset> element for the character set in
+# 					Index.xml, MYSET.xml must contain a <collation> element that defines the character
+# 					ordering.
+#
+# 			For a complex character set, create a C source file that describes the character set
+# 			properties and defines the support routines necessary to properly perform operations
+# 			on the character set:
+#
+# 				) Create the file ctype-MYSET.c in the strings directory.
+#
+# 					Look at one of the existing ctype-*.c files (such as ctype-big5.c) to see what
+# 					needs to be defined.
+#
+# 					The arrays in your file must have names like ctype_MYSET, to_lower_MYSET,
+# 					and so on.
+#
+# 					These correspond to the arrays for a simple character set.
+#
+# 					See SECTION 10.12.1, "CHARACTER DEFINITION ARRAYS"
+#
+# 				) For each <collation> element listed in the <charset> element for the character set
+# 					in Index.xml, the ctype-MYSET.c file must provide an implementation of the collation.
+#
+# 				) If the character set requires string collating functions, see SECTION 10.12.2, "STRING COLLATING SUPPORT FOR COMPLEX CHARACTER SETS"
+#
+# 				) If the character set requires multibyte character support, see SECTION 10.12.3, "MULTI-BYTE CHARACTER SUPPORT FOR COMPLEX CHARACTER SETS"
+#
+# 			3. Modify the configuration information. Use the existing configuration information as a guide to adding information
+# 				for MYSYS.
+#
+# 				The example here assumes that the character set has default and binary collations, but more lines are
+# 				needed if MYSET has additional collations.
+#
+# 					a. Edit mysys/charset-def.c, and "register" the collations for the new character set.
+#
+# 						Add these lines to the "declaration" section:
+#
+# 							#ifdef HAVE_CHARSET_MYSET
+# 							extern CHARSET_INFO my_charset_MYSET_general_ci;
+# 							extern CHARSET_INFO my_charset_MYSET_bin;
+# 							#endif
+#
+# 						Add these lines to the "registration" section:
+#
+# 							#ifdef HAVE_CHARSET_MYSET
+# 								add_compiled_collation(&my_charset_MYSET_general_ci);
+# 								add_compiled_collation(&my_charset_MYSET_bin);
+# 							#endif
+#
+# 					b. If the character set uses ctype-MYSET.c, edit strings/CMakeLists.txt and add
+# 						ctype-MYSET.c to the definition of the STRINGS_SOURCES variable.
+#
+# 					c. Edit cmake/character_sets.cmake:
+#
+# 						i. Add MYSET to the value of with CHARSETS_AVAILABLE in alphabetic order.
+#
+# 						ii. Add MYSET to the value of CHARSETS_COMPLEX in aplhabetic order.
+#
+# 							This is needed even for simple character sets, or CMake will not recognize
+# 							-DDEFAULT_CHARSET=MYSET
+#
+# 				4. Reconfigure, recompile and test.
+#
+# CHARACTER DEFINITION ARRAYS
+#
+# Each simple character set has a configuration file located in the sql/share/charsets directory.
+#
+# For a character set named MYSYS, the file is named MYSET.xml.
+#
+# It uses <map> array elements to list character set properties.
+#
+# <map> elements appear within these elements:
+#
+# 		) <ctype> defines attributes for each character.
+#
+# 		) <lower> and <upper> list the lowercase and uppercase characters.
+#
+# 		) <unicode> maps 8-bit character values to Unicode values.
+#
+# 		) <collation> elements indicate character ordering for comparison and sorting,
+# 			one element per collation.
+#
+# 			Binary collations need no <map> element because the character codes themselves provide the ordering.
+#
+# For a complex character set as implemented in a ctype-MYSET.c file in the strings directory,
+# there are corresponding arrays:
+#
+# 		ctype_MYSET[]
+#
+# 		to_lower_MYSET[]
+#
+# 		|
+# 		v etc.
+#
+# Not every complex char set has all of the arrays.
+#
+# See also the existing ctype-*.c files for examples.
+# See the CHARSET_INFO.txt file in the strings directory for additional information.
+#
+# Most of the arrays are indexed by character value and have 256 elements.
+# The <ctype> array is indexed by character value + 1 and has 257 elements.
+#
+# This is a legacy convention for handling EOF.
+#
+# <ctype> array elements are bit values.
+# Each element describes the attributes of a single character in the character set.
+#
+# Each attribute is associated with a bitmask, as defined in include/m_ctype.h:
+#
+# 		#define _MY_U 		01 			/* Upper case */
+# 		#define _MY_L 		02 			/* Lower case */
+# 		#define _MY_NMR 	04 			/* Numeral (digit) */
+# 		#define _MY_SPC  	010 			/* Spacing character */
+# 		#define _MY_PNT 	020 			/* Punctuation */
+# 		#define _MY_CTR 	040 			/* Control character */
+# 		#define _MY_B 		0100 			/* Blank */
+# 		#define _MY_X 		0200 			/* hexadecimal digit */
+#
+# The <ctype> value for a given character should be the union of the applicable bitmask values
+# that describe the character.
+#
+# For example, 'A' is an uppercase character (_MY_U) as well as a hexadecimal digit (_MY_X), so its
+# ctype value should be defined like this:
+#
+# 		ctype['A'+1] = _MY_U | _MY_X = 01 | 0200 = 0201
+#
+# The bitmask values in m_ctype.h are octal values, but the elements of the <ctype> array
+# MYSET.xml should be written as hexadecimal values.
+#
+# The <lower> and <upper> arrays hold the lowercase and uppercase characters corresponding
+# to each member of the character set.
+#
+# For example:
+#
+# 		lower['A'] should contain 'a'
+# 		upper['a'] should contain 'A'
+#
+# Each <collation> array indicates how characters should be ordered for comparison and sorting purposes.
+# MySQL sorts characters based on the values of this information.
+#
+# In some cases, this is the same as the <upper> array, which means that sorting is case-insensitive.
+#
+# For more complicated sorting rules (for complex character sets), see the discussion of string collating
+# in SECTION 10.12.2, "STRING COLLATING SUPPORT FOR COMPLEX CHARACTER SETS"
+#
+# 10.12.2 STRING COLLATING SUPPORT FOR COMPLEX CHARACTER SETS
+#
+# For a simple character set named MYSET, sorting rules are specified in the
+# MYSET.xml configuration file using <map> array elements within <collation> elements.
+#
+# If the sorting rules for your language are too complex to be handled with simple arrays,
+# you must define string collating functions in the ctype-MYSET.c source file in the
+# strings directory.
+#
+# The existing character sets provide the best documentation and examples to show how these
+# functions are implemented.
+#
+# Look at the ctype-*.c files in the strings directory, such as the files for the big5,
+# czech, gbk, sjis and tis160 character sets.
+#
+# Take a look at the MY_COLLATION_HANDLER structures to see how they are used.
+#
+# See also the CHARSET_INFO.txt file in the strings directory for additional information.
+#
+# 10.12.3 MULTI-BYTE CHARACTER SUPPORT FOR COMPLEX CHARACTER SETS
+#
+# If you want to add support for a new character set named MYSET that includes
+# multibyte characters, you must use multibyte character functions in the ctype-MYSET.c
+# source file in the strings directory.
+#
+# The existing character sets provide the best documentation and examples on how they are implemented.
+#
+# Look at the ctype-*.c files in the strings directory, such as the files for the 
+# euc_kr, gb2312, gbk, sjis and ujis character sets.
+#
+# Take a look at the MY_CHARSET_HANDLER structures to see how they are used.
+#
+# See also the CHARSET_INFO.txt file in the strings directory for additional information.
+#
+# ADDING A COLLATION TO A CHARACTER SET
+#
+# A collation is a set of rules that defines how to compare and sort character strings.
+# Each collation in MySQL belongs to a single character set.
+#
+# Every character set has at least one collation, and most have two or more collations.
+#
+# A collation orders characters based on weights. Each character in a character set maps to a 
+# weight.
+#
+# Characters with equal weights compare as equal, and characters with unequal weights compare
+# according to the relative magnitude of their weights.
+#
+# THe WEIGHT_STRING() function can be used to see the weights for the characters in a string.
+#
+# The value that it returns to indicate weights is a binary string, so it is convenient to use HEX(WEIGHT_STRING(str))
+# to display the weights in printable form.
+#
+# The following example shows that weights do not differ for lettercase for the letters
+# in 'AaBb' if it is a nonbinary case-insensitive string, but do differ if it is a binary string:
+#
+# 		SELECT HEX(WEIGHT_STRING('AaBb' COLLATE latin1_swedish_ci));
+# 		+-----------------------------------------------------------+
+# 		| HEX(WEIGHT_STRING('AaBb' COLLATE latin1_swedish_ci)) 		|
+# 		+-----------------------------------------------------------+
+# 		| 41414242 																	|
+# 		+-----------------------------------------------------------+
+#
+# 		SELECT HEX(WEIGHT_STRING(BINARY 'AaBb'));
+# 		+----------------------------------------+
+# 		| HEX(WEIGHT_STRING(BINARY 'AaBb')) 	  |
+# 		+----------------------------------------+
+# 		| 41614262 										  |
+# 		+----------------------------------------+
+#
+# MySQL supports several collation implementations, as discussed in SECTION 10.13.1, "COLLATION IMPLEMENTATION TYPES".
+#
+# Some of these can be added to MySQL without recompiling:
+#
+# 		) Simple collations for 8-bit character sets
+#
+# 		) UCA-based collations for Unicode character sets
+#
+# 		) Binary (xxx_bin) collations
+#
+# The following sections describe how to add collations of the first two types to existing character sets.
+#
+# All existing character sets already have a binary collation, so there is no
+# need here ot describe how to add one.
+#
+# Summary of the procedure for adding a new collation:
+#
+# 		1. Choose a collation ID
+#
+# 		2. Add configuration information that names the collation and describes the character-ordering rules.
+#
+# 		3. Restart the server.
+#
+# 		4. Verify that the collation is present
+#
+# The instructions here cover only collations that can be added without recompiling MysQL.
+#
+# To add a collation that does require recompiling (as implemented by means of functions
+# in a C source file), use the instructions in SECTION 10.12, "ADDING A CHARACTER SET".
+#
+# However, instead of adding all the information required for a complete character set,
+# just modify the appropriate files for an existing character set.
+#
+# That is, based on what is already present for the character set's current collations,
+# add data structures, functions and configuration information for the new collation.
+#
+# 		NOTE:
+#
+# 			If you modify an existing collation, that may affect the ordering of rows for indexes
+# 			on columns that use the collation.
+#
+# 			In this case, rebuild any such indexes to avoid problems such as incorrect query results.
+#
+# 			See SECTION 2.11.3, "REBUILDING OR REPAIRING TABLES OR INDEXES"
+#
+# ADDITIONAL RESOURCES
+#
+# ) The Unicode Collation Algorithm (UCA) spec -> <link>
+#
+# ) The Locale Data Markup Language (LDML) spec -> <link>
+#
+# 10.13.1 COLLATION IMPLEMENTATION TYPES
+#
+# MySQL implements several types of collations:
+#
+# Simple collations for 8-bit character sets
+#
+# This kind of collation is implemented using an array of 256 weights that
+# defines a one-to-one mapping from character codes to weights.
+#
+# latin1_swedish_ci is an example.
+#
+# It is a case-insensitive collation, so the uppercase and lowercase versions of a character
+# have the same weights and they compare as equal.
+#
+# 		SET NAMES 'latin1' COLLATE 'latin1_swedish_ci';
+# 		Query OK, 0 rows affected (0.01 sec)
+#
+# 		SELECT HEX(WEIGHT_STRING('a')), HEX(WEIGHT_STRING('A'));
+# 		+---------------------------+-------------------------+
+# 		| HEX(WEIGHT_STRING('a')) 	 | HEX(WEIGHT_STRING('A')) |
+# 		+---------------------------+-------------------------+
+# 		| 41 								 | 41 							|
+# 		+---------------------------+-------------------------+
+#
+# 		SELECT 'a' = 'A';
+# 		+-----------------+
+# 		| 'a' = 'A' 		|
+# 		+-----------------+
+# 		| 			1 			|
+# 		+-----------------+
+# 		1 row in set (0.12 sec)
+#
+# For implementation instructions, see SECTION 10.13.3, "ADDING A SIMPLE COLLATION TO AN 8-BIT CHARACTER SET"
+#
+# COMPLEX COLLATIONS FOR 8-BIT CHARACTER SETS
+#
+# This kind of collation is implemented using functions in a C source file that define how to order
+# characters, as described in SECTION 10.12, "ADDING A CHARACTER SET"
+#
+# COLLATIONS FOR NON-UNICODE MULTIBYTE CHARACTER SETS
+#
+# For this type of collation, 8-bit (single-byte) and multibyte characters are
+# handled differently.
+#
+# For 8-bit characters, character codes map to weights in case-insensitive fashion.
+#
+# (For example, the single-byte characters 'a' and 'A' both have a weight of 0x41)
+#
+# For multibyte characters, there are two types of relationship between character
+# codes and weights:
+#
+# 		) Weights equal character codes.
+#
+# 			sjis_japanese_ci is an example of this kind of collation.
+#
+# 			The multibyte character '<japanese char>' has a character code of 0x82C0,
+# 			and the weight is also 0x82C0
+#
+# 				CREATE TABLE t1
+# 					(c1 VARCHAR(2) CHARACTER SET sjis COLLATE sjis_japanese_ci);
+# 				Query OK, 0 rows affected (0.01 sec)
+#
+# 				INSERT INTO t1 VALUES ('a'), ('A'), (0x82C0);
+# 				Query OK, 3 rows affected (0.00 sec)
+# 				Records: 3 Duplicates: 0 Warnings: 0
+#
+# 				SELECT c1, HEX(c1), HEX(WEIGHT_STRING(c1)) FROM t1;
+# 				+--------+-----------+--------------------------------+
+# 				| c1 		| HEX(c1) 	| HEX(WEIGHT_STRING(c1)) 			|
+# 				+--------+-----------+--------------------------------+
+# 				| a 		| 61 			| 41 										|
+# 				| A 		| 41 			| 41 										|
+# 				| <char> | 82C0 		| 82C0 									|
+# 				+--------+-----------+--------------------------------+
+# 				3 rows in set (0.00 sec)
+#
+# 		) Character codes map one-to-one to weights, but a code is not necessarily equal
+# 			to the weight.
+#
+# 			gbk_chinese_ci is an example of this kind of collation.
+#
+# 			The multibyte character '<Japanese Char>', has a character code of 0x81B0 but
+# 			a weight of 0xC286.
+#
+# 			CREATE TABLE t1(c1 VARCHAR(2) CHARACTER SET gbk COLLATE gbk_chinese_ci);
+# 			Query OK, 0 rows affected (0.33 sec)
+#
+# 			INSERT INTO t1 VALUES ('a'), ('A'), (0x81B0);
+# 			Query OK, 3 rows affected (0.00 sec)
+# 			Records: 3 Duplicates: 0 Warnings: 0
+#
+# 			SELECT c1, HEX(c1), HEX(WEIGHT_STRING(c1)) FROM t1;
+# 			+-----+---------+-----------------------+
+# 			| c1  | HEX(c1) | HEX(WEIGHT_STRING(c1))|
+# 			+-----+---------+-----------------------+
+# 			| a 	| 61 		 | 41 						 |
+# 			| A 	| 41 		 | 41 						 |
+# 			| * 	| 81B0 	 | C286 						 |
+# 			+-----+---------+-----------------------+
+# 			3 rows in set (0.00 sec)
+#
+# For implementation instructions, see SECTION 10.12, "ADDING A CHARACTER SET"
+#
+# Collations for Unicode multibyte character sets
+#
+# Some of these collations are based on the Unicode Collation Algorithm (UCA), others are not.
+#
+# Non-UCA collations have a one-to-one mapping from character code to weight.
+# In MySQL, such collations are case insensitive and accent insensitive.
+#
+# utf8_general_ci is an example: 'a', 'A', 'À', and 'á' each have different character codes
+# but all have a weight of 0x0041 and compare as equal.
+#
+# 		SET NAMES 'utf8' COLLATE 'utf8_general_ci';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		CREATE TABLE t1 (c1 CHAR(1) CHARACTER SET UTF8 COLLATE utf8_general_ci);
+# 		Query OK, 0 rows affected (0.01 sec)
+#
+# 		INSERT INTO t1 VALUES ('a'),('A'),('À'), ('á');
+# 		Query OK, 4 rows affected (0.00 sec)
+# 		Records: 4 Duplicates: 0 Warnings: 0
+#
+# 		SELECT c1, HEX(c1), HEX(WEIGHT_STRING(c1)) FROM t1;
+# 		+----+--------+-----------------------+
+# 		| c1 | HEX(c1)| HEX(WEIGHT_STRING(c1))|
+# 		+----+--------+-----------------------+
+# 		| a  | 61 	  | 0041 					  |
+# 		| A  | 41 	  | 0041 					  |
+# 		| À  | C380   | 0041 					  |
+# 		| á  | C3A1   | 0041 					  |
+# 		+----+--------+-----------------------+
+# 		4 rows in set (0.00 sec)
+#
+# UCA-based collations in MySQL have these properties:
+#
+# 		) If a character has weights, each weight uses 2 bytes (16 bits)
+#
+# 		) A character may have zero weights (or an empty weight).
+#
+# 			In this case, the character is ignorable.
+#
+# 			Example: "U+0000 NULL" does not have a weight and is ignorable.
+#
+# 		) A character may have one weight. Example: 'a' has a weight of 0x0E33
+#
+# 			SET NAMES 'utf8' COLLATE 'utf8_unicode_ci';
+# 			Query OK, 0 rows affected (0.05 sec)
+#
+# 			SELECT HEX('a'), HEX(WEIGHT_STRING('a'));
+# 			+---------+-------------------------+
+# 			| HEX('a')| HEX(WEIGHT_STRING('a')) |
+# 			+---------+-------------------------+
+# 			| 61 		 | 0E33 							|
+# 			+---------+-------------------------+
+# 			1 row in set (0.02 sec)
+#
+# 		) A character may have many weights. This is an expansion.
+# 			Example: The German letter '[german s]' (SZ ligature, or SHARP S) has a weight of 0x0FEA0FEA
+#
+# 			SET NAMES 'utf8' COLLATE 'utf8_unicode_ci';
+# 			Query OK, 0 rows affected (0.11 sec)
+
+# 			SELECT HEX('[german s]'), HEX(WEIGHT_STRING('[german s]'));
+# 			+------------------+---------------------------------+
+# 			| HEX('[german s]')| HEX(WEIGHT_STRING('[german s]'))|
+# 			+------------------+---------------------------------+
+# 			| C39F 				 | 0FEA0FEA 							  |
+# 			+------------------+---------------------------------+
+# 			1 row in set (0.00 sec)
+#
+# 		) Many characters may have one weight. This is a contraction.
+#
+# 			Example: 'ch' is a single letter is a single letter in Czech
+# 			and has a weight of 0x0EE2
+#
+# 			SET NAMES 'utf8' COLLATE 'utf8_czech_ci';
+# 			Query OK, 0 rows affected (0.09 sec)
+#
+# 			SELECT HEX('ch'), HEX(WEIGHT_STRING('ch'));
+# 			+--------------+------------------------------+
+# 			| HEX('ch') 	| HEX(WEIGHT_STRING('ch')) 	 |
+# 			+--------------+------------------------------+
+# 			| 6368 			| 0EE2 								 |
+# 			+--------------+------------------------------+
+# 			1 row in set (0.00 sec)
+#
+# A many-characters-to-many-weights mapping is also possible (this is contraction with expaison),
+# but it is not supported by MySQL.
+#
+# For implementation instructions, for a non-UCA collation, see Section 10.12, "ADDING A CHARACTER SET"
+#
+# For a UCA collation, see SECTION 10.13.4, "Adding a UCA Collation to a Unicode Character Set"
+#
+# MISCELLANEOUS COLLATIONS
+#
+# There are also a few collations that do not fall into any of the previous categories.
+#
+# 10.13.2 CHOOSING A COLLATION ID
+#
+# Each collation must have a unique ID.
+# To add a collation, you must choose an ID value that is not currently used.
+#
+# MySQL supports two-byte collation IDs. The range of IDs from 1024 to 2047
+# is reserved for user-defined collations.
+#
+# The collation ID that you choose will appear in these contexts:
+#
+# 		) The ID column of the INFORMATION_SCHEMA.COLLATIONS table
+#
+# 		) The Id column of SHOW_COLLATION output
+#
+# 		) The charsetnr member of the MYSQL_FIELD C API data structure.
+#
+# 		) The number member of the MY_CHARSET_INFO data structure returned by the mysql_get_character_set_info()
+# 			C API function.
+#
+# To determine the largest currently used ID, issue the following statement:
+#
+# 		SELECT MAX(ID) FROM INFORMATION_SCHEMA.COLLATIONS;
+# 		+----------+
+# 		| MAX(ID)  |
+# 		+----------+
+# 		| 210 	  |
+# 		+----------+
+#
+# To display a list of all currently used IDs, issue this statement:
+#
+# 		SELECT ID FROM INFORMATION_SCHEMA.COLLATIONS ORDER BY ID;
+# 		+---------+
+# 		| ID 		 |
+# 		+---------+
+# 		| 		1 	 |
+# 		| 		2   |
+# 		|   ---   |
+# 		| 	  52   |
+# 		| 	  53   |
+# 		| 	  57   |
+# 		| 	  58   |
+# 		| 	 ---   |
+# 		| 	  98   |
+# 		| 	  99   |
+# 		|   128   |
+# 		| 	 129 	 |
+# 		| 	 ---   |
+# 		|   210   |
+# 		+---------+
+#
+# WARNING:
+#
+# 		Before upgrading, you should save the configuration files that you change.
+#
+# 		If you upgrade in place, the process will replace your modified files.
+#
+# 10.13.3 ADDING A SIMPLE COLLATION TO AN 8-BIT CHARACTER SET
+#
+# This section describes how to add a simple collation for an 8-bit character set by writing
+# the <collation> elements associated with a <charset> character set description in the
+# MySQL Index.xml file.
+#
+# The procedure described here does not require recompiling MySQL.
+#
+# The example adds a collation named latin1_test_ci to the latin1 character set.
+#
+# 		1. Choose a collation ID, as shown in SECTION 10.13.2, "CHOOSING A COLLATION ID". The following steps use an ID of 1024
+#
+# 		2. Modify the Index.xml and latin1.xml configuration files.
+#
+# 			These files are located in the directory named by the character_sets_dir system variable.
+#
+# 			You can check the variable value as follows, although the path name might be different
+# 			on your system:
+#
+# 				SHOW VARIABLES LIKE 'character_sets_dir';
+# 				+--------------------+----------------------------------------+
+# 				| Variable_name 		| Value 											  |
+# 				+--------------------+----------------------------------------+
+# 				| character_sets_dir | /user/local/mysql/share/mysql/charsets/|
+# 				+--------------------+----------------------------------------+
+#
+# 		3. Choose a name for the collation and list it in the Index.xml file
+#
+# 			Find the <charset> element for the character set to which the collation is being
+# 			added, and a <collation> element that indicates the collation name and ID, to associate
+# 			the name with the ID.
+#
+# 			For example:
+#
+# 				<charset name="latin1">
+# 					---
+# 					<collation name="latin1_test_ci" id="1024"/>
+# 					---
+# 				</charset>
+#
+# 		4. In the latin1.xml configuration file, add a <collation> element that names the collation
+# 			and that contains a <map> element that defines a character code-to-weight mapping table
+# 			for character codes 0 to 255.
+#
+# 			Each value within the <map> element must be a number in hexadecimal format.
+#
+# 			<collation name="latin1_test_ci">
+# 			<map>
+# 			00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
+# 			10 11 -> etc.
+# 			|
+# 			v
+# 			etc.		
+# 			</map>
+# 			</collation>
+#
+# 		5. Restart the server and use this statement to verify that the collation is present:
+#
+# 			SHOW COLLATION WHERE Collation = 'latin1_test_ci';
+# 			+--------------------+-------------+----------+--------------+------------+----------------+
+# 			| Collation 			| Charset 	  | Id 		 | Default 		 | Compiled   | Sortlen 		 |
+# 			+--------------------+-------------+----------+--------------+------------+----------------+
+# 			| latin1_test_ci 		| latin1 	  | 1024 	 | 				 | 			  | 		1 			 |
+# 			+--------------------+-------------+----------+--------------+------------+----------------+
+#
+# 10.13.4 ADDING A UCA COLLATION TO A UNICODE CHARACTER SET
+#
+# This section describes how to add a UCA collation for a Unicode character set by writing the <collation>
+# element within a <charset> character set description in the MySQL Index.xml file
+#
+# The procedure described here does not require recompiling MySQL.
+#
+# It uses a subset of the Locale Data Markup Language (LDML) specification, which is available
+# at <link>
+#
+# With this method, you need not define the entire collation.
+#
+# Instead, you begin with an existing "base" collation and describe the new collation
+# in terms of how it differs from the base collation.
+#
+# The following table lists the base collations of the Unicode character sets for which
+# UCA collations can be defined.
+#
+# It is not possible to create a user-defined UCA collations for utf16le; there is no utf16le_unicode_ci
+# collation that would serve as the basis of such collations.
+#
+# TABLE 10.4 MySQL CHARACTER SETS AVAILABLE FOR USER-DEFINED UCA COLLATIONS
+#
+# 	Character Set 		Base Collation
+# +---------------+-----------------+
+# | utf8 			| utf8_unicode_ci |
+# | ucs2 			| ucs2_unicode_ci |
+# | utf16 			| utf16_unicode_ci|
+# | utf32 			| utf32_unicode_ci|
+# +---------------+-----------------+
+#
+# THe following sections show how to add a collation that is defined using LDML syntax, and
+# provide a summary of LDML rules supported in MySQL.
+#
+# 10.13.4.1 DEFINING A UCA COLLATION USING LDML SYNTAX
+#
+# To add a UCA collation for a Unicode character set without recompiling MySQL, use the following
+# procedure.
+#
+# If you are unfamiliar with the LDML rules used to describe the collations sort characteristics,
+# see SECTION 10.13.4.2, "LDML SYNTAX SUPPORTED IN MYSQL"
+#
+# The example adds a collation named utf8_phone_ci to the utf8 character set.
+#
+# The collation is designed for a scenario involving a Web app for which users post
+# their names and phone numbers.
+#
+# The numbers can be given in very different formats:
+#
+# 		+7-12345-67
+# 		+7-12-345-67
+# 		+7 12 345 67
+# 		+7 (12) 345 67
+# 		+71234567
+#
+# The problem raised by dealing with these kinds of values is that the varying permissible
+# formats make searching for a specific phone number very difficult.
+#
+# The solution is to define a new collation that reorders punctuation characters, making them ignorable.
+#
+# 		1. Choose a collation ID, as shown in SECTION 10.13.2, "CHOOSING A COLLATION ID". The following steps use an ID of 1029
+#
+# 		2. To modify the Index.xml configuration file.
+#
+# 			THis file is located in the directory named by the character_sets_dir system variable.
+#
+# 			YOu can check the variable value as follows, although the path name might
+# 			be different on your system:
+#
+# 				SHOW VARIABLES LIKE 'character_sets_dir';
+# 				+------------------------+----------------------------------------+
+# 				| Variable_name 			 | Value 										   |
+# 				+------------------------+----------------------------------------+
+# 				| character_sets_dir 	 | /user/local/mysql/share/mysql/charsets/|
+# 				+------------------------+----------------------------------------+
+#
+# 		3. Choose a name for the collation and list it in the Index.xml file.
+#
+# 			In addition, you'll need to provide the collation ordering rules.
+#
+# 			Find the <charset> element for the character set to which the collation is being added,
+# 			and add a <collation> element that indicates the collation name and ID, to associate
+# 			the name with the ID.
+#
+# 			Within the <collation> element, provide a <rules> element containing the ordering rules:
+#
+# 				<charset name="utf8">
+# 					---
+# 					<collation name="utf8_phone_ci" id="1029">
+# 						<rules>
+# 							<reset>\u0000</reset>
+# 							<i>\u0020</i> <!-- space -->
+# 							<i>\u0028</i> <!-- left paranthesis -->
+# 							<i>\u0029</i> <!-- right paranthesis -->
+# 							<i>\u002B</i> <!-- plus -->
+# 							<i>\u002D</i> <!-- hyphen -->
+# 						</rules>
+# 					</collation>
+# 					---
+# 				</charset>
+#
+# 		4. If you want a similar collation for other Unicode character sets, add other <collation> elements.
+#
+# 			For example, to define ucs2_phone_ci, add a <collation> element to the <charset name="ucs2"> element.
+#
+# 			Remember that each collation must have its own unique ID.
+#
+# 		5. Restart the server and use this statement to verify that the collation is present:
+#
+# 				SHOW COLLATION WHERE Collation = 'utf8_phone_ci';
+# 				+--------------------+-------------+------+--------------+------------+------------+
+# 				| Collation 			| Charset 	  | Id   | Default 	   | Compiled 	 | Sortlen    |
+# 				+--------------------+-------------+------+--------------+------------+------------+
+# 				| utf8_phone_ci 		| utf8 		  | 1029 | 				   | 				 | 		8    |
+# 				+--------------------+-------------+------+--------------+------------+------------+
+#
+# Now test the collation to make sure that it has the desired properties.
+#
+# Create a table containing some sample phone numbers using the new collation:
+#
+# 		CREATE TABLE phonebook (
+# 			name VARCHAR(64),
+# 			phone VARCHAR(64) CHARACTER SET utf8 COLLATE utf8_phone_ci
+# 		);
+# 		Query OK, 0 rows affected (0.09 sec)
+#
+# 		INSERT INTO phonebook VALUES ('Svoj', '+7 912 800 80 02');
+# 		Query OK, 1 row affected (0.00 sec)
+#
+# 		INSERT INTO phonebook VALUES ('Hf', '+7 (912) 800 80 04');
+# 		Query OK, 1 row affected (0.00 sec)
+#
+# 		INSERT INTO phonebook VALUES ('Bar', '+7 912-800-80-01');
+# 		Query OK, 1 row affected (0.00 sec)
+#
+# 		etc.
+#
+# Run some queries to see whether the ignored punctuation characters are in fact ignored
+# for comparison and sorting:
+#
+# 		SELECT * FROM phonebook ORDER BY phone;
+# 		+----------+--------------------------+
+# 		| name 	  | Phone 						  |
+# 		+----------+--------------------------+
+# 		| Sanja    | +380 (912) 8008005 		  |
+# 		| Bar 	  | +7-912-800-80-01 		  |
+# 		etc.
+#
+# 		5 rows in set (0.00 sec)
+#
+# 		SELECT * FROM phonebook WHERE phone='+7(912)800-80-01';
+# 		+--------+-------------------+
+# 		| name   | phone 				  |
+# 		+--------+-------------------+
+# 		| Bar    | 7-912-800-80-01   |
+# 		+--------+-------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		SELECT * FROM phonebook WHERE phone='79128008001';
+# 		+--------+-------------------+
+# 		| name   | phone 				  |
+# 		+--------+-------------------+
+# 		| Bar 	| +7-912-800-80-01  |
+# 		+--------+-------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		SELECT * FROM phonebook WHERE phone='7 9 1 2 8 0 0 8 0 0 1';
+# 		+--------+-------------------+
+# 		| name 	| phone 				  |
+# 		+--------+-------------------+
+# 		| Bar 	| +7-912-800-80-01  |
+# 		+--------+-------------------+
+# 		1 row in set (0.00 sec)
+#
+# 10.13.4.2 LDML SYNTAX SUPPORTED IN MYSQL
+#
+# This section describes the LDML syntax that MySQL recognizes.
+#
+# This is a subset of the syntax described in the LDML specification available at <link>,
+# which should be consulted for further information.
+#
+# MySQL recognizes a large enough subset of the syntax that, in many cases, it is possible
+# to download a collation definition from the Unicode Common Locale Data Repository and paste
+# the relevant part (that is, the part between the <rules> and </rules> tags) into the MysQL
+# Index.xml file.
+#
+# The rules described here are all supported except that character sorting occurs only at the
+# primary leve.
+#
+# Rules that specify differences at secondary or higher sort levels are recognized (and thus can
+# be included in collation definitions) but are treated as equality at the primary level.
+#
+# The MySQL server generates diagnostics when it finds problems while parsing the Index.xml file.
+# See SECTION 10.13.4.3, "DIAGNOSTICS DURING INDEX.XML PARSING".
+#
+# CHARACTER REPRESENTATION
+#
+# Characters named in LDML rules can be written literally or in \unnnn format, where nnnn is the
+# hexadecimal Unicode code point value.
+#
+# For example, A and á can be written literally or as \u0041 and \u00E1.
+#
+# Within hexadecimal values, the digits A through F are not case-sensitive;
+# \u00E1 and \u00e1 are equivalent.
+#
+# For UCA 4.0.0 collations, hexadecimal notation can be used only for characters in the
+# Basic Multilingual Plane, not for characters outside the BMP range of 0000 to FFFF.
+#
+# For UCA 5.2.0 collations, the hexadecimal notation can be used for any character.
+#
+# THe Index.xml file itself should be written using UTF-8 encoding
+#
+# SYNTAX RULES
+#
+# LDML has reset rules and shift rules to specify character ordering.
+#
+# Orderings are given as a set of rules that begin with a reset rule that establishes
+# an anchor point, followed by shift rules that indicate how characters sort relative
+# to the anchor point. 
+#
+# 		) A <reset> rule does not specify any ordering in and of itself.
+#
+# 			INstead, it "resets" the ordering for subsequent shift rules to cause them to
+# 			be taken in relation to a given character.
+#
+# 			Either of hte following rules resets subsequent shift rules to be taken in relation
+# 			to the letter 'A':
+#
+# 				<reset>A</reset>
+#
+# 				<reset>\u0041</reset>
+#
+# 		) The <p>, <s>, and <t> shift rules define primary, secondary and tertiary differences
+# 			of a character from another character::
+#
+# 			) Use primary differences to distinguish separate letters.
+#
+# 			) Use secondary differences to distinguish accent variations.
+#
+# 			) Use tertiary differences to distinguish lettercase variations.
+#
+# 			Either of these rules specify a primary shift rule for the 'G' character:
+#
+# 				<p>G</p>
+#
+# 				<p>\u0047</p>
+#
+# 		) The <i> shift rule indicates that one character sorts identically to another.
+#
+# 			The following rules cause 'b' to sort the same as 'a':
+#
+# 				<reset>a</reset>
+# 				<i>b</i>
+#
+# 		) Abbreviated shift syntax specifies multiple shift rules using a single pair of tags.
+#
+# 			The following table shows the correspondence between abbreviated syntax rules and
+# 			the equivalent nonabbreviated rules.
+#
+# 			TABLE 10.5 ABBREVIATED SHIFT SYNTAX
+#
+# 			ABBREVIATED SYNTAX 		NONABBREVIATED SYNTAX
+#
+# 			<pc>xyz</pc> 				<p>x</p><p>y</p><p>z</p>
+# 			<sc>xyz</sc> 				<s>x</s><s>y</s><s>z</s>
+# 			<tc>xyz</tc> 				<t>x</t><t>y</t><t>z</t>
+# 			<ic>xyz</ic> 				<i>x</i><i>y</i><i>z</i>
+#
+# 		) An expansion is a reset rule that establishes an anchor point for a multiple-character sequence.
+# 			MySQL supports expansions to 2 to 6 characters long.
+#
+# 			The following rules put 'z' greater at the primary level than the sequence
+# 			of three characters 'abc':
+#
+# 				<reset>abc</reset>
+# 				<p>z</p>
+#
+# 		) A contraction shift is a shift rule that sorts a multiple-character sequence.
+# 			MySQL supports contractions 2 to 6 characters long.
+#
+# 			The following rules put the sequence of three characters 'xyz' greater at
+# 			primary level than 'a':
+#
+# 				<reset>a</reset>
+# 				<p>xyz</p>
+#
+# 		) Long expansions and long contractions can be used together.
+#
+#			These rules put the sequence of three characters 'xyz' greater at the
+# 			primary level than the sequence of three characters 'abc':
+#
+# 				<reset>abc</reset>
+# 				<p>xyz</p>
+#
+# 		) Normal expansion syntax uses <x> plus <extend> elements to specify an expansion.
+#
+# 			The following rules put the character 'k' greater at secondary level than the 			 
+# 			sequence 'ch'.
+#
+# 			That is, 'k' behaves as if it expands to a character after 'c' followed by 'h':
+#
+# 				<reset>c</reset>
+# 				<x><s>k</s><extend>h</extend></x>
+#
+# 			This syntax permits long sequences. These rules sort the sequence 'ccs' greater
+# 			at the tertiary level than the sequence 'cscs':
+#
+# 				<reset>cs</reset>
+# 				<x><t>ccs</t><extend>cs</extend></x>
+#
+# 			The LDML specification describes normal expansion syntax as "tricky". See that spec for details.
+#
+# 		) Previous context syntax uses <x> plus <context> elements to specify that the context before
+# 			a character affects how it sorts.
+#
+# 			The following rules put '-' greater at the secondary level than 'a',
+# 			but only when '-' occurs after 'b':
+#
+# 				<reset>a</reset>
+# 				<x><context>b</context><s>-</s></x>
+#
+# 		) Previous context syntax can include the <extend> element.
+#
+# 			These rules put 'def' greater at the primary level than 'aghi', but only when
+# 			'def' comes after 'abc':
+#
+# 				<reset>a</reset>
+# 				<x><context>abc</context><p>def</p><extend>ghi</extend></x>
+#
+# 		) Reset rules permit a before attribute. Normally, shift rules after a reset rule indicate characters
+# 			that sort after the reset character.
+#
+# 			Shift rules after a reset rule that has the before attribute indicate characters that
+# 			sort before the reset character.
+#
+# 			The following rules put the character 'b' immediately before 'a' at the primary level:
+#
+# 				<reset before="primary">a</reset>
+# 				<p>b</p>
+#
+# 			Permissible before attribute values specify the sort level by name or the equivalent numeric value:
+#
+# 				<reset before="primary">
+# 				<reset before="1">
+#
+# 				<reset before="secondary">
+# 				<reset before="2">
+#
+# 				<reset before="tertiary">
+# 				<reset before="3">
+#
+# 		) A reset rule can name a logical reset position rather than a literal character:
+#
+# 				<first_tertiary_ignorable/>
+# 				<last_tertiary_ignorable/>
+# 				<first_secondary_ignorable/>
+# 				<last_secondary_ignorable/>
+# 				<first_primary_ignorable/>
+# 				<last_primary_ignorable/>
+# 				<first_variable/>
+# 				<last_variable/>
+# 				<first_non_ignorable/>
+# 				<last_non_ignorable/>
+# 				<first_trailing/>
+# 				<last_trailing/>
+#
+# 			These rules put 'z' greater at the primary level than nonignorable characters that have a 
+# 			Default Unicode Collation Element Table (DUCET) entry and that are not CJK:
+#
+# 				<reset><last_non_ignorable/></reset>
+# 				<p>z</p>
+#
+# 			Logical position have the code points as follows:
+#
+# 			TABLE 10.6 LOGICAL RESET POSITION CODE POINTS
+# 			
+# 			LOGICAL POSITION 				UNICODE 4.0.0 CODE POINT 		UNICODE 5.2.0 CODE POINT
+# 			
+# 			<first_non_ignorable/> 			U+02D0 								U+02D0
+# 			<last_non_ignorable/> 			U+A48C 								U+1342E
+# 			<first_primary_ignorable/> 	U+0332 								U+0332
+#
+# 			<last_primary_ignorable/>  	U+20EA 								U+101FD
+# 			<first_secondary_ignorable/>  U+0000 								U+0000
+# 			<last_secondary_ignorable/>	U+FE73 								U+FE73
+# 			<first_tertiary_ignorable/> 	U+0000 								U+0000
+# 			<last_tertiary_ignorable/> 	U+FE73 								U+FE73
+#
+# 			<first_trailing/> 			   U+0000 								U+0000
+# 			<last_trailing/> 					U+0000 								U+0000
+# 			<first_variable/> 				U+0009 								U+0009
+# 			<last_variable/> 					U+2183 								U+1D371
+#
+# 		) The <collation> element permits a shift-after-method attribute that affects character weight
+# 			calculation for shift rules.
+#
+# 			The attribute has these permitted values:
+#
+# 				) simple: Calculate character weights as for reset rules that do not have a before attribute.
+#
+# 							This is the default if the attribute is not given.
+#
+# 				) expand: Use expansions for shifts after reset rules.
+#
+# 			Suppose that '0' and '1' have weights of 0E29 and 0E2A and we want to put all basic Latin
+# 			letters between '0' and '1':
+#
+# 				<reset>0</reset>
+# 				<pc>(alphabet)</pc>
+#
+# 			For simple shift mode, weights are calculated as follows:
+#
+# 				'a' has weight 0E29+1
+# 				'b' has weight 0E29+2
+# 				'c' has weight 0E29+3
+# 				---
+#
+# 			However, there are not enough vacant position to put 26 characters between '0' and '1'.
+# 			The result is that digits and letters are intermixed.
+#
+# 			to solve this, use shift-after-method="expand". Then weights are calculated like this:
+#
+# 				'a' has weight [0E29][233D+1]
+# 				'b' has weight [0E29][233D+2]
+# 				'c' has weight [0E29][233D+3]
+# 				---
+#
+# 			233D is the UCA 4.0.0 weight for character 0xA48C, which is the last nonignorable character
+# 			(a sort of the greatest character in the collation, excluding CJK).
+#
+# 			UCA 5.2.0 is similar but uses 3ACA, for character 0x1342E
+#
+# MYSQL-Specific LDML Extensions
+# 
+# An extension to LDML rules permits the <collation> element to include an optional version
+# attribute in <collation> tags to indicate the UCA version on which the collation is based.
+#
+# IF the version attribute is omitted, its default value is 4.0.0
+#
+# For example, this specification indicates a collation that is based on UCA 5.2.0:
+#
+# 		<collation id="nnn" name="utf8_xxx_ci" version="5.2.0">
+# 		---
+# 		</collation>
+#
+# 10.13.4.3 DIAGNOSTICS DURING INDEX.XML PARSING
+#
+# The MySQL server generates diagnostics when it finds problems while parsing the Index.xml file:
+#
+# 		) Unknown tags are written to the error log.
+#
+# 			For example, the following message results if a collation definition contains a <aaa> tag:
+#
+# 				[Warning] Buffered warning: Unknown LDML tag:
+# 				'charsets/charset/collation/rules/aaa'
+#
+# 		) If collation intiialization is not possible, the server reports an "Uknown collation" error, and also
+# 			generates warnings explaining the problems, such as in the previous example.
+#
+# 			In other cases, when a collation description is generally correct but contains some unknown tags,
+# 			the collation is initialized and is available for use.
+#
+# 			The unknown parts are ignored, but a warning is generated in the error log.
+#
+# 		) Problems with collations generate warnings that clients can display with SHOW_WARNINGS.
+#
+# 			Suppose that a reset rule contains an expansion longer than the maximum supported length
+# 			of 6 characters:
+#
+# 				<reset>abcdefghi</reset>
+# 				<i>x</i>
+#
+# 			An attempt to use the collation produces warnings:
+#
+# 				SELECT _utf8'test' COLLATE utf8_test_ci;
+# 				ERROR 1273 (HY000): Unknown collation: 'utf8_test_ci'
+# 				SHOW WARNINGS;
+# 				+--------------+----------+-----------------------------------------------+
+# 				| Level 			| Code 	  | Message 												  |
+# 				+--------------+----------+-----------------------------------------------+
+# 				| Error 		   | 1273 	  | Unknown collation: 'utf8_test_ci' 				  |
+# 				| Warning 		| 1273 	  | Expansion is too long at 'abcdefghi=x' 		  |
+# 				+--------------+----------+-----------------------------------------------+
+#
+# 10.14 CHARACTER SET CONFIGURATION
+#
+# The MySQL server has a compiled-in default cahracter set and collation.
+#
+# TO change these defaults, use the --character-set-server and --collation-server options
+# when you start the server.
+#
+# See SECTION 5.1.7, "SERVER COMMAND OPTIONS".
+#
+# The collation must be a legal collation for the default character set.
+#
+# To determine which collations are available for each character set, use the SHOW_COLLATION				 			
+# statement or query the INFORMATION_SCHEMA COLLATIONS table.
+#
+# If you try to use a character set that is not compiled into your binary, you might run into
+# the following problems:
+#
+# 		) If your program uses an incorrect path to determine where the character sets are stored
+# 			(which is typically the share/mysql/charsets or share/charsets directory under the MySQL install dir)
+# 			, this can be fixed using the --character-sets-dir option when you run the program.
+#
+# 			For example, to specify a directory to be used by MysQL client programs, list it in the
+# 			[client] group of your option file.
+#
+# 			The examples given here show what the setting might look like for Unix or Windows.
+#
+# 				[client]
+# 				character-sets-dir=/usr/local/mysql/share/mysql/charsets
+#
+# 				[client]
+# 				character-sets-dir="C:/Program Files/MySQL/MySQL Server 8.0/share/charsets"
+#
+# 		) If the character set is a complex character set that cannot be loaded dynamically, you must recompile
+# 			the program with support for the character set.
+#
+# 			For Unicode character sets, you can define collations without recompiling by using LDML notation.
+#
+# 			See SECTION 10.13.4, "ADDING A UCA COLLATION TO A UNICODE CHARACTER SET"
+#
+# 		) If the character set is a dynamic character set, but you do not have a configuration file for it,
+# 			you should install the configuration file for the character set from a new MySQL distrib.
+#
+# 		) If your character set index file (Index.xml) does not contain the name for the character set, your program
+# 			displays an error message:
+#
+# 				Character set 'charset_name' is not a compiled character set and is not
+# 				specified in the '/usr/share/mysql/charsets/Index.xml' file
+#
+# 			To solve this problem, you should either get a new index file or manually add the name
+# 			of any missing character sets to the current file.
+#
+# You can force client programs to use specific character set as follows:
+#
+# 	[client]
+# 	default-character-set=charset_name
+#
+# This is normally uncalled for.
+#
+# However, when character_set_system differs from character_set_server or  character_set_client, and you
+# input characters manually (as database object identifiers, column values, or both), these may be displayed
+# incorrectly in output from the client or the output itself may be formatted incorrectly.
+#
+# In such cases, starting the mysql client with --default-character-set=system_character_set - that is,
+# setting the client character set to match the system cahracter set - should fix the problem.
+#
+# 10.15 MYSQL SERVER LOCALE SUPPORT
+#
+# The locale indicated by the lc_time_names system variable controls the language used to 
+# display day and month names and abbreviations.
+#
+# This variable affects the output from the DATE_FORMAT(), DAYNAME() and MONTHNAME() functions.
+#
+# lc_time_names does not effect the STR_TO_DATE() or GET_FORMAT() function.
+#
+# The lc_time_names value does not affect the result from FORMAT(), but this function takes an optional
+# third parameter that enables a locale to be specified to be used for the result number's decimal point,
+# thousands separator, and grouping between separators.
+#
+# Permissible locale values are the same as the legal values for the lc_time_names System varaible.
+#
+# Locale names have language and region subtags listed by IANA (<link>), such as 'ja_JP' or 'pt_BR'.
+#
+# THe default value is 'en_US' regardless of your system's locale setting, but you can set the value
+# at server startup, or set the GLOBAL value at runtime if you have privileges sufficient to set global
+# system variables;
+#
+# See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES".
+#
+# ANy client can examine the value of lc_time_names or set its SESSION value to affect the locale
+# for its own connection.
+#
+# 		SET NAMES 'utf8';
+# 		Query OK, 0 rows affected (0.09 sec)
+#
+# 		SELECT @@lc_time_names;
+# 		+-------------------+
+# 		| @@lc_time_names   |
+# 		+-------------------+
+# 		| en_US 				  |
+# 		+-------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		SELECT DAYNAME('2010-01-01'), MONTHNAME('2010-01-01');
+# 		+------------------------+---------------------------+
+#		| DAYNAME('2010-01-01')  | MONTHNAME('2010-01-01')   |
+# 		+------------------------+---------------------------+
+# 		| Friday 					 | January 						  |
+# 		+------------------------+---------------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		SELECT DATE_FORMAT('2010-01-01', '%W %a %M %b');
+# 		+----------------------------------------------+
+# 		| DATE_FORMAT('2010-01-01', %W, %a, %M, %b')   |
+# 		+----------------------------------------------+
+# 		| Friday Fri January Jan 							  |
+# 		+----------------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		SET lc_time_names = 'es_MX';
+# 		Query OK, 0 rows affected (0.00 sec9
+#
+# 		SELECT @@lc_time_names;
+# 		+-----------------------+
+# 		| @@lc_time_names 		|
+# 		+-----------------------+
+# 		| es_MX 						|
+# 		+-----------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		SELECT DAYNAME('2010-01-01'), MONTHNAME('2010-01-01');
+# 		+------------------------+-------------------------+
+# 		| DAYNAME('2010-01-01')  | MONTHNAME('2010-01-01') |
+# 		+------------------------+-------------------------+
+# 		| viernes 					 | enero 						|
+# 		+------------------------+-------------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		SELECT DATE_FORMAT('2010-01-01', '%W %a %M %b');
+# 		+---------------------------------------------------+
+# 		| DATE_FORMAT('2010-01-01', '%W %a %M %b') 			 |
+# 		+---------------------------------------------------+
+# 		| viernes vie enero ene 									 |
+# 		+---------------------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# The day or month name for each of the affected functions is converted from utf8 to the char set indicated
+# by the character_set_connection system variable.
+#
+# lc_time_names may be set to any of the following locale values.
+# The set of locales supported by MySQL may differ from those supported by your operating system:
+#
+# 		LOCALE VALUE 								Meaning
+#
+# ar_AE: Arabic - United Arab Emirates 	ar_BH: Arabic - Bahrain
+# ar_DZ: Arabic - Algeria 						ar_EG: Arabic - Egypt
+# ar_IN. Arabic - India 						ar_IQ: Arabic - Iraq
+# ar_JO: Arabic - Jordan 						ar_KW: Arabic - Kuwait
+#
+# ar_LB: Arabic - Lebanon 						ar_LY: Arabic - Libya
+# ar_MA: Arabic - Morocco 						ar_OM: Arabic - Oman
+# ar_QA: Arabic - Qatar 						ar_SA: Arabic - Saudi Arabia
+# aq_SD: Arabic - Sudan 						ar_SY: Arabic - Syria
+#
+# ar_TN: Arabic - Tunisia 						AR_YE: Arabic - Yemen
+# be_BY: Belarusian - Belarus 				bg_BG: Bulgarian - Bulgaria
+# ca_ES: Catalan - Spain 						cs_CZ: Czech - Czech Republic
+# da_DK: Danish - Denmark 						de_AT: German - Austria
+#
+# de_BE: German - Belgium 						de_CH: German - Switzerland
+# de_DE: German - Germany 						de_LU: German - Luxembourg
+# el_GR: Greek - Greece 						en_AU: English - Australia
+# en_CA: English - Canada 						en_GB: English - United Kingdom
+#
+# en_IN: English - India 						en_NZ: English - New Zealand
+# en_PH: English - Philippines 				en_US: English - United States
+# en_ZA: English - South Africa 				en_ZW: English - Zimbabwe
+#
+# es_AR: Spanish - Argentina 					es_BO: Spanish - Bolivia
+# es_CL: Spanish - Chile 						es_CO: Spanish - Colombia
+# es_CR: Spanish - Costa Rica 				es_DO: Spanish - Dominican Republic
+# es_EC: Spanish - Ecuador 					es_ES: Spanish - Spain
+#
+# es_GT: Spanish - Guatemala 					es_HN: Spanish - Honduras
+# es_MX: Spanish - Mexico 						es_NI: Spanish - Nicaragua
+# es_PA: Spanish - Panama 						es_PE: Spanish - Peru
+# es_PR: Spanish - Puerto Rico 				es_PY: Spanish - Paraguay
+#
+# es_SV: Spanish - El Salvador 				es_US: Spanish - United States
+# es_UY: Spanish - Uruguay 					es_VE: Spanish - Venezuela
+# et_EE: Estonian - Estonia 					eu_ES: Basque - Basque
+# fi_FI: Finnish - Finland 					fo_FO: Faroese - Faroe Islands
+#
+# fr_BE: French - Belgium 						fr_CA: French - Canada
+# fr_CH: French - Switzerland 				fr_FR: French - France
+# fr_LU: French - Luxembourg 					gl_ES: Galician - Spain
+# gu_IN: Gujarati - India 						he_IL: Hebrew - Israel
+#
+# hi_IN: Hindi - India 							hr_HR: Croatian - Croatia
+# hu_HU: Hungarian - Hungary 					id_ID: Indonesian - Indonesia
+# is_IS: Icelandic - Iceland 					it_CH: Italian - Switzerland
+# it_IT: Italian - Italy 						ja_JP: Japanese - japan
+#
+# ko_KR: Korean - Republic of Korea 		lt_LT : Lithuanian - Lithuania
+# lv_LV: Latvian - Latvia 						mk_MK: Macedonian - FYROM
+# mn_MN: Mongolia - Mongolian 				ms_MY: Malay - Malaysia
+# nb_NO: Norweigan (Bokmål) - Norway 		nl_BE: Dutch - Belgium
+#
+# nl_NL: Dutch - The Netherlands 			no_NO: Norweigan - Norway
+# pl_PL: Polish - Poland 						pt_BR: Portugese - Brazil
+# pt_PT: Portugese - Portugal 				rm_CH: Romansh - Switzerlands
+# ro_RO: Romanian - Romania 					ru_RU: Russian - Russia
+#
+# ru_UA: Russian - Ukraine 					sk_SK: SLovak - Slovakia
+# sl_SI: Slovenian - Slovenia 				sq_AL: Albanian - Albania
+# sr_RS: Serbian - Yugoslavia 				sv_Fi: Swedish - Finland
+# sv_SE: Swedish - Sweden 						ta_IN: Tamil - India
+#
+# te_IN: Telugu - India 						tn_TH: Thai - Thailand
+# tr_TR: Turkish - Turkey 						uk_UA: Ukrainian - Ukraine
+# ur_PK: Urdu - Pakistan 						vi_VN: Vietnamese - Viet Nam
+# zh_CN: Chinese - China 						zh_HK: Chinese - Hong Kong
+# zh_TW: Chinese - Taiwan Province of China
+#
+# 11 DATA TYPES
+#
+# MySQL supports a number of SQL data types in several categories: numeric types, date, and time types,
+# string (character and byte) types, spatial types, and the JSON data type.
+#
+# This chapter provides an overview of these data types, a more detailed description of the
+# properties of the types in each category, and a summary of the data type storage requirements.
+#
+# The initial overview is brief.
+#
+# The later chapters are more detailed with particular data types, permissible formats, etc.
+#
+# Data type descriptions use these conventions:
+#
+# 		) M indicates the maximum display width for integer types.
+#
+# 			For floating-point and fixed-point types, M is the total number of digits that
+# 			can be stored (the precision).
+#
+# 			For string types, M is the maximum length.
+#
+# 			The maximum permissible value of M depends on the data type.
+#
+# 		) D applies to floating-point and fixed-point types and indicates the number of digits
+# 			following the decimal point (the scale).
+#
+# 			The maximum possible value is 30, but should be no greater than M-2
+#
+# 		) fsp applies to the TIME, DATETIME and TIMESTAMP types and represents fractional seconds precision;
+# 			that is, the number of digits following the decimal point for fractional parts of seconds.
+#
+# 			The fsp value, if given, must be in the range 0 to 6.
+#
+# 			A value of 0 signifies that there is no fractional part.
+#
+# 			If omitted, the default precision is 0.
+# 			(This differs from the standard SQL default of 6, for compatibility with previous versions of MySQL)
+#
+# 		) Square brackets ([ and ]) indicate optional parts of type definitions.
+#
+# 11.1 NUMERIC TYPE OVERVIEW
+#
+# A summary of the numeric data types follows.
+#
+# For additional information about properties and storage requirements of the numeric types, 
+# see SECTION 11.2, "NUMERIC TYPES", and SECTION 11.8, "DATA TYPE STORAGE REQUIREMENTS"
+#
+# M indicates the maximum display width for integer types.
+# The maximum display width is 255.
+#
+# Display width is unrelated to the range of values a type can contain, as described
+# in SECTION 11.2, "NUMERIC TYPES". For floating-point and fixed-point types, M, is the
+# total number of digits that can be stored.
+#
+# If you specify ZEROFILL for a numeric column, MySQL automatically adds the UNSIGNED attribute
+# to the column.
+#
+# NUmeric data types that permit the UNSIGNED attribute also permit SIGNED.
+# However, these data types are signed by default, so the SIGNED attribute has no effect.
+#
+# SERIAL is an alias for BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE.
+#
+# SERIAL DEFAULT VALUE in definition of an integer column is an alias for NOT NULL 
+# AUTO_INCREMENT UNIQUE
+#
+# 		WARNING:
+#
+# 			When you use subtraction between integer values where one is of type UNSIGNED,
+# 			the result is unsigned unless the NO_UNSIGNED_SUBTRACTION SQL mode is enabled.
+#
+# 			See SECTION 12.12, "CAST FUNCTIONS AND OPERATORS"
+#
+# 		) BIT [(M)]
+# 		
+# 			A bit-value type. M indicates the number of bits per value, from 1 to 64.
+# 			The default is 1 if M is omitted.
+#
+# 		) TINYINT[ (M) ] [UNSIGNED] [ZEROFILL]
+#
+# 			A very small integer. The signed range is -128 to 127.
+# 			Unsigned range is 0 to 255.
+#
+# 		) BOOL, BOOLEAN
+#
+# 			These types are synonyms for TINYINT(1).
+#
+# 			A value of zero is considered false.
+# 			Nonzero values are considered true:
+#
+# 				SELECT IF(0, 'true', 'false');
+# 				+-----------------------------+
+# 				| IF(0, 'true', 'false') 		|
+# 				+-----------------------------+
+# 				| false 							   |
+# 				+-----------------------------+
+#
+# 				SELECT IF(1, 'true', 'false');
+# 				+-----------------------------+
+# 				| IF(1, 'true', 'false') 		|
+# 				+-----------------------------+
+# 				| true 								|
+# 				+-----------------------------+
+#
+# 				SELECT IF(2, 'true', 'false');
+# 				+------------------------------+
+# 				| IF(2, 'true', 'false') 		 |
+# 				+------------------------------+
+# 				| true 								 |
+# 				+------------------------------+
+#
+# 			However, the values TRUE and FALSE are merely aliases for 1 and 0,
+# 			respectively, as shown here:
+#
+# 				SELECT IF(0 = FALSE, 'true', 'false');
+# 				+------------------------------------+
+# 				| IF(0 = FALSE, 'true', 'false') 	 |
+# 				+------------------------------------+
+# 				| true 										 |
+# 				+------------------------------------+
+#
+# 				SELECT IF(1 = TRUE, 'true', 'false');
+# 				+------------------------------------+
+# 				| IF(1 = TRUE, 'true', 'false') 		 |
+# 				+------------------------------------+
+# 				| true 										 |
+# 				+------------------------------------+
+#
+# 				SELECT IF(2 = TRUE, 'true', 'false');
+# 				+------------------------------------+
+# 				| IF(2 = TRUE, 'true', 'false') 		 |
+# 				+------------------------------------+
+# 				| false 										 |
+# 				+------------------------------------+
+#
+# 				SELECT IF(2 = FALSE, 'true', 'false');
+# 				+------------------------------------+
+# 				| IF(2 = FALSE, 'true', 'false') 	 |
+# 				+------------------------------------+
+# 				| false 										 |
+# 				+------------------------------------+
+#
+# 			The last two statements display the results shown because 2 is equal to neither 1 nor 0.
+#
+# 		) SMALLINT[ (M) ] [UNSIGNED] [ZEROFILL]
+#
+# 			A small integer. The signed range is -32768 to 32767
+#
+# 			The unsigned range is 0 to 65535
+#
+# 		) MEDIUMINT[ (M) ] [UNSIGNED] [ZEROFILL]
+#
+# 			A medium-sized integer.
+#
+# 			The signed range is -8388608 to 8388607
+#
+# 			The unsigned range is 0 to 16777215
+#
+# 		) INT[ (M) ] [UNSIGNED] [ZEROFILL]
+#
+# 			A normal-size integer.
+#
+# 			The signed range is -2147483648 to 2147483647.
+#
+# 			The unsigned range is 0 to 4294967295
+#
+# 		) INTEGER[ (M) ] [UNSIGNED] [ZEROFILL]
+#
+# 			This type is a synonym for INT.
+#
+# 		) BIGINT[ (M) ] [UNSIGNED] [ZEROFILL]
+#
+# 			A large integer. The signed range is -9.223.372.036.854.775.808 to same but - 1. Unsigned is 0 to x2
+#
+# 			SERIAL is an alias for BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE.
+#
+# 			Some things you should be aware of with respect to BIGINT columns:
+#
+# 				) All arithmetic is done using signed BIGINT or DOUBLE values, so you should not use
+# 					unsigned big integers larger than unsigned positive cap (63 bits), except with bit functions.
+#
+# 					If you do that, some of the last digits in the result may be wrong because of rounding
+# 					errors when converting a BIGINT value to a DOUBLE.
+#
+# 					MySQL can handle BIGINT in the following cases:
+#
+# 						) When using integers to store large unsigned values in a BIGINT column.
+#
+# 						) In MIN(col name) or MAX(col name), where col_name refers to a BIGINT column.
+#
+# 						) When using operators (+, -, * and so on) where both operands are integers.
+#
+# 				) You can always store an exact integer value in a BIGINT column by storing it using a string.
+#
+# 					IN this case, MySQL performs a string-to-number conversion that involves no
+# 					intermediate double-precision representation.
+#
+# 				) The -, + and * operators use BIGINT arithmetic when both operands are integer values.
+#
+# 					This means that if you multiply two big integers (or results from functions that return integers),
+# 					you may get unexpected results when the result is larger than the max of positive signed.
+#
+# 		) DECIMAL[(M[,D])] [UNSIGNED] [ZEROFILL]
+#
+# 			A packed "exact" fixed-point number.
+#
+# 			M is the total number of digits (the precision) and D is the number of digits after
+# 			after the decimal point (the scale).
+#
+# 			The decimal point and (for negative numbers) the - sign are not counted in M.
+#
+# 			If D is 0, values have no decimal point or fractional part.
+#
+# 			THe maximum number of digits (M) for DECIMAL is 65.
+#
+# 			The maximum number of supported decimals (D) is 30.
+#
+# 			If D is omitted, the default is 0. If M is omitted, the default is 10.
+#
+# 			UNSIGNED, if specified, disallows negative values.
+#
+# 			All basic calculations (+, -, *, /) with DECIMAL columns are done with a precision of 65 digits.
+#
+# 		) DEC[(M[,D])] [UNSIGNED] [ZEROFILL], NUMERIC[(M[,D])] [UNSIGNED] [ZEROFILL], FIXED[(M[,D])] [UNSIGNED] [ZEROFILL]
+#
+# 			These types are synonyms for DECIMAL. The FIXED synonym is available for compatibility
+# 			with other database systems.
+#
+# 		) FLOAT[(M,D)] [UNSIGNED] [ZEROFILL]
+#
+# 			A small (single-precision) floating point number.
+#
+# 			Permissible values are -3.4E+38 to -1.1E-38,0 and 1.1~E-38 to 3.4~E38
+#
+# 			These are the theoretical limits, based on the IEEE standard.
+# 			The actual range might be slightly smaller depending on your hardware or OS.
+#
+# 			M is the total number of digits and D is the number of digits following the decimal point.
+# 			If M and D are omitted, values are stored to the limits permitted by the hardware.
+#
+# 			A single-precision floating-point number is accurate to approximately 7 decimal places.
+#
+# 			UNSIGNED, if specified, disallows negative values.
+#
+# 			Using FLOAT might give you some unexpected problems because all calculations
+# 			in MySQL are done with double precision.
+#
+# 			See SECTION B.6.4.7, "SOLVING PROBLEMS WITH NO MATCHING ROWS"
+#
+# 		) DOUBLE[(M,D)] [UNSIGNED] [ZEROFILL]
+#
+# 			A normal-size (double-precision) floating-point number.
+# 			Permissible values are -1.7~E+308 to -2.2~E-308, 0 and 2.2~E-308 to 1.7~E+308
+#
+# 			These are the theoretical limits, based on the IEEE standard.
+#
+# 			The actual range might be slightly smaller depending on your hardware or OS.
+#
+# 			M is the total number of digits and D is the number of digits following
+# 			the decimal point.
+#
+# 			If M and D are omitted, values are stored to the limits permitted by the hardware.
+#
+# 			A double-precision floating-point number is accurate to approximately 15 decimal places.
+#
+# 			UNSIGNED, if specified, disallows negative values.
+#
+# 		) DOUBLE PRECISION[(M,D)] [UNSIGNED] [ZEROFILL], REAL[(M,D)] [UNSIGNED] [ZEROFILL]
+#
+# 			These types are synonyms for DOUBLE:
+#
+# 			Exception: If the REAL_AS_FLOAT SQL mode is enabled, REAL is a synonym for FLOAT
+# 			rather than DOUBLE.
+#
+# 		) FLOAT(p) 	[UNSIGNED] [ZEROFILL]
+#
+# 			A floating point number.
+#
+# 			p represents the precision in bits, but MySQL uses this value only to determine
+# 			whether to use FLOAT or DOUBLE for the resulting data type.
+#
+# 			If p is from 0 to 24, the data type becomes FLOAT with no M or D values.
+#
+# 			IF p is from 25 to 53, the data type becomes DOUBLE with no M or D values.
+#
+# 			The range of resulting column is the same as for the single-precision FLOAT or
+# 			double-precision DOUBLE data types described earlier in this section.
+#
+# 			FLOAT(p) syntax is provided for ODBC compatibility.
+#
+# 11.1..2 DATE AND TIME TYPE OVERVIEW
+#
+# A summary of the temporal data types follows.
+#
+# For additional information about properties and storage requirements
+# of the temporal types, see SECTION 11.3, "DATE AND TIME TYPES" and
+# SECTION 11.8, "DATA TYPE STORAGE REQUIREMENTS".
+#
+# FOr descriptions of functions that operate on temporal values,
+# see SECTION 12.7, "DATE AND TIME FUNCTIONS"
+#
+# For the DATE and DATETIME range descriptions, "supported" means that although
+# earlier values might work - that is ascertained.
+#
+# MySQL permits fractional seconds for TIME, DATETIME and TIMESTAMP values, with up to
+# microseconds (6 digits) precision.
+#
+# To define a column that includes a fractional seconds part, use the syntax
+# type_name(fsp), where type_name is TIME, DATETIME or TIMESTAMP and fsp is the fractional
+# seconds precision.
+#
+# For example:
+#
+# 		CREATE TABLE t1 (t TIME(3), dt DATETIME(6));
+#
+# The fsp value, if given, must be in the range 0 to 6.
+#
+# A value of 0 signifies that htere is no fractional part.
+# If omitted, the default precision is 0.
+#
+# (This differs from the standard SQL default of 6, for compatibility
+# with previous versions)
+#
+# Any TIMESTAMP or DATETIME column in a table can have automatic initialization
+# and updating properties.
+#
+# 		) DATE
+#
+# 			A date.
+#
+# 			The supported range is '1000-01-01' to '9999-12-31'. 
+#
+# 			MySQL displays DATE values in 'YYYY-MM-DD' format, but permits assignments
+# 			of values to DATE columns using either strings or numbers. 	
+#
+# 		) DATETIME[(fsp)]
+#
+# 			A date and time combination.
+#
+# 			The supported range is '1000-01-01 00:00:00.000000' to '9999-12-31 23:59:59.999999'
+#
+# 			MySQL displays DATETIME Values in 'YYYY-MM-DD HH:MM:SS[.fraction]' format, but permits
+# 			assignment of values to DATETIME columnns using either strings or numbers.
+#
+# 			An optional fsp value in the range from 0 to 6 may be given to specify fractional
+# 			seconds precision.
+#
+# 			A value of 0 signifies that there is no fractional part.
+#
+# 			iF omitted, the default precision is 0.
+#
+# 			Automatic intiialization and updating ot the current date and time for DATETIME
+# 			columns can be specified using DEFAULT and ON UPDATE column definition clauses,
+# 			as described in SECTION 11.3.5,"AUTOMATIC INITIALIZATION AND UPDATING FOR TIMESTAMP AND DATETIME"
+#
+# 		) TIMESTAMP[(fsp)]
+#
+# 			A timestamp.
+#
+# 			The range is '1970-01-01 00:00:01.000000' UTC to '2038-01-19 03:14:07.999999' UTC.
+#
+# 			TIMESTAMP values are stored as the number of seconds since the epoch
+# 			('1970-01-01 00:00:00' UTC).
+#
+# 			A TIMESTAMP cannot represent the value '1970-01-01 00:00:00' because that is
+# 			equivalent to 0 seconds from the epoch and the value 0 is reserved
+# 			for representing '0000-00-00 00:00:00', the "zero" TIMESTAMP value.
+#
+# 			An optional FSP value in the range from 0 to 6 may be given to specify
+# 			fractional second precision.
+#
+# 			A value of 0 signifies taht there is no fractional part.
+# 			If omitted, the default precision is 0.
+#
+# 			The way the server handles TIMESTAMP definitions depends on the
+# 			value of the explicit_defaults_for_timestamp system variable.
+#
+# 			IF explicit_defaults_for_timestamp is enabled, there is no automatic
+# 			assignment of the DEFAULT CURRENT_TIMESTAMP or ON UPDATE CURRENT_TIMESTAMP
+# 			attributes to any TIMESTAMP column.
+#
+# 			They must be included explicitly in the column definition.
+#
+# 			Also, any TIMESTAMP not explicit declared as NOT NULL permits NULL
+# 			values.
+#
+# 			If explicit_defaults_for_timestamp id disabled, the server handles TIMESTAMP
+# 			as follows:
+#
+# 				Unless specified otherwise, the first TIMESTAMP column in a table is defined to be
+# 				automatically set to the date and time of the most recent modification if not
+# 				explicitly assigned a value.
+#
+# 				This makes TIMESTAMP useful for recording the timestamp of an INSERT or UPDATE
+# 				operation.
+#
+# 				YOu can also set any TIMESTAMP column to the current date and time by assigning it
+# 				a NULL value, unless it has been defined with the NULL attribute to permit NULL values.
+#
+# 				Automatic intiialization and updating to the current date and time can be specified
+# 				using DEFAULT CURRENT_TIMESTAMP and ON UPDATE CURRENT_TIMESTAMP column definition clauses.
+#
+# 				By default, the first TIMESTAMP column has these properties, as previously noted.
+#
+# 				However, any TIMESTAMP column in a table can be defined to have these properties.
+#
+# 		) TIME[(fsp)]
+#
+# 			A time. The range is '-838:59:59.000000' to '838:59:59.000000'.
+#
+# 			MySQL displays TIME values in 'HH:MM:SS[.fraction]' format, but permits
+# 			assignment of values to TIME columns using either strings or numbers.
+#
+# 			An optional fsp value in the range from 0 to 6 may be given to specify fractional seconds precision.
+#
+# 			A value of 0 signifies that there is no fractional part.
+# 			If omitted, the default precision is 0.
+#
+# 		) YEAR[(4)]
+#
+# 			A year in a four-digit format.
+#
+# 			MySQL displays YEAR values in YYYY format, but permits assignment
+# 			of values to YEAR columns using either strings or numbers.
+#
+# 			Values display as 1901 to 2155 and 0000
+#
+# 			For additional information about YEAR display format and interpretation of input values,
+# 			see SECTION 11.3.3 "THE YEAR TYPE"
+#
+# 			NOTE:
+#
+# 				MySQL 8.0 does NOT support the YEAR(2) data tpye permitted in older versions of MysQL.
+# 				For instructions on converting, see SECTION 11.3.4, "Migrating YEAR(2) Columns to YEAR(4)"
+#
+# The SUM() and AVG() aggregate functiosn do not work with temporal values.
+#
+# (They convert the values ot numbers, losing everything after the first nonnumeric character)
+#
+# To work around this problem, convert to numeric units, perform the aggregate operation,
+# and convert back to a temporal value. Examples:
+#
+# SELECT SEC_TO_TIME(SUM(TIME_TO_SEC(time_col))) FROM tbl_name;
+# SELECT FROM_DAYS(SUM(TO_DAYS(date_col))) FROM tbl_name;
+#
+# 11.1.3 STRING TYPE OVERVIEW
+#
+# A summary of the string data types follows.
+#
+# For additional information about properties and storage requirements of the string types,
+# see SECTION 11.4, "STRING TYPES" and SECTION 11.8, "DATA TYPE STORAGE REQUIREMENTS"
+#
+# in some cases, MySQL may change a string column to a type different from that given in
+# a CREATE_TABLE or ALTER_TABLE statement.
+#
+# See SECTION 13.1.20.7 "SILENT COLUMN SPECIFICATION CHANGES"
+#
+# MySQL interprets length specification in character column definitions in character units.
+# This applies to CHAR, VARCHAR and the TEXT types.
+#
+# Column definitions for many string data types can include attributes that specify the
+# character set or collation of the column.
+#
+# These attributes apply to the  CHAR, VARCHAR, the TEXT types, ENUM and SET data types:
+#
+# 		) The CHARACTER SET attribute specifies the character set, and the COLLATE attribute specifies
+# 			a collation for the character set.
+#
+# 			For example:
+#
+# 				CREATE TABLE t
+# 				(
+# 					c1 VARCHAR(20) CHARACTER SET utf8,
+# 					c2 TEXT CHARACTER SET latin1 COLLATE latin1_general_cs
+# 				);
+#
+# 			This table definition creates a column named c1 that has a character set of utf8
+# 			with the default collation for that character set, and a column named c2 that has
+# 			a character set of latin1 and a case-sensitive collation.
+#
+# 			The rules for assigning the character set and collation when either or both of the
+# 			CHARACTER SET and COLLATE attributes are missing are described in SECTION 10.3.5,
+# 			"COLUMN CHARACTER SET AND COLLATION"
+#
+# 			CHARSET is a synonym for CHARACTER SET.
+#
+# 		) Specifying the CHARACTER SET binary attribute for a character string data type causes
+# 			the column to be created as the corresponding binary string data type:
+#
+# 				CHAR becomes BINARY
+#
+# 				VARCHAR becomes VARBINARY
+#
+# 				TEXT becomes BLOB
+#
+# 			For the ENUM and SET data types, this does not occur.
+# 			They are created as declared.
+#
+# 			Suppose that you specify a table using this definition:
+#
+# 				CREATE TABLE t
+# 				(
+# 					c1 VARCHAR(10) CHARACTER SET binary,
+# 					c2 TEXT CHARACTER SET binary,
+# 					c3 ENUM('a', 'b', 'c') CHARACTER SET binary
+# 				);
+#
+# 			The resulting table has this defintiion:
+#
+# 				CREATE TABLE t
+# 				(
+# 					c1 VARBINARY(10),
+# 					c2 BLOB,
+# 					c3 ENUM('a', 'b', 'c') CHARACTER SET binary
+# 				);
+#
+# 		) The BINARY attribute is shorthand for specifying the table default char set and the binary (_bin) collation
+# 			of that character set.
+#
+# 			IN this case, comparison and sorting are based on numeric character code values.
+#
+# 		) The ASCII attribute is shorthand for CHARACTER SET latin1
+#
+# 		) The UNICODE attribute is shorthand for CHARACTER SET ucs2
+#
+# Character column comparison and sortings are based on the collation assigned to the column.
+#
+# FOr the CHAR, VARCHAR, TEXT, ENUM and SET data types, you can declare a column with a binary
+# (_bin) collation or the BINARY attribute to cause comparison and sorting to use the underlying
+# character code values rather than a lexical ordering.
+#
+# For addition information about use of character sets in MySQL, see CHAPTER 10, CHARACTER SETS, COLLATIONS, UNICODE.
+#
+# 		) [NATIONAL] CHAR[(M)] [CHARACTER SET charset_name] [COLLATE collation_name]
+#
+# 			A fixed-length string that is always right-padded with spaces to the specified length when stored.
+#
+# 			M represents the column length in characters.
+# 			The range of M is 0 to 255.
+#
+# 			If M is omitted, the length is 1.
+#
+# 			NOTE:
+#
+# 				Trailing spaces are removed when CHAR values are retrieved unless the PAD_CHAR_TO_FULL_LENGTH
+# 				SQL mode is enabled.
+#
+# 			CHAR is shorthand for CHARACTER, NATIONAL_CHAR (or its equivalent short form, NCHAR) is the
+# 			standard SQL way to define that a CHAR column should use some predefined char set.
+#
+# 			MySQL uses utf8 as this predefined character set.
+#
+# 			See SECTION 10.3.7, "THE NATIONAL CHARACTER SET"
+#
+# 			The CHAR_BYTE data type is an alias for the BINARY data type.
+# 			THis is a compatbility feature.
+#
+# 			MySQL permitws you to create a column of type CHAR(0).
+#
+# 			THis is useful primarily when you have to be compliant with old applications that depend
+# 			on the existence of a column but that do not actually use its value. 
+#
+# 			CHAR(0) is also quite nice when you need a column that can take only two values:
+#
+# 				a column taht is defined as CHAR(0) NULL occupies only one bit and can take only NULL or ''
+#
+# 		) [NATIONAL] VARCHAR(M) [CHARACTER SET charset_name] [COLLATE collation_name]
+#
+# 			A variable-length string.
+#
+# 			M represents the maximum column length in characters.
+# 			The range of M is 0 to 65,535.
+#
+# 			The effective maximum length of a VARCHAR is subject to the maximum row size (65,535 bytes,
+# 			which is shared among all columns) and the character set used.
+#
+# 			For example, utf8 characters can require up to three bytes per character, so
+# 			a VARCHAR column that uses the utf8 character set can be declared to be a maximum of
+# 			21,844 characters.
+#
+# 			See SECTION C.10.4, "LIMITS ON TABLE COLUMN COUNT AND ROW SIZE"
+#
+# 			MySQL stores VARCHAR values as a 1-byte or 2-byte length prefix plus data.
+#
+# 			The length prefix indicates the number of bytes in the value.
+#
+# 			A VARCHAR column uses one length byte if values requires no more than 255 bytes,
+# 			two length bytes if values may require more than 255 bytes.
+#
+#			NOTE:
+#
+# 				MySQL follows the standard SQL specification, and does not remove trailing spaces from VARCHAR values.
+#
+# 			VARCHAR is shorthand for CHARACTER_VARYING. NATIONAL_VARCHAR is the standard SQL way to define that
+# 			a VARCHAR column should use some predefined character set.
+#
+# 			MySQL uses utf8 as this predefined character set. SECTION 10.3.7, "THE NATIONAL CHARACTER SET"
+#
+# 			NVARCHAR is shorthand for NATIONAL_VARCHAR
+#
+# 		) BINARY[(M)]
+#
+# 			The BINARY type is similar to the CHAR type, but stores binary byte strings rather than nonbinary
+# 			character strings.
+#
+# 			An optional length M represents the column length in bytes.
+#
+# 			If omitted, M defaults to 1.
+#
+# 		) VARBINARY(M)
+#
+# 			The VARBINARY tpye is similar to the VARCHAR type, but stores binary byte strings
+# 			rather than nonbinary character strings.
+#
+# 			M represents the max column length in bytes.
+#
+# 		) TINYBLOB
+#
+# 			A BLOB column with a max length of 255 (2^8 - 1) bytes. Each TINYBLOB value is stored using 1-byte length
+# 			prefix that indicates the number of bytes in the value.
+#
+# 		) TINYTEXT [CHARACTER SET charset_name] [COLLATE collation name]
+#
+# 			A TEXT Column with a max length of 255 (2^8 - 1) chars. 
+#
+# 			The effective length is less if the values contains multibyte characters.
+#
+# 			Each TINYTEXT value is stored using a 1-byte length prefix that indicates
+# 			the number of bytes in the value.
+#
+# 		) BLOB[(M)]
+#
+# 			A BLOB column with a max length of 65,535 (2^16 - 1) bytes.
+#
+# 			Each BLOB value is stored using 2-byte length prefix that indicates the number
+# 			of bytes in the value.
+#
+# 			An optional length M can be given for this type.
+#
+# 			IF this is done, MySQL creates the column as the smallest BLOB tpye large enough to hold values of
+# 			M bytes long.
+#
+# 		) TEXT[(M)] [CHARACTER SET charset name] [COLLATE collation name]
+#
+# 			A TEXT column with a maximum of length 65,535 (2^16-1) chars.
+#
+# 			The effective max length is less if the value contains multibyte chars.
+#
+# 			Each TEXT value is stored using a 2-byte length prefix that indicates the
+# 			number of bytes in the value.
+#
+# 			An optional length M can be given for this type.
+#
+# 			If this is done, MySQL creates the column as the smallest TEXT type large enough
+# 			to hold values M chars long.
+#
+# 		) MEDIUMBLOB
+#
+# 			A BLOB column with a maximum length of 16,777,215 (2^24-1) bytes.
+#
+# 			Each MEDIUMBLOB value is stored using a 3-bytes length prefix that indicates
+# 			the number of bytes in the value.
+#
+# 		) MEDIUMTEXT [CHARACTER SET charset name] [COLLATE collation name]
+#
+# 			A TEXT column with a max length of 16,777,215 (2^24-1) chars.
+#
+# 			The effective max length is less if the value contains multibyte characters.
+#
+# 			Each MEDIUMTEXT value is stored using 3-byte length prefix that indicates
+# 			the number of bytes in the value.
+#
+# 		) LONGBLOB
+#
+# 			https://dev.mysql.com/doc/refman/8.0/en/string-type-overview.html
 #
