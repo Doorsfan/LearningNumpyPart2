@@ -69600,5 +69600,2014 @@ Need be, i will change this for upcoming repeated cases. */
 #
 # 		) LONGBLOB
 #
-# 			https://dev.mysql.com/doc/refman/8.0/en/string-type-overview.html
+# 			A BLOB colum with a maximum length of 4,294,967,295 or 4GB (2^32 - 1) bytes.
 #
+# 			The effective maximum length of LONGBLOB columns depends on the configured maximum
+# 			packet size in the client/server protocol and available memory.
+#
+# 			Each LONGBLOB value is stored using a 4-byte length prefix that indicates
+# 			the number of bytes in the value.
+#
+# 		) LONGTEXT [CHARACTER SET charset name] [COLLATE collation name]
+#
+# 			A TEXT column with a maximum length of 4,294,967,295 or 4GB (2^32 - 1) characters.
+#
+# 			The effective maximum length is less if the value contains multibyte characters.
+#
+# 			The effective maximum length of LONGTEXT columns also depends on the configured
+# 			maximum packet size in the client/server protocol and available memory.
+#
+# 			Each LONGTEXT value is stored using a 4-byte length prefix that indicates the number
+# 			of bytes in the value.
+#
+# 		) ENUM ('value1', 'value2', ---) [CHARACTER SET charset name] [COLLATE collation name]
+#
+# 			An enumeration. A string object that can have only one value, chosen from the list
+# 			of values 'value1', 'value2', ---, NULL or the special '' error value.
+#
+# 			ENUM values are represented internally as integers.
+#
+# 			An ENUM column can have a maximum of 65,535 distinct elements.
+#
+# 			The maximum supported length of an individual ENUM element is M <= 255 and
+# 			(M x w) <= 1020, where M is the element literal length and w is the number of bytes
+# 			required for the maximum-length character in the character set.
+#
+# 		) SET('value1', 'value2', ---) [CHARACTER SET charset name] [COLLATE collation name]
+#
+# 			A set. A string object that can have zero or more values, each of which must be
+# 			chosen from the list of values 'value1', 'value2', --- SET values are represented
+# 			internally as integers.
+#
+# 			A SET column can have a maximum of 64 distinct members.
+#
+# 			The maximum supported length of an individual SET element is M <= 255 and
+# 			(M x w) <= 1020, where M is the elemental literal length and w is the number
+# 			of bytes required for the maximum-length character in the character set.
+#
+# 11.2 NUMERIC TYPES
+#
+# MySQL supports all standard SQL numeric data types. These types include the exact numeric
+# data types (INTEGER, SMALLINT, DECIMAL and NUMERIC), as well as the approximate numeric
+# data types (FLOAT, REAL, and DOUBLE PRECISION)
+#
+# The keyword INT is a synonym for INTEGER, and the keyword DEC and FIXED are synonynms
+# for DECIMAL
+#
+# MySQL treats DOUBLE as a synonym for DOUBLE PRECISION (a nonstandard extension).
+#
+# MySQL also treats REAL as a synonym for DOUBLE PRECISION (a nonstandard variation),
+# unless the REAL_AS_FLOAT SQL mode is enabled.
+#
+# The BIT data type stores bit values and is supported for MyISAM, MEMORY, InnoDB and NDB tables.
+#
+# For information about how MySQL handles assignment of out-of-range values to columns and overflow
+# during expression evaluation, see SECTION 11.2.6, "OUT-OF-RANGE AND OVERFLOW HANDLING"
+#
+# For information about numeric type storage requirements, see SECTION 11.8, "DATA TYPE STORAGE REQUIREMENTS"
+#
+# The data type used for the result of a calculation on numeric operands depends on the
+# types of the operands and the operations performed on them.
+#
+# For more information, see SECTION 12.6.1, "ARITHMETIC OPERATORS"
+#
+# 11.2.1 INTEGER TYPES (EXACT VALUE) - INTEGER, INT, SMALLINT, TINYINT, MEDIUMINT, BIGINT
+#
+# MySQL supports the SQL standard integer types INTEGER (or INT) and SMALLINT.
+#
+# As an extension to the standard, MySQL also supports the integer types TINYINT,
+# MEDIUMINT, and BIGINT.
+#
+# The following table shows the required storage and range for each integer type.
+#
+# TABLE 11.1 REQUIRED STORAGE AND RANGE FOR INTEGER TYPES SUPPORTED BY MYSQL
+#
+# 		Type 						Storage (Bytes) 					Minimum Value SIgned 				Minimum value Unsigned 		Maximum Value Signed 		Maximum Value Unsigned
+#
+# 	TINYINT 						1 										-128 										0 									127 								255
+#
+# 	SMALLINT 					2 										-32768 									0 									32767 							65535
+#
+# 	MEDIUMINT 					3 										-8388608 								0 									8388607 							16777215
+#
+#  INT 							4 										-2147483648 							0 									2147483647 						429467295
+#
+# 	BIGINT 						8 										-2^63 									0 									2^63-1 							2^64-1
+#
+# 11.2.2 FIXED-POINT TYPES (EXACT VALUE) - DECIMAL, NUMERIC
+#
+# The DECIMAL and NUMERIC types store exact numeric data values. These types are used when it is important
+# to preserve exact precision, for exaxmple in monetary data.
+#
+# In MySQL, NUMERIC is implemented as DECIMAL, so the following remarks about DECIMAL apply equally to NUMERIC.
+#
+# MySQL stores DECIMAL values in binary format. See SECTION 12.24, "PRECISION MATH"
+#
+# In a DECIMAL column declaration, the precision and scale can be (and usually is) specified,
+# for example:
+#
+# 		salary DECIMAL(5,2)
+#
+# In this example, 5 is the precision and 2 is the scale.
+#
+# The precision represents the number of significant digits that are stored for values, and the scale represents
+# the number of digits that can be stored following the decimal point.
+#
+# Standard SQL requires that DECIMAL(5,2) be able to store any value with five digits and two decimals,
+# so values that can be stored in the salary column range from -999.99 to 999.99
+#
+# In standard SQL, the syntax DECIMAL(M) is equivalent to DECIMAL(M,0)
+#
+# Similarly, the syntax DECIMAL is equivalent to DECIMAL(M,0), where the implementation is permitted
+# to decide the value of M.
+#
+# MySQL supports both of these variant forms of DECIMAL syntax. The default value of M is 10.
+#
+# If the scale is 0, DECIMAL values contain no decimal point or fractional part.
+#
+# The maximum number of digits for DECIMAL is 65, but the actual range for a given DECIMAL column
+# can be constrained by the precision or scale for a given column.
+#
+# When such a column is assigned a value with more digits following the decimal point than are
+# permitted by the specified scale, the value is converted to that scale.
+#
+# (The precise behavior is operating system-specific, but generally the effect is truncation
+# to the permissible number of digits)
+#
+# 11.2.3 FLOATING-POINT TYPES (APPROXIMATE VALUE) - FLOAT, DOUBLE
+#
+# The FLOAT and DOUBLE types represent approximate numeric data values.
+#
+# MySQL uses four bytes for single-precision values and eight bytes for double-precision
+# values.
+#
+# For FLOAT, the SQL standard permits an optional specification of the precision
+# (but not the range of the exponent) in bits following the keyword FLOAT in parantheses.
+#
+# MySQL also supports this optional precision specification, but the precision value is used
+# only to determine storage size.
+#
+# A precision from 0 to 23 results in a 4-byte single-precision FLOAT column.
+# A precision from 24 to 53 results in a 8-byte double-precision DOUBLE column.
+#
+# MYSQL permits a nonstandard syntax: FLOAT(M,D) or REAL(M,D) or DOUBLE PRECISION(M,D).
+#
+# Here, (M,D) means that values can be stored with up to M digits in total,
+# of which D digits may be after the decimal point.
+#
+# For example, a column defined as FLOAT(7,4) will look like -999.9999 when displayed.
+#
+# MySQL performs rounding when storing values, so if you insert 999.00009 into a FLOAT(7,4) column,
+# the approximate result is 999.0001
+#
+# Because floating-point values are approximate and not stored as exact values, attempts to treat them
+# as exact in comparisons may lead to problems.
+#
+# They are also subject to platform or implementation dependencies. For more information,
+# see SECTION B.6.4.8, "PROBLEMS WITH FLOATING-POINT VALUES"
+#
+# For maximum portability, code requiring storage of approximate numeric data values should
+# use FLOAT or DOUBLE precision with no specification of precision or number of digits.
+#
+# 11.2.4 BIT-VALUE TYPE - BIT
+#
+# The BIT data type is used to store bit values. A type of BIT(M) enables storage
+# of M-bit values. M can range from 1 to 64.
+#
+# To specify bit values, b 'value' notation can be used.
+# value is a binary value written using zeros and ones.
+#
+# For example, b'111' and b'10000000' represent 7 and 128, respectively.
+#
+# See SECTION 9.1.5, "BIT-VALUE LITERALS"
+#
+# If you assign a value to a BIT(M) column that is less than M bits long,
+# the value is padded on the left with zeros.
+#
+# For example, assigning a value of b'101' to a BIT(6) column is, in effect,
+# the same as assigning b'000101'
+#
+# NDB cluster. The maximum combined size of all BIT columns used in a given NDB
+# table must not exceed 4096 bits.
+#
+# 11.2.5 NUMERIC TYPE ATTRIBUTES
+#
+# MySQL supports an extension for optionally specifying the display width of integer data
+# types in parantheses following the base keyword for the type.
+#
+# For example, INT(4) specifies an INT with a display width of four digits.
+#
+# This optional display width may be used by applications to display integer values
+# having a width less than the width specified for the column by left-padding them with
+# spaces. 
+#
+# (That is, this width is present in the metadata returned with result sets.
+#  Whether it used or not is up to the application)
+#
+# The display width does NOT constrain the range of values that can be stored in
+# the column.
+#
+# Nor does it prevent values wider than the column display width from being displayed
+# correctly.
+#
+# For example, a column specified as SMALLINT(3) has the usual SMALLINT range of
+# -32768 to 32767, and values outside the range permitted by three digits are displayed
+# in full using more than three digits.
+#
+# When used in conjunction with the optional (nonstandard) attribute ZEROFILL, the default
+# padding of spaces is replaced with zeros.
+#
+# For example, for a column declared as INT(4)_ZEROFILL, a value of 5 is retrieved as 0005.
+#
+# NOTE:
+#
+# 		THe ZEROFILL attribute is ignored when a columnm is involved in expressions or UNION queries.
+#
+# 		If you store values larger than the display width in an integer column that has the ZEROFILL
+# 		attribute, you may experience problems when MySQL generates temporary tables for some complicated
+# 		joins.
+#
+# 		In these cases, MySQL assumes that the data values fit within the column display width.
+#
+# All integer types can have an optional (nonstandard) attribute UNSIGNED.
+#
+# Unsigned type can be used to permit only nonnegative numbers in a column or when you 
+# need a large upper numeric range for the column.
+#
+# For example, if an INT column is UNSIGNED, the size of the column's range is the same
+# but its endpoints shift from -2147483648 to the opposite of that in positive,
+# to 0 to 2*the low point
+#
+# Floating-point and fixed-point types also can be UNSIGNED. As with integer types,
+# this attribute prevents negative values from being stored in the column.
+#
+# Unlike the integer types, the upper range of column values remains the same.
+#
+# If you specify ZEROFILL for a numeric column, MySQL automatically adds the UNSIGNED
+# attribute to the column.
+#
+# Integer or floating-point data types can have the additional attribute AUTO_INCREMENT.
+#
+# When you insert a value of NULL into an indexed AUTO_INCREMENT column, the column is set
+# to the next sequence value.
+#
+# Typically this is value+1, where value is the largest value for the column currently
+# in the table. (AUTO_INCREMENT sequences begin with 1)
+#
+# Storing 0 into an AUTO_INCREMENT column has the same effect as storing NULL, unless the
+# NO_AUTO_VALUE_ON_ZERO SQL mode is enabled.
+#
+# Inserting NULL to generate AUTO_INCREMENT values requires that the column be declared 
+# NOT NULL.
+#
+# If the column is declared NULL, inserting NULL stores a NULL.
+#
+# When you insert any other value into an AUTO_INCREMENT column, the column is set to that
+# value and the sequence is reset so that the next automatically generated value follows
+# sequentially from the inserted value.
+#
+# In MySQL 8.0, negative values for AUTO_INCREMENT columns are not supported.
+#
+# 11.2.6 OUT-OF-RANGE AND OVERFLOW HANDLING
+#
+# When MySQL stores a value in a numeric column that is outside the permissible range of the
+# column data type, the result depends on the SQL mode in effect at the time:
+#
+# 		) If strict SQL mode is enabled, MySQL rejects the out-of-range values with an error and the insert fails,
+# 			in accordance with the SQL standard.
+#
+# 		) If no restrictive modes are enabled, MySQL clips the value to the appropriate endpoint of the column data
+# 			type range and stores the resulting value instead.
+#
+# 			When an out-of-range value is assigned to an integer column, MySQL stores the value representing the corresponding
+# 			endpoint of the column data type range.
+#
+# 			When a floating-point or fixed-point column is assigned a value that exceeds the range implied by the
+# 			specified (or default) precision and scale, MySQL stores the value representing the corresponding
+# 			endpoint of that range.
+#
+# Suppose that a table t1 has this definition:
+#
+# 		CREATE TABLE t1 (i1 TINYINT, i2 TINYINT UNSIGNED);
+#
+# With strict SQL mode enabled, an out of range error occurs:
+#
+# 		SET sql_mode = 'TRADITIONAL';
+# 		INSERT INTO t1 (i1, i2) VALUES(256, 256);
+# 		ERROR 1264 (22003): Out of range value for column 'i1' at row 1
+# 		SELECT * FROM t1;
+# 		Empty set (0.00 sec)
+#
+# With strict SQL mode not eabled, clipping with warnings occurs:
+#
+# 		SET sql_mode = '';
+# 		INSERT INTO t1 (i1, i2) VALUES(256,256);
+# 		SHOW WARNINGS;
+# 		+---------------+-----------+------------------------------------------------------------+
+# 		| Level 			 | Code 		 | Message 																	  |
+# 		+---------------+-----------+------------------------------------------------------------+
+# 		| Warning 		 | 1264 		 | Out of range value for column 'i1' at row 1 					  |
+# 		| Warning 		 | 1264 		 | Out of range value for column 'i2' at row 1 					  |
+# 		+---------------+-----------+------------------------------------------------------------+
+# 		SELECT * FROM t1;
+# 		+-----------+-------------+
+# 		| i1 			| i2 			  |
+# 		+-----------+-------------+
+# 		| 127 		| 255 		  |
+# 		+-----------+-------------+
+#
+# When strict SQL mode is not enabled, column-assignment conversions that occur due to clipping
+# are reported as warnings for ALTER_TABLE, LOAD_DATA_INFILE, UPDATE, and multiple-row INSERT
+# statements.
+#
+# In strict mode, these statements fail, and some or all the values are not inserted or changed,
+# depending on whether the table is a transactional table and other factors.
+#
+# For details, see SECTION 5.1.11, "SERVER SQL MODES"
+#
+# Overflow during numeric expression evaluation results in an error.
+# For example, the largest signed BIGINT value is <a lot>, thus, the following gives an error:
+#
+# 		SELECT <a lot> + 1;
+# 		ERROR 1690 (22003): BIGINT value is out of range in '(<a lot> + 1)'
+#
+# To enable the operation to succeed in this case, conver the value to unsigned:
+#
+# 		SELECT CAST(<a lot> AS UNSIGNED) + 1;
+# 		+------------------------------------+
+# 		| CAST(<a lot> AS UNSIGNED) + 1 		 |
+# 		+------------------------------------+
+# 		| 						<a lot> + 1 		 |
+# 		+------------------------------------+
+#
+# Whether overflow occurs depends on the range of the operands, so another way to handle
+# the preceding expression is to use exact-value arithmetic because DECIMAL values 
+# have a larger range than integers:
+#
+# 		SELECT <a lot>.0 + 1;
+# 		+------------------------------------+
+# 		| <a lot>.0 + 1 							 |
+# 		+------------------------------------+
+# 		| 					<a lot>.0 + 1 			 |
+# 		+------------------------------------+
+#
+# Subtraction between integer values, where one is of type UNSIGNED, produces an unsigned
+# result by default.
+#
+# If the result would otherwise have been negative, an error results:
+#
+# 		SET sql_mode = '';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		SELECT CAST(0 AS UNSIGNED) - 1;
+# 		ERROR 1690 (22003): BIGINT UNSIGNED value is out of range in '(cast(0 as unsigned) - 1)'
+#
+# If the NO_UNSIGNED_SUBTRACTION SQL mode is enabled, the result is negative:
+#
+# 		SET sql_mode = 'NO_UNSIGNED_SUBTRACTION';
+# 		SELECT CAST(0 AS UNSIGNED) - 1;
+# 		+---------------------------------------+
+# 		| 	CAST(0 AS UNSIGNED) - 1 				 |
+# 		+---------------------------------------+
+# 		| 							-1 					 |
+# 		+---------------------------------------+
+#
+# If the result of such an operation is used to update an UNSIGNED integer column,
+# the result is clipped to the maximum value for the column type, or clipped to 0 if
+# NO_UNSIGNED_SUBTRACTION is enabled.
+#
+# If strict SQL mode is enabled, an error occurs and the column remains unchanged.
+#
+# 11.3 DATE AND TIME TYPES
+#
+# The date and time types for representing temporal values are DATE, TIME, DATETIME,
+# TIMESTAMP, and YEAR.
+#
+# Each temporal type has a range of valid  values, as well as a "zero" value that may be
+# used when you specify an invalid value that MySQL cannot represent.
+#
+# The TIMESTAMP type has special automatic updating behavior, described later.
+#
+# For temporal type storage requirements, see SECTION 11.8, "DATA TYPE STORAGE REQUIREMENTS"
+#
+# Keep in mind these general considerations when working with date and time types:
+#
+# 		) MySQL retrieves values for a given date or time type in a standard output format,
+# 			but it attempts to interpret a variety of formats for input values that you supply
+# 			(for example, when you specify a value to be assigned to or compared to a date or time type).
+#  
+# 			For a description of the permitted formats for date and time types, see SECTION 9.1.3, "DATE AND TIME LITERALS".
+#
+# 			It is expected that you supply valid values. Unpredictable results may occur if oyu use values 
+# 			in other formats.
+#
+# 		) Although MySQL tries to interpret values in several formats, date parts must always be given in year-month-day order
+# 			(for example, '98-09-04'), rather than in the month-day-year or day-month-year orders commonly used elsewhere
+# 			(for example, '09-04-98', '04-09-98')
+#
+# 		) Dates containing two-digit year values are ambiguous because the century is unknown.
+#
+# 			MySQL interprets two-digit year values using these rules:
+#
+# 				) Year values in the range 70-99 are converted to 1970-1999
+#
+# 				) Year values in the range 00-69 are converted to 2000-2069
+#
+# 			See also SECTION 11.3.8, "TWO-DIGIT YEARS IN DATES"
+#
+# 		) Conversion of values from one temporal type to another occurs according to the rules
+# 			in SECTION 11.3.7, "CONVERSION BETWEEN DATE AND TIME TYPES"
+#
+# 		) MySQL automatically converts a date or time value to a number if the value is used in a numeric context and vice versa.
+#
+# 		) By default, when MySQL encounters a value for a date or time type that is out of range or otherwise
+# 			invalid for the type, it converts the value to the "zero" value for that type.
+#
+# 			The exception is that out-of-range TIME values are clipped to the appropriate endpoint of the TIME range.
+#
+# 		) By setting the SQL mode to the appropriate value, you can specify more exactly what kind of dates you want
+# 			MySQL to support.
+#
+# 			(See SECTION 5.1.11, "SERVER SQL MODES")
+#
+# 			You can get MySQL to accept certain dates, such as '2009-11-13', by enabling the ALLOW_INVALID_DATES SQL mode.
+#
+# 			This is useful when you want to store a "possibly wrong" value which the user has specified (for example, in a web
+# 			form) in the DB for future processing.
+#
+# 			Under this mode, MySQL verifies only that the month is in the range from 1 to 12 and that the day is in the range
+# 			from 1 to 31.
+#
+# 		) MySQL permits you to store dates where the day or month and day are zero in a DATE or DATETIME column.
+#
+# 			This is useful for applications that need to store birthdates for which you may not know the exact date.
+#
+# 			In this case, you simply store the date as '2009-00-00' or '2009-01-00'.
+#
+# 			If you store the dates such as these, you should not expect to get correct results
+# 			for functions such as DATE_SUB() or DATE_ADD() that require complete dates.
+#
+# 			To disallow zero month or day parts in dates, enable the NO_ZERO_IN_DATE mode.
+#
+# 		) MySQL permits you to store a "zero" value of '0000-00-00' as a "dummy date".
+#
+# 			This is in some cases more convenient than using NULL values, and uses less data and
+# 			index space.
+#
+# 			To disallow '0000-00-00', enable the NO_ZERO_DATE mode.
+#
+# 		) "Zero" date or time values used through Connector/ODBC are converted automatically to NULL
+# 			because ODBC cannot handle such values.
+#
+# The following table shows the format of the "zero" value for each type.
+#
+# The "zero" values are special, but you can store or refer to them explicitly using
+# the values shown in the table.
+#
+# You can also do this using the values '0' or 0, which are easier to write.
+#
+# For temporal types that include a date part (DATE, DATETIME and TIMESTAMP), use of
+# these values produces warnings if the NO_ZERO_DATE SQL mode is enabled.
+#
+# 		DATA TYPE 					"Zero" Value
+#
+# 	DATE 							'0000-00-00'
+#
+#  TIME 							'00:00:00'
+#
+# 	DATETIME 					'0000-00-00 00:00:00'
+#
+# 	TIMESTAMP 					'0000-00-00 00:00:00'
+#
+#	YEAR 							0000
+#
+# 11.3.1 THE DATE, DATETIME and TIMESTAMP TYPES
+#
+# The DATE, DATETIME, and TIMESTAMP types are related.
+# This section describes their characteristics, how they are similar, and how they differ.
+#
+# MySQL recognizes DATE, DATETIME, and TIMESTAMP values in several formats, described in SECTION 9.1.3,
+# "DATE AND TIME LITERALS"
+#
+# For the DATE and DATETIME range descriptions, "supported" means that although earlier values might
+# work, there is no guarantee.
+#
+# The DATE type is used for values with a date part but no time part.
+# MySQL retrieves and displays DATE values in 'YYYY-MM-DD' format.
+#
+# The supported range is '1000-01-01' to '9999-12-13'
+#
+# The DATETIME type is used for values that contain both date and time parts.
+# MySQL retrieves and displays DATETIME values in 'YYYY-MM-DD HH:MM:SS' format.
+#
+# The supported range is '1000-01-01 00:00:00' to '9999-12-31 23:59:59'
+#
+# The TIMESTAMP data type is used for values that contain both date and time parts.
+# TIMESTAMP has a range of '1970-01-01 00:00:01' UTC to '2038-01-19 03:14:07' UTC.
+#
+# A DATETIME or TIMESTAMP value can include a trailing fractional seconds part in up to microseconds
+# (6 digits) precision.
+#
+# In particular, any fractional part in a value inserted into a DATETIME or TIMESTAMP column is stored
+# rather than discarded.
+#
+# With the fractional part included, the format for these values is 'YYYY-MM-DD HH:MM:SS[.fraction]',
+# the range for DATETIME values is '1000-01-01 00:00:00.000000' to '9999-12-31 23:59:59.999999', and the
+# range for TIMESTAMP values is '1970-01-01 00:00:01.000000' to '2038-01-19 03:14:07.999999'
+#
+# The fractional part should always be separated from the rest of the time by a decimal point;
+# no other fractional seconds delimiter is recognized.
+#
+# For information about fractional seconds support in MySQL, see SECTION 11.3.6, "FRACTIONAL SECONDS IN TIME VALUES"
+#
+# The TIMESTAMP and DATETIME data types offer automatic initialization and updating to the current
+# date and time.
+#
+# For more information, see SECTION 11.3.5, "AUTOMATIC INITIALZIATION AND UPDATING FOR TIMESTMAP AND DATETIME"
+#
+# MySQL converts TIMESTAMP values from the current time zone to UTC for storage, and back from UTC to the
+# current time zone for retrieval.
+#
+# (This does not occur for other types such as DATETIME)
+#
+# By default, the current time zone for each connection is the server's time.
+# The time zone can be set on a per-connection basis.
+#
+# As long as the time zone setting remains constant, you get back the same value you store.
+# If you store a TIMESTAMP value, and then change the time zone and retrieve the value, the retrieved
+# value is different from the value you stored.
+#
+# This occurs because the same time zone was not used for conversion in both directions.
+# The current time zone is available as the value of the time_zone system variable.
+#
+# For more information, see SECTION 5.1.13, "MYSQL SERVER TIME ZONE SUPPORT"
+#
+# Invalid DATE, DATETIME or TIMESTAMP values are converted to the "zero" value of the
+# appropriate type ('0000-00-00' or '0000-00-00 00:00:00')
+#
+# Be aware of certain properties of date value interpretation in MySQL:
+#
+# 		) MySQL permits a "relaxed" format for values specified as strings, in which any punctuation
+# 			character may be used as the delimiter between date parts or time parts.
+#
+# 			In some cases, this syntax can be decieving.
+#
+# 			For example, a value such as '10:11:12' might look like a time value because of the :,
+# 			but it is interpreted as the year '2010-11-12' if used in a date context.
+#
+# 			The value '10:45:15' is converted to '0000-00-00' because '45' is not a valid month.
+#
+# 			The only delimiter recognized between a date and time part and a fractional second part
+# 			is the decimal point.
+#
+# 		) The server requires that month and day values be valid, and not merely in the range 1 to 12, and 1 to 31,
+# 			respectively.
+#
+# 			With strict mode disabled, invalid dates such as '2004-04-31' are converted to '0000-00-00' and
+# 			a warning is generated.
+#
+# 			With strict mode enabled, invalid dates generate an error.
+# 			To permit such dates, enable ALLOW_INVALID_DATES. See SECTION 5.1.11, "SERVER SQL MODES", for more info.
+#
+# 		) MySQL does not accept TIMESTAMP values that include a zero in the day or month column or values that
+# 			are not a valid date.
+#
+# 			The sole exception to this rule is the special "zero" value '0000-00-00 00:00:00'
+#
+# 		) Dates containing two-digit year values are ambiguous because the century is unknown.
+#
+# 			MySQL interprets two-digit year values using these rules:
+#
+# 				) Year values in the range 00-69 are converted to 2000-2069
+#
+# 				) year values in the range 70-99 are converted to 1970-1999
+#
+# 			See also SECTION 11.3.8, "TWO-DIGIT YEARS IN DATES"
+#
+# 11.3.2 THE TIME TYPE
+#
+# 	MySQL retrieves and displays TIME values in 'HH:MM:SS' format (or 'HHH:MM:SS' format for large hours values).
+# 	TIME values may range from '-839:59:59' to '838:59:59'.
+#
+# 	The hours part may be so large because the TIME type can be used not only to represent a time
+# of day (which must be less than 24 hours), but also elapsed time or a time interval between two events
+# (which may be much greater than 24 hours, or even negative)
+#
+# MySQL recognizes TIME values in several formats, some of which can include a trailing fractional seconds
+# part in up to microseconds (6 digits) precision.
+#
+# See SECTION 9.1.3, "DATE AND TIME LITERALS"
+#
+# For information about fractional seconds support in MySQL, see SECTION 11.3.6, "FRACTIONAL SECONDS IN TIME VALUES".
+#
+# In particular, any fractional part in a value inserted into a TIME column is stored rather than discarded.
+# With the fractional part included, the range for TIME values is '-838:59:59.000000' to '838:59:59.000000'
+#
+# Be careful about assigning abbreviated values to a TIME column. MySQL interprets abbreviated TIME values
+# with colons as time of the day.
+#
+# that is, '11:12' means '11:12:00', not '00:11:12'.
+#
+# MySQL interprets abbreviated values without colons using the assumption that the two rightmost digits represent
+# seconds (That is, as elapsed time rather than as time of day)
+#
+# For example, you might think of '1112' and 1112 as meaning '11:12:00' (12 minutes after 11 o'clock),
+# but MySQL interprets them as '00:11:12' (11 minutes, 12 seconds).
+#
+# Similarly, '12' and 12 are interpreted as '00:00:12'
+#
+# The only delimiter recognized between a time part and a fractional seconds part is the decimal point.
+#
+# By default, values that lie outside the TIME range but are otherwise valid are clipped to the closest
+# endpoint of the range.
+#
+# For example, '-850:00:00' and '850:00:00' are converted to '-838:59:59' and '838:59:59'.
+#
+# Invalid TIME values are converted to '00:00:00'. Note that because '00:00:00' is itself
+# a valid TIME value, there is no way to tell, from a value of '00:00:00' stored in a table, whether the
+# original value was specified as '00:00:00' or whether it was invalid.
+#
+# For more restrictive treatment of invalid TIME values, enable strict SQL mode to cause errors to occur.
+# See SECTION 5.1.11, "SERVER SQL MODES"
+#
+# 11.3.3 THE YEAR TYPE
+#
+# The YEAR type is a 1-byte type used to represent year values.
+# It can be declared as YEAR or YEAR(4) and has a display width of 4 characters.
+#
+# NOTE:
+#
+# 		MySQL 8.0 does not support hte YEAR(2) data type permitted in older versions of MysQL.
+# 		For instructions on converting to YEAR(4), see SECTION 11.3.4, "MIGRATING YEAR(2) COLUMNS TO YEAR(4)"
+#
+# MySQL displays YEAR values in YYYY format, with a range of 1901 to 2155, or 0000.
+#
+# You can specify input YEAR values in a variety of formats:
+#
+# 		) As a 4-digit number in the range 1901 to 2155
+#
+# 		) AS a 4-digit string in the range '1901' to '2155'
+#
+# 		) As a 1- or 2-digit number in the range 1 to 99. MySQL converts values in the ranges 1 to 69 and 70 to 99 to YEAR
+# 			values in ranges 2001 to 2069 and 1970 and 1999
+#
+# 		) As a 1- or 2-digit string in the range '0' to '99'. MySQL converts values in the ranges '0' to '69' and '70' to '99' to
+# 			YEAR values in the ranges 2000 to 2069 and 1970 to 1999
+#
+# 		) The result of inserting a numeric 0 has a display value of 0000 and an internal value of 0000.
+#
+# 			To insert zero and have it be interpreted as 2000, specify it as a string '0' or '00'
+#
+# 		) As the result of a function that returns a value that is acceptable in a YEAR context, such as NOW().
+#
+# 	MySQL converts invalid YEAR values to 0000.
+#
+# See also SECTION 11.3.8, "TWO-DIGIT YEARS IN DATES"
+#
+# 11.3.4 MIGRATING YEAR(2) COLUMNS TO YEAR(4)
+#
+# MySQL 8.0 does not support the YEAR(2) data type permitted in older versions of MySQL.
+# Existing YEAR(2) columns must be converted to YEAR(4) to become usable again.
+#
+# This section provides information about performing that conversion.
+#
+# REMOVED YEAR(2) SUPPORT IN MYSQL 8.0
+#
+# MysQL 8.0 handles YEAR(2) columns as follows:
+#
+# 		) YEAR(2) column definitions for new tables produce an ER_INVALID_YEAR_COLUMN_LENGTH error:
+#
+# 			CREATE TABLE t1 (y YEAR(2));
+# 			ERROR 1818 (HY000): Supports only YEAR or YEAR(4) column.
+#
+# 		) YEAR(2) column in existing tables remain as YEAR(2), but YEAR(2) columns in queries produce warnings
+# 			or errors.
+#
+# 		) Several programs or statements convert YEAR(2) to YEAR(4) automatically:
+#
+# 			) ALTER_TABLE statements that result in a table rebuild.
+#
+# 			) REPAIR_TABLE (which CHECK_TABLE recommends you use if it finds that a table contains YEAR(2) columns)
+#
+# 			) mysql_upgrade (which uses REPAIR_TABLE)
+#
+# 			) Dumping with mysqldump and reloading the dump file.
+#
+# 				Unlike the conversions performed by the preceding three items,
+# 				a dump and reload has the potential to change values.
+#
+# 		A MySQL upgrade usually involves at least one of the last two items.
+# 		However, with respect to YEAR(2), mysql_upgrade is preferable.
+#
+# 		You should avoid using mysqldump because, as noted, that can change values.
+#
+# MIGRATING FROM YEAR(2) TO YEAR(4)
+#
+# To convert YEAR(2) columns to YEAR(4), you can do so manually at any time without upgrading.
+#
+# Alternatively, you can upgrade to a version of MySQL with reduced or removed support
+# for YEAR(2) (MySQL 5.6.6 or later), then have MySQL convert YEAR(2) columns automatically.
+#
+# In the latter case, avoid upgrading by dumping and reloading your data because that can
+# change data values.
+#
+# In addition, if you use replication, there are upgrade considerations you must take into account.
+#
+# To convert YEAR(2) columns to YEAR(4) manually, use ALTER_TABLE or REPAIR_TABLE.
+# Suppose that a table t1 has this definition:
+#
+# 		CREATE TABLE t1 (ycol YEAR(2) NOT NULL DEFAULT '70');
+#
+# Modify the column using ALTER TABLE as follows:
+#
+# 		ALTER TABLE t1 FORCE;
+#
+# The ALTER_TABLE statement converts the table without changing YEAR(2) values.
+#
+# If the server is a replication master, the ALTER_TABLE statement replicates to slaves and
+# makes the corresponding table change on each one.
+#
+# Another migration method is to perform a binary upgrade: Install MySQL without dumping and
+# reloading your data.
+#
+# Then run mysql_upgrade, which uses REPAIR_TABLE to convert YEAR(2) columns to YEAR(4) without
+# changing data values.
+#
+# If the server is a replication master, the REPAIR_TABLE statements replicate to slaves and make
+# the corresponding table changes on each one, unless you invoke mysql_upgrade with the --skip-write-binlog option.
+#
+# Upgrades to replication servers usually involve upgrading slaves to a newer version of MySQL, then upgrading
+# the master.
+#
+# For example, if a master and slave both run MysQL 5.5, a typical upgrade sequence involves upgrading the slave
+# to 5.6, then upgrading the master to 5.6
+#
+# With regard to the different treatment of YEAR(2) as of MysQL 5.6.6, that upgrade sequence results in a problem:
+#
+# Suppose that hte slave has been upgraded but not yet the master.
+#
+# Then creating a table containing a YEAR(2) column on the master results in a table containing a 
+# YEAR(4) column on the slave.
+#
+# Consequently, these operations will have a different result on the master and slave, if you use
+# statement-based replication:
+#
+# 		) Inserting numeric 0. The resulting value has an internal value of 2000 on the master but 0000 on the slave.
+#
+# 		) Converting YEAR(2) to string. This operation uses the display value of YEAR(2) on the master but YEAR(4) on the slave.
+#
+# To avoid such problems, modify all YEAR(2) columns on the master to YEAR(4) before upgrading.
+#
+# (Use ALTER_TABLE as described previously). Then you can upgrade normally (slave first, then master) without
+# introducing any YEAR(2) to YEAR(4) differences between the master and slave.
+#
+# One migration method should be avoided: Do not dump your data with mysqldump and reload the dump file after
+# upgrading.
+#
+# This has the potential to change YEAR(2) values, as described previously.
+#
+# A migration from YEAR(2) to YEAR(4) should also involve examining application code for the
+# possibility of changed behavior under conditions such as these:
+#
+# 		) Code that expects selecting a YEAR column to produce exactly two digits.
+#
+# 		) Code that does not account for different handling for inserts of numeric 0:
+# 			inserting 0 into YEAR(2) or YEAR(4) results in an internal value of 2000 or 0000, respectively.
+#
+# 11.3.5 AUTOMATIC INITIALIZATION AND UPDATING FOR TIMESTAMP AND DATETIME
+#
+# TIMESTAMP and DATETIME columns can be automatically initialized and updated to the current date and time
+# (that is, the current timestamp)
+#
+# For any TIMESTAMP or DATETIME column in a table, you can assign the current timestamp as the default value,
+# the auto-update value, or both:
+#
+# 		) An auto-initialized column is set to the current timestamp for inserted rows that specify no value for the column.
+#
+# 		) An auto-updated column is automatically updated to the current timestamp when the value of any other column
+# 			in the row is changed from its current value.
+#
+# 			An auto-updated column remains unchanged if all other columns are set to their current values.
+#
+# 			To prevent an auto-updated column from updating when other columns change, explicitly set it to
+# 			its current value.
+#
+# 			To update an auto-updated column even when other columns do not change, explicitly set it to
+# 			the value it should have (for example, set it to CURRENT_TIMESTAMP)
+#
+# In addition, if the explicit_defaults_for_timestamp system variable is disabled, you can initialize
+# or update any TIMESTAMP (but not DATETIME) column to the current date and time by assigning it a NULL value,
+# unless it has been defined with the NULL attribute to permit NULL values.
+#
+# To specify automatic properties, use the DEFAULT CURRENT_TIMESTAMP and ON UPDATE CURRENT_TIMESTAMP clauses
+# in column definitions.
+#
+# The order of the clauses does not matter.
+#
+# If both are present in a column definition, either can occur first.
+#
+# Any of the synonyms for CURRENT_TIMESTAMP have the same meaning as CURRENT_TIMESTAMP.
+# 
+# These are CURRENT_TIMESTAMP(), NOW(), LOCALTIME, LOCALTIME(), LOCALTIMESTAMP, and
+# LOCALTIMESTAMP()
+#
+# Use of DEFAULT CURRENT_TIMESTAMP and ON UPDATE CURRENT_TIMESTAMP is specific to TIMESTAMP and DATETIME.
+#
+# The DEFAULT clause also can be used to specify a constant (nonautomatic) default value; for example,
+# DEFAULT 0 or DEFAULT '2000-01-01 00:00:00'
+#
+# NOTE:
+#
+# 		The following examples use DEFAULT 0, a default that can produce warnings or errors depending
+# 		on whether strict SQL mode or the NO_ZERO_DATE SQL mode is enabled.
+#
+# 		Be aware that the TRADITIONAL SQL mode includes strict mode and NO_ZERO_DATE.
+#
+# 		See SECTION 5.1.11, "SERVER SQL MODES"
+#
+# TIMESTAMP or DATETIME column definitions can specify the current timestamp for both the default
+# and auto-update values, for one but not hte other, or for neither.
+#
+# Different columns can have different combinations of automatic properties.
+# The following rules describe the possibilities:
+#
+# 		) With both DEFAULT CURRENT_TIMESTAMP and ON UPDATE CURRENT_TIMESTAMP, the column has the
+# 			current timestamp for its default value and is automatically updated to the current timestamp.
+#
+# 				CREATE TABLE t1 (
+# 					ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+# 					dt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+# 				);
+#
+# 		) With a DEFAULT clause but no ON UPDATE CURRENT_TIMESTAMP clause, the column has the given
+# 			default value and is not automatically updated to the current timestamp.
+#
+# 			The default depends on whether the DEFAULT clause specifies CURRENT_TIMESTAMP or
+# 			a constant value.
+#
+# 			With CURRENT_TIMESTAMP, the default is the current timestamp.
+#
+# 				CREATE TABLE t1 (
+# 					ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+# 					dt DATETIME DEFAULT CURRENT_TIMESTAMP
+# 				);
+#
+# 			With a constant, the default is the given value. In this case,
+# 			the column has no automatic properties at all.
+#
+# 				CREATE TABLE t1 (
+# 					ts TIMESTAMP DEFAULT 0,
+# 					dt DATETIME DEFAULT 0
+# 				);
+#
+# 		) With an ON UPDATE CURRENT_TIMESTAMP clause and a constant DEFAULT clause, the column
+# 			is automatically updated to the current timestamp and has the given constant default
+# 			value.
+#
+# 				CREATE TABLE t1 (
+# 					ts TIMESTAMP DEFAULT 0 ON UPDATE CURRENT_TIMESTAMP,
+# 					dt DATETIME DEFAULT 0 ON UPDATE CURRENT_TIMESTAMP
+# 				);
+#
+# 		) With an ON UPDATE CURRENT_TIMESTAMP clause but no DEFAULT clause, the column is automatically
+# 			updated to the current timestamp but does not have the current timestamp for its
+# 			default value.
+#
+# 			The default in this case is type dependent.
+#
+# 			TIMESTAMP has a default of 0 unless defined with the NULL attribute, in which case
+# 			the default is NULL.
+#
+# 				CREATE TABLE t1 (
+# 					ts1 TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- default 0
+# 					ts2 TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP -- NULL
+# 				);
+#
+# 			DATETIME has a default of NULL unless defined with the NOT NULL attribute,
+# 			in which case the default is 0.
+#
+# 				CREATE TABLE t1 (
+# 					dt1 DATETIME ON UPDATE CURRENT_TIMESTAMP, 		-- default NULL
+# 					dt2 DATETIME NOT NULL ON UPDATE CURRENT_TIMESTAMP -- default 0
+# 				);
+#
+# TIMESTAMP and DATETIME columns have no automatic properties unless they are specified
+# explicitly, with this exception:
+#
+# 		If the explicit_defaults_for_timestamp system variable is disabled, the first TIMESTAMP column has both
+# 		DEFAULT CURRENT_TIMESTAMP and ON UPDATE CURRENT_TIMESTAMP if neither is specified explicitly.
+#
+# To surpress automatic properties for the first TIMESTAMP column, use one of these strategies:
+#
+# 		) Enable the explicit_defaults_for_timestamp system variable.
+#
+# 			In this case, the DEFAULT CURRENT_TIMESTAMP and ON UPDATE CURRENT_TIMESTAMP clauses
+# 			that specify automatic initialization and updating are available, but are not assigned
+# 			to any TIMESTAMP column unless explicitly included in the column definition.
+#
+# 		) Alternatively, if explicit_defaults_for_timestamp is disabled, do either of the following:
+#
+# 			) Define the column with a DEFAULT clause that specifies a constant default value.
+#
+# 			) Specify the NULL attribute.
+#
+# 				This also causes the column to permit NULL values, which means that you cannot assign
+# 				the current timestamp by setting the column to NULL.
+#
+# 				Assigning NULL sets the column to NULL, not the current timestamp.
+#
+# 				To assign the current timestamp, set the column to CURRENT_TIMESTAMP or a synonym
+# 				such as NOW()
+#
+# Consider these table definitions:
+#
+# 		CREATE TABLE t1 (
+# 			ts1 TIMESTAMP DEFAULT 0,
+# 			ts2 TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+# 							  ON UPDATE CURRENT_TIMESTAMP);
+#
+# 		CREATE TABLE t2 (
+# 			ts1 TIMESTAMP NULL,
+# 			ts2 TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+# 							  ON UPDATE CURRENT_TIMESTAMP);
+#
+# 		CREATE TABLE t3 (
+# 			ts1 TIMESTAMP NULL DEFAULT 0,
+# 			ts2 TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+# 							  ON UPDATE CURRENT_TIMESTAMP);
+#
+# The tables have these properties:
+#
+# 		) In each table definition, the first TIMESTAMP column has no automatic initialization or updating.
+#
+# 		) The tables differ in how the ts1 column handles NULL values.
+#
+# 			For t1, ts1 is NOT NULL and assigning it a value of NULL sets it to the
+# 			current timestamp.
+#
+# 			For t2 and t3, t1 permits NULL and assigning it a value of NULL sets it to NULL.
+#
+# 		) t2 and t3 differ in the default value for ts1.
+#
+# 			For t2, ts1 is defined to permit NULL; so the default is also NULL in the absence
+# 			of an explicit DEFAULT clause.
+#
+# 			For t3, ts1 permits NULL but has an explicit default of 0.
+#
+# If a TIMESTAMP or DATETIME column definition includes an explicit fractional
+# seconds precision value anywhere, the same value must be used throughout the column definition.
+#
+# This is permitted:
+#
+# 		CREATE TABLE t1 (
+# 			ts TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+# 		);
+#
+# This is not:
+#
+# 		CREATE TABLE t1 (
+# 			ts TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP(3)
+# 		);
+#
+# TIMESTAMP INITIALIZATION AND THE NULL ATTRIBUTE
+#
+# If the explicit_defaults_for_timestamp system variable is disabled, TIMESTAMP columns
+# by default are NOT NULL, cannot contain NULL values, and assigning NULL assigns the current timestamp.
+#
+# TO permit a TIMESTAMP column to contain NULL, explicitly declare it with the NULL attribute.
+#
+# In this case, the default value also becomes NULL unless overridden with a DEFAULT clause
+# that specifies a different default value.
+#
+# DEFAULT NULL can be used to explicitly specify NULL as the default value.
+#
+# (For a TIMESTAMP column not declared with the NULL attribute, DEFAULT NULL is invalid)
+#
+# If a TIMESTAMP column permits NULL values, assigning NULL sets it to NULL, not to the current
+# timestamp.
+#
+# The following table contains several TIMESTAMP columns that permit NULL values:
+#
+# 		CREATE TABLE t
+# 		(
+# 			ts1 TIMESTAMP NULL DEFAULT NULL,
+# 			ts2 TIMESTAMP NULL DEFAULT 0,
+# 			ts3 TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
+# 		);
+#
+# A TIMESTAMP column that permits NULL values does not take on the current timestamp at
+# insert time except under one of the following conditions:
+#
+# 		) Its default value is defined as CURRENT_TIMESTAMP and no value is specified for the column.
+#
+# 		) CURRENT_TIMESTAMP or any of its synonyms such as NOW() is explicitly inserted into the column.
+#
+# in other words, a TIMESTAMP column defined to permit NULL values auto-initializes only if its
+# definition includes DEFAULT CURRENT_TIMESTAMP.
+#
+# 		CREATE TABLE t (ts TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP);
+#
+# If the TIMESTAMP column permits NULL values but its definition does not include DEFAULT CURRENT_TIMESTAMP,
+# you must explicitly insert a value corresponding to the current date and time.
+#
+# Suppose that tables t1 and t2 have these definitions:
+#
+# 		CREATE TABLE t1 (ts TIMESTAMP NULL DEFAULT '0000-00-00 00:00:00');
+# 		CREATE TABLE t2 (ts TIMESTAMP NULL DEFAULT NULL);
+#
+# To set the TIMESTAMP column in either table to the current timestamp at insert time,
+# explicitly assign it that value.
+#
+# For example:
+#
+# 		INSERT INTO t2 VALUES (CURRENT_TIMESTAMP);
+# 		INSERT INTO t1 VALUES (NOW());
+#
+# If the explicit_defaults_for_timestamp system variable is enabled, TIMESTAMP columns
+# permit NULL values only if declared with the NULL attribute.
+#
+# Also, TIMESTAMP columns do not permit assigning NULL to assign the current timestamp,
+# whether declared with the NULL or NOT NULL attribute.
+#
+# To assign the current timestamp, set the column to CURRENT_TIMESTAMP or a synonym such
+# as NOW()
+#
+# 11.3.6 FRACTIONAL SECONDS IN TIME VALUES
+#
+# MySQL 8.0 has fractional seconds support for TIME, DATETIME and TIMESTAMP values,
+# with up to microseconds (6 digits) precision:
+#
+# 		) To define a column that includes a fractional seconds part, use the syntax type_name(fsp),
+# 			where type_name is TIME, DATETIME or TIMESTAMP and fsp is the fractional second precision.
+#
+# 			For example:
+#
+# 				CREATE TABLE t1 (t TIME(3), dt DATETIME(6));
+#
+# 			The fsp value, if given, must be in the range 0 to 6.
+#
+# 			A value of 0 signifies that there is no fractional part.
+# 			If omitted, the default precision is 0.
+#
+# 			(This differs from the standard SQL default of 6, for compatibility with previous MySQL versions)
+#
+# 		) Inserting a TIME, DATE or TIMESTAMP value with a fractional seconds part into a column
+# 			of the same type but having fewer fractional digits results in rounding.
+#
+# 			Consider a table created and populated as follows:
+#
+# 				CREATE TABLE fractest (c1 TIME(2), c2 DATETIME(2), c3 TIMESTAMP(2) );
+#
+# 				INSERT INTO fractest VALUES
+# 				('17:51:04.777', '2018-09-08 17:51:04.777', '2018-09-08 17:51:04.777');
+#
+# 			The temporal values are inserted into the table with rounding:
+#
+# 				SELECT * FROM fractest;
+# 				+-----------------+------------------------------------+------------------------------+
+# 				| c1 					| c2 											 | c3  								  |
+# 				+-----------------+------------------------------------+------------------------------+
+# 				| 17:51:04.78 		| 2018-09-08 17:51:04.78 				 | 2018-09-08 17:51:04.78 		  |
+# 				+-----------------+------------------------------------+------------------------------+
+#
+# 			No warning or error is given when such rounding occurs.
+# 			This behavior follows the SQL standard.
+#
+# 			To insert the values with truncation instead, enable the TIME_TRUNCATE_FRACTIONAL SQL mode:
+#
+# 				SET @@sql_mode = sys.list_add(@@sql_mode, 'TIME_TRUNCATE_FRACTIONAL');
+#
+# 			With that SQL mode enabled, the temporal values are inserted with truncation:
+#
+# 				SELECT * FROM fractest;
+# 				+-----------------+-------------------------------------+-------------------------------+
+# 				| c1 					| c2 											  | c3 									 |
+# 				+-----------------+-------------------------------------+-------------------------------+
+# 				| 17:51:04.77 		| 2018-09-08 17:51:04.77 				  | 2018-09-08 17:51:04.77 		 |
+# 				+-----------------+-------------------------------------+-------------------------------+
+#
+# 		) Functions that take temporal arguments accept values with fractional seconds.
+#
+# 			Return values from temporal functions include fractional seconds as appropriate.
+#
+# 			For example, NOW() with no argument returns the current date and time with no fractional part,
+# 			but takes an optional argument from 0 to 6 to specify that the return value includes a
+# 			fractional seconds part of that many digits.
+#
+# 		) Syntax for temporal literals produces temporal values:
+#
+# 			DATE 'str', TIME 'str' and TIMESTAMP 'str' and the ODBC syntax equivalents.
+# 
+# 			The resulting value includes a trailing fractional second part if specified.
+#
+# 			Previously, the temporal type keyword was ignored and these constructs produced
+# 			the string value.
+#
+# 			See STANDARD SQL AND ODBC DATE AND TIME LITERALS
+#
+# 11.3.7 CONVERSION BETWEEN DATE AND TIME TYPES
+#
+# To some extent, you can convert a value from one temporal type to another.
+#
+# However, there may be some alteration of the value or loss of information.
+#
+# In all cases, conversion between temporal types is subject to the range of valid values
+# for the resulting type.
+#
+# For example, although DATE, DATETIME and TIMESTAMP values all can be specified using the
+# same set of formats, the types do not all have the same range of values.
+#
+# TIMESTAMP values cannot be earlier than 1970 UTC or later than '2038-01-19 03:14:07' UTC.
+#
+# This means that a date such as '1968-01-01', while valid as a DATE or DATETIME value, is not
+# valid as a TIMESTAMP value and is converted to 0.
+#
+# Conversion of DATE values:
+#
+# 		) Conversion to a DATETIME or TIMESTAMP value adds a time part of '00:00:00' because the DATE
+# 			value contains no time information.
+#
+# 		) Conversion to a TIME value is not useful, the result is '00:00:00'
+#
+# Conversion of DATETIME and TIMESTAMP values:
+#
+# 		) Conversion to a DATE value takes fractional seconds into account and rounds the time part.
+# 			For example, '1999-12-31 23:59:59.499' becomes '1999-12-31', whereas '1999-12-31 23:59:59.500' becomes '2000-01-01'
+#
+# 		) Conversion to a TIME value discards the date part because the TIME type contains no date information.
+#
+# For conversion of TIME values to other temporal types, the value of CURRENT_DATE() is used for the date part.
+#
+# The TIME is interpreted as elapsed time (not time of day) and added to the date.
+#
+# THis means that the date part of the result differs from the current date if the time value is
+# outside the range from '00:00:00' to '23:59:59'
+#
+# Suppose that the current date is '2012-01-01'.
+#
+# TIME Values of '12:00:00', '24:00:00', and '-12:00:00', when converted to DATETIME
+# or TIMESTAMP values, result in '2012-01-01 12:00:00', '2012-01-02 00:00:00' and
+# '2011-12-31 12:00:00', respectively.
+#
+# Conversion of TIME to DATE is similar, but discards the time part from the result:
+#
+# 	'2012-01-01', '2012-01-02' and '2011-12-31', respectively.
+#
+# Explicit conversion can be used to override implicit conversion.
+#
+# FOr example, in comparison of DATE and DATETIME values, the DATE value is coerced to the
+# DATETIME type by adding a time part of '00:00:00'
+#
+# To perform the comparison by ignoring the time part of the DATETIME value instead, use the
+# CAST() function in the following way:
+#
+# 		date_col = CAST(datetime_col AS DATE);
+#
+# Conversion of TIME and DATETIME values to numeric form (for example, by adding +0) depends on whether
+# the value contains a fractional seconds part.
+#
+# TIME(N) or DATETIME(N) is converted to integer when N is 0 (or omitted) and to a DECIMAL
+# value with N decimal digits when N is greater than 0:
+#
+# 		SELECT CURTIME(), CURTIME()+0, CURTIME(3)+0;
+# 		+------------+---------------+-----------------+
+# 		| CURTIME()  | CURTIME()+0   | CURTIME(3)+0 	  |
+# 		+------------+---------------+-----------------+
+# 		| 09:28:00   | 		92800   | 92800.887 		  |
+# 		+------------+---------------+-----------------+
+#
+# 		SELECT NOW(), NOW()+0, NOW(3)+0;
+# 		+----------------------+-----------------+--------------------------+
+# 		| NOW() 					  | NOW()+0 		  | NOW(3)+0 					  |
+# 		+----------------------+-----------------+--------------------------+
+# 		| 2012-08-15 09:28:00  | 20120815092800  | 201220815092800.889 	  |
+# 		+----------------------+-----------------+--------------------------+
+#
+# 11.3.8 TWO-DIGIT YEARS IN DATES
+#
+# Date values with two-digit years are ambiguous because the century is unknown.
+#
+# Such values must be interpreted into four-digit form because MySQL stores years
+# internally using four digits.
+#
+# For DATETIME, DATE and TIMESTAMP types, MySQL interprets dates specified with ambiguous year values
+# using these rules:
+#
+# 		) Year values in the range 00-69 are converted to 2000-2069
+#
+# 		) Year values in the range 70-99 are converted to 1970-1999
+#
+# For YEAR, the rules are the same, with this exception:
+#
+# 		A numeric 00 inserted into YEAR(4) results in 0000 rather than 2000.
+#
+# 		TO specify zero for YEAR(4) and have it be interpreted as 2000, specify
+# 		it as a string '0' or '00'
+#
+# Remember that these rules are only heuritics that provide reasonable guesses as to what
+# your data values mean.
+#
+# If the rules used by MySQL do not produce the values you require, you must 
+# provide unambiguous input containing four-digit year values.
+#
+# ORDER BY properly sorts YEAR values that have two-digit years.
+#
+# Some functions like MIN() and MAX() convert a YEAR to a number.
+#
+# This means that a value with a two-digit year does not work properly with these
+# functions. 	
+#
+# THe fix in this case is to convert the YEAR to four-digit year format.
+#
+# 11.4 STRING TYPES
+#
+# The string types are CHAR, VARCHAR, BINARY, VARBINARY, BLOB, TEXT, ENUM and SET.
+#
+# This section describes how these types work and how to use them in your
+# queries.
+#
+# For string type storage requirements, see SECTION 11.8, "DATA TYPE STORAGE REQUIREMENTS"
+#
+# 11.4.1 THE CHAR AND VARCHAR TYPES
+#
+# The CHAR and VARCHAR types are similar, but differ in the way they are stored and retrieved.
+#
+# They also differ in maximum length and in whether trailing spaces are retained.
+#
+# The CHAR and VARCHAR types are declared with a length that indicates the maximum number of
+# characters you want to store.
+#
+# For example, CHAR(30) can hold up to 30 characters.
+#
+# THe length of a CHAR column is fixed to the length that you declare when you
+# create the table.
+#
+# THe length can be any value from 0 to 255.
+#
+# When CHAR values are stored, they are right-padded with spaces to the specified length.
+#
+# When CHAR values are retrieved, trailing spaces are removed unless the PAD_CHAR_TO_FULL_LENGTH
+# SQL mode is enabled.
+#
+# Values in VARCHAR columns are variable-length strings.
+#
+# The length can be specified as a value from 0 to 65,535.
+#
+# The effective maximum length of a VARCHAR is subject to the maximum row size (65,535 bytes,
+# which is shared among all columns) and the character set used.
+#
+# See SECTION C.10.4, "LIMITS ON TABLE COLUMN COUNT AND ROW SIZE"
+#
+# In contrast to CHAR, VARCHAR values are stored as 1-byte or 2-byte length prefix 
+# plus data.
+#
+# The length prefix indicates the number of bytes in the value.
+#
+# A column uses one length byte if values require no more than 255 bytes,
+# two length bytes if values may require more than 255 bytes.
+#
+# If strict SQL mode is not enabled, and you assign a value ot a CHAR or VARCHAR column
+# that exceeds the column's maximum length, the value is truncated to fit and a warning
+# is generated.
+#
+# For truncation of nonspace characters, you can cause an error to occur (rather than a warning)
+# and suppress insertion of the value by using strict SQL mode.
+#
+# See SECTION 5.1.11, "SERVER SQL MODES"
+#
+# For VARCHAR columns, trailing spaces in excess of the column length are truncated prior
+# to insertion and a warning is generated, regardless of the SQL mode in use.
+#
+# For CHAR columns, truncation of excess trailing spaces from inserted values is performed
+# silently regardless of the SQL mode.
+#
+# VARCHAR values are not padded when they are stored. Trailing spaces are retained when values
+# are stored and retrieved, in conformance with standard SQL.
+#
+# The following table illustrates the difference between CHAR and VARCHAR by showing the result
+# of storing various string values into CHAR(4) and VARCHAR(4) columns (assuming that the column
+# uses a single-byte character set such as latin1)
+#
+# 	Value 				CHAR(4) 			STORAGE REQUIRED 		VARCHAR(4) 		STORAGE REQUIRED
+#
+# 	'' 					'    ' 			4 bytes 					'' 				1 byte
+# 	'ab' 					'ab  ' 			4 bytes 					'ab' 				3 bytes
+# 	'abcd' 				'abcd' 			4 bytes 					'abcd' 			5 bytes
+# 	'abcdefgh' 			'abcd' 			4 bytes 					'abcd' 			5 bytes
+#
+# The values shown as stored in the last row of the table apply only when not using strict mode;
+# if MySQL is running in strict mode, values that exceed the column length are NOT stored, and an error results.
+#
+# InnoDB enforces fixed-length fields greater than or equal to 768 bytes in length as variable-length
+# fields, which can be stored off-page.
+#
+# For example, a CHAR(255) column can exceed 768 bytes if the maximum byte length of the character
+# set is greater than 3, as it is with utf8mb4.
+#
+# If a given value is stored into the CHAR(4) and VARCHAR(4) columns, the values retrieved from the
+# columns are not always the same because trailing spaces are removed from CHAR columns upon retrieval.
+#
+# The following example illustrates this difference:
+#
+# 		CREATE TABLE vc (v VARCHAR(4), c CHAR(4));
+# 		Query OK, 0 rows affected (0,01 sec)
+#
+# 		INSERT INTO vc VALUES ('ab  ', 'ab  ');
+# 		Query OK, 1 row affected (0.00 sec)
+#
+# 		SELECT CONCAT('(', v, ')'), CONCAT('(', c, ')') FROM vc;
+# 		+-------------------------+----------------------------+
+# 		| CONCAT('(', v, ')') 	  | CONCAT('(', c, ')') 		 |
+# 		+-------------------------+----------------------------+
+# 		| (ab  ) 					  | (ab) 							 |
+# 		+-------------------------+----------------------------+
+# 		1 row in set (0.06 sec)
+#
+# Values in CHAR and VARCHAR columns are sorted and compared according to the
+# character set collation assigned to the column.
+#
+# Most MySQL collations have a pad attribute of PAD SPACE.
+#
+# The exceptions are Unicode collations based on UCA 9.0.0 and higher,
+# which have a pad attribute of NO PAD.
+#
+# (See SECTION 10.10.1, "UNICODE CHARACTER SETS")
+#
+# To determine the pad attribute for a collation; use the INFORMATION_SCHEMA COLLATIONS table,
+# which has a PAD_ATTRIBUTE column.
+#
+# THe pad attribute determines how trailing spaces are treated for comparison of nonbinary strings
+# (CHAR, VARCHAR, and TEXT values).
+#
+# NO PAD collations treat spaces at the end of strings like any other character.
+#
+# For PAD SPACE collations, trailing spaces are insignificant in comparisons; strings are compared
+# without regard to any trailing spaces.
+#
+# "Comparison" in this context does not include the LIKE pattern-matching operator, for which
+# trailing spaces are significant.
+#
+# For example:
+#
+# 		CREATE TABLE names (myname CHAR(10));
+# 		Query OK, 0 rows affected (0.03 sec)
+#
+# 		INSERT INTO names VALUES ('Monty');
+# 		Query OK, 1 row affected (0.00 sec)
+#
+# 		SELECT myname = 'Monty', myname = 'Monty    ' FROM names;
+#		+------------------------+--------------------------+
+# 		| myname = 'Monty' 		 | myname = 'Monty    ' 	 |
+# 		+------------------------+--------------------------+
+# 		| 			1 					 |				1 					 |
+# 		+------------------------+--------------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		SELECT myname LIKE 'Monty', myname LIKE 'Monty    ' FROM names;
+# 		+------------------------+--------------------------+
+# 		| myname LIKE 'Monty' 	 | myname LIKE 'Monty    '  |
+# 		+------------------------+--------------------------+
+# 		| 				1 				 | 				0 				 |
+# 		+------------------------+--------------------------+
+# 		1 row in set (0.00 sec)
+#
+# This is true for all MySQL versions, and is not affected by the server SQL mode.
+#
+# Note:
+#
+# 		For more information about MySQL character sets and collations, see
+# 		CHAPTER 10, CHARACTER SETS, COLLATIONS, UNICODE.
+#
+# 		For additional information about storage requirements, see
+# 		SECTION 11.8, "DATA TYPE STORAGE REQUIREMENTS"
+#
+# For those cases where trailing pad characters are stripped or comparisons ignore them,
+# if a column has an index that requires unique values, inserting into the column values
+# that differ only in number of trialing pad chars will result in a duplicate key error.
+#
+# For example, if a table contains 'a', an attempt to store 'a  ' causes a duplicate-key error.
+#
+# 11.4.2 THE BINARY AND VARBINARY TYPES
+#
+# The BINARY and VARBINARY types are similar to CHAR and VARCHAR, except that they contain
+# binary strings rather than nonbinary strings.
+#
+# That is, they contain byte strings rather than character strings.
+#
+# This means they have the binary character set and collation, and comparison
+# and sorting are based on the numeric values of the bytes in the values.
+#
+# The permissible maximum length is the same for BINARY and VARBINARY as it is
+# for CHAR and VARCHAR, except that the length for BINARY and VARBINARY is a length
+# in bytes rather than in characters.
+#
+# The BINARY and VARBINARY data types are distinct from the CHAR BINARY and VARCHAR BINARY
+# data types.
+#
+# For the latter types, the BINARY attribute does not cause the column to be treated as a binary
+# string column.
+#
+# Instead, it causes the binary (_bin) collation for the column character set to be used, and
+# the column itself contains nonbinary character strings rather than binary byte strings.
+#
+# For example, CHAR(5) BINARY is treated as CHAR(5) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin, assuming
+# that the default character set is utf8mb4.
+#
+# This differs from BINARY(5), which stores 5-bytes binary strings that have the binary
+# character set and collation.
+#
+# For information about differences between binary strings and binary collations for nonbinary strings,
+# see SECTION 10.8.5, "THE BINARY COLLATION COMPARED TO _BIN COLLATIONS"
+#
+# If strict SQL mode is not enabled and you assign a value to a BINARY or VARBINARY column that 
+# exceeds the column's maximum length, the value is truncated to fit and a warning is generated.
+#
+# For cases of truncation, you can cause an error to occur (rather than a warning), and suppress
+# insertion of the value by using strict SQL mode.
+#
+# See SECTION 5.1.11, "SERVER SQL MODES"
+#
+# When BINARY values are stored, they are right-padded with the pad value to the specified length.
+#
+# The pad value is 0x00 (the zero byte). Values are right-padded with 0x00 on insert, and no trailing
+# bytes are removed on select.
+#
+# All bytes are significant in comparisons, including ORDER BY and DISTINCT operations.
+#
+# 0x00 bytes and spaces are different in comparisons, with 0x00 < space.
+#
+# Example:
+#
+# 		For a BINARY(3) column, 'a  ' becomes 'a \0' when inserted.
+# 		'a\0' becomes 'a\0\0' when inserted.
+#
+# 		Both inserted values remain unchanged when selected.
+#
+# 		For VARBINARY, there is no padding on insert and no bytes are stripped on select.
+#
+# 		All bytes are significant in comparisons, including ORDER BY and DISTINCT operations.
+# 		0x00 bytes and spaces are different in comparisons, with 0x00 < space.
+#
+# 		For those cases where trailing pad bytes are stripped or comparisons ignore them, if a column
+# 		has an index that requires unique values, inserting into the column values that differ
+# 		only in number of trailing pad bytes will result in a duplicate key error.
+#
+# 		For example,, if a table contains 'a', an attempt to store 'a\0', causes a duplicate-key
+# 		errror.
+#
+# 		You should consider the preceding padding and stripping characteristics carefully if you plan
+# 		to use the BINARY data type for storing binary data and you require that hte value
+# 		retrieved be exactly the same as the value stored.
+#
+# 		The following example illustrates how 0x00-padding of BINARY values affects
+# 		column value comparisons:
+#
+# 			CREATE TABLE t (c BINARY(3));
+# 			Query OK, 0 rows affected (0.01 sec)
+#
+# 			INSERT INTO t SET c = 'a';
+# 			Query OK, 1 row affected (0.01 sec)
+#
+# 			SELECT HEX(c), c = 'a', c = 'a\0\0' from t;
+# 			+-----------+--------------+---------------+
+# 			| HEX(c) 	| c = 'a' 	   | c = 'a\0\0'   |
+# 			+-----------+--------------+---------------+
+# 			| 610000 	| 			0 		| 1 				 |
+# 			+-----------+--------------+---------------+
+# 			1 row in set (0.09 sec)
+#
+# If the value retrieved must be the same as the value specified for storage with no padding,
+# it might be preferable to use VARBINARY or one of the BLOB data types instead.
+#
+# 11.4.3 THE BLOB AND TEXT TYPES
+#
+# A BLOB is a binary large object that can hold a variable amount of data.
+# The four BLOB types are TINYBLOB, MEDIUMBLOB, and LONGBLOB.
+#
+# These differ only in the maximum length of the values they can hold.
+#
+# The four TEXT types are TINYTEXT, TEXT, MEDIUMTEXT, and LONGTEXT.
+#
+# These correspond to the four BLOB types and have the same maximum lengths
+# and storage requirements.
+#
+# See SECTION 11.8, "DATA TYPE STORAGE REQUIREMENTS"
+#
+# BLOB values are treated as binary strings (byte strings).
+#
+# THey have the binary character set and collation, and comparison and sorting
+# are based on the numeric values of the bytes in column values.
+#
+# TEXT values are treated as nonbinary strings (char strings)
+#
+# They have a character set other than binary, and values are sorted and compared based
+# on the collation of the character set.
+#
+# If strict SQL mode is not enabled and you assign a value to a BLOB or TEXT column that
+# exceeds the column's maximum length, the value is truncated to fit and a warning is
+# generated.
+#
+# For truncation of nonspace characters, you can cause an error to occur (rather than a warning)
+# and suppress insertion of the value by using strict SQL mode.
+#
+# See SECTION 5.1.11, "SERVER SQL MODES"
+#
+# Truncation of excess trailing spaces from values to be inserted into TEXT columns always
+# generate a warning, regardless of the SQL mode.
+#
+# For TEXT and BLOB columns, there is no padding on insert and no bytes are stripped on select.
+#
+# If a TEXT column is indexed, index entry comparisons are space-padded at the end.
+#
+# This means that, if the index requires unique values, duplicate-key errors will occur for
+# values that  differ only in the number of trailing spaces.
+#
+# For example, if a table contains 'a', an attempt to store 'a  ' causes a duplicate-key error.
+#
+# This is not true for BLOB columns.
+#
+# In most respects, you can regard a BLOB column as a VARBINARY column that can be as large
+# as you like.
+#
+# Similarly, you can regard a TEXT column as a VARCHAR column.
+#
+# BLOB and TEXT differ from VARBINARY and VARCHAR in the following ways:
+#
+# 		) For indexes on BLOB and TEXT columns, you must specify an index prefix length.
+# 			For CHAR and VARCHAR, a prefix length is optional.
+#
+# 			See SECTION 8.3.5, "COLUMN INDEXES"
+#
+# 		) BLOB and TEXT columns cannot have DEFAULT values.
+#
+# If you use the BINARY attribute with a TEXT data type, the column is assigned
+# the binary (_bin) collation of the column character set.
+#
+# LONG and LONG VARCHAR map to the MEDIUMTEXT data type.
+# This is a compatbility feature.
+#
+# MySQL Connector/ODBC defines BLOB values as LONGVARBINARY and TEXT values as LONGVARCHAR.
+#
+# Because BLOB and TEXT values cna be extremely long, you might encounter some constraints in using them:
+#
+# 		) Only the first max_sort_length bytes of the column are used when sorting.
+#
+# 			The default value of max_sort_length is 1024.
+#
+# 			You can make more bytes significant in sorting or grouping by increasing
+# 			the value of max_sort_length at server startup or runtime.
+#
+# 			Any client can change the value of its session max_sort_length variable:
+#
+# 				SET max_sort_length = 2000;
+# 				SELECT id, comment FROM t
+# 				-> ORDER BY comment;
+#
+# 		) Instances of BLOB or TEXT columns in the result of a query that is processed using a temporary table
+# 			causes the server to use a table on disk rather than in memory because the MEMORY storage engine
+# 			does not support those data types. (see SECTION 8.4.4, "INTERNAL TEMPORARY TABLE USE IN MYSQL")
+#
+# 			Use of disk incurs a performance penalty, so include BLOB or TEXT columns in the query result only
+# 			if they are really needed.
+#
+# 			For example, avoid using SELECT_*, which selects all columns.
+#
+# 		) The maximum size of a BLOB or TEXT object is determined by its type, but the largest value
+# 			you actually can transmit between the client and server is determined by the amount of
+# 			available memory and the size of the communications buffers.
+#
+# 			You can change the message buffer size by changing the value of the max_allowed_packet
+# 			variable, but you must do so for both the server and your client program.
+#
+# 			For example, both mysql and mysqldump enable you to change the client-side 
+# 			max_allowed_packet value.
+#
+# 			See SECTION 5.1.1, "CONFIGURING THE SERVER", SECTION 4.5.1 "MYSQL - THE MYSQL COMMAND-LINE TOOL";
+# 			and SECTION 4.5.4 "MYSQLDUMP - A DATABASE BACKUP PROGRAM".
+#
+# 			YOu may also want ot compare the packet sizes of the data objects you are storing with the storage
+# 			requirements, see SECTION 11.8, "DATA TYPE STORAGE REQUIREMENTS"
+#
+# Each BLOB or TEXT value is represented internally by a separately allocated object.
+#
+# This is in contrast to other data types, for which storage is allocated once per column when the
+# table is opened.
+#
+# IN some cases, it may be desirable to store binary data such as media files in BLOB or TEXT columns.
+# You may find MySQL's string handling functions useful for workting with such data.
+#
+# See SECTION 12.5, "STRING FUNCTIONS".
+#
+# For security and other reasons, it is usually preferable to do so using application code rather
+# than giving application users the FILE privilege.
+#
+# 11.4.4 THE ENUM TYPE
+#
+# An ENUM is a string object with a value chosen from a list of permitted values that are enumerated explicitly
+# in the column specification at table creation time.
+#
+# It has these advantages:
+#
+# 		) Compact data storage in situations where a column has a limited set of possible values.
+#
+# 			The strings you specify as input values are automatically encoded as numbers.
+#
+# 			See SECTION 11.8, "DATA TYPE STORAGE REQUIREMENTS" for the storage requirements
+# 			for ENUM types.
+#
+# 		) Readable queries and output.
+#
+# 			The numbers are tralsated back to the corresponding string in query results.
+#
+# and these potentional issues ot consider:
+#
+# 		) If you make enumeration values that look like numbers, it is easy ot mix up the literal values
+# 			with their internal index numbers, as explained in Enumeration Limitations.
+#
+# 		) Using ENUM columns in ORDER BY clauses requires extra care, as explained in Enumeration Sorting.
+#
+# 		) Creating and Using ENUM columns
+#
+# 		) INdex Values for Enumeration Literals
+#
+# 		) Handling of ENumeraiton lierals
+#
+# 		) Empty or NULL Enumeration values
+#
+# 		) Enumeration Sorting
+#
+# 		) Enumeration Limitations
+#
+# CREATING AND USING ENUM COLUMNS
+#
+# An enumeration value must be a quoted string literal.
+# For example, you can create a table with an ENUM column like this:
+#
+# 		CREATE TABLE shirts (
+# 			name VARCHAR(40),
+# 			size ENUM('x-small', 'small', 'medium', 'large', 'x-large')
+# 		);
+#
+# 		INSERT INTO shirts (name, size) VALUES ('dress shirt', 'large', ('t-shirt', 'medium'),
+# 			('polo shirt', 'small');
+#
+# 		SELECT name, size FROM shirts WHERE size = 'medium';
+# 		+------------+-----------+
+# 		| name 		 | size 		 |
+# 		+------------+-----------+
+# 		| t-shirt 	 | medium 	 |
+# 		+------------+-----------+
+#
+# 		UPDATE shirts SET size = 'small' WHERE size = 'large';
+# 		COMMIT;
+#
+# Inserting 1 million rows into this table with a value of 'medium' would require 1 million bytes
+# of storage, as opposed to 6 mil bytes if you stored the actual string 'medium' in a VARCHAR column.
+#
+# INDEX VALUES FOR ENUMERATION LITERALS
+#
+# Each enumeration has an index:
+#
+# 		) The elements listed in the column specification are assigned
+# 			index numbers, beginning with 1.
+#
+# 		) The index value of the empty string error  value is 0.
+#
+# 			This means that you can use the following SELECT statement
+# 			to find rows into which invalid ENUM values were assigned:
+#
+# 				SELECT * FROM tbl_name WHERE enum_col=0;
+#
+# 		) The index of the NULL value is NULL
+#
+# 		) The term "index" here refers to position within list of enum values. Not table indexes.
+#
+# For example, a column speicifed as ENUM('Mercury', 'Venus', 'Earth') can have any of the values as:
+#
+# 		VALUE 					INDEX
+#
+# 		NULL 						NULL
+# 
+# 		'' 						0
+#
+# 		'Mercury' 				1
+# 
+# 		'Venus' 					2
+#
+# 		'Earth' 					3
+#
+# An ENUM column can have a maximum of 65,535 distinct elements.
+#
+# if you retrieve an ENUM value in a numeric context, the column value's index is returned.
+#
+# For example, you can retrieve numeric values from an ENUM column like this:
+#
+# 		SELECT enum_col+0 FROM tbl_name;
+#
+# Functions such as SUM() or AVG() that expect a numeric argument cast the argument 
+# to a number if necessary.
+#
+# For ENUM values, the index number is used in the calculation.
+#
+# HANDLING OF ENUMERATION LITERALS
+#
+# Trailing spaces are automatically deleted from ENUM member values
+# in the table definition when a table is created.
+#
+# When retrieved, values stored into an ENUM column are displayed using the lettercase
+# that was used in the column definition.
+#
+# Note that ENUM columns can be assigned a character set and collation.
+#
+# For binary or case-sensitive collations, lettercase is taken into account
+# when assigning values to the column.
+#
+# If you store a number into an ENUM column, the number is treated as the index into the
+# possible values, and the value stored is the enumeration member with that index.
+#
+# (However, this does NOT work with LOAD_DATA, which treats all input as strings)
+#
+# If the numeric value is quoted, it is still interpeted as an index if there
+# is no matching string in the list of enumeration values.
+#
+# For these reasons, it is not advisable to define an ENUM column with enumeration values
+# that look like numbers, because this can easily become confusing.
+#
+# For example, the following column has enumeration members with string values of '0', '1', '2',
+# but numeric index values of 123
+#
+# numbers ENUM('0', '1', '2')
+#
+# If you store 2, it is interpeted as an index value and becomes '1' (the value with index 2).
+#
+# If you store '2', it matches an enumeration value, so it is stored as '2'.
+#
+# If you store '3', it does not match any enumeration value, so it is treated as an index and
+# becomes '2' (the value with index 3)
+#
+# 	INSERT INTO t (numbers) VALUES(2), ('2'), ('3');
+# 	SELECT * FROM t;
+# 	+-------------+
+# 	| numbers 	  |
+# 	+-------------+
+# 	| 1 			  |
+## | 2 			  |
+# 	| 2 			  |
+# 	+-------------+
+#
+# To determine all possible values for an ENUM column, use SHOW_COLUMNS_FROM_tbl_name_LIKE_'enum col' and parse the
+# ENUM definition in the Type column of the output.
+#
+# In the C API, ENUM values are returned as strings.
+#
+# For information about using result set metadata to distinguish them from otehr strings,
+# see SECTION 28.7.5, "C API DATA STRUCTURES"
+#
+# EMPTY OR NULL ENUMERATION VALUES
+#
+# An enumeration value can also be the empty string ('') or NULL under certain circumnstances:
+#
+# 		) If oyu insert an invalid value into an ENUM(that is, a string ot present in the list of permitted values),
+# 			the empty string is inserted instead as a special error value.
+#
+# 			THis string can be distinguished from a "normal" empty string by the fact that this string has
+# 			the numeric value 0.
+#
+# 			See INDEX VALUES FOR ENUMERATION LITERALS for details about the numeric
+# 			indexes for the enumeration values.
+#
+# 			If strict SQL mode is enabled, attempts to insert invalid ENUM values result in an error.
+#
+# 		) If an ENUM column is declared to permit NULL, the NULL value is a valid value for hte column,
+# 			and the default value is NULL.
+#
+# 			If an ENUM column is declared NOT NULL, its default value is the first element
+# 			of the list of permitted values.
+#
+# ENUMERATION SORTING
+#
+# ENUM values are sorted based on their index numbers, which depend on the order in which the enumeration members
+# were listed in the column specification.
+#
+# FOr example, 'b' sorts before 'a' for ENUM('b', 'a')
+#
+# The empty string sorts before nonempty strings, and NULL values sort before ALL other enumeration values.
+#
+# TO prevent unexpected resultswhen using ORDER BY clause on an ENUM column,
+# use one of these techniques:
+#
+# 		) Specify the ENUM list in alphabetic order
+#
+# 		) Make sure taht hte column is sorted lexically rather
+# 		than by index number by coding ORDER BY CAST(col AS CHAR) or ORDER BY CONCAT(col)
+#
+# ENUMERATION LIMITATIONS
+#
+# AN enumeraiton value cannot be an expression, even one that evaluates to a string value.
+#
+# FOr example, this CREATE TABLE statement DOES NOT work because the CONCAT function CANNOT 
+# be used ot cosntruct an enumeration value:
+#
+# 		CREATE TABLE sizes (
+# 			size ENUM('small', CONCAT('med', 'ium'), 'large')
+# 		);
+#
+# YOu also cannot employ a user variable as an enumeration value.
+#
+# This pair of staetments do NOT work:
+#
+# 		SET @mysize = 'medium';
+#
+# 		CREATE TABLE sizes (
+# 			size ENUM('small', @mysize, 'large')
+# 		);
+#
+# We strongly recommend that you do NOT use numbers as Enum values.
+#
+# BEcause it does not save on storage over the appropriate TINYINT or SMALLINT types,
+# and it is easy to mix up strings and the underlying number values (which might not be the same),
+# if oyu quote the ENUM values incorrectly.
+#
+# If you do use a number as an enum value, always enclose it in quotation marks.
+#
+# If the quotation marks are omitted, the number is regarded as an index.
+#
+# SEe HANDLING OF ENUMERAITON LITERALS to see how even a quoted number could be
+# mistakenly used as a numeric index value.
+#
+# Duplicate vlaues in teh definition cause a warning, or an error if strict mode
+# is enabled.
+#
+# 11.4.5 THE SET TYPE
+#
+# A SET is a string object that can have zero or more values,each of which must be chosen
+# from a list of permitted values specified when the table is created.
+#
+# SET column values that consist of multiple set members are specified with members
+# separated by commas (,)
+#
+# A consequence of this is that SET members values should not themselves
+# contain commas.
+#
+# For example, a column specified as SET('one', 'two') NOT NULL can have any of these values:
+#
+# 		''
+# 		'one'
+# 		'two'
+# 		'one, two'
+#
+# A SET column can have a maximum of 64 distinct members.
+#
+# Duplicate values in the definition cause a warning, or an error if strict
+# SQL mode is enabled.
+#
+# Trailing spaces are automatically deleted from SET member values in the table
+# definition when a table is created.
+#
+# WHen retrieved, values stored in a SET column are displayed using the lettercase
+# that was used in the column definition.
+#
+# Note that SET columns can be assigned a character set and collation.
+#
+# For binary or case-sensitive collations, lettercase is taken into account when assinging
+# values ot hte column.
+#
+# MySQL stores SET values numerically, with the low-order bit of the stored value correpsonding
+# to the first set member.
+#
+# If you retrieve a SET value in a numeric context, the value retrieved has bits set corresponding
+# to the set members that make up the column vlaue.
+#
+# For example, you can retrieve numeric values from a SET column like this:
+#
+# 		SELECT set_col+0 FROM tbl_name;
+#
+# If a number is stored into a SET column, the bits that are set in the binary representation
+# of the number determine the set members in the column value.
+#
+# FOr a column specified as SET('a', 'b', 'c', 'd'), the members have the following decimal
+# and binary values:
+#
+# 		SET member 			DECIMAL VALUE 			BINARY VALUE
+#
+# 		'a' 					1 							0001
+# 		'b' 					2 							0010
+# 		'c' 					4 							0100
+# 		'd' 					8 							1000
+#
+# If you assign a value of 9 to this column, that is 1001 in binary, so the first and fourth SET value members
+# 'a' and 'd' are selected and the resulting value is 'a,d'
+#
+# For a value containing more than one SET element, it doesn ot matter what order the elements are listed in
+# when you insert the value.
+#
+# It also does not matter how many times a given element is listed in the value.
+#
+# When the value is retrieved later, each element in the value appears once, with
+# elements listed according to the order in which they were specified at table creation time.
+#
+# For example, suppose tha a column is specified as SET('a','b','c','d'):
+#
+# 		CREATE TABLE myset (col SET('a', 'b', 'c', 'd'));
+#
+# If you insert the values 'a,d', 'd,a', 'a,d,d', 'a,d,a', and 'd,a,d':
+#
+# 		INSERT INTO myset (col) VALUES
+# 		-> ('a,d'), ('d,a'), ('a,d,a'), ('a,d,d'); ('d,a,d');
+# 		Query OK, 5 rows affected (0.01 sec)
+# 		Records: 5 Duplicates: 0 Warnings: 0
+#
+# THen all these values appear as 'a,d' when retrieved:
+#
+# 		SELECT col FROM myset;
+#
+# 		+-------+
+# 		| col   |
+# 		+-------+
+# 		| a,d   |
+# 		| a,d   |
+# 		| a,d   |
+# 		| a,d   |
+# 		| a,d   |
+# 		+-------+
+# 		5 rows in set (0.04 sec)
+#
+# If you set a SET column to an unsupported value, the value is ignored and a warning is issued:
+#
+#
+# 		INSERT INTO myset (col) VALUES ('a,d,d,s');
+# 		Query OK, 1 row affected, 1 warning (0.03 sec)
+#
+# 		SHOW WARNING;
+# 		+-----------+-----------+------------------------------------------+
+# 		| Level 	   | Code 		| Message 						   				 |
+# 		+-----------+-----------+------------------------------------------+
+# 		| Warning 	| 1265 		| Data truncated for column 'col' at row 1 |
+# 		+-----------+-----------+------------------------------------------+
+# 		1 row in set (0.04 sec)
+#
+# 		SELECT col FROM myset;
+# 		+-----+
+# 		| col |
+# 		+-----+
+# 		| a,d |
+# 		| a,d |
+# 		| a,d |
+# 		| a,d |
+# 		| a,d |
+# 		| a,d |
+# 		+-----+
+# 		6 rows in set (0.01 sec)
+#
+# If strict SQL mode is enabled, attempts to insert invalid SET values
+# result in an error.
+#
+# SET values are sorted numerically. 
+#
+# NULL values sort before non-NULL SET values.
+#
+# Functions such as SUM() or AVG() that expect a numeric argument cast teh argument
+# to a number if necessary.
+#
+# For SET values, the cast operation causes the numeric value
+# to be used.
+#
+# Normally, you search for SET values using the FIND_IN_SET() function or the LIKE operator:
+#
+# 		SELECT * FROM tbl_name WHERE FIND_IN_SET('value',set_col)>0;
+# 		SELECT * FROM tbl_name WHERE set_col LIKE '%value%';
+#
+# The first statement finds rows where set_col contains the value set member.
+#
+# The second is similarr, but not the same, it finds rows where set_col contains
+# value anywhere, even as a substring of another set member.
+#
+# The following statements also are permitted:
+#
+# 		SELECT * FROM tbl_name WHERE set_col & 1;
+# 		SELECT * FROM tbl_name WHERE set_col = 'val1,val2';
+#
+# The first of the statement looks for values containing the first set member.
+#
+# The second looks for an exact match.
+#
+# Be careful with comparisons of the second tpye.
+#
+# Comparing set values to 'val1,val2' returns different reuslts than comparin values
+# to 'val2, val1'.
+#
+# You should specify the values in the same order they are listed in the column definition.
+#
+# TO determine all possible values for a SET column, use SHOW COLUMNS FROM tbl_name LIKE
+# set_col and parse the SET definition in the Type column of the output.
+#
+# In the C API, SET values are returned as strings.
+#
+# FOr information about using result set metadata to distinguish them from other strings,
+# see SECTION 28.7.5, "C API DATA STRUCTURES"
+#
+# 
+# 
+#  https://dev.mysql.com/doc/refman/8.0/en/set.html
+# 
+#   			  
