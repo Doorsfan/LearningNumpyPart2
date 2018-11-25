@@ -71606,8 +71606,2020 @@ Need be, i will change this for upcoming repeated cases. */
 # FOr information about using result set metadata to distinguish them from other strings,
 # see SECTION 28.7.5, "C API DATA STRUCTURES"
 #
+#
+# 11.5 SPATIAL DATA TYPES
+#
+# The Open Geospatial Consortium (OGC) is an international consortium of more than 250
+# companies, agencies, and universities participating in the development of publicly
+# available conceptual solutions that can be useful with all kinds of applications that manage spatial data.
+#
+# The Open-Geospatial Consortium publishes the OpenGIS Implementation Standard for Geographic 
+# Information - Simple feature access - Part 2: SQL option, a document that proposes
+# several conceptual ways for extending an SQL RDBMS to support spatial data.
+#
+# Available at the OGC website, <link>
+#
+# Following the OGC specification, MySQL implements spatial extensions as a subset of the
+# SQL with Geometry Types environment.
+#
+# This term refers to an SQL environment that has been extended with a set of geometry
+# types.
+#
+# A geometry-valued SQL column is implemented as a column that has a geometry type.
+#
+# The specification describes a set of SQL geometry types, as well as functions on those
+# types to create and analyze geometry values.
+#
+# MySQL spatial extensions enable the generation, storage and analysis of geographic features:
+#
+# 		) Data types for representing spatial values
+#
+# 		) Functions for manipulating spatial values
+#
+# 		) Spatial indedxing for improved access times to spatial columns
+#
+# The spatial data types and functions are available for MyISAM, InnoDB, NDB and ARCHIVE tables.
+#
+# For indexing spatial columns, MyISAM and InnoDB support both SPATIAL and
+# non-SPATIAL indexes.
+#
+# The other storage engines support non-SPATIAL indexes, as described in
+# SECTION 13.1.15, "CREATE INDEX SYNTAX" later
+#
+# A geographic feature is anything in the world that has a location.
+# A feature can be:
+#
+# 		) An entity. For example, a mountain, a pond, a city
+#
+# 		) A space. For example, town district, the tropics.
+#
+# 		) a definable location. For example, a crossroad, as a particular place where two streets intersect.
+#
+# Some documents use the term geospatial feature to refer to geographic features.
+#
+# Geometry is another word that denotes a geographic feature. Originally the word geometry
+# meant measurement of the earth.
+#
+# Another meaning comes from cartography, referring to the geometric features that cartographers
+# use to map the world.
+#
+# The discussion here considers these terms synonymous:
+#
+# 	geographic feature, geospatial feature, feature, or geometry.
+#
+# The term most commonly used is géometry, defined as a point or an
+# aggregate of points representing anything in the world that has a location.
+#
+# The following material covers these topics:
+#
+# 		) The spatial data types implemented in MySQL model
+#
+# 		) The basis of the spatial extensions in the OpenGIS geometry model
+#
+# 		) Data formats for representing spatial data
+#
+# 		) How to use spatial data in MySQL
+#
+# 		) Use of indexing for spatial data
+#
+# 		) MysQL differences from the OpenGIS spec
+#
+# For informaiton about functions that operate on spatial data,
+# see SECTION 12.16, "SPATIAL ANALYSIS FUNCTIONS"
+#
+# ADDITIONAL RESOURCES
+#
+# These standards are important for the MySQL implementation of spatial operations:
+#
+# 		) SQL/MM Part 3: Spatial
+#
+# 		) The Open Geospatial consortium publishes the OpenGIS Implementation Standard for Geographic
+# 			Information, a document that proposes several conceptual ways for extending an SQL
+# 			RDBMS to support spatial data.
+#
+# 			See in particular Simple Feature Access - Part 1: Common Architechture, and Simple
+# 			Feature Access - part 2: SQL option
+#
+# 			The Open Geospatial Consortium (OGC) maintains a website at <link>
+#
+# 			The specification is available there at <link>
+#
+# 			It contains additional information relevant to the material here
+#
+# 		) The grammar for spatial reference system (RFS) definitions is based on the grammar
+# 			defined in OpenGIS Implementation-Specific: Coordinate Transformation Service,
+# 			More info at links.
+#
+# 			For differences from that specification in SRS definitions as implemented in MySQL,
+# 			see SECTION 13.1.19, "CREATE SPATIAL REFERENCE SYSTEM SYNTAX"
+#
+# If you have questions or concerns about the use of the spatial extensions to MySQL,
+# you can discuss at forums.
+#
+# 11.5.1 SPATIAL DATA TYPES
+#
+# MySQL has spatial data types that correspond to OpenGIS classes.
+# The basis for these types is described in SECTION 11.5.2, "THE OPENGIS GEOMETRY MODEL"
+#
+# Some spatial data types hold single geometry values:
+#
+# 		) GEOMETRY
+#
+# 		) POINT
+#
+# 		) LINESTRING
+#
+# 		) POLYGON
+#
+# GEOMETRY can store geometry values of any type. The other single-value types (POINT, LINESTRING,
+# and POLYGON) restrict their values to a particular geometry type.
+#
+# The other spatial data types hold collections of  values:
+#
+# 		) MULTIPOINT
+#
+# 		) MULTILINESTRING
+#
+# 		) MULTIPOLYGON
+#
+# 		) GEOMETRYCOLLECTION
+#
+# GEOMETRYCOLLECTION can store a collection of objects of any type.
+#
+# The other collection types (MULTIPOINT, MULTILINESTRING, MULTIPOLYGON, and
+# GEOMETRYCOLLECTION) restrict collection members to those having a particular
+# geometry type.
+#
+# Example: To create a table named geom that has a column named g that can store values
+# of any geometry type, use this statement:
+#
+# 		CREATE TABLE geom (g GEOMETRY);
+#
+# Columns with a spatial data type can have an SRID attribute, to explicitly indicate the
+# spatial reference system (SRS) for values stored in the column.
+#
+# For example:
+#
+# 		CREATE TABLE geom (
+# 			p POINT SRID 0,
+# 			g GEOMETRY NOT NULL SRID 4326
+# 		);
+#
+# SPATIAL indexes can be created on spatial columns if they are NOT NULL and have a specific SRID,
+# so if you plan to index the column, declare it with the NOT NULL and SRID attributes:
+#
+# 		CREATE TABLE geom (g GEOMETRY NOT NULL SRID 4326);
+#
+# InnoDB tables permit SRID values for Cartesian and geographic SRSs.
+# MyISAM tables permit SRID values for Cartesian SRSs.
+#
+# The SRID attribute makes a spatial column SRID-restricted, which has these implications:
+#
+# 		) The column can contain only values with the given SRID. Attempts to insert values with a different
+# 			SRID produce an error.
+#
+# 		) The optimizer can use SPATIAL indexes on the column. See SECTION 8.3.3, "SPATIAL INDEX OPTIMIZATION"
+#
+# Spatial columns with no SRID attribute are not SRID-restricted and accept values with any SRID.
+#
+# However, the optimizer cannot use SPATIAL indexes on them until the column definition is modified
+# to include an SRID attribute, which may require that the column contents first be modified so that
+# all values have the same SRID.
+#
+# For other examples showing how to use spatial data types in MySQL, see SECTION 11.5.6, "CREATING SPATIAL COLUMNS"
+# For information about spatial reference systems, see SECTION 11.5.5 "SPATIAL REFERENCE SYSTEM SUPPORT"
+#
+# 11.5.2 THE OPENGIS GEOMETRY MODEL
+#
+# The set of geometry types proposed by OGC's SQL with Geometry Types environment is based on
+# the OpenGIS Geometry Model.
+#
+# In this model, each geometric object has the following general properties:
+#
+# 		) It is associated with a spatial reference system, which describes the coordinate space
+# 			in which the object is defined.
+#
+# 		) It belongs to some geometry class.
+#
+# 11.5.2.1 THE GEOMETRY CLASS HIERARCHY
+#
+# The geometry classes define a hierarchy as follows:
+#
+# 		) Geometry (noninstantiable)
+#
+# 			) Point (instansiable)
+#
+# 			) Curve (noninstansiable)
+#
+# 				) LineString (instansible)
+#
+# 					) Line
+#
+# 					) LinearRing
+#
+# 			) Surface (noninstansiable)
+#
+# 				) Polygon (instansiable)
+#
+# 			) GeometryCollection (instansible)
+#
+# 				) MultiPoint (instansible)
+#
+# 				) MultiCurve (Noninstansible)
+#
+# 					) MultiLineString (Instansible)
+#
+# 				) MultiSurface (noninstansible)
+#
+# 					) MultiPolygon (instansible)
+#
+# It is not possible to create objects in noninstansible classes.
+#
+# IT is possible to create objects in instansible classes.
+#
+# All classes have properties, and instansible classes may also have assertions
+# (rules that define valid class instances)
+#
+# Geometry is the base class. It is an abstract class.
+#
+# The instansible subclasses of Geometry is restricted to zero, one or two-dimensional
+# geometric objects that exist in two-dimensional co-ordinate space.
+#
+# All instansible geometry classes are defined so that valid instances of a geometry
+# class are topologically closed (that is, all defined geometries include their boundary)
+#
+# The base Geometry class has subclasses for Point, Curve, Surface and GeometryCollection:
+#
+# 		) Point represents zero-dimensional objects
+#
+# 		) Curve represents one-dimensional object, and has subclass LineString, with sub-subclasses Line
+# 			and LinearRing
+#
+# 		) Surface is designed for two-dimensional objects and has subclass Polygon.
+#
+# 		) GeometryCollection has specialized zero, one and two dimensional collection classes named
+# 			MultiPoint, MultiLineString and MultiPolygon for modeling geometries corresponding to collections
+# 			of Points, LineStrings, and Polygons, respectively.
+#
+# 			MultiCurve, and MultiSurface are introduced as abstract superclasses that generalize
+# 			the collection interfaces to handle Curves and Surfaces.
+#
+# Geometry, Curve, Surface, MultiCurve, and MultiSurface are defined as noninstansiable classes.
+#
+# They define a common set of methods for their subclasses and are included for extensibility.
+#
+# Point, LineString, Polygon, GeometryCollection, MultiPoint, MultiLineString and MultiPolygon
+# are instansiable classes.
+#
+# 11.5.2.2 GEOMETRY CLASS
+#
+# Geometry is the root class of the hierarchy. It is a noninstansiable class but has a number
+# of properties, described in the following list, that are common to all geometry values created
+# from any of the Geometry subclasses.
+#
+# Particular subclasses have their own specific properties, described later.
+#
+# GEOMETRY PROPERTIES
+#
+# A geometry value has the following properties:
+#
+# 		) Its type. Each geometry belongs to one of the instantiable classes in the hiearchy
+#
+# 		) Its SRID, or spatial reference identifier.
+#
+# 			This value identifies the geometry's associated spatial reference system that describes
+# 			the coordinate space in which the geometry object is defined.
+#
+# 			In MySQL, the SRID value is an integer associated with the geometry value.
+# 			The maximum usable SRID value is 2^32-1.
+#
+# 			If a large value is given, only the lower 32 bits are used.
+#
+# 			SRID 0 represents an infinite flat Cartesian plane with no units assigned to its axes.
+# 			To ensure SRID 0 behavior, create geometry values using SRID 0.
+#
+# 			SRID 0 is the default for new geometry values if no SRID is specified.
+#
+# 			FOr computations on multiple geometry values, all values must have the same
+# 			SRID or an error occurs.
+#
+# 		) Its coordinates in its spatial reference system, represented as double-precision (8 byte) numbers.
+#
+# 			All nonempty geometries include at least one pair of (X,Y) coordinates.
+#
+# 			Empty geometries contain no coordinates.
+#
+# 			Coordinates are related to the SRID. For example, in different coordinate systems,
+# 			the distance between two objects may differ even when objects have the same coordinates,
+# 			because the distance on the planar coordinate system and the distance on the geodetic
+# 			system (co-ords on the Earth's surface) are different things.
+#
+# 		) Its interior, boundary and exterior.
+#
+# 			Every geometry occupies some position in space.
+#
+# 			The exterior of a geometry is all space not occupied by the geometry.
+#
+# 			The interior is the space occupied by the geometry.
+#
+# 			The boundary is the interface between the geometry's interior and exterior.
+#
+# 		) Its MBR (minimum bounding rectangle) or envelope.
+#
+# 			This is the bounding geometry, formed by the minimum and maximum (X,Y) coordinates:
+#
+# 				((MINX MINY, MAXX MINY, MAXX MAXY, MINX MAXY, MINX MINY))
+#
+# 		) Whether the value is simple or nonsimple. Geometry values of types (LineString, MultiPoint,
+# 			MultiLineString) are either simple or nonsimple.
+#
+# 			Each type determines its own assertions for being simple or nonsimple.
+#
+# 		) Whether the value is closed or not closed. Geometry values of types (LineString, MultiString) are either
+# 			closer or not closed.
+#
+# 			Each type determines its own assertions for being closed or not closed.
+#
+# 		) Whether the value is empty or nonempty A geometry is empty if it does not have any points.
+#
+# 			Exterior, interior, and boundary of an empty geometry are not defined (that is,
+# 			they are represented by a NULL value)
+#
+# 			An empty geometry is defined to be always simple and has an area of 0.
+#
+# 		) Its dimension. A geometry can have dimension of -1, 0, 1 or 2:
+#
+# 			) -1 for an empty geometry
+#
+# 			) 0 for a geometry with no length and no area
+#
+# 			) 1 for a geometry with nonzero length and zero area
+#
+# 			) 2 for a geometry with nonzero area
+#
+# 			Point objects have a dimension of zero.
+#
+# 			LineString objects have a dimension of 1.
+# 			Polygon objects have a dimension of 2.
+#
+# 			The dimensions of MultiPoint, MultiLineString and MultiPolygon
+# 			objects are the same as the dimensions of the elements they consist of.
+#
+# 11.5.2.3 POINT CLASS
+#
+# A Point is a geometry that represents a single location in coordinate space.
+#
+# Point Examples
+#
+# 		) Imagine a large-scale map of the world with many cities. A Point object could represent each city.
+#
+# 		) On a city map, a Point object could represent a bus stop.
+#
+# Point Properties
+#
+# 		) X co-ord value
+#
+# 		) Y co-ord value
+#
+# 		) Point is defined as a zero-dimensional geometry
+#
+# 		) The boundary of a Point is the empty set
+#
+# 11.5.2.4 CURVE CLASS
+#
+# A Curve is a one-dimensional geometry, usually represented by a sequence of points.
+# Particular subclasses of Curve define the type of interpolation between points.
+#
+# Curve is a noninstantiable class.
+#
+# Curve Properties:
+#
+# 		) A Curve has the coordinates of its points
+#
+# 		) A Curve is defined as a one-dimensional geometry
+#
+# 		) A Curve is simple if it does not pass through the same point twice, with the exception
+# 			that a curve can still be simple if the start and end points are the same.
+#
+# 		) A Curve is closed if its start point is equal to its endpoint
+#
+# 		) The boundary of a closed Curve is empty
+#
+# 		) The boundary of a nonclosed Curve consists of its two endpoints
+#
+# 		) A Curve that is simple and closed is a LinearRing
+#
+# 11.5.2.5 LineString Class
+#
+# A LineString is a Curve with linear interpolation between points.
+#
+# LineString Examples
+#
+# 		) On a world map, LineString objects could represent rivers
+#
+# 		) In a City map, LineString objects could represent streets
+#
+# LineString Properties
+#
+# 		) A LineString has coordinates of segments, defined by each consecutive pair of points.
+#
+# 		) A LineString is a Line if it consists of exactly two points.
+#
+# 		) A LineString is a LinearRing if it is both closed and simple
+#
+# 11.5.2.6 SURFACE CLASS
+#
+# A Surface is a two-dimensional geometry. It is a noninstantiable class.
+#
+# Its only instantible subclass is Polygon.
+#
+# Surface Properties
+#
+# 		) A Surface is defined as a two-dimensional geometry
+#
+# 		) The OpenGIS specification defines a simple Surface as a geometry that consists of a single
+# 			"patch" that is associated with a single exterior boundary and zero or more interior boundaries.
+#
+# 		) The boundary of a simple Surface is the set of closed curves corresponding to its exterior and interior boundaries.
+#
+# 11.5.2.7 POLYGON CLASS
+#
+# A Polygon is a planar Surface representing a multisided geometry.
+#
+# It is defined by a single exterior boundary and zero or more interior boundaries,
+# where each interior boundary defines a Hole in the Polygon.
+#
+# Polygon Examples
+#
+# 		) On a region map, Polygon objects could represent forests, districts and so on
+#
+# Polygon ASsertions
+#
+# 		) The boundary of a Polygon consists of a set of LinearRing objects (that is, LineString objects
+# 			that are both simple and closed) that make up its exterior and interior boundaries.
+#
+# 		) A Polygon has no rings that cross. The rings in the boundary of a Polygon may intersect at a Point, but only as a tangent.
+#
+# 		) A Polygon has no lines, spikes or punctures.
+#
+# 		) A Polygon has an interior that is a connected point set.
+#
+# 		) A Polygon may have holes. The exterior of a Polygon with holes is not connected.
+# 			Each hole defines a connected component of the exterior.
+#
+# THe preceding assertions make a Polygon a simple geometry.
+#
+# 11.5.2.8 GEOMETRYCOLLECTION CLASS
+#
+# A GeomCollection is a geometry that is a collection of zero or more geometries of any class.
+#
+# GeomCollection and GeometryCollection are synonymous, with GeomCollection the preferred type name.
+#
+# All the elements in a geometry collection must be in the same spatial reference system (that is,
+# in the same coordinate system)
+#
+# There are no other constraints on the elements of a geometry collection, although the subclasses
+# of GeomCollection described in the following sections may restrict membership.
+#
+# Restrictions may be based on:
+#
+# 		) Element type (for example, a MultiPoint may contain only Point elements)
+#
+# 		) Dimension
+#
+# 		) Constraints on the degree of spatial overlap between elements.
+#
+# 11.5.2.9 MULTIPOINT CLASS
+#
+# A MultiPoint is a geometry collection composed of Point elements.
+# The points are not connected or ordered in any way.
+#
+# MultiPoints Examples:
+#
+# 		) On a world map, a MultiPoint could represent a chain of small islands
+#
+# 		) On a city map, a MultiPoint could represent the outlets for a ticket office
+#
+# MultiPoint Properties:
+#
+# 		) A MultiPoint is a zero-dimensional geometry
+#
+# 		) A MultiPoint is simple if no two of its Point values are equal (hve identical coordinate values)
+#
+# 		) The boundary of a MultiPoint is the empty set
+#
+# 11.5.2.10 MULTICURVE CLASS
+#
+# A MultiCurve is a geometry collection composed of Curve elements.
+#
+# MultiCurve is a noninstansiable class.
+#
+# MultiCurve Properties:
+#
+# 		) A MultiCurve is a one-dimensional geometry
+#
+# 		) A MultiCurve is simple if and only if all of its elements are simple;
+# 			the only intersections between any two elements occur at points that are
+# 			on the boundaries of both elements.
+#
+# 		) A MultiCurve boundary is obtained by applying the "mod 2 union rule" (also known as odd-even rule):
+#
+# 			A point is in the boundary of a MultiCurve if it is in the boundaries of an
+# 			Odd number of Curve elements.
+#
+# 		) A MultiCurve is closed if all of its elements are closed.
+#
+# 		) The boundary of a closed MultiCurve is always empty.
+#
+# 11.5.2.11 MULTILINESTRING CLASS
+#
+# A MultiLineString is a MultiCurve geometry collection composed of LineString elements.
+#
+# MultiLineString Examples:
+#
+# 		) On a region map, a MultiLineString could represent a river system or a high way system
+#
+# 11.5.2.12 MULTISURFACE CLASS
+#
+# A MultiSurface is a geometry collection composed of surface elements.
+# MultiSurface is a noninstansiable class.
+#
+# Its only instantiable subclass is MultiPolygon
+#
+# MultiSurface Assertions
+#
+# 		) Surfaces within a MultiSurface have no interiors that intersect
+#
+# 		) Surfaces within a MultiSurface have boundaries that intersect at most a finite number of points.
+#
+# 11.5.2.13 MULTIPOLYGON CLASS
+#
+# A MultiPolygon is a MultiSurface object composed of Polygon elements.
+#
+# MultiPolygon Examples
+#
+# 		) On a region map, a MultiPolygon could represent a system of lakes.
+#
+# MultiPolygon ASsertions
+#
+# 		) A MultiPolygon has no two polygon elements with interiors that intersect.
+#
+# 		) A MultiPolygon has no two Polygon elements that cross (crossing is also forbidden by the previous assertion), or that touch at an infinite number of points.
+#
+# 		) A MultiPolygon may not have cut lines, spikes, or punctures. A MultiPolygon is a regular, closed point set.
+#
+# 		) A MultiPolygon that has more than one Polygon has an interior that is not connected.
+#
+# 			The number of connected components of the interior of a MultiPolygon is equal to
+# 			the number of Polygon values in the MultiPolygon.
+#
+# MultiPolygon Properties
+#
+# 		) A MultiPolygon is a two-dimensional geometry
+#
+# 		) A MultiPolygon boundary is a set of closed curves (LineSTring values) corresponding
+# 			to the boundaries of its Polygon elements.
+#
+# 		) Each Curve in the boundary of the MultiPolygon is in the boundary of exactly one
+# 			polygon element.
+#
+# 		) Every Curve in the boundary of an Polygon element is in the boundary of the MultiPolygon.
+#
+# 11.5.3 SUPPORTED SPATIAL DATA FORMATS
+#
+# Two standard spatial data formats are used to represent geometry objects in queries:
+#
+# 		) Well-known Text (WKT) format
+#
+# 		) Well-known Binary (WKB) format
+#
+# INternally, MySQl stores geometry values in a format that is not identical to either WKT or WKB format.
+# (Internal format is like WKB but with an initial 4 bytes to indicate the SRID)
+#
+# There are functions available to  convert between different data formats; see SECTION 12.16.6, "GEOMETRY FORMAT CONVERSION FUNCTIONS"
+#
+# The following sections describe the spatial data formats MySQL uses:
+#
+# 		) Well-Known Text (WKT) Format
+#
+# 		) Well-Known Binary (WKB) Format
+#
+# 		) Internal Geometry Storage Format
+#
+# WELL-KNOWN TEXT (WKT) FORMAT
+#
+# The Well-Known Text (WKT) representation of geometry values is designed for exchanging
+# geometry data in ASCII form.
+#
+# The OpenGIS specification provides a Backus-Naur grammar that specifies the formal
+# production rules for writing WKT values (see 11.5, "SPATIAL DATA TYPES")
+#
+# Examples of WKT representations of geometry objects:
+#
+# 		) A Point:
+#
+# 			POINT(15 20)
+#
+# 			THe point coordinates are specified with no separating comma.
+#
+# 			this differs from the syntax for the SQL Point() function, which requires a comma between
+# 			the coordinates.
+#
+# 			Take care to use the syntax appropriate to the context of a given spatial operation.
+#
+# 			For example, the following statements both use ST_X() to extract the X-coordinate from a 
+# 			Point object.
+#
+# 			The first produces the object directly using the Point() function.
+#
+# 			The second uses a WKT representation converted to a Point with ST_GeomFromText()
+#
+# 				SELECT ST_X(Point(15, 20));
+# 				+------------------------------+
+# 				| ST_X(POINT(15, 20)) 			 |
+# 				+------------------------------+
+# 				| 			15 						 |
+# 				+------------------------------+
+#
+# 				SELECT ST_X(ST_GeomFromText('POINT(15 20)'));
+# 				+--------------------------------------+
+# 				| ST_X(ST_GeomFromText('POINT(15 20)'))|
+# 				+--------------------------------------+
+# 				| 					15 							|
+# 				+--------------------------------------+
+#
+# 		) A LineString with four points:
+#
+# 			LINESTRING(0 0, 10 10, 20 25, 50 60)
+#
+# 			The point coordinate pairs are separated by commas.
+#
+# 		) A Polygon with one exterior ring and one interior ring:
+#
+# 			POLYGON ((0 0, 10 0, 10 10, 0 10, 0 0), (5 5, 7 5, 7 7, 5 7, 5 5))
+#
+# 		) A MultiPoint with three Point values:
+#
+# 			MULTIPOINT(0 0, 20 20, 60 60)
+#
+# 			Spatial functions such as ST_MPointFromText() and ST_GeomFromText() that accept
+# 			WKT-format representations of MultiPoint values permit individual points within values
+# 			to be surrounded by parantheses.
+#
+# 			For example, both of the following function calls are valid:
+#
+# 				ST_MPointFromText('MULTIPOINT (1 1, 2 2, 3 3)')
+# 				ST_MPointFromText('MULTIPOINT ((1 1), (2 2), (3 3))')
+#
+# 		) A MultiLineString with two LineString values:
+#
+# 			MULTILINESTRING((10 10, 20 20), (15 15, 30 15))
+#
+# 		) A MultiPolygon with two Polygon values:
+#
+# 			MULTIPOLYGON(((0 0, 10 0, 10 10, 0 10, 0 0)), ((5 5, 7 5, 7 7, 5 7, 5  5)))
+#
+# 		) A GeometryCollection consisting of two Point values and one LineString:
+#
+# 			GEOMETRYCOLLECTION(POINT(10 10), POINT(30 30), LINESTRING(15 15, 20 20))
+#
+# WELL-KNOWN BINARY (WKB) Format
+#
+# The Well-Known Binary (WKB) representation of Geometric values is used for exchanging geometry
+# data as binary streams represented by BLOB values containing geometric WKB information.
+#
+# This format is defined by the OpenGIS specification (see SECTION 11.5, "SPATIAL DATA TYPES").
+# It is also defined in the ISO SQL/MM PART 3: SPATIAL STANDARD.
+#
+# WKB uses 1-byte unsigned integers, 4-byte unsigned integers and 8-byte double precision numbers
+# (IEEE 754 format).
+#
+# A byte is 8 bits.
+#
+# For example, a WKB value that corresponds to POINT(1 -1) consists of this sequence of 21 bytes,
+# each represented by 2 hexadecimal digits:
+#
+# 	0101000000000000000000F03F000000000000F0BF
+#
+# The sequence consists of the components shown in the following table.
+#
+# TABLE 11.2 WKB COMPONENTS EXAMPLE
+#
+# COMPONENT 		SIZE 			VALUE
+#
+# Byte order 		1 byte 		01
+#
+# WKB type 			4 bytes 		01000000
+#
+# X co-ord 			8 bytes 		0000000000000000F03F
 # 
+# Y co-ord 			8 bytes 		0000000000000000F0BF
+#
+# Components representation is as follows:
+#
+# 		) The byte order is either 1 or 0 to signify little-endian or big-endian storage.
+#
+# 			The little-endian and big-endian byte orders are also known as Network Data
+# 			Representation (NDR) and External Data Representation (XDR), respectively.
+#
+# 		) The WKB type is a code that indicates the geometry type.
+#
+# 			MySQL uses values from 1 through 7 to indicate Point, LineString, Polygon,
+# 			MultiPoint, MultiLineString, Multipolygon, and GeometryCollection
+#
+# 		) A Point value has X and Y coordinates, each represented as a double-precision value.
+#
+# WKB values for more complex geometry values have more complex data structures,
+# as detailed in the OpenGIS specification.
+#
+# INTERNAL GEOMETRY STORAGE FORMAT
+#
+# MySQL stores geometry values using 4 bytes to indicate the SRID followed by the WKB representation
+# of the value.
+#
+# For a description of WKB format, see Well-Known Binary (WKB) Format
+#
+# For the WKB part, these MySQL-specific considerations apply:
+#
+# 		) The byte-order indicator byte is 1 because MySQL stores geometries as little-ending values.
+#
+# 		) MySQL supports geometry types of Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon,
+# 			and GeometryCollection.
+#
+# 			Other geometry types are not supported.
+#
+# 		) Only GeometryCollection can be empty. Such a value is stored with 0 elements.
+#
+# 		) Polygon rings can be specified both clockwise and counterclockwise.
+# 			MySQL flips the rings auotmatically when reading data.
+#
+# Cartesian coordinates are stored in the length unit of the spatial reference system, with
+# X values in the X coordinates and Y values in the Y coordinates.
+#
+# Axis directions are those specified by the spatial reference system.
+#
+# Geographic coordinates are stored in the angle unit of the spatial reference system,
+# with longitudes in the X coordinates and latitude in the Y coordinates.
+#
+# Axis directions and the meridian are those specified by the spatial reference system.
+#
+# THe LENGTH() function returns the space in bytes required for value storage.
+# Example:
+#
+# 		SET @g = ST_GeomFromText('POINT(1 -1)');
+# 		SELECT LENGTH(@g);
+# 		+-----------------+
+# 		| LENGTH(@g) 		|
+# 		+-----------------+
+# 		| 		25 			|
+# 		+-----------------+
+#
+# 		SELECT HEX(@g);
+# 		+----------------------------------------------------------+
+# 		| HEX(@g) 																  |
+# 		+----------------------------------------------------------+
+# 		| <same as before> 													  |
+# 		+----------------------------------------------------------+
+#
+# The value length is 25 bytes, made up of these components (as can be seen from the Hexadecimal
+# value):
+#
+# 		)  4 bytes for integer SRID (0)
+#
+# 		) 1 byte for integer byte order (1 = little endian)
+#
+# 		) 4 bytes for integer type information (1 = Point)
+#
+# 		) 8 bytes for double-precision X coordinate (1)
+#
+# 		) 8 bytes for double-precision Y coordinate (-1)
+#
+# 11.5.4 GEOMETRY WELL-FORMEDNESS AND VALIDITY
+#
+# For geometry values, MySQL distinguishes between the concepts of syntactically well-formed
+# and geometrically valid.
+#
+# A geometry is syntactically well-formed if it satisfies conditions such as those in this
+# (nonexhaustive) list:
+#
+# 		) Linestrings have at least two points
+#
+# 		) Polygons have at least one ring
+#
+# 		) Polygon rings are closed (first and last points the same)
+#
+# 		) Polygon rings have at least 4 points (minimum polygon is a triangle with first and last points the same)
+#
+# 		) Collections aren ot empty (except GeometryCollection)
+#
+# A geometry is geometrically valid if it is syntactically well-formed and satisfies conditions
+# such as those in this (nonexhaustive) list:
+#
+# 		) Polygons are not self-intersecting
+#
+# 		) Polygon interior rings are inside the exterior ring
+#
+# 		) Multipolygons do not have overlapping polygons
+#
+# Spatial functions fail if a geometry is not syntactically well-formed.
+#
+# Spatial import functions that parse WKT or WKB values raise an error for attempts
+# to create a geometry that is not syntactically well-formed.
+#
+# Syntactically well-formedness is also checked for attempts to store geometries
+# into tables.
+#
+# It is permitted to insert, select, and update geometrically invalid geometries,
+# but they must be syntactically well-formed.
+#
+# Due to the computational expenses, MySQL does not check explicitly for geometric 
+# validity.
+#
+# Spatial computations may detect some cases of invalid geometries and raise an error,
+# but they may also return an undefined result without detecting the invalidity.
+#
+# APplications that require geometrically valid geometries should check them using
+# the ST_IsValid() function.
+#
+# 11.5.5 Spatial Reference System Support
+#
+# A spatial reference system (SRS) for spatial data is a coordinate-based system
+# for geographic locations.
+#
+# There are different types of spatial reference systems:
+#
+# 		) A projected SRS is a projection of a globe onto a flat surface; that is, a flap map.
+#
+# 			For example, a light bulb inside a globe that shines on a paper cylinder surrounding
+# 			the globe projects a map onto the paper.
+#
+# 			The result is georeferenced: Each point maps to a place on the globe.
+#
+# 			The coordinate system on that plane is Cartesian using a length unit (meters, feet, etc.)
+# 			rather than degrees of longitude and latitude.
+#
+# 			The globes in this case are ellipsoids; that is, flattened spheres.
+#
+# 			Earth is a bit shorter in its North-South Axis than its Easter-West Axis, so a slightly
+# 			flattened sphere is more correct but perfect spheres permit faster calculations.
+#
+# 		) A geographic SRS is a nonprojected SRS representing longitude-latitude (or latitude-longitude) coordinates
+# 			on an ellipsoid, in any angular unit.
+#
+# 		) The SRS denoted in MySQL by SRID 0 represents an infite flat Cartesian plane with no units assigned to its axes.
+#
+# 			unlike projected SRSs, it is not georeferenced and it does not necessarily represent Earth.
+#
+# 			IT is an abstract plane that cna be used for anything. SRID 0 is the default SRID for spatial data in MySQL.
+#
+# MySQL maintains information about available spatial reference systems for spatial data in the data dictionary
+# mysql.st_spatial_reference_systems table, which can store entries for projected and geographic SRSs.
+#
+# THis data dictionary table is invisible, but SRS entry contents are available through the INFORMATION_SCHEMA
+# ST_SPATIAL_REFERENCE_SYSTEMS table, implemented as a view on mysql.st_spatial_reference_systems 
+#
+# (See SECTION 25.27, "THE INFORMATION_SCHEMA ST_SPATIAL_REFERENCE_SYSTEMS TABLE" for more info)
+#
+# The following example shows what an SRS entry looks like:
+#
+# 		SELECT
+# 		FROM INFORMATION_SCHEMA.ST_SPATIAL_REFERENCE_SYSTEMS
+# 		WHERE SRS_ID = 4326\G
+# 		************************ 1. row ***********************
+# 								SRS_NAME: WGS 84
+# 								  SRS_ID: 4326
+# 						ORGANIZATION  : EPSG
+# 		  ORGANIZATION_COORDSYS_ID: 4326
+# 						DEFINITION    : GEOGCS["WGS 84", DATUM["World Geodetic System 1984",
+# 											 SPHEROID["WGS 84", 6378137, 298-257223563,
+# 											 AUTHORITY["EPSG", "7030"]], AUTHORITY["EPSG", "6326"]],
+# 											 PRIMEM["Greenwhich", 0, AUTHORITY["EPSG", "8901"]],
+# 											 UNIT["degree",0-01745329519943278,
+# 											 AUTHORITY["EPSG","9122"]],
+# 											 AXIS["Lat",NORTH],AXIS["Long", EAST],
+# 											 AUTHORITY["EPSG", "4326"]]
+# 						DESCRIPTION  :
+#
+# This entry describes the SRS used for GPS systems.
+#
+# It has a name (SRS_NAME) of WGS 84 and an ID (SRS_ID) of 4326,
+# which is the ID used by the European Petroleum Survey Group (EPSG)
+#
+# SRS definitions in the DEFINITION column are WKT values, represented as specified in the
+# Open Geospatial Consortium document OGC 12-063r5.
+#
+# SRS_ID values represent the same kind of values passed as the SRID argument to spatial
+# functions.
+#
+# SRID 0 (the unitless Cartesian plane) is special.
+#
+# it is always a legal spatial reference system ID and can be used in any computations
+# on spatial data that depend on SRID values. 
+#
+# For computations on multiple geometry values, all values must have the same SRID or an error occurs.
+#
+# SRS definition parsing occurs on demand when definitions are needed by GIS functions.
+#
+# Parsed definitions are cached in the data dictionary cache so that parsing overhead
+# is not incurred for every statement that needs SRS information.
+#
+# To enable manipulation of SRS entries stored in the data dictionary, MySQL provides
+# these SQL statements:
+#
+# 		) CREATE_SPATIAL_REFERENCE_SYSTEM: See SECTION 13.1.19, "CREATE SPATIAL REFERENCE SYSTEM SYNTAX".
+# 			The description for this statement includes additional information about SRS components.
+#
+# 		) DROP_SPATIAL_REFERENCE_SYSTEM: See SECTION 13.1.31, "DROP SPATIAL REFERENCE SYSTEM SYNTAX"
+#
+# 11.5.6 CREATING SPATIAL COLUMNS
+#
+# MySQL provides a standard way of creating spatial columns for geometry types, for example,
+# with CREATE_TABLE or ALTER_TABLE.
+#
+# Spatial columns are supported for MyISAM, InnoDB, NDB and ARCHIVE tables.
+#
+# See also the notes about spatial indexes under SECTION 11.5.10, "CREATING SPATIAL INDEXES"
+#
+# Columns with a spatial data type can have an SRID attribute, to explicitly indicate the
+# spatial reference system (SRS) for values stored in the column.
+#
+# For implications of an SRID-restricted column, see SECTION 11.5.1, "SPATIAL DATA TYPES"
+#
+# 		) Use the CREATE_TABLE statement to create a table with a spatial column:
+#
+# 			CREATE TABLE geom (g GEOMETRY);
+#
+# 		) Use the ALTER_TABLE statement to add or drop a spatial column to or from
+# 			an existing table:
+#
+# 			ALTER TABLE geom ADD pt POINT;
+# 			ALTER TABLE geom DROP pt;
+#
+# 11.5.7 POPULATING SPATIAL COLUMNS
+#
+# After you have created spatial columns, you can populate them with spatial data.
+#
+# Values should be stored in internal geometry format, but you can convert them to that
+# format from either Well-Known Text (WKT) or Well-Known Binary (WKB) format.
+#
+# The following examples demonstrate how to insert geometry values into a table by
+# converting WKT values to internal geometry format:
+#
+# 		) Perform the conversion directly in the INSERT statement:
+#
+# 			INSERT INTO geom VALUES (ST_GeomFromText('POINT(1 1)'));
+# 			
+# 			SET @g = 'POINT(1 1)';
+# 			INSERT INTO geom VALUES (ST_GeomFromText(@g));
+#
+# 		) Perform the conversion prior to the INSERT:
+#
+# 			SET @g = ST_GeomFromText('POINT(1 1)');
+# 			INSERT INTO geom VALUES (@g);
+#
+# The following examples insert more complex geometries into the table:
+#
+# 		SET @g = 'LINESTRING(0 0, 1 1, 2 2)';
+# 		INSERT INTO geom VALUES (ST_GeomFromText(@g));
+#
+# 		SET @g = 'POLYGON((0 0,10 0,10 10,0 10,0 0),(5 5,7 5,7 7,5 7,5 5))';
+# 		INSERT INTO geom VALUES (ST_GeomFromText(@g));
+#
+# 		SET @g =
+# 		'GEOMETRYCOLLECTION(POINT(1 1),LINESTRING(0 0,1 1,2 2,3 3,4 4))';
+# 		INSERT INTO geom VALUES (ST_GeomFromText(@g));
+#
+# The preceding examples use ST_GeomFromText() to create geometry values.
+# You can also use type-specific functions:
+#
+# 		SET @g = 'POINT(1 1)';
+# 		INSERT INTO geom VALUES (ST_PointFromText(@g));
+#
+# 		SET @g = 'LINESTRING(0 0,1 1,2 2)';
+# 		INSERT INTO geom VALUES (ST_LineStringFromText(@g));
+#
+# 		SET @g = 'POLYGON((0 0,10 0,10 10,0 10,0 0), (5 5,7 5,7 7,7 5,5 5))';
+# 		INSERT INTO geom VALUES (ST_PolygonFromText(@g));
+#
+# 		SET @g =
+# 		'GEOMETRYCOLLECTION(POINT(1 1),LINESTRING(0 0,1 1,2 2,3 3,4 4))';
+# 		INSERT INTO geom VALUES (ST_GeomCollFromText(@g));
+#
+# A client application program that wants to use WKB representations of geometry
+# value is responsible for sending correctly formed WKB in queries to the server.
+#
+# There are several ways to satisfy this requirement. For example:
+#
+# 		) Inserting a POINT(1 1) value with hex literal syntax:
+#
+# 			INSERT INTO geom VALUES
+# 			(ST_GeomFromWKB(X'<same as before>'));
+#
+# 		) An ODBC application can send a WKB representation, binding it to a placeholder
+# 			using an argument of BLOB type:
+#
+# 			INSERT INTO geom VALUES (ST_GeomFromWKB(?))
+#
+# 			Other programming interfaces may support a similar placeholder mechanism.
+#
+# 		) In a C program, you can escape a binary value using mysql_real_escape_string_quote()
+# 			and include the result in a query string that is sent to the server.
+#
+# 			See SECTION 28.7.7.56, "MYSQL_REAL_ESCAPE_STRING_QUOTE()"
+#
+# 11.5.8 FETCHING SPATIAL DATA
+#
+# Geometry values stored in a table can be fetched in internal format.
+# You can also convert them to WKT or WKB format.
+#
+# 		) Fetching spatial data in internal format:
+#
+# 			Fetching geometry values using internal format can be useful in table-to-table transfers:
+#
+# 				CREATE TABLE geom2 (g GEOMETRY) SELECT g FROM geom;
+#
+# 		) Fetching spatial data in WKT format:
+#
+# 			The ST_AsText() function converts a geometry from internal format to
+# 			a WKT string.
+#
+# 				SELECT ST_AsText(g) FROM geom;
+#
+# 		) Fetching spatial data in WKB format:
+#
+# 			The ST_AsBinary() function converts a geometry from internal format to a BLOB
+# 			containing the WKB value:
+#
+# 				SELECT ST_AsBinary(g) FROM geom;
+#
+# 11.5.9 OPTIMIZING SPATIAL ANALYSIS
+#
+# For MyISAM and InnoDB tables, search operations in columns containing spatial data
+# can be optimized using SPATIAL indexes.
+#
+# The most typical operations are:
+#
+# 		) Point queries that search for all objects that contain a given point
+#
+# 		) Region queries that search for all objects that overlap a given region
+#
+# MySQL uses R-Trees with quadratic splitting for SPATIAL indexes on spatial columns.
+#
+# A SPATIAL index is built using the minimum bounding rectangle (MBR) of a geometry.
+# For most geometries, the MBR is a minimum rectangle that surrounds the geometries.
+#
+# For a horizontal or a vertical linestring, the MBR is a rectangle degenrated into
+# the linestring.
+#
+# For a point, the MBR is a rectangle degenerated into the point.
+#
+# It is also possible to create normal indexes on spatial columns.
+#
+# In a non-SPATIAL index, you must declare a prefix for any spatial column
+# except for POINT columns.
+#
+# MyISAM and InnoDB support both SPATIAL and non-SPATIAL indexes.
+#
+# Other storage engines support non-SPATIAL indexes, as described in
+# SECTION 13.1.15, "CREATE INDEX SYNTAX". 
+#
+# 11.5.10 CREATING SPATIAL INDEXES
+#
+# For InnoDB and MyISAM tables, MySQL can create spatial indexes using syntax similar
+# to that for creating regular indexes, but using the SPATIAL keyword.
+#
+# Columns in spatial indexes must be declared NOT NULL.
+#
+# The following examples demonstrate how to create spatial indexes:
+#
+# 		) With CREATE_TABLE:
+#
+# 			CREATE TABLE geom (g GEOMETRY NOT NULL SRID 4326, SPATIAL INDEX(g));
+#
+# 		) With ALTER_TABLE:
+#
+# 			CREATE TABLE geom (g GEOMETRY NOT NULL SRID 4326);
+# 			ALTER TABLE geom ADD SPATIAL INDEX(g);
+#
+# 		) With CREATE_INDEX:
+#
+# 			CREATE TABLE geom (g GEOMETRY NOT NULL SRID 4326);
+# 			CREATE SPATIAL INDEX g ON geom (g);
+#
+# SPATIAL INDEX creates an R-tree index. 
+#
+# For storage engines that support nonspatial indexing of spatial columns, teh engine creates a B-tree index.
+#
+# A B-tree index on spatial values is useful for exact-value lookups, but not for range scans.
+#
+# The optimizer can use spatial indexes defined on columns that are SRID-restricted.
+# For more information, see SECTION 11.5.1, "SPATIAL DATA TYPES", and SECTION 8.3.3, "SPATIAL INDEX OPTIMIZATION"
+#
+# For more information on indexing spatial columns, see SECTION 13.1.15, "CREATE INDEX SYNTAX"
+#
+# To drop spatial indexes, use ALTER_TABLE or DROP_INDEX:
+#
+# 		) With ALTER_TABLE:
+#
+# 				ALTER TABLE geom DROP INDEX g;
+#
+# 		) With DROP_INDEX:
+#
+# 				DROP INDEX g ON geom;
+#
+# Example: Suppose that a table geom contains more than 32,000 geometries, which are stored in the column
+# g of type GEOMETRY.
+#
+# The table also has an AUTO_INCREMENT column fid for storing object ID values.
+#
+# 	DESCRIBE geom;
+# 	+----------------+------------------+---------+--------+------------+----------------+
+# 	| Field 			  | Type 				| Null 	 | Key 	 | Default    | Extra 			 |
+# 	+----------------+------------------+---------+--------+------------+----------------+
+# 	| fid 			  | int(11) 			| 			 | PRI 	 | NULL 		  | auto_increment |
+# 	| g 				  | geometry 			| 			 | 		 | 			  | 					 |
+# 	+----------------+------------------+---------+--------+------------+----------------+
+#
+# SELECT COUNT(*) FROM geom;
+# 	+---------------+
+# 	| count(*) 		 |
+# 	+---------------+
+# 	| 		32376 	 |
+# 	+---------------+
+# 	1 row in set (0.00 sec)
+#
+# To add a spatial index on the column g, use this statement:
+#
+# ALTER TABLE geom ADD SPATIAL INDEX(g);
+# Query OK, 32376 rows affected (4.05 sec)
+# Records: 32376  Duplicates: 0 Warnings: 0
+#
+# 11.5.11 USING SPATIAL INDEXES
+#
+# The optimizer investigates whether available spatial indexes can be involved in the search
+# for queries that use a function such as MBRContains() or MBRWithin() in the WHERE clause.
+#
+# The following query finds all objects that are in the given rectangle:
+#
+# 		SET @poly =
+# 		-> 'Polygon((30000 15000,
+# 						 31000 15000,
+# 						 31000 16000,
+# 						 30000 16000,
+# 						 30000 15000))';
+# 		SELECT fid,ST_AsText(g) FROM geom WHERE 
+# 		-> MBRContains(ST_GeomFromText(@poly),g);
+# 		
+#
+# 		+-----+-----------------------------------------------------------------+
+# 		| fid | ST_AsText(g) 									 								|
+# 		+-----+-----------------------------------------------------------------+
+# 		| 21  | LINESTRING(30350.4 15828.8, 30350.6 15845,30333.8 15845,30 ---  |
+# 		| 22 	| etc.
+# 		| | 	|
+# 		  V
+#
+# 		20 rows in set (0.00 sec)
+#
+# Use EXPLAIN to check the way this query is executed:
+#
+# 		SET @poly =
+# 		-> 'Polygon((30000 15000,
+# 						 31000 15000,
+# 						 31000 16000,
+# 						 30000 16000,
+# 						 30000 15000))';
+# 		EXPLAIN SELECT fid,ST_AsText(g) FROM geom WHERE
+# 		-> MBRContains(ST_GeomFromText(@poly),g)\G
+# 		******************** 1. row ***********************
+# 							id: 1
+# 				select_type: SIMPLE
+# 						table: geom
+# 						 type: range
+# 			possible_keys : g
+# 						  key: g
+# 					key_len : 32
+# 						  ref: NULL
+# 						 rows: 50
+# 					   Extra: Using where
+# 		1 row in set (0.00 sec)
+#
+# Check what would happen without a spatial index:
+#
+# 		SET @poly =
+# 		-> 'Polygon((30000 15000,
+# 						 31000 15000,
+# 						 31000 16000,
+# 						 30000 16000,
+# 						 30000 15000))';
+#		EXPLAIN SELECT fid,ST_AsText(g) FROM g IGNORE INDEX (g) WHERE
+# 		-> MBRContains(ST_GeomFromText(@poly),g)\G
+# 		******************** 1. row ************************'
+# 							id: 1
+# 				select_type: SIMPLE
+# 					table   : geom
+# 					    type: ALL
+# 			possible_keys : NULL
+# 						  key: NULL
+# 					key_len : NULL
+# 						  ref: NULL
+# 						rows : 32376
+# 					  Extra : Using where
+# 		1 row in set (0.00 sec)
+#
+# Executing the SELECT statement without the spatial index yields the same result, but causes
+# the execution time to rise from 0.00 sec to 0.46 seconds.
+#
+# 		SET @poly =
+# 		-> 'Polygon((30000 15000,
+# 						 31000 15000,
+# 						 31000 16000,
+# 						 30000 16000,
+# 						 30000 15000))';
+# 		SELECT fid,ST_AsText(g) FROM geom IGNORE INDEX (g) WHERE
+# 		-> MBRContains(ST_GeomFromText(@poly),g);
+# 		+-------+-------------------------
+# 		| fid   | ST_AsText(g) 
+# 		+-------+-------------------
+# 		| 1 	  | LINESTRING(30250.4 15129.2, 30248.8 15138.4, 30238.2 15136 ---
+# 		| 2 	  | etc ->
+# 		| | 	  | 
+# 		| V 	  |
 # 
-#  https://dev.mysql.com/doc/refman/8.0/en/set.html
+# 		20 rows in set (0.46 sec)
+# 		
+#
+# 11.6 THE JSON DATA TYPE
+#
+# 		) CREATING JSON VALUES
+#
+# 		) NORMALIZATION, MERGING, AND AUTOWRAPPING OF JSON VALUES
+#
+# 		) SEARCHING AND MODIFYING JSON VALUES
+#
+# 		) COMPARISON AND ORDERING OF JSON VALUES
+#
+# 		) CONVERTING BETWEEN JSON AND NON-JSON VALUES
+#
+# 		) AGGREGATION OF JSON VALUES
+#
+# MySQL supports a native JSON data type defined by RFC 7159 taht enables efficient access to data in JSON
+# (JavaScript Object Notation) documents.
+#
+# The JSON data type provides these advantages over storing JSON-format strings in a string column:
+#
+# 		) Automatic validation of JSON documents stored in JSON columns. Invalid documents produce an error.
+#
+# 		) Optimized storage format.
+#
+# 			JSON documents stored in JSON columns are converted to an internal format that permits quick read
+# 			access to document elements.
+#
+# 			When the server later must be read a JSON value stored in this binary format, the value need not be 
+# 			parsed from a text representation.
+#
+# 			The binary format is structured to enable the server to look up subobjects or nested values
+# 			directly by key or array index without reading all values before or after them in the document.
+#
+# MySQL 8.0 also supports the JSON MERGE PATCH format defined in RFC 7396, using the JSON_MERGE_PATCH() function.
+#
+# See the description of this function, as well as NORMALIZATION, MERGING, AND AUTOWRAPPING OF JSON VALUES, for examples
+# and furtehr information.
+#
+# NOTE:
+#
+# 		This discussion uses JSON in monotype to indicate specifically the JSON data type and "JSON" in regular font
+# 		to indicate JSON data in general.
+#
+# The space required to store a JSON document is roughly the same as for LONGBLOB or LONGTEXT;
+# See SECTION 11.8, "DATA TYPE STORAGE REQUIREMENTS", for more information.
+#
+# It is important to keep in mind that the size of any JSON document stored in a JSON column
+# is limited to the value of the max_allowed_packet system variable.
+#
+# (When the server is manipulating a JSON value internally in memory, it can be larger than this;
+# the limit applies when the server stores it).
+#
+# You can obtain the amount of space required to store a JSON document using the JSON_STORAGE_SIZE()
+# function; note that for a JSON column, the storage size - and thus the value returned by ths function -
+# is that used by column prior to any partial updates that may have been performed on it.
+#
+# (See the discussion of the JSON partial update optimization later in this section)
+#
+# A JSON column cannot have a default value.
+#
+# Along with the JSON data type, a set of SQL functions is available to enable operations on JSON
+# values, such as creation, manipulation and searching.
+#
+# The following discussion shows examples of these operations.
+#
+# For details about individual functions, see SECTION 12.17, "JSON FUNCTIONS"
+#
+# A set of spatial functions for operating on GeoJSON values is also available.
+# See SECTION 12.16.11, "SPATIAL GEOJSON FUNCTIONS"
+#
+# JSON columns, like columns of other binary types, are not indexed directly;
+# instead, you can create an index on a generated column that extracts a scalar
+# value from the JSON column.
+#
+# See INDEXING A GENERATED COLUMN TO PROVIDE A JSON COLUMN INDEX, for a detailed example.
+#
+# The MySQL optimizer also looks for compatible indexes on virtual columns that match
+# JSON expressions.
+#
+# MySQL NDB Cluster 8.0 supports JSON columns and MySQL JSON functions, including creation
+# of an index on a column generated from a JSON column as a workaround for being unable
+# to index a JSON column.
+#
+# A maximum of 3 JSON columns per NDB table is supported.
+#
+# PARTIAL UPDATES OF JSON VALUES
+#
+# In MySQL 8.0, the optimizer can perform a partial, in-place update of a JSON
+# column instead of removing the old document and writing the new document in its
+# entirety to the column.
+#
+# This optimization can be peformed for an update that meets the following conditions:
+#
+# 		) The column being updated was declared as JSON
+#
+# 		) The UPDATE statement uses any of the three functions:
+#
+# 			JSON_SET()
+#
+# 			JSON_REPLACE()
+#
+#			JSON_REMOVE()
+#
+# 			to update the column.
+#
+# 			A direct assignment of the column value (for example, UPDATE mytable SET jcol = '{"a": 10, "b": 25'}) cannot be
+# 			performed as a partial update.
+#
+# 			Updats of multiple JSON columns in a single UPDATE statement can be optimized in this fashion;
+# 			MySQL can perform partial updates of only those columns whose values are updated using the
+# 			three functions above.
+#
+# 		) The input column and the target column must be the same column; 
+# 		  a statement such as UPDATE mytable SET jcol1 = JSON_SET(jcol2, '$.a', 100)
+# 		 cannot be performed as a partial update.
+#
+# 			The update can use nested calls to any of the functions listed above,
+# 			in any combination - as long as the input and target columns are the same.
+#
+# 		) All changes replace existing array or object values with new ones, and do not add any new elements
+# 			to the parent object or array.
+#
+# 		) The value being replaced must be at least as large as the replacement value.
+#
+# 			In other words, the new value cannot be any larger than the old one.
+#
+# 			A possible exception to this requirement occurs when a previous partial update has
+# 			left sufficient space for the larger value.
+#
+# 			You can use the function JSON_STORAGE_FREE() to see how much space has been freed
+# 			by any partial updates of a JSON column.
+#
+# Such partial updates can be written to the binary log using a compact form that saves space;
+# this can be enabled by setting the binlog_row_value_options system variable to PARTIAL_JSON.
+#
+# See the description of this variable ofr more information.
+#
+# The next few sections provide basic info regarding the creation and manipulation of JSON values.
+#
+# CREATING JSON VALUES
+#
+# A JSON array contains a list of values separated by commas and eclosed within { and } characters:
+#
+# 		["abc", 10, null, true, false]
+#
+# A JSON Object contains a set of key value pairs separated by commas enclosed with { and } characters:
+#
+# 		{"k1": "value", "k2": 10}
+#
+# As the examples illustrate, JSON arrays and objects can contain scalar values that
+# are strings or numbers, the JSON null literal, or the JSON boolean true or false literals.
+#
+# Keys in JSON objects must be strings. Temporal (date, time, or datetime) scalar values
+# are also permitted:
+#
+# 		["12:18:29.000000", "2015-07-29", "2015-07-29 12:18:29.000000"]
+#
+# Nesting is permitted within JSON array elements and JSON object key values:
+#
+# 		[99, {"id": "HK500", "cost": 75.99}, ["hot", "cold"]]
+# 		{"k1": "value", "k2": [10, 20]}
+#
+# You can also obtain JSON values from a number of functions supplied by MySQL for this
+# purpose (see SECTION 12.17.2, "FUNCTIONS THAT CREATE JSON VALUES") as well as by casting
+# values of other types to the JSON type using CAST(value AS JSON)
+#
+# (see CONVERTING BETWEEN JSON AND NON-JSON VALUES)
+#
+# THe next paragraphs describes how MySQL handles JSON values provided as input.
+#
+# In MySQL, JSON values are written as strings.
+#
+# MySQL parses any string used in a context that requires a JSON value, and produces
+# an error if it is not valid as JSON.
+#
+# These contexts include inserting a value into a column that has the JSON data type
+# and passing an argument to a function that expects a JSON value (usually shown as
+# json_doc or json_val in the documentation for MySQL JSON functions), as follows:
+#
+# 		) Attempting to insert a value into a JSON column succeeds if the value is a valid JSON value,
+# 			but fails if it is not:
+#
+# 			CREATE TABLE t1 (jdoc JSON);
+# 			Query OK, 0 rows affected (0.20 sec)
+#
+# 			INSERT INTO t1 VALUES('{"key1": "value1", "key2": "value2"}');
+# 			Query OK, 1 row affected (0.01 sec)
+#
+# 			INSERT INTO T1 VALUES('[1, 2,');
+# 			ERROR 3140 (22032) at line 2: Invalid JSON text:
+# 			"Invalid value" at position 6 in value (or column) '[1, 2,'
+#
+# 			Positions for "at position N" in such error messages are 0-based, but should
+# 			be considered rough indications of where the problem in a value actually occurs.
+#
+# 		) The JSON_TYPE() function expects a JSON argument and attempts to parse it into
+# 			a JSON value.
+#
+# 			It returns the value's JSON type if it is valid and produces an error otherwise:
+#
+# 				SELECT JSON_TYPE('["a", "b", 1]');
+# 				+---------------------------------+
+# 				| JSON_TYPE('["a", "b", 1]') 		 |
+# 			   +---------------------------------+
+# 				| ARRAY 									 |
+# 				+---------------------------------+
+#
+# 				SELECT JSON_TYPE('"hello"');
+# 				+---------------------------+
+# 				| JSON_TYPE('"hello"') 		 |
+# 				+---------------------------+
+# 				| STRING 						 |
+# 				+---------------------------+
+#
+# 				SELECT JSON_TYPE('hello');
+# 				ERROR 3146 (22032): Invalid data type for JSON data in argument 1
+# 				to function json_type; a JSON string or JSON type is required.
+#
+# MySQL handles strings used in JSON context using the utf8mb4 character set and utf8mb4_bin
+# collation.
+#
+# Strings in other character sets are converted to utf8mb4 as necessary.
+# (For strings in  the ascii or utf8 character sets, no conversion is needed because ascii
+# and utf8 are subsets of utf8mb4)
+#
+# As an alternative to writing JSON values using literal strings, functions exist for composing
+# JSON values from component elements.
+#
+# JSON_ARRAY() takes a (possibly empty) list of values and returns a JSON array containing those
+# values:
+#
+# 		SELECT JSON_ARRAY('a', 1, NOW());
+# 		+----------------------------------------+
+# 		| JSON_ARRAY('a', 1, NOW()) 			  	  |
+# 		+----------------------------------------+
+# 		| ["a", 1, "2015-07-27 09:43:47.000000"] |
+# 		+----------------------------------------+
+#
+# JSON_OBJECT() takes a (possibly empty) list of key-value pairs and returns
+# a JSON object containing those pairs:
+#
+# 		SELECT JSON_OBJECT('key1', 1, 'key2', 'abc');
+# 		+-------------------------------------------+
+# 		| JSON_OBJECT('key1', 1, 'key2', 'abc') 	  |
+# 		+-------------------------------------------+
+# 		| {"key1": 1, "key2": "abc"} 					  |
+# 		+-------------------------------------------+
+#
+# JSON_MERGE_PRESERVE() takes two or more JSON documents and returns the combined result:
+#
+# 		SELECT JSON_MERGE_PRESERVE('["a", 1]', '{"key": "value"}');
+# 		+---------------------------------------------------------+
+# 		| JSON_MERGE_PRESERVE('["a", 1]', '{"key": "value"}') 	 |
+# 		+---------------------------------------------------------+
+# 		| ["a", 1, {"key": "value"}] 										 |
+# 		+---------------------------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# For information about the merging rules, see NORMALIZATION, MERGING, AND AUTOWRAPPING OF JSON VALUES.
+#
+# (MySQL 8.0.3 and later also support JSON_MERGE_PATCH(), which has somewhat different behavior.
+#
+# See JSON_MERGE_PATCH() COMPARED WITH JSON_MERGE_PRESERVE(), for information about the differences
+# between these two functions.)
+#
+# JSON values can be assigned to user-defined variables:
+#
+# 		SET @j = JSON_OBJECT('key', 'value');
+# 		SELECT @j;
+# 		+----------------------+
+# 		| @j 						  |
+# 		+----------------------+
+# 		| {"key": "value"} 	  |
+# 		+----------------------+
+#
+# However, user-defined variables cannot be of JSON data type, so although @j in the preceding
+# example looks like a JSON value and has the same character set and collation as a JSON value,
+# it does NOT have the JSON data type.
+#
+# Instead, the result from JSON_oBJECT() is converted to a string when assigned to the variable.
+#
+# Strings produced by converting JSON values have a character set of utf8mb4 and a collation
+# of utf8mb4_bin:
+#
+# 		SELECT CHARSET(@j), COLLATION(@j);
+# 		+--------------+----------------+
+# 		| CHARSET(@j)  | COLLATION(@j)  |
+# 		+--------------+----------------+
+# 		| utf8mb4 		| utf8mb4_bin 	  |
+# 		+--------------+----------------+
+#
+# Because utf8mb4_bin is a binary collation, comparison of JSON values is case-sensitive.
+#
+# 		SELECT JSON_ARRAY('x') = JSON_ARRAY('X');
+# 		+-------------------------------------------+
+# 		| JSON_ARRAY('x') = JSON_ARRAY('X') 		  |
+# 		+-------------------------------------------+
+# 		| 							0 							  |
+# 		+-------------------------------------------+
+#
+# Case sensitivity also applies to the JSON null, true, and false literals,
+# which always must be written in lowercase:
+#
+# 		SELECT JSON_VALID('null'), JSON_VALID('Null'), JSON_VALID('NULL');
+# 		+-----------------------+---------------------+------------------------+
+# 		| JSON_VALID('null') 	| JSON_VALID('Null')  | JSON_VALID('NULL') 	  |
+# 		+-----------------------+---------------------+------------------------+
+# 		| 					1 			| 					0 		 | 				0 			  |
+# 		+-----------------------+---------------------+------------------------+
+#
+# 		SELECT CAST('null' AS JSON);
+# 		+-------------------------+
+# 		| CAST('null' AS JSON) 	  |
+# 		+-------------------------+
+# 		| null 						  |
+# 		+-------------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		SELECT CAST('NULL' AS JSON);
+# 		ERROR 3141 (22032): Invalid JSON text in argument 1 to function cast_as_json:
+# 		"Invalid value." at position 0 in 'NULL'.
+#
+# Case sensitivity of the JSON literals differs from that of the SQL NULL, TRUE and FALSE
+# literals, which can be written in any lettercase:
+#
+# 		SELECT ISNULL(null), ISNULL(Null), ISNULL(NULL);
+# 		+----------------+----------------+------------------+
+# 		| ISNULL(null)   | ISNULL(Null)   | ISNULL(NULL) 	  |
+# 		+----------------+----------------+------------------+
+# 		| 				1 	  | 			1 		 | 			1 		  |
+# 		+----------------+----------------+------------------+
+#
+# Sometimes it may be necessary or desirable to insert quote characters (" or ') into a 
+# JSON document.
+#
+# Assume for this example that you want to insert some JSON objects containing strings
+# representing sentences that state some facts about MySQL, each paired with an appropriate
+# keyword, into a table created using the SQL statement shown here:
+#
+# 		CREATE TABLE facts (sentence JSON);
+#
+# Among these keyword-sentence pairs is this one:
+#
+# 		mascot: The MySQL mascot is a dolphin named "sakila"
+#
+# On way to insert this as a JSON object into the facts table is to use the MySQL JSON_OBJECT() function.
+# IN this case, you must escape each quote character using a backslash, as shown here:
+#
+# 		INSERT INTO facts VALUES
+# 			(JSON_OBJECT("mascot", "Our mascot is a dolphin named \"Sakila\"."));
+#
+# THis does not work in the same way if you insert the value as a JSON object literal, in which case,
+# you must use the double backslash escape sequence, like this:
+#
+# 		INSERT INTO facts VALUES
+# 			('{"mascot": "Our mascot is a dolphin named \\"Sakila\\"."}');
+#
+# Using the double backslash keeps MySQL from performing escape sequence processing, and instead
+# causes it to pass the string literal to the storage engine for processing.
+#
+# After inserting the JSON object in either of the ways just shown, you can see that the
+# backslashes are present in the JSON column value by doing a simple SELECT, like this:
+#
+# 		SELECT sentence FROM facts;
+# 		+---------------------------------------------------------+
+# 		| sentence 												  				 |
+# 		+---------------------------------------------------------+
+# 		| {"mascot": "Our mascot is a dolphin named \"Sakila\"."} |
+# 		+---------------------------------------------------------+
+#
+# To look up this particular sentence employing mascot as the key, you can use
+# the column-path operator -> as shown, here:
+#
+# 		SELECT col->"$.mascot" FROM qtest;
+# 		+--------------------------------------------------+
+# 		| col->"$.mascot" 										   |
+# 		+--------------------------------------------------+
+# 		| "Our mascot is a dolphin named \"Sakila\"." 		|
+# 		+--------------------------------------------------+
+#
+# THis leaves the backslashes intact, along with the surrounding quote marks.
+#
+# To display the desired value using mascot as the key, but without including the
+# surrounding quote marks or any escapes, use the inline path operator ->>, like this: 
+#
+# 		SELECT sentence->>"$.mascot" FROM facts;
+# 		+-----------------------------------------------+
+# 		| sentence->>"$.mascot" 								|
+# 		+-----------------------------------------------+
+# 		| "Our mascot is a dolphin named "Sakila". 	   |
+# 		+-----------------------------------------------+
+#
 # 
+# NOTE:
+#
+# 		THe previous example does not work as shown if the NO_BACKSLASH_ESCAPES server SQL mode
+# 		is enabled.
+#
+# 		If this mode is set, a single backslash instead of double backslashes can be used to
+# 		insert the JSON object literal, and the backslashes are preserved.
+#
+# 		If you use the JSON_OBJECT() function when performing the insert and this mode is set,
+# 		you must alternate single and double quotes, like this:
+#
+# 			INSERT INTO facts VALUES
+# 			(JSON_OBJECT('mascot', 'Our mascot is a dolphin named "Sakila".'));
+#
+# 		See the description of the JSON_UNQUOTE() functions for more info about the effects
+# 		of this mode on escaped characters in JSON values.
+#
+# NORMALIZATION, MERGING, AND AUTOWRAPPING OF JSON VALUES
+#
+# WHen a string is parsed and found ot be a valid JSON document, it is also normalized.
+#
+# THis means that members with keys that duplicate a key found later in the document,
+# reading from left to right, are discarded.
+#
+# The object value produced by the following JSON_OBJECT() call includes only the second
+# key1 element because that key name occurs earlier in the value, as shown here:
+#
+# 		SELECT JSON_OBJECT('key1', 1, 'key2', 'abc', 'key1', 'def');
+# 		+----------------------------------------------------------+
+# 		| JSON_OBJECT('key1', 1, 'key2', 'abc', 'key1', 'def') 	  |
+# 		+----------------------------------------------------------+
+# 		| {"key1": "def", "key2": "abc"} 								  |
+# 		+----------------------------------------------------------+
+#
+# Normalization is also performed when values are inserted into JSON columns,
+# as shown here:
+#
+# 		CREATE TABLE t1 (c1 JSON);
+#
+# 		INSERT INTO t1 VALUES
+# 			('{"x": 17, "x": "red"}'),
+# 			('{"x": 17, "x": "red", "x": [3, 5, 7]}');
+#
+# 		SELECT c1 FROM t1;
+# 		+----------------------+
+# 		| c1 						  |
+# 		+----------------------+
+# 		| {"x": "red"} 		  |
+# 		| {"x": [3, 5, 7]} 	  |
+# 		+----------------------+
+#
+# This "last duplicate key wins" behavior is suggested by RFC 7159 and is implemented by most JavaScript
+# parsers. (BUG #86866, BUG #26369555)
+#
+# In versions of MySQL prior to 8.0.3, members with keys that duplicated a key found earlier
+# in the document were discarded.
+#
+# The object value produced by the following JSON_OBJECT() call does not include the second
+# key1 element because that key name occurs earlier in this value:
+#
+# 		SELECT JSON_OBJECT('key1', 1, 'key2', 'abc', 'key1', 'def');
+# 		+-----------------------------------------------------------+
+# 		| JSON_OBJECT('key1', 1, 'key2', 'abc', 'key1', 'def') 		|
+# 		+-----------------------------------------------------------+
+# 		| {"key1": 1, "key2": "abc"} 										   |
+# 		+-----------------------------------------------------------+
+#
+# Prior to MySQL 8.0.3, this "first duplicate key wins" normalization was also performed
+# when inserting values into JSON columns.
+#
+# 		CREATE TABLE t1 (c1 JSON);
+#
+# 		INSERT INTO t1 VALUES
+# 		> 			('{"x": 17, "x": "red"}'),
+# 		> 			('{"x": 17, "x": "red", "x": [3, 5, 7]}');
+#
+# 		SELECT c1 FROM t1;
+# 		+---------------------+
+# 		| c1 						 |
+# 		+---------------------+
+# 		| {"x": 17} 			 |
+# 		| {"x": 17}				 |
+# 		+---------------------+
+#
+# MySQL also discards extra whitespace between keys, values or elements in the original JSON document.
+#
+# To make lookups more efficient, it also sorts the keys of a JSON object.
+#
+# You should be aware that hte result of this ordering is subject to change and not guaranteeed to be
+# consistent across releases.
+#
+# MySQL functions that produce JSON values (see SECTION 12.17.2, "FUNCTIONS THAT CREATE JSON VALUES")
+# always return normalized values.
+#
+# MERGING JSON VALUES
+#
+# Two merging algorithms are supported in MySQL 8.0.3 (and later), implemented by the functions JSON_MERGE_PRESERVE()
+# and JSON_MERGE_PATCH().
+#
+# These differ in how they handle duplicate keys: JSON_MERGE_PRESERVE() retains values for duplicate keys,
+# while JSON_MERGE_PATCH() discards all but the last value.
+#
+# The next few paragraphs explain how each of these two functions handles the merging
+# of different combinations of JSON documents (that is, of objects and arrays)
+#
+# NOTE:
+#
+# 		JSON_MERGE_PRESERVE() is the same as the JSON_MERGE() function found in previous versions
+# 		of MySQL (renamed in MySQL 8.0.3)
+#
+# 		JSON_MERGE() is still supported as an alias for JSON_MERGE_PRESERVE() in MySQL 8.0, but is
+# 		deprecated and will be removed.
+#
+# MERGING ARRAYS.
+#
+# In contexts that combine multiple arrays, the arrays are merged into a single array.
+# JSON_MERGE_PRESERVE() does this by concatenating arrays named later to the end of the first array..
+#
+# JSON_MERGE_PATCH() considers each argument as an array consisting of a single element
+# (thus having 0 as its index) and then applies "last duplicate key wins" logic to select only
+# the last argument.
+#
+# YOu can compare the results shown by this query:
+#
+# 		SELECT
+# 			JSON_MERGE_PRESERVE('[1, 2]', '["a", "b", "c"]', '[true, false]') AS Preserve,
+# 			JSON_MERGE_PATCH('[1, 2]', '["a", "b", "c"]', '[true, false]') AS Patch\G
+# 		******************************** 1. row ************************************
+# 		Preserve: [1, 2, "a", "b", "c", true, false]
+# 			Patch: [true, false]
+#
+# Multiple objects when merged produce a single object.
+#
+# JSON_MERGE_PRESERVE() handles multiple objects having the same key by combining all
+# unique values for that key in an array; this array is then used as the value for that key
+# in the result.
+#
+# JSON_MERGE_PATCH() discards values for which duplicate keys are found, working from left
+# to right, so that hte result contains only the last value for that key.
+#
+# THe following query illuistrates the difference in the results for the duplicate key a:
+#
+# 		SELECT
+# 			JSON_MERGE_PRESERVE('{"a": 1, "b", 2}', '{"c": 3, "a": 4}', '{"c": 5, "d": 3}') AS Preserve,
+# 			JSON_MERGE_PATCH('{"a": 3, "b": 2}', '{"c": 3, "a": 4}', '{"c": 5, "d": 3}') AS Patch\G
+# 		******************************* 1. row ***************************************
+# 		Preserve: {"a": [1,4], "b": 2, "c": [3, 5], "d": 3}
+# 			Patch: {"a": 4, "b": 2, "c": 5, "d": 3}
+#
+# Nonarray values used in a context that requires an array value are autowrapped: The value is surrounded
+# by [ and ] characters to convert it to an array.
+#
+# in the following statement, each argument is autowrapped as an array ([1], [2])
+#
+# These are then merged to produce a single result array; as in the previous two cases,
+# JSON_MERGE_PRESERVE() combines values having the same key while JSON_MERGE_PATCH() dicards
+# values for all duplicate keys except the last, as shown here:
+#
+# 		SELECT 
+# 			JSON_MERGE_PRESERVE('1', '2') AS Preserve,
+# 			JSON_MERGE_PATCH('1', '2') AS Patch\G
+# 		*************************** 1. row ***************************
+# 		Preserve: [1, 2]
+# 			Patch: 2
+#
+# Array and object values are merged by autowrapping the object as an array and merging
+# the arrays by combining values or by "last duplicate key wins" according to the choice of
+# merging function (JSON_MERGE_PRESERVE() or JSON_MERGE_PATCH(), respectively), as can be seen
+# in this example:
+#
+# 		SELECT
+# 			JSON_MERGE_PRESERVE('[10, 20]', '{"a": "x", "b": "y"}') AS Preserve,
+# 			JSON_MERGE_PATCH('[10,20]', '{"a": "x", "b": "y"}') AS Patch\G
+# 		**************************** 1. row ****************************
+# 		Preserve: [10, 20, {"a": "x", "b": "y"}]
+# 			Patch: {"a": "x", "b": "y"}
+#
+# SEARCHING AND MODIFYING JSON VALUES
+#
+# A JSON path expression selects a value within a JSON document.
+#
+# Path expressions are useful with functions that extract parts of or modify a JSON document,
+# to specify where within that document to operate.
+#
+# For example, the following query extracts from a JSON document the value of the member
+# with the name key:
+#
+# 		SELECT JSON_EXTRACT('{"id": 14, "name": "Aztalan"}', '$.name');
+# 		+-------------------------------------------------------------+
+# 		| JSON_EXTRACT('{"id": 14, "name": "Aztalan"}', '$.name') 	  |
+# 		+-------------------------------------------------------------+
+# 		| "Aztalan" 																  |
+# 		+-------------------------------------------------------------+
+#
+# Path syntax uses a leading $ char to represent the JSON document under consideration,
+# optionally followed by selectors that indicate successively more specific parts of
+# the document:
+#
+# 		) A period followed by a key name names the member in an object with the gven key.
+#
+# 			The key name must be specified within double quotation marks if the name
+# 			without quotes is not legal within path expressions (for example, if it contains a space)
+#
+# 		) [N] appended to a path that selects an array names the value at position [N] within the array.
+#
+# 			Array positions work as per normal index accessing.
+#
+# 			If path does not select an array value, path[0] evaluates to the same as path:
+#
+# 				SELECT JSON_SET('"x"', '$[0]', 'a');
+# 				+-----------------------------------+
+# 				| JSON_SET('"x"', '$[0]', 'a') 		|
+# 				+-----------------------------------+
+# 				| "a" 										|
+# 				+-----------------------------------+
+# 				1 row in set (0.00 sec)
+#
+# 		) [M to N] specifies a subset or range of array values starting with the value at position M,
+# 			and ending with the value at position N.
+#
+# 			last is supported as a synonym for the index of the rightmost array element.
+#
+# 			Rleative addressing of array elements is also supported.
+#
+# 			If path does not select an array value, path[last] evaluates
+# 			to the same value as path,as shown later in this section. (SEE RIGHTMOST ARRAY ELEMENT)
+#
+# 		) Paths can contain * or ** wildcards:
+#
+# 			) .[*] evalutes to the values of all members in a JSON object.
+#
+# 			) [*] evaluates to the values of all elements in a JSON array.
+#
+# 			) prefix**suffix evalutes to all paths that begin with the named prefix and end with the named suffix.
+#
+# 		) Ap ath that does not exist in the document (evaluates to nonexistent data) evaluates to NULL.
+#
+# Let $ refer to this JSON array with three elements:
+#
+# 		[3, {"a": [5, 6], "b": 10}, [99, 100]]
+#
+# Then:
+#
+# 		) $[0] evaluates to 3
+#
+# 		) $[1] evaluates to {"a": [5,6], "b": 10}
+#
+# 		) $[2] evaluates to [99, 100]
+#
+# 		) $[3] evaluates to NULL (it refers to the fourth array element, which does not exist)
+#
+# Because $[1] and $[2] evaluate to nonscalar values, they can be used as the basis for more specific
+# path expressions that select nested values.
+#
+# Examples:
+#
+# 		) $[1].a evaluates to [5,6]
+#
+# 		) $[1].a[1] evaluates to 6
+#
+# 		) $[1].b evaluates to 10
+#
+# 		) $[2][0] evaluates to 99
+#
+# As mentioned previously, path components that name keys msut be quoted if the unquoted key name is not legal
+# in path expressions.
+#
+# Let $ refer to this value:
+#
+# 		{"a fish": "shark", "a bird": "sparrow"}
+#
+# The keys both contain a space and must be quoted:
+#
+# 		) $."a fish" evaluates to shark
+#
+# 		) $."a bird" evaluates to sparrow
+#
+# Paths that use wildcards evaluate to an array that can contain multiple values:
+#
+# 		SELECT JSON_EXTRACT('{"a": 1, "b": 2, "c": [3, 4, 5]}', '$.*');
+# 		+--------------------------------------------------------------+
+# 		| jSON_EXTRACT('{"a": 1, "b": 2, "c": [3,4,5]}', '$.*') 			|
+# 		+--------------------------------------------------------------+
+# 		| [1, 2, [3, 4, 5]] 														   |
+# 		+--------------------------------------------------------------+
+#
+# 		SELECT JSON_EXTRACT('{"a": 1, "b": 2, "c": [3, 4, 5]}', '$.c[*]');
+# 		+--------------------------------------------------------------+
+# 		| JSON_EXTRACT('{"a": 1, "b": 2, "c": [3, 4, 5]}', '$.c[*]')	|
+# 		+--------------------------------------------------------------+
+# 		| [3, 4, 5] 																	|
+# 		+--------------------------------------------------------------+
+#
+# In the following example, the path $**.b evaluates to multiple paths ($.a.b and $.c.b) and produces
+# an array of the matching pattern values:
+#
+# 		SELECT JSON_EXTRACT('{"a": {"b": 1}, "c": {"b": 2}}', '$**.b');
+# 		+------------------------------------------------------------+
+# 		| JSON_EXTRACT('{"a": {"b": 1}, "c": {"b": 2}}', '$**.b') 	 |
+# 		+------------------------------------------------------------+
+# 		| [1, 2] 																	 |
+# 		+------------------------------------------------------------+
+#
+# RANGES FROM ARRAYS.
+#
+# You can use ranges with the to keyword to specify subsets of JSON arrays.
+#
+# For example, $[1 to 3] includes the second, third and fourth elements of an array,
+# as shown here:
+#
+# 		SELECT JSON_EXTRACT('[1, 2, 3, 4, 5]', '$[1 to 3]');
+# 		+---------------------------------------------------+
+# 		| JSON_EXTRACT('[1, 2, 3, 4, 5]', '$[1 to 3]') 		 |
+# 		+---------------------------------------------------+
+# 		| [2, 3, 4] 													 |
+# 		+---------------------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# The syntax is M to N, where M and N are, respectively, the first and last indexes of a range of elements
+# from a JSON array.
+#
+# N must be greater than M, M must be greater than or equal to 0.
+#
+# Array elements are indexed beginning with 0.
+#
+# You can use ranges in contexts where wildcards are supported.
+#
+# RIGHTMOST ARRAY ELEMENT
+#
+# The last keyword is supported as a synonym for the index of the last element in an array.
+#
+# Expressions of the form lqst - N can be used for relative addressing, and within range
+# definitons, like this:
+#
+# 		SELECT JSON_EXTRACT('[1, 2, 3, 4, 5]', '$[last-3 to last-1]');
+# 		+------------------------------------------------------------+
+# 		| JSON_EXTRACT('[1, 2, 3, 4, 5]', '$[last-3 to last-1]') 	 |
+# 		+------------------------------------------------------------+
+# 		| [2, 3, 4] 																 |
+# 		+------------------------------------------------------------+
+# 		1 row in set (0.01 sec)
+#
+# If the path is evaluated against a value that is not an array, the result of the evaluation
+# is the same as if the value had been wrapped in a single-element array:
+#
+# 		SELECT JSON_REPLACE('"Sakila"', '$[last]', 10);
+# 		+---------------------------------------------+
+# 		| JSON_REPLACE('"Sakila"', '$[last]', 10) 	 |
+# 		+---------------------------------------------+
+# 		| 10 														 |
+# 		+---------------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# You can use column->path with a JSON column identifier and JSON path expression
+# as a synonym for JSON_EXTRACT(column, path)
+#
+# See SECTION 12.17.3, "FUNCTIONS THAT SEARCH JSON VALUES" FOR MORE INFO.
+#
+# See also INDEXING A GENERATED COLUMN TO PROVIDE A JSON COLUMN INDEX.
+#
+# Some functions take an existing JSON document, modify it in some way, and return the
+# resulting modified document.
+#
+# Path expressions indicate where in teh document to make changes.
+#
+# For example:
+#
+# 		JSON_SET()
+#
+# 		JSON_INSERT()
+#
+# 		JSON_REPLACE()
+#
+# functions each take a JSON document, plus one or more path-value pairs that describe
+# where to modify the document and the values to use.
+#
+# The functions differi n how they handle existing and nonexisting values within the document.
+#
+# Consider this document:
+#
+# https://dev.mysql.com/doc/refman/8.0/en/json.html
 #   			  
