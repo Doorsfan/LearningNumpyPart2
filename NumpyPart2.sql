@@ -73621,5 +73621,2015 @@ Need be, i will change this for upcoming repeated cases. */
 #
 # Consider this document:
 #
-# https://dev.mysql.com/doc/refman/8.0/en/json.html
-#   			  
+# 		SET @j = '["a", {"b": [true, false]}, [10, 20]]';
+#
+# JSON_SET() replaces values for paths that exist and adds values for paths
+# that do not exist:
+#
+# 		SELECT JSON_SET(@j, '$[1].b[0]', 1, '$[2][2]', 2);
+# 		+-------------------------------------------------+
+# 		| JSON_SET(@j, '$[1].b[0]', 1, '$[2][2]', 2) 	  |
+# 		+-------------------------------------------------+
+# 		| ["a", {"b": [1, false]}, [10, 20, 2]] 			  |
+# 		+-------------------------------------------------+
+#
+# In this case, the path $[1].b[0] selects an existing value (true), which is
+# replaced with the value following the path argument(1)
+#
+# The path $[2][2] does not exist, so the corresponding value(2) is added to the
+# value selected by [2]
+#
+# JSON_INSERT() adds new values but does not replace existing values:
+#
+# 		SELECT JSON_INSERT(@j, '$[1].b[0]', 1, '$[2][2]', 2);
+# 		+---------------------------------------------------+
+# 		| JSON_INSERT(@j, '$[1].b[0]', 1, '$[2][2]', 2) 	 |
+# 		+---------------------------------------------------+
+# 		| ["a", {"b": [true, false]}, [10, 20, 2]] 		    |
+# 		+---------------------------------------------------+
+#
+# JSON_REPLACE() replaces existing values and ignores new values:
+#
+# 		SELECT JSON_REPLACE(@j, '$[1].b[0]', 1, '$[2][2]', 2);
+# 		+----------------------------------------------------+
+# 		| JSON_REPLACE(@j, '$[1].b[0]', 1, '$[2][2]', 2) 	  |
+# 		+----------------------------------------------------+
+# 		| ["a", {"b": [1, false]}, [10, 20]] 					  |
+# 		+----------------------------------------------------+
+#
+# THe path-value pairs are evaluated left to right. The document produced by
+# evaluating one pair becomes the new value against which the next pair is evaluated.
+#
+# JSON_REMOVE() takes a JSON document and one or more paths that specify values to be
+# removed from the document.
+#
+# The return value is the original document minus the values selected by paths that exist
+# within the document:
+#
+# 		SELECT JSON_REMOVE(@j, '$[2]', '$[1].b[1]', '$[1].b[1]');
+# 		+------------------------------------------------------+
+# 		| JSON_REMOVE(@j, '$[2]', '$[1].b[1]', '$[1].b[1]') 	 |
+# 		+------------------------------------------------------+
+# 		| ["a", {"b": [true]}] 											 |
+# 		+------------------------------------------------------+
+#
+# The path have these effects:
+#
+# 		) $[2] matches [10, 20] and removes it.
+#
+# 		) The first instance of $[1].b[1] matches false in the b element and removes it.
+#
+# 		) The second instance of $[1].b[1] matches nothing. That element has already been removed,
+# 			the path no longer exists, and has no effect.
+#
+# CCOMPARISON AND ORDERING OF JSON VALUES
+#
+# JSON values can be compared using the =, <,<=, >, >=, <>, !=, and <=> operators.
+#
+# The following comparison operators and functions are not yet supported with JSON values:
+#
+# 		) BETWEEN
+#
+# 		) IN()
+#
+# 		) GREATEST()
+#
+# 		) LEAST()
+#
+# A workaround for the comparison operators and functions just listed is to cast JSON values
+# to a native MySQL numeric or string data type so they have a consistent non-JSON scalar type.
+#
+# Comparison of JSON values takes place at two levels.
+#
+# The first level of comparison is based on the JSON types of the compared values.
+#
+# If the types differ, the comparison result is determined solely by which type has higher
+# precedence.
+#
+# If the two values have the same JSON type, a second level of comparison occurs using
+# type-specific rules.
+#
+# The following list shows the precedences of JSON types, from highest precedence to the lowest.
+# (The type names are those returned by the JSON_TYPE() function)
+#
+# Types shown together on a line have the same precedence.
+#
+# Any value having a JSON type listed earlier in the list compares greater than any value having
+# a JSON type listed later in the list.
+#
+# BLOB
+# BIT
+# OPAQUE
+# DATETIME
+# TIME
+# DATE
+# BOOLEAN
+# ARRAY
+# OBJECT
+# STRING
+# INTEGER, DOUBLE
+# NULL
+#
+# For JSON values of the same precedence, the comparison rules are type specific:
+#
+# 		) BLOB
+#
+# 			The first N bytes of the two values are compared, where N is the number of bytes in teh shorter value.
+#
+# 			If the first N bytes of the two values are identical, the shorter value is ordered before the longer value.
+#
+# 		) BIT
+#
+# 			Same rules as for BLOB.
+#
+# 		) OPAQUE
+#
+# 			Same rule as for BLOB. OPAQUE values are values that are not classified as one of the other types.
+#
+# 		) DATETIME
+#
+# 			A value that represent an earlier point in time is ordered before a value that represents a later point in time.
+#
+# 			If two values originally come from the MySQL DATETIME and TIMESTAMP types, respectively,
+# 			they are equal if they represent the same point in time.
+#
+# 		) TIME
+#
+# 			The smaller of two time values is ordered before the larger one.
+#
+# 		) DATE
+#
+# 			The earlier data is ordered before the more recent date.
+#
+# 		) ARRAY
+#
+# 			Two JSON arrays are equal if they have the same length and values in corresponding positions
+# 			in the arrays are equal.
+#
+# 			If the arrays are not equal, their order is determined by the elements in the first position where
+# 			there is a difference.
+#
+# 			The array with the smaller value in that position is ordered first.
+#
+# 			If all values of the shorter array are equal to the corresponding values in the longer array,
+# 			the shorter array is ordered first.
+#
+# 			Example:
+#
+# 				[] < ["a"] < ["ab"] < ["ab", "cd", "ef"] < ["ab", "ef"]
+#
+# 		) BOOLEAN
+#
+# 			The JSON false literal is less than the JSON true literal
+#
+# 		) OBJECT
+#
+# 			Two JSON objects are equal if they have the same set of keys, and
+# 			each key has the same value in both objects.
+#
+# 			Example:
+#
+# 				{"a": 1, "b": 2} = {"b": 2, "a": 1}
+#
+# 			The order of two objects that are not equal is unspecified but determinsitic.
+#
+# 		) STRING
+#
+# 			Strings are ordered lexically on the first N bytes of the utf8mb4 representation
+# 			of the two strings being compared, where N is the length of the shorter string.
+#
+# 			If the first N bytes of the two strings are identical, the shorter string is considered
+# 			smaller than the longer string.
+#
+# 			Example:
+#
+# 				"a" < "ab" < "b" < "bc"
+#
+# 			This ordering is equivalent to the ordering of SQL strings with collation utf8mb4_bin
+#
+# 			Because utf8mb4_bin is a binary collation, comparison of JSON values is case-sensitive:
+#
+# 				"A" < "a"
+#
+# 		) INTEGER, DOUBLE
+#
+# 			JSON values can contain exact-value numbers and approximate-value numbers.
+# 			For a general discussion of these types of numbers, see SECTION 9.1.2, "NUMERIC LITERALS"
+#
+# 			The rules for comparing native MySQL numeric types are discussed in SECTION 12.2, "TYPE CONVERSION IN EXPRESSION EVALUATION",
+# 			but the rules for comparing numbers within JSON values differ somewhat:
+#
+# 				) In a comparison between two columns that use the native MySQL INT and DOUBLE numeric types, respectively,
+# 					it is known that all comparisons involve an integer and a double, so the integer is converted to double
+# 					for all rows.
+#
+# 					That is, exact-value numbers are converted to approximate-value numbers.
+#
+# 				) On the other hand, if the query compares two JSON columns containing numbers, it cannot be known
+# 					in advance whether numbers will be integer or double.
+#
+# 					To provide the most consistent behavior across all rows, MySQL converts approximate-value numbers
+# 					to exact-value numbers.
+#
+# 					The resulting ordering is consistent and does not lose precision for the exact-value numbers.
+# 					
+#
+# 			Were JSON comparisons to use the non-JSON numeric comparison rules, inconsistent ordering could occur.
+#
+# 			The usual MySQL comparison rules for numbers yield these orderings:
+#
+# 				) Integer comparison:
+#
+# 					1 < 2 < 3 (where doubles would be not defined)
+#
+# 				) Double comparison:
+#
+# 					Inconsistent
+#
+# For comparison of any JSON value to SQL NULL the result is UNKNOWN.
+#
+# For comparison of JSON and non-JSON values, the non-JSON value is converted to JSON according
+# to the rules in the following table, then the values compared as described previously.
+#
+# CONVERTING BETWEEN JSON AND NON-JSON VALUES
+#
+# The following table provides a summary of the rules that MySQL follows when casting between
+# JSON values and values of other types:
+#
+# 		TABLE 11.3 JSON CONVERISON RULES
+#
+# 		OTHER TYPE 					CAST(other type AS JSON) 						CAST(JSON AS other type)
+#
+# 		JSON 							No change 											No change
+#
+# 		utf8 char type 			The string is parsed into 						The JSON value is serialized into a utf8mb4 string.
+# 		(utf8mb4, utf8, ascii)  a JSON value.
+#
+# 		Other character 			Other char encodings are treated
+# 		types 						implicitly and converted to utf8mb4 		The JSON value is serialized to a utf8mb4, then cast to other
+#	 																							character encodings. The result may not be meaningful.
+#
+# 		NULL 							Results in a NULL value of type JSON 		N/A
+#
+# 		Geometry types 			The geometry value is converted into  		Illegal operation. Workaround: Pass the result of CAST(json val AS CHAR) 
+# 										a JSON document by calling ST_AsGeoJSON() to ST_GeomFromGeoJSON()
+#
+# 		All other types 			Results in a JSON document consisting 		Succeeds if the JSON document consists of a single scalar value of the
+# 										of a single scalar value. 						target type and that scalar value can be cast to the target type. (Otherwise NULL and Warning)
+#
+# ORDER BY and GROUP BY for JSON values works according to these principles:
+#
+# 		) Ordering of scalar JSON values uses the same rules as in the preceding discussion.
+#
+# 		) For ascending sorts, SQL NULL orders before all JSON values, including the JSON null literal;
+# 			for descending sorts, SQL NULL orders after all JSON values, including the JSON null literal.
+#
+# 		) Sort keys for JSON values are bound by the value of the max_sort_length system variable,
+# 			so keys that differ only after the first max_sort_length bytes compare as equal.
+#
+# 		) Sorting of nonscalar values is not currently supported and a warning occurs.
+#
+# For sorting, it can be beneficial to cast a JSON scalar to some other native MySQL type.
+#
+# For example, if a column named jdoc contains JSON objects having a member consisting of an
+# an id key and a nonnegative value, use this expression to sort by id values:
+#
+# 		ORDER BY CAST(JSON_EXTRACT(jdoc, '$.id') AS UNSIGNED)
+#
+# If there happens to be a generated column defined to use the same expression as in the ORDER BY,
+# the MySQL optimizer recognizes that and considers using the index for the query execution plan.
+#
+# See SECTION 8.3.11, "OPTIMIZER USE OF GENERATED COLUMN INDEXES"
+#
+# AGGREGATION OF JSON VALUES
+#
+# For aggregation of JSON values, SQL NULL values are ignored as for other data types.
+#
+# Non-NULL values are converted to a numeric type and aggregated, except for MIN(), MAX() and GROUP_CONCAT().
+#
+# The conversion to number should produce a meaningful result for JSON values that are numeric scalars,
+# although (depending on the values) truncation and loss of precision may occur.
+#
+# Conversion to number of other JSON values may not produce a meaningful result.
+#
+# 11.7 DATA TYPE DEFAULT VALUES
+#
+# Data type specifications can have explicit or implicit default values.
+#
+# A DEFAULT value clause in a data type specificaiton explicitly indicates a default
+# value for a column.
+#
+# Examples:
+#
+# 		CREATE TABLE t1 (
+# 			i 		INT DEFAULT -1,
+# 			c 		VARCHAR(10) DEFAULT '',
+# 			price DOUBLE(16,2) DEFAULT 0.00
+# 		);
+#
+# SERIAL DEFAULT VALUE is a special case.
+# In the definition of an integer column, it is an alias for NOT NULL AUTO_INCREMENT UNIQUE.
+#
+# Some aspects of explicit DEFAULT clause handling are version dependent, as described following:
+#
+# 		) Handling of Explicit Defaults as of MySQL 8.0.13
+# 
+# 		) Handling of Explicit Defaults Prior to MySQL 8.0.13
+#
+# 		) Handling of Implicit Defaults
+#
+# HANDLING OF EXPLICIT DEFAULTS AS OF MySQL 8.0.13
+#
+# The default value specified in a DEFAULT caluse can be a literal constant or an expression.
+#
+# With one exception, enclose expression default values within parantheses to
+# distinguish them from literal constant default values.
+#
+# Examples:
+#
+# 		CREATE TABLE t1 (
+# 			-- literal defaults
+# 			i INT 			DEFAULT 0,
+# 			c VARCHAR(10) 	DEFAULT '',
+# 			-- expression defaults
+# 			f FLOAT 			DEFAULT (RAND() * RAND()),
+# 			b BINARY(16) 	DEFAULT (UUID_TO_BIN(UUID())),
+# 			d DATE 			DEFAULT (CURRENT_DATE + INTERVAL 1 YEAR),
+# 			p POINT 			DEFAULT (Point(0, 0)),
+# 			j JSON 			DEFAULT (JSON_ARRAY())
+# 		);
+#
+# The exception is that, for TIMESTAMP and DATETIME columns, you can specify the
+# CURRENT_TIMESTAMP function as the default, without enclosing parentheses.
+#
+# See SECTION 11.3.5, "AUTOMATIC INITIALIZATION AND UPDATING FOR TIMESTAMP AND DATETIME"
+#
+# The BLOB, TEXT, GEOMETRY and JSON data types can be assigned a default value only if
+# the value is written as an expression, even if the expression value is a literal:
+#
+# 		) This is permitted (literal default specified as expression):
+#
+# 			CREATE TABLE t2 (b BLOB DEFAULT ('abc'));
+#
+# 		) This produces an error (literal default not specified as expression):
+#
+# 			CREATE TABLE t2 (b BLOB DEFAULT 'abc');
+#
+# Expression default values must adhere to the following rules.
+# An error occurs if an expression contains disallowed constructs.
+#
+# 		) Literals, built-in functions (both deterministic and nondeterministic), and operators are permitted.
+#
+# 		) Subqueries, parameters, variables, stored functions, and user-defined functions are not permitted.
+#
+# 		) An expression default value cannot depend on a column that has the AUTO_INCREMENT attribute
+#
+# 		) An expression default value for one column can refer to other table columns, with the exception that
+# 			references to generated columns or columns with expression default values must be to columns that occur
+# 			earlier in the table definition.
+#
+# 			That is, expression default values cannot contain forward references to generated columns or columns
+# 			with expression default values.
+#
+# 			The ordering constraint also applies to the use of ALTER_TABLE to reorder table columns.
+#
+# 			If the resulting table would have an expression default value that contains a forward reference
+# 			to a generated column or column with an expression default value, the statment fails.
+#
+# 			NOTE:
+#
+# 				If any component of an expression default value depends on the SQL mode, different
+# 				results may occur for different uses of the table unless the SQL mode is the same during
+# 				all uses.
+#
+# For CREATE_TABLE_---_LIKE and CREATE_TABLE_---_SELECT, the destination table preserves expression default
+# values from the original table.
+#
+# If an expression default value refers to a nondeterministic function, any statement that causes the expression
+# to be evaluated is unsafe for statement-based replication.
+#
+# This includes statements such as INSERT, UPDATE and ALTER_TABLE.
+#
+# When inserting a new row, the default value for a column with an expression default can be inserted either by
+# omitting the column name or by specifying the column as DEFAULT (just as for columns with literal defaults):
+#
+# 		CREATE TABLE t4 (uid BINARY(16) DEFAULT (UUID_TO_BIN(UUID())));
+# 		INSERT INTO t4 () VALUES();
+# 		INSERT INTO t4 () VALUES(DEFAULT);
+#
+# 		SELECT BIN_TO_UUID(uid) AS uid FROM t4;
+# 		+----------------------------------------+
+# 		| uid 											  |
+# 		+----------------------------------------+
+# 		| f1109174-94c9-11e8-971d-3bf1095aa633   |
+# 		| f110cf9a-94c9-11e8-971d-3bf1095aa633   |
+# 		+----------------------------------------+
+#
+# However, the use of DEFAULT(col name) to specify the default value for a named column is permitted only
+# for columns that have a literal default value, not for columns that have an expression default value.
+#
+# Not all storage engines permit expression default values. For those that do not, an ER_UNSUPPORTED_ACTION_ON_DEFAULT_VAL_GENERATED
+# error occurs.
+#
+# If a default value evaluates to a data type that differs from the declared column type, implicit coercion to the declared
+# type occurs according to the usual MySQL type-conversion rules.
+#
+# See SECTION 12.2, "TYPE CONVERSION IN EXPRESSION EVALUATION"
+#
+# HANDLING OF EXPLICIT DEFAULTS PRIOR TO MYSQL 8.0.13
+#
+# With one exception, the default value specified in a DEFAULT clause must be a literal constant;
+# it cannot be a function or an expression.
+#
+# This means, for example, that you cannot set the default for a date column to be the value of a 
+# function such as NOW() or CURRENT_DATE.
+#
+# The exception is that, for TIMESTAMP and DATETIME columns, you can specify CURRENT_TIMESTAMP as
+# the default.
+#
+# See SECTION 11.3.5, "AUTOMATIC INITIALIZATION AND UPDATING FOR TIMESTAMP AND DATETIME"
+#
+# The BLOB, TEXT, GEOMETRY, and JSON data types cannot be assigned a default value.
+#
+# If a default value evaluates to a data type that differs from the declared column type,
+# implicit coercion to the declared type occurs according to the usual MySQL type-conversion
+# rules.
+#
+# See SECTION 12.2, "TYPE CONVERSION IN EXPRESSION EVALUATION"
+#
+# HANDLING OF IMPLICIT DEFAULTS
+#
+# If a data type specification includes no explicit DEFAULT value, MySQL determines
+# the default value as follows:
+#
+# If the column can take NULL as a value, the column is defined with an explicit DEFAULT NULL clause.
+#
+# IF the column cannot take NULL as a value, MySQL defines the column with no explicit DEFAULT clause.
+# Exception:
+#
+# 		If the column is defined as part of a PRIMARY KEY but not explicitly as NOT NULL, MySQL creates
+# 		it as a NOT NULL column (because PRIMARY KEY columns must be NOT NULL)
+#
+# For data entry into a NOT NULL column that has no explicit DEFAULT clause, if an INSERT or REPLACE
+# statement includes no value for the column, or an UPDATE statement sets the column to NULL,
+# MySQL handles the column according to the SQL mode in effect at the time:
+#
+# 		) If strict SQL mode is enabled, an error occurs for transactional tables and the statement
+# 			is rolled back.
+#
+# 			For nontransactional tables, an error occurs, but if this happens for the second
+# 			or subsequent row of a multiple-row statement, the preceding rows will have been inserted.
+#
+# 		) If strict mode is not enabled, MySQL sets the column to the implicit default value for the column data type.
+#
+# Suppose that a table t is defined as follows:
+#
+# 		CREATE TABLE t (i INT NOT NULL);
+#
+# In this case, i has no explicit default, so in strict mode each of the following statements produce
+# an error and no row is inserted.
+#
+# When not using strict mode, only the third statement produces an error; the implicit default is inserted
+# for the first two statements, but the third fails because DEFAULT(i) cannot produce a value:
+#
+# 		INSERT INTO t VALUES();
+# 		INSERT INTO t VALUES(DEFAULT);
+# 		INSERT INTO t VALUES(DEFAULT(i));
+#
+# See SECTION 5.1.11, "SERVER SQL MODES"
+#
+# For a given table, the SHOW_CREATE_TABLE statement displays which columns have an explicit DEFAULT clause.
+#
+# Implicit defaults are defined as follows:
+#
+# 		) For numeric types, the default is 0, with the exception that for integer or floating-point types declared
+# 			with the AUTO_INCREMENT attribute, the default is the next value in the sequence.
+#
+# 		) For date and time types other than TIMESTMAP, the default is the appropriate "zero" value for the type.
+#
+# 			This is also true for TIMESTAMP if the explicit_defaults_for_timestamp system variable is enabled
+# 			(See SECTION 5.1.8, "SERVER SYSTEM VARIABLES").
+#
+# 			Otherwise, for the first TIMESTAMP column in a table, the default value is the current
+# 			date and time. See SECTION 11.3, "DATE AND TIME TYPES"
+#
+# 		) For string types other than ENUM, the default value is the empty string..
+#
+# 			For ENUM, the default is the first enumeration value.
+#
+# 11.8 DATA TYPE STORAGE REQUIREMENTS
+#
+# 		) INNODB TABLE STORAGE REQUIREMENTS
+#
+# 		) NDB TABLE STORAGE REQUIREMENTS
+#
+# 		) NUMERIC TYPE STORAGE REQUIREMENTS
+#
+# 		) DATE AND TIME TYPE STORAGE REQUIREMENTS
+#
+# 		) STRING TYPE STORAGE REQUIREMENTS
+#
+# 		) SPATIAL TYPE STORAGE REQUIREMENTS
+#
+# 		) JSON STORAGE REQUIREMENTS
+#
+# The storage requirements for table data on disk depend on several factors.
+#
+# Different storage engines represent data types and store raw data differently.
+# 
+# Table data might be compressed, either for a column or an entire row, complicating
+# the calculation of storage requirements for a table or column.
+#
+# Despite differences in storage layout on disk, the internal MySQL APIs that communicate
+# and exchange information about table rows use a consistent data structure that applies
+# across all storage engines.
+#
+# This section includes guidelines and information for the storage requirements for each data
+# type supported by MySQL, including the internal format and size for storage engines that
+# use a fixed-size representation for data types.
+#
+# Information is listed by category or storage engine.
+#
+# The internal representation of a table has maximum row size of 65,535 bytes, even if the storage
+# engine is capable of supporting larger rows.
+#
+# This figure excludes BLOB or TEXT columns, which contribute only 9 to 12 bytes toward thi sisze.
+#
+# For BLOB and TEXT data, the information is stored internally in a different area of memory than
+# the row buffer.
+#
+# Different storage engines handle the allocation and storage of this data in different ways, according
+# to the method they use for handling the corresponding types.
+#
+# For more information, see CHAPTER 16, ALTERNATIVE STORAGE ENGINES, and SECTION C.10.4, "LIMITS ON TABLE COLUMN COUNT AND RWO SIZE"
+#
+# INNODB TABLE STORAGE REQUIREMENTS
+#
+# See SECTION 15.10, "INNODB ROW FORMATS" for information about storage requirements for InnoDB tables
+#
+# NDB TABLE STORAGE REQUIREMENTS
+#
+# 		IMPORTANT:
+#
+# 			NDB tables use 4-byte alignment; all NDB data storage is done in multiples of 4 bytes.
+#
+# 			Thus, a column value that would typically take 15 bytes, requires 16 bytes in an NDB table.
+#
+# 			For example, in NDB tables, teh TINYINT, SMALLINT, MEDIUMINT, and INTEGER(INT) column types
+# 			each require 4 bytes storage per record due to the alignment factor.
+#
+# 			Each BIT(M) column takes M bits of storage space.
+#
+# 			 Although an individual BIT column is NOT 4-byte aligned, 
+# 			NDB reserves 4 bytes (32 bits) per row for the first 1-32 bits needed for BIT columns,
+# 			then another 4 bytes for bits 33-64, and so on.
+#
+#  		While a NULL itself does not require any storage space, NDB reserves 4 bytes per row if
+# 			the table definition contains any columns allowing NULL, up to 32 NULL columns.
+#
+# 			(If an NDB Cluster table is defined with more than 32 NULL columns up to 64 NULL
+# 			columns, then 8 bytes per row are reserved)
+#
+# Every table using the NDB storage engine requires a primary key; if you do not define a primary
+# key, a "hidden" primary key is created by NDB.
+#
+# THis hidden primary key consumes 31-35 bytes per table record.
+#
+# You can use the ndb_size.pl Perl script to estimate NDB storage requirements. It connects
+# to a current MySQL (not NDB cluster) database and creates a report on how much space that database
+# would require if it used the NDB storage engine.
+#
+# See SECTION 22.4.29, "NDB_SIZE.PL -- NDBCLUSTER SIZE REQUIREMENTS ESTIMATOR" for more information.
+#
+# NUMERIC TYPE STORAGE REQUIREMENTS
+#
+# DATA TYPE 				STORAGE REQUIRED
+#
+# TINYINT 					1 byte
+#
+# SMALLINT 					2 bytes
+#
+# MEDIUMINT 				3 bytes
+#
+# INT, INTEGER 			4 bytes
+#
+# BIGINT 					8 bytes
+#
+# FLOAT(p) 					4 bytes if 0 <= p <= 24, 8 bytes if 25 <= 25 <= 53
+#
+# FLOAT 						4 bytes
+#
+# DOUBLE [PRECISION],  	8 bytes
+# REAL 
+#
+# DECIMAL(M,D), 			Varies, see following
+# NUMERIC(M,D)
+#
+# BIT(M) 					approximately (M+7)/8 bytes
+#
+# Values for DECIMAL (and NUMERIC) columns are represented using a bianry format that packs
+# nine decimal (base 10) digits into four bytes.
+#
+# Storage for the integer and fractional parts of each value are determined separately.
+#
+# Each multiple of nine digits requires four bytes, and the "leftover"  digits require some
+# fraction of four bytes.
+#
+# The storage required ofr excess digits is given by the following table:
+#
+#
+#
+# 	LEFTOVER DIGITS 					NUMBER OF BYTES
+#
+# 	0 										0
+#
+# 	1 										1
+#
+# 	2 										1
+#
+# 	3 										2
+#
+# 	4 										2
+#
+# 	5 										3
+#
+# 	6 										3
+#
+# 	7 										4
+#
+# 	8 										4
+#
+#
+# DATE AND TIME TYPE STORAGE REQUIREMENTS
+#
+# For TIME, DATETIME and TIMESTAMP columns, the storage required for tables created before MySQL
+# 5.6.4 differs from tables created from 5.6.4 on.
+#
+# This is due to a change in 5.6.4 that permits these types to have a fractional part, which
+# reuqires from 0 to 3 bytes.
+#
+# 	DATA TYPES 		STORAGE REQUIRED PRE 5.6.4 	STORAGE REQUIRED POST 5.6.4
+#
+# 	YEAR 				1 byte 								1 byte
+#
+# 	DATE 				3 bytes 								3 bytes
+#
+# 	TIME 				3 bytes 								3 bytes + fractional seconds storage
+#
+#  DATETIME 		8 bytes 								5 bytes + fractional seconds storage
+#
+#  TIMESTAMP 		4 bytes 								4 bytes + fractional seconds storage
+#
+# As of MySQL 5.6.4, storage for YEAR and DATE remains unchanged.
+#
+# However, TIME, DATETIME and TIMESTAMP are represented differently.
+#
+# DATETIME is packed more efficiently, requiring 5 rather than 8 bytes for the
+# nonfractional part, and all three parts have a fractional part that requires
+# from 0 to 3 bytes, depending on the fractional seconds precision of stored values.
+#
+# FRACTIONAL SECONDS PRECISION 		STORAGE REQUIRED
+#
+# 0 											0 bytes
+#
+# 1,2 										1 byte
+#
+# 3,4 										2 bytes
+#
+# 5,6 										3 bytes
+#
+# For example, TIME(0), TIME(2), TIME(4), and TIME(6) use 3,4,5 and 6 bytes, respectively.
+#
+# TIME and TIME(0) are equivalent and require the same storage.
+#
+# For details about internal representation of temporal values, see MySQL INTERNALS: IMPORTANT ALGORITHMS AND STRUCTURES.
+#
+# STRING TYPE STORAGE REQUIREMENTS
+#
+# In the following table, M represents the declared column length in characters for nonbinary string
+# types and bytes for binary string types.
+#
+# L represents the actual length in bytes of a given string value.
+#
+# 		DATA TYPE 							REQUIRED
+#
+# 	CHAR(M) 						The compact family of INnoDB row formats optimize storage for variable-length character sets.
+# 									See COMPACT ROW FORMAT STORAGE CHARACTERISTICS.
+#
+# 									Otherwise, M x w bytes, <= M <= 255, where w is the number of bytes required for
+# 									the maximum length character in the character set.
+#
+# 	BINARY(M) 					M bytes, 0 <= M <= 255
+#
+# 	VARCHAR(M), 				L + 1 bytes if column values require 0 - 255 bytes, 
+# 	VARBINARY(M)  				L + 2 bytes if values may require more than 255 bytes.
+#
+# 	TINYBLOB,TINYTEXT 		L + 1 bytes, where L < 2^8
+#
+# 	BLOB, TEXT 					L + 2 bytes, where L < 2^16
+#
+# 	MEDIUMBLOB, 				L + 3 bytes, where L < 2^24
+# 	MEDIUMTEXT
+#
+# 	LONGBLOB, 					L + 4 bytes, where L < 2^32
+# 	LONGTEXT
+#
+# 	ENUM('value1', 			1 or 2 bytes, depending on the number of enumeration values (65,535 values maximum) 
+# 	'value2', ---)
+#
+#  SET('value1', 				1,2,3,4 or 8 bytes, depending on the number of set members (64 members maximum)
+# 	'value2', ---)
+#
+# Variable-length string types are stored using a length prefix plus data.
+#
+# THe length prefix requires from one to four bytes depending on the data type, and the value of the 
+# prefix is L (the byte length of the string)
+#
+# For example, storage for a MEDIUMTEXT value requires L bytes to store the value plus three bytes
+# to store the length of the value.
+#
+# To calculate the number of bytes used to store a particular CHAR, VARCHAR or TEXT column value, you must
+# take into account the character set used for that column and whether the value contains multibyte characters.
+#
+# IN particular, when using a utf8 Unicode character set, you must keep in mind that not all characters use
+# the same number of bytes.
+#
+# Utf8mb3 and utf8mb4 character sets can require up to three and four bytes per character, respectively.
+#
+# For a breakdown of the storage used for different categories of utf8mb3 or utf8mb4 characters,
+# see SECTION 10.9, "UNICODE SUPPORT"
+#
+# VARCHAR, VARBINARY and the BLOB and TEXT types are variable-length types.
+# For each, the storage requirements depend on these factors:
+#
+# 		) The actual length of the column value
+#
+# 		) The column's maximum possible length
+#
+# 		) The character set used for the column, because some character sets contain multibyte characters
+#
+# For example, a VARCHAR(255) column can hold a string with a maximum length of 255 characters.
+#
+# Assuming that the column uses the latin1 character set (one byte per character), the actual stoage
+# required is the length of the String (L), plus one byte to record the length of the string.
+#
+# For the string, 'abcd', L is 4 and the storage requirement is 5 bytes.
+#
+# If the same column is instead declared to use the ucs2 double-byte character set, the storage
+# requirement is 10 bytes:
+#
+# 		THe length of 'abcd' is eight bytes and the column requires two bytes to store lengths
+# 		because the maximum length is greater than 255 (up to 510 bytes)
+#
+# THe efective maxixmum number of bytes that can be stored in a VARCHAR or VARBINARY column 
+# is subject to the row size of 65,535 bytes, which is shared among all columns.
+#
+# For a VARCHAR column that stores multibyte characters, the effective maximum number of characters
+# is less.
+#
+# For example, utf8mb4 characters can require up to four bytes per character.
+#
+# So a VARCHAR column that uses the utf8mb4 character set can be declared to be a maxximum of
+# 16,383 chars. See SECTION C.10.4, "LIMITS ON TABLE COLUMN COUNT AND ROW SIZE"
+#
+# InnoDB encodes fixed-length fields greater than or equal to 768 bytes in length as variable-length
+# fields, which can be stored off-page.
+#
+# For example, a CHAR(255) column can exceed 768 bytes if the maximum byte length of the character set
+# is greater than 3,as it is with utf8mb4.
+#
+# The NDB storage engine supports variable-width columns.
+#
+# This means that VARCHAR columns in an NDB CLuster table requires the same amount of storage as would
+# any other storage engine, with the exception that such values are 4-byte aligned.
+#
+# Thus, the string 'abcd' stored in a VARCHAR(50) column using the latin1 character set
+# requires 8 bytes (rather than 5 bytes for the same column value in a MyISAM table)
+#
+# TEXT and BLOB columns are implemented differently in NDB, each row in a TEXT column is
+# made up of two separate parts.
+#
+# One of these is of fixed size (256 bytes) and is actually stored in the original table.
+#
+# The other consists of any data in excess of 256 bytes, which is stored in a hidden table.
+#
+# The rows in the second table are always 2000 bytes long.
+#
+# This means that hte size of a TEXT column is 256 if size <= 256 (where size represents the size
+# of the row);
+#
+# Otherwise, the size is 256 + size + (2000 X ( size - 256 ) % 2000)
+#
+# The size of an ENUM object is determined by the number of different enumeration values.
+# One byte is used for enumerations with up to 255 possible values.
+#
+# Two bytes are used for enumerations having between 256 and 65,535 possible values.
+# See SECTION 11.4.4, "THE ENUM TYPE"
+#
+# THe size of a SET object is determined by the number of different set members.
+#
+# If the set size is N, the object occupies (N+7)/8 bytes, rounded up to 1, 2,3,4 or 8 bytes.
+#
+# A SET can have a maximum of 64 members. See SECTION 11.4.5, "THE SET TYPE"
+#
+# SPATIAL TYPE STORAGE REQUIREMENTS
+#
+# MySQL stores geometry values using 4 bytes to indicate the SRID followed by the WKB
+# representation of the value.
+#
+# The LENGTH() function returns the space in bytes required for value storage.
+#
+# For descriptions of WKB and internal storage formats for spatial values, 
+# see SECTION 11.5.3, "SUPPORTED SPATIAL DATA FORMATS"
+#
+# JSON STORAGE REQUIREMENTS
+#
+# In general, the storage requirements for a JSON column is approximately the same as for
+# a LONGBLOB or LONGTEXT column; that is, the space consumed by a JSON document is roughly
+# the same as it would be for the document's string representation stored in a column of one
+# of these types.
+#
+# However, there is an overhead imposed by the binary encoding, including metadata and dictionaries
+# needed for lookup, of the individual values stored in the JSON document.
+#
+# For example, a string stored in a JSON document requires 4 to 10 bytes additional storage,
+# depending on the length of the string and the size of hte object or array in which it is sorted.
+#
+# In addition, MySQL imposes a limit on the size of any JSON document stored in a JSON column
+# such that it cannot be any larger than the value of max_allowed_packet.
+#
+# 11.9 CHOOSING THE RIGHT TYPE FOR A COLUMN
+#
+# For optimum storage, you should try to use the most precise type in all cases.
+#
+# For example, if an integer column is used for values in the range from 1 to 99.999,
+# MEDIUMINT UNSIGNED is the best type.
+#
+# Of the types that represent all the required values, this type uses the least amount o storage.
+#
+# All basic calculations (+, -, *, and /) with DECIMAL columns are done with precision of 65
+# decimal (base 10) digits.
+#
+# See SECTION 11.1.1, "NUMERIC TYPE OVERVIEW"
+#
+# If accuracy is not too important, or if speed is the higehst priority, the DOUBLE tpye may be good
+# enough.
+#
+# For high precision, you can always convert to a fixed-point type stored in a BIGINT.
+#
+# This enables you to do all calculations with 64-bit integers and then convert results back
+# to floating-point values as necessary.
+#
+# 11.10 USING DATA TYPES FROM OTHER DATABASE ENGINES
+#
+# To facilitate the use of code written for SQL implementations from other vendors, MySQL
+# maps data types as shown in the following table.
+#
+# These mappings make it easier to import table definitions from other database systems
+# into MySQL.
+#
+# 		OTHER VENDOR TYPE 	MYSQL TYPE
+# 	
+# 		BOOL 						TINYINT
+#
+# 		BOOLEAN 					TINYINT
+#
+# 		CHAR VARYING(M) 		VARCHAR(M)
+#
+# 		FIXED 					DECIMAL
+#
+# 		FLOAT4  					FLOAT
+#
+# 		FLOAT8 					DOUBLE
+#
+# 		INT1 						TINYINT
+#
+# 		INT2 						SMALLINT
+#
+# 		INT3 						MEDIUMINT
+#
+# 		INT4 						INT
+#
+# 		INT8 						BIGINT
+#
+# 		LONG VARBINARY 		MEDIUMBLOB
+#
+# 		LONG VARCHAR 			MEDIUMTEXT
+#
+# 		LONG 						MEDIUMTEXT
+#
+# 		MIDDLEINT 				MEDIUMINT
+#
+# 		NUMERIC 					DECIMAL
+#
+# Data type mapping occurs at table creation time, after which the original type specifications are discarded.
+#
+# If you create a table used by other vendors and then issue a DESCRIBE tbl_name statement, MySQL reports
+# the table structure using the equivalent MySQL types.
+#
+# For example:
+#
+# 		CREATE TABLE t (a BOOL, b FLOAT8, c LONG VARCHAR, d NUMERIC);
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		DESCRIBE t;
+# 		+------------+--------------------------+--------+--------+-----------+------------+
+# 		| Field 		 | Type 							 | Null   | Key 	 | Default 	 | Extra 	  |
+# 		+------------+--------------------------+--------+--------+-----------+------------+
+# 		| a 			 | tinyint(1) 					 | YES 	 | 		 | NULL 		 | 			  |
+# 		| b 			 | double 						 | YES 	 | 		 | NULL 		 | 			  |
+# 		| c 			 | mediumtext 					 | YES 	 | 		 | NULL 		 | 			  |
+# 		| d 			 | decimal(10,0) 				 | YES 	 | 		 | NULL 		 | 			  |
+# 		+------------+--------------------------+--------+--------+-----------+------------+
+# 		4 rows in set (0.01 sec)
+#
+# CHAPTER 12 FUNCTIONS AND OPERATORS
+#
+# Expressions can be used at several points in SQL statements, such as in teh ORDER BY or HAVING clauses
+# of SELECT statements, in the WHERE clause of a SELECT, DELETE or UPDATE statement, or in SET statements.
+#
+# Expressions can be written using literal values, column values, NULL, built-in functions, stored functions,
+# user-defined functions, and operators.
+#
+# This chapter describes the functions and operators that are permitted for writing expressions in MySQL.
+#
+# Instructions for writing stored functions and user-defined functions are given in SECTION 24.2, "USING STORED ROUTINES (PROCEDURES AND FUNCTIONS)",
+# and SECTION 29.4, "ADDING NEW FUNCTIONS TO MYSQL".
+#
+# See SECTION 9.2.4, "FUNCTION NAME-PARSING AND RESOLUTION", for hte rules descirbing how the server interprets
+# references to different kinds of functions.
+#
+# An expression that contains NULL always produces a NULL value unless otherwise indicated in the documentation
+# for a particular function or operator.
+#
+# NOTE:
+#
+# 		By default, there must be no whitespace between a function name and the parenthesis following it.
+#
+# 		THis helps the MySQL parser distinguish between function calls and references to tables or columns
+# 		that happen to have the same name as the function.
+#
+# 		However, spaces around the function arguments are permitted.
+#
+# You can tell the MySQL server to accept spaces after function names by starting it with the
+# --sql-mode=IGNORE_SPACE option.
+#
+# (See SECTION 5.1.11, "SERVER SQL MODES")
+#
+# Individual client programs can request this behavior by using the CLIENT_IGNORE_SPACE option
+# for mysql_real_connect()
+#
+# In either case, all function names become reserved words.
+#
+# For the sake of brevity, most examples in this chapter display the output from the Mysql program
+# in abbreviated form.
+#
+# Rather than showing examples in this format:
+#
+# 		SELECT MOD(29,9);
+# 		+----------------+
+# 		| mod(29,9) 	  |
+# 		+----------------+
+# 		| 		2 			  |
+# 		+----------------+
+# 		1 rows in set (0.00 sec)
+#
+
+# This formati s used:
+#
+# 		SELECT MOD(29,9);
+# 			-> 2
+#
+# 12.1 FUNCTION AND OPERATOR REFERENCE
+#
+# TABLE 12.1 FUNCTIONS AND OPERATORS
+#
+# NAME 							DESC
+#
+# ABS() 						Return the absolute value
+#
+# ACOS() 					Return the arc cosine
+#
+# ADDDATE() 				Add time values (intervals) to a date value
+#
+# ADDTIME() 				Add time
+#
+# AES_DECRYPT() 			Decrypt using AES
+#
+# AES_ENCRYPT() 			Encrypt using AES
+#
+# AND, && 					Logical AND
+#
+# ANY_VALUE() 				Suppress ONLY_FULL_GROUP_BY value rejection
+#
+# ASCII() 					Return numeric value of left-most character
+#
+# ASIN() 					Return the arc sine
+#
+# = 							Assign a value (as part of a SET statement, or as part of the SET clause in an UPDATE statement)
+#
+# := 							Assign a value
+#
+# ASYMMETRIC_DECRYPT() 	Decrypt ciphertext using private or public key
+#
+# ASYMMETRIC_DERIVE() 	Derive symmetric key from asymmetric keys
+#
+# ASYMMETRIC_ENCRYPT() 	Encrypt cleartext using private or public key
+#
+# ASYMMETRIC_SIGN() 		Generate signature from digest
+#
+# ASYMMETRIC_VERIFY() 	Verify that signature matches digest
+#
+# ATAN() 					Return the arc tangent
+#
+# ATAN2(), ATAN() 		Return the arc tangent of the two arguments
+#
+# AVG() 						Return the average value of the argument
+#
+# BENCHMARK() 				Repeatedly execute an expression
+#
+# BETWEEN -- AND -- 		Check whether a value is within a range of values
+#
+# BIN() 						Return a string containing binary representation of a number
+#
+# BIN_TO_UUID() 			Convert binary UUID to string
+#
+# BINARY 					Cast a string to a binary string
+#
+# BIT_AND() 				Return bitwise AND
+#
+# BIT_COUNT() 				Return the number of bits that are set
+#
+# BIT_LENGTH() 			Return length of argument in bits
+#
+# BIT_OR() 					Return bitwise OR
+#
+# BIT_XOR() 				Return bitwise XOR
+#
+# & 							Bitwise AND
+#
+# ~ 							Bitwise inversion
+#
+# | 							Bitwise OR
+#
+# ^ 							Bitwise XOR
+#
+# CAN_ACCESS_COLUMN() 	Internal use only
+#
+# CAN_ACCESS_DATABASE() Internal use only
+#
+# CAN_ACCESS_TABLE() 	INternal use only
+#
+# CAN_ACCESS_VIEW() 		Internal use only
+#
+# CASE 						Case operator
+#
+# CAST() 					Cast a value as a certain type
+#
+# CEIL() 					Return the smallest integer value not less than the argument
+#
+# CEILING() 				Return the smallest integer value not less than the argument
+#
+# CHAR() 					Return the character for each integer passed
+#
+# CHAR_LENGTH() 			Return number of characters in argument
+#
+# CHARACTER_LENGTH() 	Synonym for CHAR_LENGTH()
+#
+# CHARSET() 				Return the character set of the argument
+#
+# COALESCE() 				Returns the first non-NULL argument
+#
+# COERCIBILITY() 			Returns the collation coercibility value of the string argument
+#
+# COLLATION() 				Return the collation of the string argument
+#
+# COMPRESS() 				Return result as a bianry string
+#
+# CONCAT()	 				Return concatenated string
+#
+# CONCAT_WS() 				Return concatenate with separator
+#
+# CONNECTION_ID() 		Return the connection ID (thread ID) for the connection
+#
+# CONV() 					Convert numbers between different number bases
+#
+# CONVERT() 				Cast a value as a certain type
+#
+# CONVERT_TZ() 			Convert from one time zone to another
+#
+# COS() 						Return the cosine
+#
+# COT() 						Return the cotangent
+#
+# COUNT() 					Return a count of the number of rows returned
+#
+# COUNT(DISTINCT) 		Return the count of a number of different values
+# 
+# CRC32() 					Compute a cyclic redundancy check value
+#
+# CREATE_ASYMMETRIC_PRIV_KEY() 		Create private key
+#
+# CREATE_ASYMMETRIC_PUB_KEY() 		Create public key
+#
+# CREATE_DH_PARAMETERS() Generate shared DH secret
+#
+# CREATE_DIGEST() 		Generate digest from string
+#
+# CUME_DIST() 				Cumulative distrib value
+#
+# CURDATE() 				Return the current date
+#
+# CURRENT_DATE(), 		Synonyms for CURDATE()
+# CURRENT_DATE
+#
+# CURRENT_ROLE() 			Returns the current active roles
+#
+# CURRENT_TIME(), 		Synonyms for CURTIME()
+# CURRENT_TIME
+#
+# CURRENT_TIMESTAMP(), 	Synonyms for NOW()
+# CURRENT_TIMESTAMP
+#
+# CURRENT_USER(), 		The authenticated user name and host name
+# CURRENT_USER
+#
+# CURTIME() 				Return the current time
+#
+# DATABASE() 				Return the default (current) DB name
+#
+# DATE() 					Extract hte date part of a date or datetime expression
+#
+# DATE_ADD() 				Add time values(intervals) to a date value
+#
+# DATE_FORMAT() 			Format date as specified
+#
+# DATE_SUB() 				Subtract a time value (interval) from a date
+#
+# DATEDIFF() 				Subtract two dates
+#
+# DAY() 						Synonym for DAYOFMONTH()
+# 
+# DAYNAME() 				Return the name of the weekday
+#
+# DAYOFMONTH() 			Return the day of the month (0-31)
+#
+# DAYOFWEEK() 				Return the weekday index of the argument
+#
+# DAYOFYEAR() 				Return the day of the year (1-366)
+#
+# DECODE() 					Decodes a string encrypted using ENCODE()
+#
+# DEFAULT() 				Return the default value for a table column
+#
+# DEGREES() 				Convert radians to degrees
+#
+# DENSE_RANK() 			Rank of current row within its partition, without gaps
+#
+# DES_DECRYPT() 			Decrypt a string
+#
+# DES_ENCRYPT 				Encrypt a string
+#
+# DIV 						Integer division
+#
+# / 							Division operator
+#
+# ELT() 						Return string at index number
+#
+# ENCODE() 					Encode a string
+#
+# ENCRYPT() 				Encrypt a string
+#
+# = 							Equal operator
+#
+# <=> 						NULL-safe equal to operator
+#
+# EXP() 						Raise to the power of
+#
+# EXPORT_SET() 			Return string such that for every bit set in the value bits,
+# 								you get an on string and for every unset bit, you get an off string.
+#
+# EXTRACT() 				Extract part of a date
+#
+# ExtractValue() 			Extract a value from an XML string using XPath notation
+#
+# FIELD() 					Return the index (position) of the first argument in the subsequent arguments
+#
+# FIND_IN_SET() 			Return the index position of the first argument within the second argument
+#
+# FIRST_VALUE() 			Value of argument from first row of window frame
+#
+# FLOOR() 					Return the alrgest integer value not greater than the argument
+#
+# FORMAT() 					Return a number formatted to specified number of decimal places
+#
+# FOUND_ROWS() 			For a SELECT with a LIMIT clause, the number of rows that would be returned were there no LIMIT clause
+#
+# FROM_BASE64() 			Decode base64 encoded string and return result
+#
+# FROM_DAYS() 				Convert a day number to a date
+#
+# FROM_UNIXTIME() 		Format Unix timestamp as a date
+#
+# GeomCollection() 		Construct geometry collection from geometries
+#
+# GeometryCollection() 	Construct geometry collection from geometries
+#
+# GET_DD_COLUMN 			Internal use only
+# _PRIVILEGES()
+#
+# GET_DD_CREATE_OPTIONS() Internal use only
+#
+# GET_DD_INDEX_SUB_PART_LENGTH Internal use only
+#
+# GET_FORMAT() 			Return a date format string
+#
+# GET_LOCK() 				Get a named lock
+#
+# > 							Greater than operator
+#
+# >= 							Greater than or equal operator
+#
+# GREATEST() 				Return the largest argument
+#
+# GROUP_CONCAT() 			Return a concatenated string
+#
+# GROUPING() 				Distinguish super-aggregate ROLLUP rows from regular rows
+#
+# GTID_SUBSET() 			Return true if all GTIDs in subset are also in set; otherwise false.
+#
+# GTID_SUBTRACT() 		Return all GTIDs in set that are not in subset.
+#
+# HEX() 						Return a hexadecimal representation of a decimal or string vlaue
+#
+# HOUR() 					Extract the hour
+#
+# ICU_VERSION() 			ICU library version
+#
+# IF() 						If/Else construct
+#
+# IFNULL() 					Null if/else construct
+#
+# IN() 						Check whether a value is within a set of values
+#
+# INET_ATON() 				Return the numeric value of an IP address
+#
+# INET_NTOA() 				Return the IP address from a numeric value
+#
+# INET6_ATON() 			Return the numeric value of an IPV6 address
+#
+# INET6_NTOA() 			Return the IPv6 address from a numeric value
+#
+# INSERT() 					Insert a substring at the specified position up to the specified number of characters
+#
+# INSTR() 					Returns the index of the first occurence of substring
+#
+# INTERNAL_AUTO_INCREMENT() Internal use only
+#
+# INTERNAL_AVG_ROW_LENGTH() Internal use only
+#
+# INTERNAL_CHECK_TIME() 	 Internal use only
+#
+# INTERNAL_CHECKSUM() 		 Internal use only
+#
+# INTERNAL_DATA_FREE() 		 Internal use only
+# 
+# INTERNAL_DATA_LENGTH() 	 Internal use only
+#
+# INTERNAL_DD_CHAR_LENGTH() Internal use only
+#
+# INTERNAL_GET_COMMENT_OR_ERROR() Internal use only
+#
+# INTERNAL_GET_VIEW_WARNING_OR_ERROR() Internal useo nly
+#
+# INTERNAL_INDEX_COLUMN_CARDINALITY() Internal useo nly
+#
+# INTERNAL_INDEX_LENGTH() 	 Internal use only
+#
+# INTERNAL_KEYS_DISABLED()  Internal useo nly
+#
+# INTERNAL_MAX_DATA_LENGTH() Internal use only
+#
+# INTERNAL_TABLE_ROWS() 	 INTERNAL USE ONLY 
+#
+# INTERNAL_UPDATE_TIME() 	 Intenral use only
+#
+# INTERVAL() 					 Return the index of the argument that is less than the first argument
+#
+# IS 								 Test a value against a boolean
+#
+# IS_FREE_LOCK() 				 Whether the named lock is free
+#
+# IS_IPV4() 					 Whether argument is an ipv4 address
+#
+# IS_IPV4_COMPAT() 			 Whether argument is an IPV4-compatible address
+#
+# IS_IPV4_MAPPED() 			 Whether argument is an IPv4-mapped address
+#
+# IS_IPV6() 					 Whether argument is an IPV6 address
+#
+# IS_NOT 						 Test a value against a boolean
+#
+# IS_NOT_NULL 					 NOT NULL value test
+#
+# IS_NULL 						 NULL value test
+#
+# IS_USED_LOCK() 				 Whether the named lock is in use; return connection identifier if true
+#
+# IS_UUID() 					 Whether argument is a valid UUID
+#
+# ISNULL() 						 Test whether the argument is NULL
+#
+# JSON_ARRAY() 				 Create JSON array
+#
+# JSON_ARRAY_APPEND() 		 Append data to JSON document
+#
+# JSON_ARRAY_INSERT() 		 Insert into JSON array
+#
+# JSON_ARRAYAGG() 			 Return result set as a single JSON array
+#
+# -> 								 Return value from JSON column after evaluating path; equivalent to JSON_EXTRACT()
+#
+# JSON_CONTAINS() 		    Whether JSON document contains specific object at Path
+#
+# JSON_CONTAINS_PATH() 		 Whether JSON document contains any data at path
+#
+# JSON_DEPTH() 				 Maximum depth of JSON document
+#
+# JSON_EXTRACT() 				 Return data from JSON document
+#
+# ->> 							 Return value from JSON column after evaluating path and unquoting the result;
+# 									 equivalent to JSON_UNQUOTE(JSON_EXTRACT())
+#
+# JSON_INSERT() 				 Insert data into JSON document
+#
+# JSON_KEYS() 					 Array of keys from JSON document
+#
+# JSON_LENGTH() 				 Number of elements in JSON document
+#
+# JSON_MERGE() (deprecated >= 8.0.3) Merge JSON documents, preserving duplicate keys. Deprecated synonym for JSON_MERGE_PRESERVE()
+#
+# JSON_MERGE_PATCH() 		 Merge JSON documents, replacing values of duplicate keys
+#
+# JSON_MERGE_PRESERVE() 	 Merge JSON documents, preserving duplicate keys
+#
+# JSON_OBJECT() 				 Create JSON object
+#
+# JSON_OBJECTAGG() 			 Return result set as a single JSON object
+#
+# JSON_PRETTY() 				 Prints a JSON document in human-readable format, with each array
+# 									 element or object member printed on a new line, indented two spaces
+# 									 with respect to its parent.
+#
+# JSON_QUOTE() 				 Quote JSON document
+#
+# JSON_REMOVE() 				 Remove data from JSON document
+#
+# JSON_REPLACE() 				 Replace values in JSON document
+#
+# JSON_SEARCH() 				 Path to value within JSON document
+#
+# JSON_SET() 					 Insert data into JSON document
+#
+# JSON_STORAGE_FREE() 		 Freed space within binary representation of a JSON column value following a partial update
+#
+# JSON_STORAGE_SIZE() 		 Space used for storage of binary representation of a JSON document, for a JSON column, the space
+# 									 used when the document was inserted, prior to any partial updates
+#
+# JSON_TABLE() 				 Returns data from a JSON expression as a relational table
+#
+# JSON_TYPE() 					 Type of JSON value
+#
+# JSON_UNQUOTE() 				 Unquote JSON value
+#
+# JSON_VALID() 				 Whether JSON value is valid
+#
+# LAG() 							 Value of argument from row lagging current row within partition
+#
+# LAST_DAY 						 Return the last day of the month for the argument
+#
+# LAST_INSERT_ID() 			 Value of the AUTOINCREMENT column for the last INSERT
+#
+# LAST_VALUE() 				 Value of an argument from last row of window frame
+#
+# LCASE() 					    Synonym for LOWER()
+#
+# LEAD() 						 Value of argument from row leading current row within partition
+#
+# LEAST() 						 Return  the smallest argument
+#
+# LEFT() 						 Return the leftmost number of characters as specified
+#
+# << 								 left shift
+#
+# LENGTH() 						 Return the length of a string in bytes
+#
+# < 								 Less than operator
+#
+# <= 								 Less than or equal operator
+#
+# LIKE 							 Simple pattern matching
+#
+# LineString() 				 Construct LineString from Point values
+#
+# LN() 							 Return the natural logarithm of the argument
+#
+# LOAD_FILE() 					 Load the named file
+#
+# LOCALTIME(), LOCALTIME 	 Synonym for NOW()
+#
+# LOCALTIMESTAMP, 			 Synonym for NOW()
+# LOCALTIMESTAMP() 
+#
+# LOCATE() 						 Return the position of hte first occurence of substring
+#
+# LOG() 							 Return the natural logarithm of the first argument
+#
+# LOG10() 						 Return the base-10 logarithm of the argument
+#
+# LOG2() 						 Return the base-2 logarithm of the argument
+#
+# LOWER() 						 Return the arguments in lowercase
+#
+# LPAD() 						 Return the string argument, left-padded with the specified string
+#
+# LTRIM() 						 Remove leading spaces
+#
+# MAKE_SET() 					 Return a set of comma-separated strings that have the corresponding bit in bits set
+#
+# MAKEDATE() 					 Create a date from the year and day of year
+#
+# MAKETIME() 					 Create time from hour, minute, second
+#
+# MASTER_POS_WAIT() 			 Block until the slave has read and applied all updates up to the specified position
+#
+# MATCH 							 Perform full-text search
+#
+# MAX() 							 Return the maximum value
+#
+# MBRContains() 				 Whether MBR of one geometry contains MBR of another
+#
+# MBRCoveredBy() 				 Whether one MBR is covered by another
+#
+# MBRCovers() 					 Whether one MBR covers another
+#
+# MBRDisjoint() 				 Whether MBRs of two geometries are disjoint
+#
+# MBREquals() 					 Whether MBRs of two geometries are equal
+#
+# MBRIntersects() 			 Whether MBRs of two geometries insersect
+#
+# MBROverlaps() 				 Whether MBRs of two geometries overlap
+#
+# MBRTouches() 				 Whether MBRs of two geometries touch
+#
+# MBRWithin() 					 Whether MBR of one geometry is within MBR of another
+#
+# MD5() 							 Calculates MD5 Checksum
+#
+# MICROSECOND() 				 Return the microseconds from argument
+#
+# MID() 							 Return A substring starting from the specified position
+#
+# MIN() 							 Return the minimum value
+#
+# - 								 Minus operator
+#
+# MINUTE() 						 Return the minute from the argument
+#
+# MOD() 							 Return the remainder
+#
+# %, MOD 						 Modulo operator
+#
+# MONTH() 						 Return the month from the date passed
+#
+# MONTHNAME() 					 Return the name of the month
+#
+# MultiLineString() 			 Construct MultiLineString from LineString Values
+#
+# MultiPoint() 				 Construct MultiPoint from Point values
+#
+# MultiPolygon() 				 Construct MultiPolygon from Polygon values
+#
+# NAME_CONST() 				 Causes the column to have the given name
+#
+# NOT, ! 						 Negates value
+#
+# NOT_BETWEEN_---_AND_--- 	 Check wether a value is not within a range of values
+#
+# !=, <> 						 Not equal operator
+#
+# NOT_IN() 						 Check wether a value is not within a set of values
+#
+# NOT_LIKE 						 Negation of simple pattern matching
+#
+# NOT_REGEXP 					 Negation of REGEXP
+#
+# NOW() 							 Return the current date and time
+#
+# NTH_VALUE() 					 Value of argument from N-th row of Window frame
+#
+# NTILE() 						 Bucket number of current row within its partition
+#
+# NULLIF() 						 Return NULL if expr1 = expr2
+#
+# OCT() 							 Return a string containing octal representation of a number
+#
+# OCTET_LENGTH() 				 Synonym for LENGTH()
+#
+# ||, OR 						 Logical OR
+#
+# ORD() 							 Return charater code for leftmost char of the argument
+#
+# PASSWORD() 					 Calculate and return a password string
+#
+# PERCENT_RANK() 				 Percentage rank value
+#
+# PERIOD_ADD() 				 Add a period to a year-month
+#
+# PERIOD_DIFF() 				 Return the number of months between periods
+#
+# PI() 							 Return the vlaue of PI
+#
+# + 								 Addition operator
+#
+# Point() 						 Construct Point from coordinates
+#
+# Polygon() 					 Construct Polygon from LineString arguments
+#
+# POSITION() 					 Synonym for LOCATE()
+#
+# POW() 							 Return the argument raised to the specified power
+#
+# POWER() 						 Return the argument raised to the specified power
+#
+# QUARTER() 					 Return the quarter from a date argument
+#
+# QUOTE() 						 Escape the argument for use in an SQL statement
+#
+# RADIANS() 					 Return argument converted to radians
+#
+# RAND() 						 Return a random floating point value
+#
+# RANDOM_BYTES() 				 Return a random byte vector
+#
+# RANK() 						 Rank of current row within its partition, with gaps
+#
+# REGEXP 						 Whether string matches regular expression
+#
+# REGEXP_INSTR() 				 Starting index of substring matching regular expression
+#
+# REGEXP_lIKE() 				 Whether string matches regular expression
+#
+# REGEXP_REPLACE() 			 Replace substrings matching regular expression
+#
+# REGEXP_SUBSTR() 			 Return substring matching regular expressions
+#
+# RELEASE_ALL_LOCKS() 		 Release all current named locks
+#
+# RELEASE_LOCK() 				 RElease the named lock
+#
+# REPEAT() 						 Repeat a string the specified number of times
+#
+# REPLACE() 					 Replace occurences of a specified string
+#
+# REVERSE() 					 Reverse the characters in a string
+#
+# RIGHT() 						 Return the specified rightmost number of characters
+#
+# >> 								 Right shift
+#
+# RLIKE 							 Whether string matches regular expression
+#
+# ROLE_GRAPHML() 				 Returns a GraphML document representing memory role subgraphs
+#
+# ROUND() 						 Round the argument
+#
+# ROW_COUNT() 					 The number of rws updated
+#
+# ROW_NUMBER() 				 Number of current row within its partition
+#
+# RPAD() 						 Append string the specified number of times
+#
+# RTRIM() 						 Removes trailing spaces
+#
+# SCHEMA() 						 Synonym for DATABASE()
+#
+# SEC_TO_TIME() 				 Converts seconds to 'HH:MM:SS' format
+#
+# SECOND() 						 Return the second (0-59)
+#
+# SESSION_USER() 				 Synonym for USER()
+#
+# SHA1(), SHA() 				 Calculate an SHA-1 160-bit checksum
+#
+# SHA2() 						 Calculate an SHA-2 checksum
+#
+# SIGN() 						 Return the sign of the argument
+#
+# SIN() 							 Return the sine of the argument
+#
+# SLEEP() 						 Sleep for a number of seconds
+#
+# SOUNDEX() 					 Return a soundex string
+#
+# SOUNDS_LIKE 					 Compare sounds
+#
+# SPACE() 						 Return a string of the specified number of spaces
+#
+# SQRT() 						 Return the square root of the argument
+#
+# ST_Area() 					 Return Polygon or MultiPolygon area
+#
+# ST_AsBinary(), ST_AsWKB() Convert from internal geometry format to WKB
+#
+# ST_AsGeoJSON() 				 Generate GeoJSON object from geometry
+#
+# ST_AsText(), 				 Convert from internal geometry format to WKT
+# ST_AsWKT()
+#
+# ST_Buffer() 					 Return geometry of points within given distance from geometry
+#
+# ST_Buffer_Strategy() 		 Produce strategy option for ST_Buffer()
+#
+# ST_Centroid() 				 Return centroid as a point
+#
+# ST_Contains() 				 Whether one geometry contains another
+#
+# ST_ConvexHull() 			 Return convex hull of geometry
+#
+# ST_Crosses() 				 Whether one geometry crosses another
+#
+# ST_Difference() 			 Return point set difference of two geometries
+#
+# ST_Dimension() 				 Dimension of geometry
+#
+# ST_Disjoint() 				 Whether one geometry is disjoint from another
+#
+# ST_Distance() 				 The distance of one geometry from another
+#
+# ST_Distance_Sphere() 		 Minimum distance on earth between geometries
+#
+# ST_EndPoint() 				 End Point of LineString
+#
+# ST_Envelope() 				 Return MBR of geometry
+#
+# ST_Equals() 					 Whether one geometry is equal to another
+#
+# ST_ExteriorRing() 			 Return exterior ring of Polygon
+#
+# ST_GeoHash() 				 Produce a geohash value
+#
+# ST_GeomCollFromText(), 				Return geometry collection from WKT
+# ST_GeometryCollectionFromText(),
+# ST_GeomCollFromTxt()
+#
+# ST_GeomCollFromWKB(), 				Return geometry collection from WKB
+# ST_GeometryCollectionFromWKB()
+#
+# ST_GeometryN() 				  Return N-th geometry from geometry collection
+#
+# ST_GeometryType() 			Return name of geometry type
+#
+# ST_GeomFromGeoJSON() 		Generate geometry from GeoJSON object
+#
+# ST_GeomFromText(), 		Return geometry from WKT
+# ST_GeometryFromText()
+#
+# ST_GeomFromWKB(), 			Return geometry from WKB
+# ST_GeometryFromWKB()
+#
+# ST_InteriorRingN() 		Return N-th interior ring of Polygon
+#
+# ST_Intersection() 			Return point set intersection of two geometries
+#
+# ST_Intersects() 			Whether one geometry intersects another
+#
+# ST_IsClosed() 			 	Whether a geometry is closed and simple
+#
+# ST_IsEmpty() 				Placeholder function
+#
+# ST_IsSimple() 				Whether a geometry is simple
+#
+# ST_IsValid() 				Whether a geometry is valid
+#
+# ST_LatFromGeoHash() 		Return latitude from geohash value
+#
+# ST_Latitude() 			 	Return latitude of Point
+#
+# ST_Length() 					Return length of LineString
+#
+# ST_LineFromText(), 		Construct LineString from WKT
+# ST_LineStringFromText()
+#
+# ST_LineFromWKB(), 			Construct LineString from WKB
+# ST_LineStringFromWKB()
+#
+# ST_longFromGeoHash() 		Return longitude from geohash value
+#
+# ST_Longitude() 				Return longitude of Point
+#
+# ST_MakeEnvelope() 			Rectangle around two points
+#
+# ST_MLineFromText(), 				Construct MultiLineString from WKT
+# ST_MultiLineStringFromText()
+#
+# ST_MLineFromWKB(), 				Construct MultiLineString from WKB
+# ST_MultiLineStringFromWKB()
+#
+# ST_MPointFromText(), 			 	Construct MultiPoint from WKT
+# ST_MultiPointFromText()
+#
+# ST_MPointFromWKB(), 				Construct MultiPoint from WKB
+# ST_MultiPointFromWKB()
+#
+# ST_MPolyFromText(), 			 	Construct MultiPolygon from WKT
+# ST_MultiPolygonFromText()
+#
+# ST_MPolyFromWKB(), 				Construct MultiPolygon from WKB
+# ST_MultiPolygonFromWKB()
+#
+# ST_NumGeometries() 				Return number of geometries in geometry collection
+#
+# ST_NumINteriorRing(), 			Return number of interior rings in Polygon
+# ST_NumInteriorRings()
+#
+# ST_NumPoints() 					 	Return number of points in lineString
+#
+# ST_Overlaps() 						Whether one geometry overlaps another
+#
+# ST_PointFromGeoHash() 			Convert geohash value to POINT value
+#
+# ST_PointFromText() 				Construct Point from WKT
+#
+# ST_PointFromWKB() 					Constuct point from WKB
+#
+# ST_PointN 							Return N-th point from LineString
+#
+# ST_PolyFromText(), 				Construct polygon from WKT
+# ST_PolygonFromText()
+#
+# ST_PolyFromWKB(), 					Construct Polygon from WKB
+# ST_PolygonFromWKB()
+#
+# ST_Simplify() 						Return simplified geometry
+#
+# ST_SRID() 							Return spatial reference system ID for geometry
+#
+# ST_StartPoint() 					Start Point of LineString
+#
+# ST_SwapXY() 							Return argument with X/Y coordinates swapped
+#
+# ST_SymDifference() 				Return point set symmetric difference of two geometries
+#
+# ST_Touches() 						Whether one geometry touches another
+#
+# ST_Transform() 						Transform coordinates of geometry
+#
+# ST_Union() 							Return point set union of two geometries
+#
+# ST_Validate() 						Return validated geometry
+#
+# ST_Within() 							Whether one geometry is within another
+#
+# ST_X() 								Return X coordinate of Point
+#
+# ST_Y() 								Return Y coordinate of Point
+#
+# STATEMENT_DIGEST() 				Compute statement digest hash value
+#
+# STATEMENT_DIGEST_TEXT() 			Compute normalized statement digest
+#
+# STD() 									Return the population standard deviation
+#
+# STDDEV() 								Return the pop standard deviation
+#
+# STDDEV_POP() 						Return the pop standard deviation
+#
+# STDDEV_SAMP() 						Return the sample standard deviation
+#
+# STR_TO_DATE() 						Convert a string to a date
+#
+# STRCMP() 								Compare two strings
+#
+# SUBDATE() 							Synonym for DATE_SUB() when invoked with three arguments
+#
+# SUBSTR() 								Return the substring as specified
+#
+# SUBSTRING() 							Return the substring as specified
+#
+# SUBSTRING_INDEX() 					Return a substring from a string before the specified number of occurrences of the delimiter
+#
+# SUBTIME() 							Subtract times
+#
+# SUM() 									Return the sum
+#
+# SYSDATE() 							Return the time at which the function executes
+#
+# SYSTEM_USER() 						Synonym for USER()
+#
+# TAN() 									Return the tangent of the argument
+#
+# TIME() 								Extract the time portion of the expression passed
+#
+# TIME_FORMAT() 						Format as time
+#
+# TIME_TO_SEC() 						Return the argument converted to seconds
+#
+# TIMEDIFF() 							Subtract time
+#
+# * 										Multiplication operator
+#
+# TIMESTAMP() 							With a single argument, this function returns the date or datetime expression;
+# 											with two arguments, the sum of the arguments
+#
+# TIMESTAMPADD() 						Add an internval to a datetime expression
+#
+# TIMESTAMPDIFF() 					Subtract an internal from a datetime expression
+#
+# TO_BASE64() 							Return the argument converted to a base-64 string
+#
+# TO_DAYS() 							Return the date argument converted to days
+#
+# TO_SECONDS() 						Return the date or datetime argument converted to seconds since Year 0
+#
+# TRIM() 								Remove leading and trailing spaces
+#
+# TRUNCATE() 							Truncate to specified number of decimal places
+#
+# UCASE() 								Synonym for UPPER()
+#
+# - 										Change the sign of the argument
+#
+# UNCOMPRESS() 						Uncompress a string compressed
+#
+# UNCOMPRESSED_LENGTH() 			Return the length of a string before compression
+#
+# UNHEX() 								Return a string containing hex representation of a number
+#
+# UNIX_TIMESTAMP() 					Return a Unix timestamp
+#
+# UpdateXML() 							Return replaced XML fragment
+#
+# UPPER() 								Conver to uppercase
+#
+# USER() 								The user name and host name provided by the client
+#
+# UTC_DATE() 							Return the current UTC date
+#
+# UTC_TIME() 							Return the current UTC time
+#
+# UTC_TIMESTAMP() 					Return the current UTC date and time
+#
+# UUID() 								Return a Universal Unique Identifier (UUID)
+#
+# UUID_SHORT() 						Return an integer-valued universal identifier
+#
+# UUID_TO_BIN() 						Convert string UUID to binary
+#
+# VALIDATE_PASSWORD_STRENGTH() 	Determine strength of a password
+#
+# VALUES() 								Defines the values to be used during an INSERT
+#
+# VAR_POP() 							Return the population standard variance
+#
+# VAR_SAMP() 							Return the sample variance
+#
+# VARIANCE() 							Return the population standard variance
+#
+# VERSION() 							Return a string that indicates the MySQL server version
+#
+# WAIT_FOR_EXECUTED_GTID_SET() 	Wait until the given GTIDs havve executed on slave.
+#
+# WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS() Wait until the given GTIDs have executed on slave.
+#
+# WEEK() 								Return the week number
+#
+# WEEKDAY() 							Return the weekday index
+#
+# WEEKOFYEAR() 						Return the calendar week of the date (1-53)
+#
+# WEIGHT_STRING() 					Return the weight string for a string
+#
+# XOR 									Logical XOR
+#
+# YEAR() 								Return the year
+#
+# YEARWEEK() 							return the year and week.
+#
+# 12.2 TYPE CONVERSION IN EXPRESSION EVALUATION
+#
+# When an operator is used with operands of different types, type conversion occurs to make the operands
+# compatible.
+#
+# Some conversions occur implicitly.
+#
+# for example, MySQL automatically converts strings to numbers as called for, and vice versa.
+#
+# 		SELECT 1+'1';
+# 			-> 2
+# 		SELECT CONCAT(2,' test');
+# 			-> '2 test'
+#
+# It is also possible to convert a number to a string explicitly using the CAST() function.
+#
+# Conversion occurs implicitly with the CONCAT() function because it expects string
+# arguments.
+#
+# SELECT 38.8, CAST(38.8 AS CHAR);
+# 		-> 38.8, '38.8'
+# SELECT 38.8, CONCAT(38.8);
+# 		-> 38.8, '38.8'
+#
+# See later in this section for information about the character set of implicit number-to-string conversions,
+# and for modified rules that apply to CREATE TABLE --- SELECT statements.
+#
+# The following rules describe how conversion occurs for comparison operations:
+#
+# 	) If one or both arguments are NULL, the result of the comparison is NULL, except for the NULL-safe
+# 		<=> equality comparison operator.
+#
+# 		For NULL <=> NULL, the result is true.
+#
+# 		No conversion called for.
+#
+# 	) If both arguments in a comparison operation are strings, they are compared as strings.
+#
+# 	) If both arguments are integers, they are compared as integers.
+#
+# 	) Hexadecimal values are treated as binary strings if not compared to a number.
+#
+# 	) If one of the arguments is a TIMESTAMP or DATETIME column and the other argument is a constant,
+# 		the constant is converted to a timestamp before the comparison is performed.
+#
+# 		This is done to be more ODBC-friendly.
+#
+# 		This is not done for the arguments to IN().
+#
+# 		TO be safe, always use complete datetime, date or time strings when doing comparisons.
+#
+# 		For example, to achieve the best results when using BETWEEN with date or time values, use CAST()
+# 		to explicitly convert the values to the desired data type.
+#
+# 		A single-row subquery from a table or tables is not considered a constant.
+#
+# 		For example, if a subquery returns an integer ot be compared to a DATETIME value,
+# 		the comparison is done as two integers.
+#
+# 		The integer is not converted to a temporal value.
+#
+# 		To compare the operans as DATETIME values, use CAST() to explicitly convert the
+# 		subquery value to DATETIME.
+#
+#  ) If one of the argument is a decimal value, comparison depends on the other argument.
+#
+# 		The arguments are compared as decimal values if the other argument is a decimal
+# 		or integer value, or as floating-point values if the other argument is a floating-point value.
+#
+# 	) In all other cases, the arguments are compared as floating-point (real) numbers.
+#
+# For information about conversion of values from one temporal type to another, see
+# SECTION 11.3.7, "CONVERSION BETWEEN DATE AND TIME TYPES"
+#
+# Comparison of JSON values takes place at two levels.
+#
+# The first level of comparison is based on the JSON types of the compared values.
+#
+# If the types differ, the comparison result is determined solely by which type has
+# higher precedence.
+#
+# IF the two values have the same JSON type, a second level of comparison occurs using
+# type-specific rules.
+#
+# For comparison of JSON and non-JSON values, the non-JSON value is converted to JSON and
+# the values compared as JSON values.
+#
+# For details, See COMPARISON AND ORDERING OF JSON VALUES.
+#
+# The following examples illustrate conversion of strings to numbers for comparison operations:
+#
+# 		SELECT 1 > '6x';
+# 			-> 0
+#
+# 		SELECT 7 > '6x';
+# 			-> 1
+#
+# 		SELECT 0 > 'x6';
+# 			-> 0
+#
+# 		SELECT 0 = 'x6';
+# 			-> 1
+#
+# For comparisons of a string column with a number, MySQL cannot use an index on the column
+# to look up the value quickly.
+#
+# If str_col is an indexed string column, the index cannot be used when performing the lookup
+# in the following statement:
+#
+# 		SELECT * FROM tbl_name WHERE str_col=1;
+#
+# The reason for htis is that there are many different strings that may convert to the value 1,
+# such as '1', ' 1' or '1a'
+#
+# https://dev.mysql.com/doc/refman/8.0/en/type-conversion.html
+#		  
