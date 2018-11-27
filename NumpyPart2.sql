@@ -75631,5 +75631,2018 @@ Need be, i will change this for upcoming repeated cases. */
 # The reason for htis is that there are many different strings that may convert to the value 1,
 # such as '1', ' 1' or '1a'
 #
-# https://dev.mysql.com/doc/refman/8.0/en/type-conversion.html
-#		  
+# Comparisons that use floating-point numbers (or values that are converted to floating-point numbers)
+# are approximate because such numbers are inexact.
+#
+# This might lead to results that appear inconsistent:
+#
+# 		SELECT '18015376320243458' = 18015376320243458;
+# 			-> 1
+# 		SELECT '18015376320243459' = <same as defined ot the left>
+# 			-> 0
+#
+# Such results can occur because the values are converted to floating-point numbers,
+# which have only 53 bits of precision and are subject to rounding:
+#
+# 		SELECT '18015376320243459'+0.0;
+# 			-> 1.8015376320243e+16
+#
+# Furthermore, the conversion from string to floating-point and from integer to floating-point
+# do not necessarily occur the same way.
+#
+# The integer may be converted to floating-point by the CPU, whereas the string is converted
+# digit by digit in an operation that involves floating-point multiplications.
+#
+# The results shown will vary on different systems, and can be affected by factors such as
+# computer architechture or the compiler version or optimization level.
+#
+# One way to avoid such problems is to use CAST() so that a value is not converted implicitly
+# to a float-point number:
+#
+# 		SELECT CAST('18015376320243459' AS UNSIGNED) = 18015376320243459;
+# 			-> 1
+#
+# For more information about floating-point comparisons, see SECTION B.6.4.8, "PROBLEMS WITH FLOATING-POINT VALUES"
+#
+# The server includes dtoa, a conversion library that provides the basis for improved conversion between
+# string or DECIMAL values and approximate value (FLOAT/DOUBLE) numbers:
+#
+# 		) Consistent conversion results across platforms, which eliminates, for example, Unix versus Windows conversion differences.
+#
+# 		) Accurate representation of values in cases where results previously did not provide sufficient precision,
+# 			such as for values close to IEEE limits.
+#
+# 		) Conversion of numbers to string format with the best possible precision.
+#
+# 			The precision of dtoa is always the same or better than that of the standard C library functions.
+#
+# Because the conversions produced by this library differ in some cases from non-dtoa results,
+# the potential exists for incompatibilities in applications that rely on previous results.
+#
+# For example, applications that depend on a specific exact result from previous conversions might
+# need adjustment to accomodate additional precision.
+#
+# The dtoa library provides conversions with the following properties.
+#
+# D represents a value with a DECIMAL or string representation, and F represents a floating-point
+# number in native binary (IEEE) format.
+#
+# 		) F -> D conversion is done with the best possible precision, returning D as the shortest string
+# 			that yields F when read back in and rounded to the nearest value in native binary format
+# 			as specified by IEEE.
+#
+# 		) D -> F conversion is done such that F is the nearest native binary number to the input decimal string D.
+#
+# These properties imply that F -> D -> F converions are lossless unless F is -inf, +inf or NaN.
+#
+# The latter values are not supported because the SQL standard defines them as invalid values
+# for FLOAT or DOUBLE.
+#
+# For D -> F -> D conversions, a sufficient condition for losslessness is that D uses 15 or fewer digits
+# of precision, is not a denormal value, -inf, +inf or NaN.
+#
+# In some cases, the conversion is lossless even if D has more than 15 digits of precision,
+# but this is not always the case.
+#
+# Implicit conversion of a numeric or temporal value to string produces a value that has a character
+# set and collation determined by the character_set_connection and collation_connection system variables.
+#
+# (These variables commonly are set with SET_NAMES. For information about connection character sets,
+# see SECTION 10.4, "CONNECTION CHARACTER SETS AND COLLATIONS")
+#
+# This means that such a conversion results in a character (nonbinary) string (a CHAR, VARCHAR, or LONGTEXT value),
+# except in the case that the connection character set is set to bianry.
+#
+# In that case, the conversion result is a binary string (a BINARY, VARBINARY or LONGBLOB value)
+#
+# For integer expressions, the preceding remarks about expression evaluation apply somewhat differently
+# for expression assignment; for example, in a statement such as this:
+#
+# 		CREATE TABLE t SELECT integer_expr;
+#
+# In this case, the table in the column resulting from the expression has type INT or BIGINT
+# depending on the length of the integer expression.
+#
+# If the maximum length of the expression does not fit in an INT, BIGINT is used instead.
+#
+# The length is taken from the max_length value of the SELECT result set metadata
+# (see SECTION 28.7.5 "C API DATA STRUCTURES")
+#
+# This means that you can force a BIGINT rather than INT by use of a sufficiently long
+# expression:
+#
+# 		CREATE TABLE t SELECT 0000000000000000000000000000000000;
+#
+# 12.3 OPERATORS
+#
+# TABLE 12.2 OPERATORS
+#
+# NAME 				DESC
+#
+# AND, && 			Logical AND
+#
+# = 					Assign a value (as part of a SET statement, or as part of the SET clause in an UPDATE statement)
+#
+# := 					Assign a value
+#
+# BETWEEN_---_AND_--- Check whether a value is within range of values
+#
+# BINARY 			Cast a string to a binary string
+#
+# & 					Bitwise AND
+#
+# ~  					Bitwise inversion
+#
+# | 					Bitwise OR
+#
+# ^ 					Bitwise XOR
+#
+# CASE 				Case operator
+#
+# DIV 				Integer division
+#
+# / 					Division operator
+#
+# = 					Equal operator
+#
+# <=> 				NULL-safe equal to operator
+#
+# > 					Greater than operator
+#
+# >= 					Greater than or equal operator
+#
+# IS 					Test a value against a boolean
+#
+# IS NOT 			Test a value against a boolean
+#
+# IS NOT NULL 		NOT NULL value test
+#
+# IS NULL 			NULL value test
+#
+# -> 					Return value from JSON column after evaluating path; equivalent to JSON_EXTRACT()
+#
+# ->> 				Return value from JSON column after evaluating path and unquoting the result;
+# 						equivalent to JSON_UNQUOTE(JSON_EXTRACT())
+#
+# << 					Left shit
+#
+# < 					Less than operator
+#
+# <= 					Less than or equal operator
+#
+# LIKE 				Simple pattern matching
+#
+# - 					Minus operator
+#
+# %, MOD 			Modulo operator
+#
+# NOT, ! 			Negates value
+#
+# NOT BETWEEN_---_AND_--- Check whether a value is not within a range of values
+#
+# !=, <> 			Not equal operator
+#
+# NOT_LIKE 			Negation of simple pattern matching
+#
+# NOT_REGEXP 		Negation of REGEXP
+#
+# ||, OR 			Logical OR
+#
+# + 					Addition operator
+#
+# REGEXP 			Whether string matches regular expression
+#
+# >> 					Right shift
+#
+# RLIKE 				Whether string matches regular expression
+#
+# SOUNDS_LIKE 		Compare sounds
+#
+# * 					Multiplication operator
+#
+# - 					Change the sign of the argument
+#
+# XOR 				Logical XOR
+#
+# 12.3.1 OPERATOR PRECEDENCE
+#
+# Operator precedences are shown in the following list, from highest precedence 
+# to the lowest.
+#
+# Operators that are shown together on a line have the same precedence.
+#
+# 		INTERVAL
+# 		BINARY, COLLATE
+# 		!
+# 		- (unary minus), ~ (unary bit inversion)
+# 		^
+# 		*, /, DIV, %, MOD
+# 		-, +
+# 		<<, >>
+# 		&
+# 		|
+# 		= (comparison), <=>, >=, >, <=, <, <>, !=, IS, LIKE, REGEXP, IN
+# 		BETWEEN, CASE, WHEN, THEN, ELSE
+# 		NOT
+# 		AND, &&
+# 		XOR
+# 		OR, ||
+# 		= (assignment), :=
+#
+# The precedence of = depends on whether it is used as a comparison operator (=) or as an
+# assignment operator (=)
+#
+# When used as a comparison operator, it has the same precedence as <=>, >=, >, <=, <, <>, !=, IS, LIKE, REGEXP and IN.
+#
+# WHen used as an assignment operator, it has the same precedence as :=, SECTION 13.7.5.1, "SET SYNTAX FOR VARIABLE ASSIGNMENT",
+# and SECTION 9.4, "USER-DEFINED VARIABLES", explain how MySQL determines which interpretation of = should apply.
+#
+# For operators that occur at the same precedence level within an expression, evaluation proceeds left to right, with the
+# exception that assignments evaluate right to left.
+#
+# The precedence and meaning of some operators depends on the SQL mode:
+#
+# 		) By default, || is a logical OR operator. With PIPES_AS_CONCAT enabled, || is string concatenation,
+# 			with a precedence between ^ and the unary operators.
+#
+# 		) By default, ! has a higher precedence than NOT.
+#
+# 			With HIGH_NOT_PRECEDENCE enabled, ! and NOT have the same precedence.
+#
+# See SECTION 5.1.11, "SERVER SQL MODES"
+#
+# The precedence of operators determines the order of evaluation of terms in an expression.
+# To override this order and group terms explicitly, use parantheses.
+#
+# For example:
+#
+# 		SELECT 1+2*3;
+# 			-> 7
+# 		SELECT (1+2)*3;
+# 			-> 9
+#
+# 12.3.2 COMPARISON FUNCTIONS AND OPERATORS
+#
+# TABLE 12.3 COMPARISON OPERATORS
+#
+# Name 									Desc
+#
+# BETWEEN_---_AND_--- 				Check whether a value is within a range of  values
+#
+# COALESCE() 							Returns the first non-NULL argument
+#
+# = 										Equal operator
+#
+# <=> 									NULL-safe equal to operator
+#
+# > 										Greater than operator
+#
+# >= 										Greater than or equal operator
+#
+# GREATEST() 							Return the largest argument
+#
+# IN() 									Check whether a value is within a set of values
+#
+# INTERVAL() 							Returns the index of the argument that is less than the first argument
+#
+# IS 										Test a value against a boolean
+#
+# IS_NOT 								Test a value against a boolean
+#
+# IS_NOT_NULL 							NOT NULL value test
+#
+# IS_NULL 								NULL value test
+#
+# ISNULL() 								NULL value test
+#
+# LEAST() 								Return the smallest argument
+#
+# < 										Less than operator
+#
+# <= 										Less than or equal operator
+#
+# LIKE 									Simple pattern matching
+#
+# NOT_BETWEEN_---_AND_--- 			Check whether a value is not within a range of values
+#
+# !=, <> 								Not equal operator
+#
+# NOT_IN() 								Check whether a value is not within a set of values
+#
+# NOT_LIKE 								Negation of simple pattern matching
+#
+# STRCMP() 								Compare two strings
+#
+# Comparison operations result in a value of 1 (TRUE), 0 (FALSE), or NULL.
+#
+# These operations work for both numbers and strings.
+# Strings are automatically converted to numbers and numbers to strings as necessary.
+#
+# The following relational comparison operators can be used to compare not only scalar
+# operands, but row operands:
+#
+# 		= > < >= <= <> !=
+#
+# The descriptions for those operators later in this section detail how they work with
+# row operands.
+#
+# For additional examples of row comparisons in the context of row subqueries, see 
+# SECTION 13.2.11.5, "ROW SUBQUERIES"
+#
+# Some of the functions in this section return values other than !(TRUE), 0(FALSE) or
+# NULL.
+#
+# LEAST() and GREATEST() are examples of such functions;
+# 
+# SECTION 12.2, "TYPE CONVERSION IN EXPRESSION EVALUATION", describes the rules for comparison
+# operations performed by these and similar functions for determining their return values.
+#
+# NOTE:
+#
+# 		In previous versions of MySQL, when evaluating an expression containing LEAST() or
+# 		GREATEST(), the server attempted to guess the context in which the function was used,
+# 		and to coerce the function's arguments to the data type of the expression as a whole.
+#
+# 		For example, the arguments to LEAST("11", "45", "2") are evaluated and stored as strings,
+# 		so that this expansion returns "11".
+#
+# 		In MySQL 8.0.3 and earlier, when evaluating the expression LEAST("11", "45", "2") + 0,
+# 		the server converted the arguments to integers (anticipating the addition of integer 0
+# 		to the result) before sorting them, thus returning 2.
+#
+# 		Beginning with 8.0.4, the server no longer attempts to infer context in this fashion.
+#
+# 		Instead, the function is executed using the arguments as provided, performing data type
+# 		conversions to one or more of the arguments if and only if they are not all of the
+# 		same type.
+#
+# 		Any type coercion mandated by an expression that makes use of the return value is now
+# 		performed following function execution.
+#
+# 		This means that, In MysQL 8.0.4, and later, LEAST("11", "45", "2") + 0 evaluates to
+# 		"11" + 0 and thus to integer 11. (Bug #83895, Bug #25123839)
+#
+# To convert a value to a specific type for comparison purposes, you can use the CAST()
+# function.
+#
+# String values can be converted to a different character set using CONVERT()
+#
+# See SECTION 12.10, "CAST FUNCTIONS AND OPERATORS"
+#
+# By default, string comparisons are not case-sensitive and use the current char set.
+# The default is utf8mb4.
+#
+# ) =
+#
+# 		Equal:
+#
+# 				SELECT 1 = 0;
+# 					-> 0
+#
+# 				SELECT '0' = 0;
+# 					-> 1
+#
+# 				SELECT '0.0' = 0;
+# 					-> 1
+#
+# 				SELECT "0.01" = 0;
+# 					-> 0
+#
+# 				SELECT '.01' = 0.01;
+# 					-> 1
+#
+# For row comparisons, (a,b) = (x,y) is equivalent to:
+#
+# 		(a = x) AND (b = y)
+#
+# ) <=>
+#
+# 		NULL-safe equal.
+#
+# 		THis operator performs an equality comparison like the = operator, but returns 1
+# 		rather than NULL if both operands are NULL and 0 rather than NULL if one operand is NULL.
+#
+# 		The <=> operator is equivalent to the standard SQL IS NOT DISTINCT FROM operator.
+#
+# 			SELECT 1 <=> 1, NULL <=> NULL, 1 <=> NULL;
+# 				-> 1, 1, 0
+#
+# 			SELECT 1 = 1, NULL = NULL, 1 = NULL;
+# 				-> 1, NULL, NULL
+#
+# 		For row comparisons, (a,b) <=> (x,y) is equivalent to:
+#
+# 			(a <=> x) AND (b <=> y)
+#
+# ) <>, !=
+#
+# 		Not equal:
+#
+# 			SELECT '.01' <> '0.01';
+# 				-> 1
+# 			SELECT .01 <> '0.01';
+# 				-> 0
+#			SELECT 'zapp' <> 'zappp';
+# 				-> 1
+#
+# 		For row comparisons, (a,b) <> (x, y) and (a,b) != (x,y) are equivalent to:
+#
+# 			(a <> x) OR (b <> y)
+#
+# ) <=
+#
+# 		Less than or equal:
+#
+# 			SELECT 0.1 <= 2;
+# 				-> 1
+#
+# 		For row comparisons, (a, b) <= (x, y) is equivalent to:
+#
+# 			(a < x) OR ((a = x) AND (b <= y))
+#
+# ) < 
+#
+# 		Less than:
+#
+# 			SELECT 2 < 2;
+# 				-> 0
+#
+# 		For row comparisons, (a, b) < (x, y) is equivalent to.
+#
+# 			(a < x) OR ((a = x) AND (b < y))
+#
+# ) >=
+#
+# 		Greater than or equal:
+#
+# 			SELECT 2 >= 2;
+# 				-> 1
+#
+# 		For row comparisons, (a, b) >= (x, y) is equivalent to:
+#
+# 			(a > x) OR ((a = x) AND (b >= y))
+#
+# ) >
+#
+# 		Greater than:
+#
+# 			SELECT 2 > 2;
+# 				-> 0
+#
+# 		For row comparisons, (a, b) > (x, y) is equivalent to:
+#
+# 			(a > x) OR ((a = x) AND (b > y))
+#
+# ) IS_boolean_value
+#
+# 		Tests a value against a boolean value, where boolean_value can be TRUE, FALSE, or UNKNOWN.
+#
+# 			SELECT 1 IS TRUE, 0 IS FALSE, NULL IS UNKNOWN;
+# 				-> 1, 1, 1
+#
+# ) IS_NOT_boolean_value
+#
+# 		Test a value against a boolean value, where boolean_value can be TRUE, FALSE or UNKNOWN.
+#
+# 			SELECT 1 IS NOT UNKNOWN, 0 IS NOT UNKNOWN, NULL IS NOT UNKNOWN;
+# 				-> 1, 1, 0
+#
+# ) IS_NULL
+#
+# 		Test whether a value is NULL
+#
+# 			SELECT 1 IS NULL, 0 IS NULL, NULL IS NULL;
+# 				-> 0, 0, 1
+#
+# 		To work well with ODBC programs, MySQL supports the following extra features when using IS_NULL:
+#
+# 			) If sql_auto_is_null variable is set to 1, then after a statement that successfully inserts an
+# 				automatically generated AUTO_INCREMENT value, you can find that value by issuing a statement
+# 				of the following form:
+#
+# 					SELECT * FROM tbl_name WHERE auto_col IS NULL
+#
+# 				If the statement returns a row, the value returned is the same as if you invoked the 
+# 				LAST_INSERT_ID() function.
+#
+# 				For details, including the return value after a multiple-row insert, see SECTION 12.15, "INFORMATION FUNCTIONS"
+#
+# 				If no AUTO_INCREMENT value was successfully inserted, the SELECT statement returns no row.
+#
+# 				The behavior of retrieving an AUTO_INCREMENT value by using an IS_NULL comparison can be disabled
+# 				by setting sql_auto_is_null = 0
+#
+# 				See SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# 				The default value of sql_auto_is_null is 0
+#
+# 			) For DATE and DATETIME columns that are declared as NOT NULL, you can find the special date
+# 				'0000-00-00' by using a statement like this:
+#
+# 					SELECT * FROM tbl_name WHERE date_column IS NULL
+#
+# 				This is needed to get some ODBC applications to work because ODBC does not support a
+# 				'0000-00-00' date value.
+#
+# 				See OBTAINING AUTO-INCREMENT VALUES, and the description for the FLAG_AUTO_IS_NULL option at 
+# 				CONNECTOR/ODBC CONNECTION PARAMETERS
+#
+# 		) IS_NOT_NULL
+#
+# 			Tests whether a value is not NULL.
+#
+# 			SELECT 1 IS NOT NULL, 0 IS NOT NULL, NULL IS NOT NULL;
+# 				-> 1, 1, 0
+#
+# 		) expr_BETWEEN_min_AND_max
+#
+# 			If expr is greater than or equal to min and expr is less than or equal to max, BETWEEN returns 1, otherwise it returns 0.
+#
+# 			This is equivalent to the expression (min <= expr AND expr <= max) if all the arguments are of the same type.
+#
+# 			Otherwise type conversion takes place according to the rules described in SECTION 12.2, "TYPE CONVERSION IN EXPRESSION EVALUATION",
+# 			but applied to all the three arguments.
+#
+# 				SELECT 2 BETWEEN 1 AND 3, 2 BETWEEN 3 AND 1;
+# 					-> 1, 0
+# 				SELECT 1 BETWEEN 2 AND 3;
+#  				-> 0
+#
+# 				SELECT 'b' BETWEEN 'a' AND 'c';
+# 					-> 1
+# 				SELECT 2 BETWEEN 2 AND '3';
+# 					-> 1
+#
+# 				SELECT 2 BETWEEN 2 AND 'x-3';
+# 					-> 0
+#
+# 			For best results when using BETWEEN with date or time values, use CAST() to explicitly convert the values
+# 			to the desired data type.
+#
+# 			Examples:
+#
+# 				If you compare a DATETIME to two DATE values, convert the DATE values to DATETIME values.
+#
+# 				If you are to use a string constant such as '2001-1-1' in a comparison to a DATE, cast the string
+# 				a DATE.
+#
+# 		) expr_NOT_BETWEEN_min_AND_max
+#
+# 			This is the same as NOT (expr BETWEEN min AND max)
+#
+# 		) COALESCE(value, ---)
+#
+# 			Returns the first non-NULL value in the list, or NULL if there are no non-NULL values.
+#
+# 			The return type of COALESCE() is the aggregated type of the argument types.
+#
+# 				SELECT COALESCE(NULL,1);
+# 					-> 1
+#
+# 				SELECT CCOALESCE(NULL, NULL, NULL);
+# 					-> NULL
+#
+# 		) GREATEST(value1, value2, ---)
+#
+# 			With two or more arguments, returns the largest (maximum-value) argument.
+#
+# 			The arguments are compared using the same rules as for LEAST()
+#
+# 				SELECT GREATEST(2,0);
+# 					-> 2
+# 				SELECT GREATEST(34.0,3.0, 5.0, 767.0);
+# 					-> 767.0
+# 				SELECT GREATEST('B', 'A', 'C');
+# 					-> 'C'
+#
+# 				GREATEST() returns NULL if any argument is NULL
+#
+# 		) expr_IN_(value,---)
+#
+# 			Returns 1 if expr is equal to any of the values in the IN list, else returns 0.
+#
+# 			If all values are constants, they are evaluated according to the type of expr
+# 			and sorted.
+#
+# 			The search for the item then is done using a binary search.
+#
+# 			This means IN is very quick if the IN value list consists entirely of constants.
+#
+# 			Otherwise, type conversion takes place according to the rules described in
+# 			SECTION 12.2, "TYPE CONVERSION IN EXPRESSION EVALUATION", but applied to all
+# 			the arguments.
+#
+# 				SELECT 2 IN (0, 3, 5, 7);
+# 					-> 0
+#
+# 				SELECT 'wefwf' IN ('wee', 'wefwf', 'weg');
+# 					-> 1
+#
+# 			IN can be used to compare row constructors:
+#
+# 				SELECT (3,4) IN ((1,2), (3,4));
+# 					-> 1
+#
+# 				SELECT (3,4) IN ((1,2), (3,5));
+# 					-> 0
+#
+# 			You should never mix quoted and unquoted values in an IN list because the comparison rules
+# 			for quoted values (such as strings) and unquoted values (such as numbers) differ.
+#
+# 			Mixing types may therefore lead to inconsistent results.
+#
+# 			For example, do not write an IN expression like this:
+#
+# 				SELECT val1 FROM tbl1 WHERE val1 IN (1,2, 'a');
+#
+# 			Instead, write it like this:
+#
+# 				SELECT val1 FROM tbl1 WHERE val1 IN ('1', '2', 'a');
+#
+# 			The number of values in the IN list is only limited by the max_allowed_packet value.
+#
+# 			To comply with the SQL standard, IN returns NULL not only if the expression on the left
+# 			hand side is NULL, but also if no match is found in the list and one of the expression
+# 			in the list is NULL.
+#
+# 			IN() syntax cal also be used to write certain types of subqueries.
+#
+# 			See SECTION 13.2.11.3, "SUBQUERIES WITH ANY, IN, OR SOME"
+#
+# 		) expr_NOT_IN_(value, ---)
+#
+# 			This is the same as NOT (expr IN (value, ---))
+#
+# 		) ISNULL(expr)
+#
+# 			If expr is NULL, ISNULL() returns 1, otherwise, it returns 0.
+#
+# 				SELECT ISNULL(1+1);
+# 					-> 0
+# 				SELECT ISNULL(1/0);
+# 					-> 1
+#
+# 			ISNULL() can be used instead of = to test whether a value is NULL.
+#
+# 			(Comparing a value to NULL using = ALWAYS yields NULL)
+#
+# 			The ISNULL() function shares some special behaviors with the IS_NULL comparison operator.
+#
+# 			See the description of IS_NULL.
+#
+# 		) INTERVAL(N,N1,N2,N3,---)
+#
+# 			Returns 0 if N < N1, 1 if N < N2 and so on, or -1 if N is NULL.
+#
+# 			All arguments are treated as integers.
+#
+# 			It is required that N1 < N2 < N3 < --- < Nn for this function to work correctly.
+#
+# 			THis is because a binary search is used (very fast)
+#
+# 				SELECT INTERVAL(23, 1, 15, 17, 30, 44, 200);
+# 					-> 3
+#
+# 				SELECT INTERVAL(10, 1, 10, 100, 1000);
+# 					-> 2
+#
+# 				SELECT INTERVAL(22, 23, 30, 44, 200);
+# 					-> 0
+#
+# 		) LEAST(value1, value2)
+#
+# 			With two or more arguments, returns the smallest (minimum-valued) argument.
+# 			The arguments are compared using the following rules:
+#
+# 				) If any argument is NULL, the result is NULL. No comparison is needed.
+#
+# 				) If all arguments are integer-valued, they are compared as integers
+#
+# 				) If at least one argument is double precision, they are compared as double-precision values.
+#
+# 					Otherwise, if at least one argument is a DECIMAL value, they are compared as DECIMAL values.
+#
+# 				) If hte argument comprises a mix of numbers and strings, they are compared as numbers.
+#
+# 				) If any argument is a nonbinary (character) string, the arguments are compared as nonbinary strings.
+#
+# 				) In all other cases, the arguments are compared as binary strings.
+#
+# 			The return type of LEAST() is the aggregated type of the comparison argument types.
+#
+# 				SELECT LEAST(2,0);
+# 					-> 0
+# 				SELECT LEAST(34.0, 3.0, 5.0, 767.0);
+# 					-> 3.0
+# 				SELECT LEAST('B', 'A', 'C');
+# 					-> 'A'
+#
+# 12.3.3 LOGICAL OPERATORS
+#
+# TABLE 12.4 LOGICAL OPERATORS
+#
+# NAME 		DESCRIPTION
+#
+# AND, && 	Logical AND
+#
+# NOT, ! 	Negates value
+#
+# ||, OR 	Logical OR
+#
+# XOR 		Logical XOR
+#
+# In SQL, all logical operators evaluate to TRUE, FALSE or NULL (UNKNOWN).
+#
+# In MySQL, these are implemented as 1 (TRUE), 0 (FALSE) and NULL.
+#
+# Most of this is common to different SQL db servers, although some servers may
+# return any nonzero value for TRUE.
+#
+# MySQL evaluates any nonzero, non-NULL value to TRUE.
+#
+# For example, the following statements all assess to TRUE:
+#
+# 		SELECT 10 IS TRUE;
+# 		-> 1
+# 		SELECT -10 IS TRUE;
+# 		-> 1
+# 		SELECT 'string' IS NOT NULL;
+# 		-> 1
+#
+# ) NOT, !
+#
+# 		Logical NOT. Evaluates to 1 if the operand is 0, to 0 if the operand is nonzero,
+# 		and NOT NULL returns NULL
+#
+# 			SELECT NOT 10;
+# 			-> 0
+#
+# 			SELECT NOT 0;
+# 			-> 1
+#
+# 			SELECT NOT NULL;
+# 			-> NULL
+#
+# 			SELECT ! (1+1);
+# 			-> 0
+#
+# 			SELECT ! 1+1;
+# 			-> 1
+#
+# 		The last example produces 1 because the expression evaluates the same way as (!1)+1
+#
+# ) AND, &&
+#
+# 		Logical AND.
+#
+# 		Evaluates to 1 if all operands are nonzero and not NULL, to 0 if one or more operands
+# 		are 0, otherwise NULL is returned.
+#
+# 			SELECT 1 AND 1;
+# 				-> 1
+#
+# 			SELECT 1 AND 0;
+# 				-> 0
+#
+# 			SELECT 1 AND NULL;
+# 				-> NULL
+#
+# 			SELECT 0 AND NULL;
+# 				-> 0
+#
+# 			SELECT NULL AND 0;
+# 				-> 0
+#
+# ) OR, ||
+#
+# 		Logical OR.
+#
+# 		When both operans are non-NULL, the result is 1 if any operand is nonzero, and 0 otherwise.
+#
+# 		With a NULL operand, the result is 1 if the other operand is nonzero, and NULL otherwise.
+#
+# 		If both operands are NULL, the result is NULL.
+#
+# 			SELECT 1 OR 1;
+# 			-> 1
+#
+# 			SELECT 1 OR 0;
+# 			-> 1
+#
+# 			SELECT 0 OR 0;
+# 			-> 0
+#
+# 			SELECT 0 OR NULL;
+# 			-> NULL
+#
+# 			SELECT 1 OR NULL;
+# 			-> 1
+#
+# ) XOR
+#
+# 		Logical XOR.
+#
+# 		Returns NULL if either operand is NULL.
+#
+# 		For non-NULL operands, evaluates to 1 if an odd number of operands is nonzero,
+# 		otherwise 0 is returned.
+#
+# 			SELECT 1 XOR 1;
+# 			-> 0
+#
+# 			SELECT 1 XOR 0;
+# 			-> 1
+#
+# 			SELECT 1 XOR NULL;
+# 			-> NULL
+#
+# 			SELECT 1 XOR 1 XOR 1;
+# 			-> 1
+#
+# 		a XOR b is mathematically equal to (a AND (NOT b)) OR ((NOT a) AND b)
+#
+# 12.3.4 ASSIGNMENT OPERATORS
+#
+# TABLE 12.5 ASSIGNMENT OPERATORS
+#
+# Name 			Desc
+#
+# = 				Assigns a value (as part of SET statement, or as part of hte SET clause in an UPDATE statement)
+#
+# := 				ASsign a value
+#
+# 		) :=
+#
+# 			Assignment operator.
+#
+# 			Causes the user variable on the left hand side of the operator to take on the value
+# 			to its right.
+#
+# 			The value on the right hand side may be a literal value, another variable storing a value,
+# 			or any legal expression that yields a scalar value, including the result of a query (provided that
+# 			this value is a scalar value)
+#
+# 			You can perform multiple assignments in the same SET statement.
+#
+# 			You can perform multiple assignments in the same statement.
+#
+# 			UNlike =, the := operator is never interpreted as a comparison operator.
+#
+# 			THis means that you can use := in any valid SQL statement (not just in SET statements)
+# 			to assign a value to a variable.
+#
+# 				SELECT @var1, @var2;
+# 					-> NULL, NULL
+#
+# 				SELECT @var1 := 1, @var2;
+# 					-> 1, NULL
+#
+# 				SELECT @var1, @var2;
+# 					-> 1, NULL
+#
+# 				SELECT @var1, @var2 := @var1;
+# 					-> 1, 1
+#
+# 				SELECT @var1, @var2;
+# 					-> 1, 1
+#
+# 				SELECT @var1:=COUNT(*) FROM t1;
+# 					-> 4
+# 				SELECT @var1;
+# 					-> 4
+#
+# 			You can make value assignments using := in other statements besides SELECT,
+# 			such as UPDATE as shown here:
+#
+# 				SELECT @var1;
+# 					-> 4
+#
+# 				SELECT * FROM t1;
+# 					-> 1, 3, 5, 7
+#
+# 				UPDATE t1 SET c1 = 2 WHERE c1 = @var1 := 1;
+# 				Query OK, 1 row affected (0.00 sec)
+# 				Rows matched: 1 Changed: 1 Warnings: 0
+#
+# 				SELECT @var1;
+# 					-> 1
+# 				SELECT * FROM t1;
+# 					-> 2, 3, 5, 7
+#
+# 			While it is also possible both to set and to read the value of the same variable in a single SQL statement
+# 			using the := operator, this is not recommended.
+#
+# 			SECTION 9.4, "USER-DEFINED VARIABLES", explains why you should avoid doing this.
+#
+# 		) =
+#
+# 			This operator is used to perform value assignments in two cases, described here.
+#
+# 			Within a SET statement, = is treated as an assignment operator that causes the user variable
+# 			on the left hand side of the operator to take on the value to its right.
+#
+# 			(In other words, when used in a SET statement, = is treated identically to :=)
+#
+# 			The value on the right hand side may be a literal value, another variable storing
+# 			a value, or any legal expression that yields a scalar value, including the result of a query
+# 			(provided that this value is a scalar value)
+#
+# 			You can perform multiple assignments in the same SET statement.
+#
+# 			In the SET clause of an UPDATE statement, = also acts as an assignment operator;
+#
+# 			IN this case, however, it causes the column named on the left hand side of the operator
+# 			to assume the value given to the right, provided any WHERE conditions that are part of
+# 			the UPDATE are met.
+#
+# 			You can make multiple assignments in the same SET clause of an UPDATE statement.
+#
+# 			In any other context, = is treated as a comparison operator.
+#
+# 				SELECT @var1, @var2;
+# 					-> NULL, NULL
+#
+# 				SELECT @var1 := 1, @var2;
+# 					-> 1, NULL
+#
+# 				SELECT @var1, @var2;
+# 					-> 1, NULL
+#
+# 				SELECT @var1, @var2 := @var1;
+# 					-> 1, 1
+#
+# 				SELECT @var1, @var2;
+# 					-> 1, 1
+#
+# 			For more information, see SECTION 13.7.5.1, "SET SYNTAX FOR VARIABLE ASSIGNMENT",
+# 			SECTION 13.2.12, "UPDATE SYNTAX" and SECTION 13.2.11, "SUBQUERY SYNTAX"
+#
+# 12.4 CONTROL FLOW FUNCTIONS
+#
+# TABLE 12.6 FLOW CONTROL OPERATORS
+#
+# NAME 		DESC
+#
+# CASE 		Case operator
+#
+# IF() 		If/else construct
+#
+# IFNULL() 	Null if/else construct
+#
+# NULLIF() 	Return NULL if expr1 = expr2
+#
+# 		) CASE value WHEN [compare value] THEN result [WHEN [compare value] THEN result ---] [ELSE result] END
+#
+# 			CASE WHEN [condition] THEN result [WHEN [condition] THEN result ---] [ELSE result] END
+#
+# 			The first CASE syntax returns the result for the first value=compare_value comparison that is true.
+#
+# 			The second syntax returns the result for the first condition that is true.
+#
+# 			If no comparison or condition is true, the result after ELSE is returned, or NULL if there is no ELSE part.
+#
+# 				NOTE:
+#
+# 					The syntax of the CASE expression described here difers slightly from that of the SQL CASE statement
+# 					described in SECTION 13.6.5.1 "CASE SYNTAX", for use inside stored programs.
+#
+# 					The CASE statement cannot have an ELSE NULL clause, and it is terminated with END CASE instead of END.
+#
+# 			The return type of a CASE expression result is the aggregated type of all result values:
+#
+# 				) If all types are numeric, the aggregated type is also numeric:
+#
+# 					) If at least one argument is double precision, the result is double precision.
+#
+# 					) Otherwise, if at least one argument is DECIMAL, the result is DECIMAL.
+#
+# 					) Otherwise, the result is an integer type (with one exception):
+#
+# 						) If all integer types are all signed or all unsigned, the result is the same sign and the precision
+# 							is the highest of all specified integer types (that is, TINYINT, SMALLINT, MEDIUMINT, INT or BIGINT)
+#
+# 						) If there is a combination of signed and unsigned integer types, the result is signed and the precision may
+# 							be higher.
+#
+# 							For example, if the types are signed INT and unsigned INT, the result is signed BIGINT.
+#
+# 						) The exception is unsigned BIGINT combined with any signed integer type.
+#
+# 							The result is DECIMAL with sufficient precision and scale 0.
+#
+# 				) If all types are BIT, the result is BIT. Otherwise, BIT arguments are treated similar to BIGINT.
+#
+# 				) If all types are YEAR, teh result is YEAR. Otherwise, YEAR arguments are treated similar to INT.
+#
+# 				) If all types are character string (CHAR or VARCHAR), the result is VARCHAR with maximum length
+# 					determined by the longest character length of the operands.
+#
+# 				) If all types are character or binary string, the result is VARBINARY
+#
+# 				) SET and ENUM are treated similar to VARCHAR; the result is VARCHAR
+#
+# 				) If all types are JSON, the result is JSON
+#
+# 				) If all types are temporal, the result is temporal:
+#
+# 					) If all temporal types are DATE, TIME, or TIMESTAMP, the result is DATE, TIME or TIMESTAMP, respectively.
+#
+# 					) Otherwise, for a mix of temporal types, teh result is DATETIME
+#
+# 				) If all types are GEOMETRY, the result is GEOMETRY.
+#
+# 				) If any type is BLOB, the result is BLOB.
+#
+# 				) For all other type combinations, the result is VARCHAR.
+#
+# 				) Literal NULL operands are ignored for type aggregation.
+#
+# 					SELECT CASE 1 WHEN 1 THEN 'one'
+# 						-> WHEN 2 THEN 'two' ELSE 'more' END;
+# 						-> 'one'
+#
+# 					SELECT CASE WHEN 1>0 THEN 'true' ELSE 'false' END;
+# 						-> 'true'
+#
+# 					SELECT CASE BINARY 'B'
+# 							WHEN 'a' THEN 1 WHEN 'b' THEN 2 END;
+# 					-> NULL
+#
+# 		) IF(expr1, expr2, expr3)
+#
+# 			If expr1 is TRUE (expr1 <> 0 and expr1 <> NULL), IF() returns expr2.
+#
+# 			Otherwise, it returns expr3.
+#
+# 				NOTE:
+#
+# 					THere is also an IF statement, which differs from the IF() function described here. 
+# 					See SECTION 13.6.5.2, "IF SYNTAX"
+#
+# 			If only one of expr2 or expr3 is explicitly NULL, the result type of the IF() function is the type
+# 			of the non-NULL expression.
+#
+# 			The default return type of IF() (which may matter when it is stored into a temporary table) is calculated
+# 			as follows:
+#
+# 				) If expr2 or expr3 produce a string, the result is a string
+#
+# 				  If expr2 and expr3 are both strings, the result is case-sensitive if either string
+# 					is case sensitive.
+#
+# 				) If expr2 or expr3 produce a floating-point value, the result is a floating-point value
+#
+# 				) If expr2 or expr3 produce an integer, the result is an integer.
+#
+# 					SELECT IF(1>2,2,3);
+# 					  -> 3
+# 
+# 					SELECT IF(1<2, 'yes', 'no');
+# 					  -> 'yes'
+#
+# 					SELECT IF(STRCMP('test', 'test1'), 'no', 'yes');
+# 					  -> 'no'
+#
+# 		) IFNULL(expr1,expr2)
+#
+# 			If expr1 is not NULL, IFNULL() returns expr1; otherwise it returns expr2
+#
+# 				SELECT IFNULL(1,0);
+# 				  -> 1
+#
+# 				SELECT IFNULL(NULL,10);
+# 				  -> 10
+#
+# 				SELECT IFNULL(1/0,10);
+# 				  -> 10
+#
+#				SELECT IFNULL(1/0, 'yes');
+# 				  -> 'yes'
+#
+# 			The default return type of IFNULL(expr1,expr2) is the more "general" of the two expressions,
+# 			in the order STRING, REAL or INTEGER.
+#
+# 			Consider the case of a table based on expressions or where MySQL must internally
+# 			store a value returned by IFNULL() in a temporary table:
+#
+# 				CREATE TABLE tmp SELECT IFNULL(1, 'test') AS test;
+# 				DESCRIBE tmp;
+# 				+----------+------------------+----------+----------+------------+----------+
+# 				| Field    | Type 				| Null 	  | Key 		 | Default 	  | Extra 	 |
+# 				+----------+------------------+----------+----------+------------+----------+
+# 				| test 	  | varbinary(4) 	   | NO 		  | 			 | 			  | 			 |
+# 				+----------+------------------+----------+----------+------------+----------+
+#
+# 			In this example, the type of the test column is VARBINARY(4) (a string type)
+#
+# 		) NULLIF(expr1,expr2)
+#
+# 			Returns NULL if expr1 = expr2 is true, otherwise returns expr1.
+#
+# 			This is the same as CASE_WHEN_expr1 = expr2 THEN_NULL_ELSE expr1 END
+#
+# 			The return value has the same type as the first argument.
+#
+# 				SELECT NULLIF(1,1);
+# 				  -> NULL
+# 				SELECT NULLIF(1,2);
+# 				  -> 1
+#
+# 			NOTE:
+#
+# 				MySQL evaluates expr1 twice if the arguments are not equal.
+#
+# 12.5 STRING FUNCTIONS
+#
+# 	12.5.1 STRING COMPARISON FUNCTIONS
+#
+# 	12.5.2 REGULAR EXPRESSIONS
+#
+# 	12.5.3 CHARACTER SET AND COLLATION OF FUNCTION RESULTS
+#
+# 	TABLE 12.7 STRING OPERATORS
+#
+# 	NAME 							Desc
+#
+# 	ASCII() 						Return numeric value of left-most character
+#
+# 	BIN() 						Return a string containing binary representation of a number
+#
+# 	BIT_LENGTH() 				Return length of argument in bits
+#
+# 	CHAR() 						Return the character of each integer passed
+#
+# 	CHAR_LENGTH() 				Return number of characters in argument
+#
+# 	CHARACTER_LENGTH() 		Synonym for CHAR_LENGTH()
+#
+# 	CONCAT() 					Return concatenated string
+#
+# 	CONCAT_WS() 				Return concatenate with separator
+#
+# 	ELT() 						Return string at index number
+#
+# 	EXPORT_SET() 				Return a string such that for every bit set in the value bits,
+# 									you get an on string and for every unset bit, you get an off string
+#
+# 	FIELD() 						Return the index (position) of the first argument in the subsequent arguments
+#
+# 	FIND_IN_SET() 				Return the index position of the first argument within the second argument
+#
+# 	FORMAT() 					Return a number formatted to specified number of decimal places
+#
+# 	FROM_BASE64() 				Decode base64 encoded string and return result
+#
+#  HEX() 						Return a hexadecimal representation of a decimal or string value
+#
+#  INSERT() 					Insert a substring at the specified position up to the specified number of characters
+#
+# 	INSTR() 						Return the index of the first occurence of substring
+#
+# 	LCASE() 						Synonym for LOWER()
+#
+#  LEFT() 						Return the leftmost number of characters as specified
+#
+#  LENGTH() 					Return the length of a string in bytes
+#
+#  LIKE 							Simple pattern matching
+#
+#  LOAD_FILE() 			   Load the named file
+#
+#  LOCATE() 					Return the position of the first occurence of substring
+#
+#  LOWER() 						Return the argument in lowercase
+#
+#  LPAD() 						Return the string argument, left-padded with the specified string
+#
+#  LTRIM() 						Remove leading spaces
+#
+# 	MAKE_SET() 					Return a set of comma-separated strings that have the corresponding bit in bits set
+#
+# 	MATCH 						Perform full-text search
+#
+#  MID() 						Return a substring starting from the specified position
+#
+# 	NOT_LIKE 					Negation of simple pattern matching
+#
+#  NOT_REGEXP 					Negation of REGEXP
+#
+#  OCT() 						Return a string containing octal representation of a number
+#
+# 	OCTET_LENGTH() 			Synonym for LENGTH()
+#
+# 	ORD() 						Return character code for leftmost character of the argument
+#
+# 	POSITION() 					Synonym for LOCATE()
+#
+#  QUOTE() 						Escape the argument for use in an SQL statement
+#
+# 	REGEXP 						Whether string matches regular expression
+#
+# 	REGEXP_INSTR() 			Starting index of substring matching regular expression
+#
+# 	REGEXP_LIKE() 				Whether string matches regular expression
+#
+# 	REGEXP_REPLACE() 			Replace substrings matching regular expression
+#
+# 	REGEXP_SUBSTR() 			Return substring matching regular expression
+#
+# 	REPEAT() 					Repeat a string the specified number of times
+#
+# 	REPLACE() 					Replace occurences of a specified string
+#
+# 	REVERSE() 					Reverse the characters in a string
+#
+# 	RIGHT() 						Return the specified rightmost number of characters
+#
+# 	RLIKE 						Whether string matches regular expression
+#
+# 	RPAD() 						Append string the specified number of times
+#
+# 	RTRIM() 						Remove trailing spaces
+#
+# 	SOUNDEX() 					Return a soundex string
+#
+# 	SOUNDS_LIKE 				Compare sounds
+#
+# 	SPACE() 						Return a string of the specified number of spaces
+#
+# 	STRCMP() 					Compare two strings
+#
+# 	SUBSTR() 					Return the substring as specified
+#
+# 	SUBSTRING() 				Return the substring as specified
+#
+# 	SUBSTRING_INDEX() 		Return a substring from a string before the specified number of occurences of the delimiter
+#
+# 	TO_BASE64() 				Return the argument converted to a base-64 string
+#
+# 	TRIM() 						Remove leading and trailing spaces
+#
+# 	UCASE() 						Synonym for UPPER()
+#
+# 	UNHEX() 						Return a string containing hex representation of a number
+#
+# 	UPPER() 						Convert to uppercase
+#
+# 	WEIGHT_STRING() 			Return the weight string for a string
+#
+# String-valued functions return NULL if the length of the result would be greater than the
+# value of the max_allowed_packet system variable.
+#
+# See SECTION 5.1.1, "CONFIGURING THE SERVER"
+#
+# For functions that operate on string positions, the first position is numbered 1
+#
+# For functions that take length arguments, noninteger arguments are rounded to the 
+# nearest integer.
+#
+# 		) ASCII(str)
+#
+# 			Returns the numeric value of the leftmost character of the string str.
+#
+# 			Returns 0 if str is the empty string.
+#
+# 			Returns NULL if str is NULL.
+#
+# 			ASCII() works for 8-bit characters.
+#
+# 				SELECT ASCII('2');
+# 					-> 50
+#
+# 				SELECT ASCII(2);
+# 					-> 50
+#
+# 				SELECT ASCII('dx');
+# 					-> 100
+#
+# 			See also the ORD() function
+#
+# 		) BIN(N)
+#
+# 			Returns a string representation of the binary value of N, where N is a longlong (BIGINT) number.
+#
+# 			This is equivalent to CONV(N,10,2)
+#
+# 			Returns NULL if N is NULL.
+#
+# 				SELECT BIN(12);
+# 					-> '1100'
+#
+# 		) BIT_LENGTH(str)
+#
+# 			Returns the length of the str in bits.
+#
+# 				SELECT BIT_LENGTH('text');
+# 					-> 32
+#
+# 		) CHAR(N, --- [USING charset_name])
+#
+# 			CHAR() interprets each argument N as an integer and returns a string consisting of the
+# 			characters given by the code values of those integers.
+#
+# 			NULL values are skipped.
+#
+# 				SELECT CHAR(77,121,83,81,'76');
+# 					-> 'MySQL'
+# 				SELECT CHAR(77, 77.3, '77.3');
+# 					-> 'MMM'
+#
+# 			CHAR() arguments larger than 255 are converted into multiple result bytes.
+#
+# 			For example, CHAR(256) is equivalent to CHAR(1, 0) and CHAR(256*256) is equivalent to
+# 			CHAR(1,0,0)
+#
+# 				SELECT HEX(CHAR(1,0)), HEX(CHAR(256));
+# 				+-------------------+-----------------+
+# 				| HEX(CHAR(1,0)) 	  | HEX(CHAR(256))  |
+# 				+-------------------+-----------------+
+# 				| 0100 				  | 0100 			  |
+# 				+-------------------+-----------------+
+#
+# 				SELECT HEX(CHAR(1,0,0)), HEX(CHAR(256*256));
+# 				+-------------------+-----------------+
+# 				| HEX(CHAR(1,0,0))  | HEX(CHAR(256*256|
+# 				+-------------------+-----------------+
+# 				| 010000 			  | 010000 			  |
+# 				+-------------------+-----------------+
+#
+# 			By default, CHAR() returns a binary string.
+#
+# 			To produce a string in a given character set, use the optional
+# 			USING clause:
+#
+# 				SELECT CHARSET(CHAR(X'65')), CHARSET(CHAR(X'65' USING utf8));
+# 				+------------------------------+----------------------------------+
+# 				| CHARSET(CHAR(X'65')) 			 | CHARSET(CHAR(X'65' USING utf8))  |
+# 				+------------------------------+----------------------------------+
+# 				| binary 							 | utf8 										|
+# 				+------------------------------+----------------------------------+
+#
+# 			If USING is given and the result string is illegal for the given character set, a warning is issued.
+#
+# 			Also, if strict SQL mode is enabled, the result from CHAR() becomes NULL
+#
+# 		) CHAR_LENGTH(str)
+#
+# 			Returns the length of the string str, measured in characters.
+#
+# 			A multibyte character counts as a single character.
+#
+# 			This means that for a string containing five 2-byte characters,
+# 			LENGTH() returns 10, whereas CHAR_LENGTH() returns 5
+#
+# 		) CHARACTER_LENGTH(str)
+#
+# 			CHARACTER_LENGTH() is a synonym for CHAR_LENGTH()
+#
+# 		) CONCAT(str1, str2, ---)
+#
+# 			Returns the string that results from concatenating the arguments.
+#
+# 			May have one or more arguments.
+#
+# 			If all arguments are nonbinary strings, the result is a nonbinary
+# 			string.
+#
+# 			If the arguments include any binary strings, the result is a binary string.
+#
+# 			A numeric argument is converted to its equivalent nonbinary string form.
+#
+# 			CONCAT() returns NULL if any argument is NULL.
+#
+# 				SELECT CONCAT('My', 'S', 'QL');
+# 					-> 'MySQL'
+#
+# 				SELECT CONCAT('My', NULL, 'QL');
+# 					-> NULL
+#
+# 				SELECT CONCAT(14.3);
+# 					-> '14.3'
+#
+# 			For quoted strings, concatenation can be performed by placing the strings
+# 			next to each other:
+#
+# 				SELECT 'My' 'S' 'QL';
+# 					-> 'MySQL'
+#
+# 		) CONCAT_WS(separator, str1, str2, ---)
+#
+# 			CONCAT_WS() stands for Concatenate With Separator and is a special form of CONCAT().
+#
+# 			The first argument is the separator for the rest of the arguments.
+#
+# 			The separator is added between the strings to be concatenated.
+#
+# 			The separator can be a string, as can the rest of the argumnets.
+# 			If the separator is NULL, the result is NULL.
+#
+# 				SELECT CONCAT_WS(',','First name', 'Second name', 'Last Name');
+# 					-> 'First name,Second name,Last Name'
+# 				SELECT CONCAT_WS(',','First name', NULL, 'Last Name');
+# 					-> 'First name, Last Name'
+#
+# 			CONCAT_WS() does not skip empty strings.
+#
+# 			However, it does skip any NULL values after the separator argument.
+#
+# 		) ELT(N, str1, str2, str3, ---)
+#
+# 			ELT() returns the Nth element of the list of strings:
+#
+# 				str1 if N = 1, str2 if N = 2, etc.
+#
+# 			Returns NULL if N less than 1 or greater than the number of arguments.
+#
+# 			ELT() is the complement of FIELD()
+#
+# 				SELECT ELT(1, 'Aa', 'Bb', 'Cc', 'Dd');
+# 					-> 'Aa'
+# 				SELECT ELT(4, 'Aa', 'Bb', 'Cc', 'Dd');
+#
+# 		) EXPORT_SET(bits, on, off[, separator[, number of bits]])
+#
+# 			Returns a string such that for every bit set in the value bits, you get an
+# 			on string and for every bit not set in the value, you get an off string.
+#
+# 			Bits in bits are examined from right to left (from low-order to high-order bits)
+#
+# 			Strings are added to the result from left to right, separated by the separator string
+# 			(the default being the comma character ,)
+#
+# 			The number of bits examined is given by number_of_bits, which has a default of 64
+# 			if not specified.
+#
+# 			number_of_bits is silently clipped to 64 if larger than 64.
+#
+# 			It is treated as an unsigned integer, so a value of -1 is effectively the same as 64.
+#
+# 				SELECT EXPORT_SET(5, 'Y', 'N', ',', 4);
+# 					-> 'Y,N,Y,N'
+#
+# 				SELECT EXPORT_SET(6, '1','0', ',', 10);
+# 					-> '0,1,1,0,0,0,0,0,0'
+#
+# 		) FIELD(str, str1, str2, str3, ---)
+#
+# 			Returns the index (position) of str in the str1, str2, str3, --- list.
+#
+# 			Returns 0 if str is not found.
+#
+# 			If all arguments to FIELD() are strings, all arguments are compared as strings.
+#
+# 			If all arguments are numbers, they are compared as numbers.
+#
+# 			Otherwise, the arguments are compared as double.
+#
+# 			If str is NULL, the return value is 0 because NULL fails equality comparison
+# 			with any value.
+#
+# 			FIELD() is the complement of ELT()
+#
+# 				SELECT FIELD('Bb', 'Aa', 'Bb', 'Cc', 'Dd', 'Ff');
+# 					-> 2
+#
+# 				SELECT FIELD('Gg', 'Aa', 'Bb', 'Cc', 'Dd', 'Ff');
+# 					-> 0
+#
+# 		) FIND_IN_SET(str, strlist)
+#
+# 			Returns a value in the range of 1 to N if the string is in the string list strlist consisting
+# 			of N substrings.
+#
+# 			A string list is a string composed of substrings separated by , characters.
+#
+# 			If the first argument is a constant string and the second is a column of type SET,
+# 			the FIND_IN_SET() function is optimized to use bit arithmetic.
+#
+# 			Returns 0 if str is not in strlist or if strlist is the empty string.
+#
+# 			Returns NULL if either argument is NULL.
+#
+# 			This function does not work properly if the first argument contains a comma
+# 			(,) character
+#
+# 				SELECT FIND_IN_SET('b', 'a,b,c,d');
+# 					-> 2
+#
+# 		) FORMAT(X,D[,locale])
+#
+# 			Formats the number X to a format like '#,###,###.##', rounded to D decimal palces, and returns
+# 			the result as a string.
+#
+# 			If D is 0, the result has no decimal point or fractional part.
+#
+# 			The optional third parameter enables a locale to be specified to be used for the
+# 			result number's decimal point, thousands separator, and grouping between
+# 			separators.
+#
+# 			Permissible locale values are the same as the legal values for the lc_time_names system variable
+# 			(see SECTION 10.15, "MySQL SERVER LOCALE SUPPORT")
+#
+# 			If no locale is specified, the default is 'en_US'
+#
+# 				SELECT FORMAT(12332.123456, 4);
+# 					-> '12, 332.1235'
+#
+# 				SELECT FORMAT(12332.1, 4);
+# 					-> '12, 332.1000'
+#
+# 				SELECT FORMAT(12332.2, 0);
+# 					-> '12, 332'
+#
+# 				SELECT FORMAT(12332.2, 2, 'de_DE');
+# 					-> '12.332,20'
+#
+# 		) FROM_BASE64(str)
+#
+# 			Takes a string encoded with the base-64 encoded rules used by TO_BASE64() and returns
+# 			the decoded result as a binary string.
+#
+# 			The result is NULL if the argument is NULL or not a valid base-64 string.
+#
+# 			See the description of TO_BASE64() for details about the encoding and decoding
+# 			rules.
+#
+# 				SELECT TO_BASE64('abc'), FROM_BASE64(TO_BASE64('abc'));
+# 					-> 'JWJj', 'abc'
+#
+# 		) HEX(str), HEX(N)
+#
+# 			For a string argument str, HEX() returns a hexadecimal string representation of str where
+# 			each byte of each character in str is converted to two hexadecimal digits.
+#
+# 			(Multibyte characters therefore become more than two digits)
+#
+# 			The inverse of this operation is performed by the UNHEX() function
+#
+# 			For a numeric argument N, HEX() returns a hexadecimal string representation of the value
+# 			of N treated as a longlong (BIGINT) number.
+#
+# 			This is equivalent to CONV(N,10,16)
+#
+# 			The inverse of this operation is performed by CONV(HEX(N), 16, 10)
+#
+# 				SELECT X'616263', HEX('abc'), UNHEX(HEX('abc'));
+# 						-> 'abc', 616263, 'abc'
+#
+# 				SELECT HEX(255), CONV(HEX(255), 16, 10);
+# 						-> 'FF', 255
+#
+# 		) INSERT(str, pos, len, newstr)
+#
+# 			Returns the string str, with the substring beginning at position pos and len characters
+# 			long replaced by the string newstr.
+#
+# 			Returns the original string if pos is not within the length of the string.
+#
+# 			Replaces the rest of the string from the position pos if len is not written within
+# 			the length of the rest of the string.
+#
+# 			Returns NULL if any argument is NULL.
+#
+# 				SELECT INSERT('Quadratic', 3, 4, 'What');
+# 					-> 'QuWhattic'
+#
+# 				SELECT INSERT('Quadratic', -1, 4, 'What');
+# 					-> 'Quadratic';
+#
+# 				SELECT INSERT('Quadratic', 3, 100, 'What');
+# 					-> 'QuWhat'
+#
+# 			This function is multibyte safe.
+#
+# 		) INSTR(str, substr)
+#
+# 			Returns the position of the first occurence of substring substr in string str.
+#
+# 			THis is the same as the two-argument form of LOCATE(), except that hte order
+# 			of the arguments is reversed.
+#
+# 				SELECT INSTR('foobarbar', 'bar');
+# 					-> 4
+#
+# 				SELECT INSTR('xbar', 'foobar');
+# 					-> 0
+#
+# 			This function is multibyte safe, and is case-sensitive only if at least one argument is a binary string.
+#
+# 		) LCASE(str)
+#
+# 			LCASE() is a synonym for LOWER()
+#
+# 			LCASE() used in a view is rewritten as LOWER() when storing the view's definition. (Bug #12844279)
+#
+# 		) LEFT(str, len)
+#
+# 			Returns the leftmost len characters from the string str, or NULL if any argument is NULL.
+#
+# 				SELECT LEFT('foobarbar', 5);
+# 					-> 'fooba'
+#
+# 			This function is multibyte safe.
+#
+# 		) LENGTH(str)
+#
+# 			Returns the length of the string str, measured in bytes.
+#
+# 			A multibyte character counts as multiple bytes.
+#
+# 			This means that for a string containing five 2-byte characters,
+# 			LENGTH() returns 10, whereas CHAR_LENGTH() returns 5.
+#
+# 				SELECT LENGTH('text');
+# 					-> 4
+#
+# 			NOTE:
+#
+# 				The Length() OpenGIS spatial function is named ST_Length() in MySQL.
+#
+# 		) LOAD_FILE(file name)
+#
+# 			Reads the file and returns the file contents as a string.
+#
+# 			To use this function, the file must be located on the server host, you must specify
+# 			the full path name to the file, and you must have the FILE privilege.
+#
+# 			The file must be readable by all and its size less than max_allowed_packet bytes.
+#
+# 			If the secure_file_priv system variable is set to a nonempty directory name,
+# 			the file must be located in that directory.
+#
+# 			If the file does not exist or cannot be read because one of the preceding conditions
+# 			is not satisfied, the function returns NULL.
+#
+# 			The character_set_filesystem system variable controls interpretation of file names
+# 			that are given as literal strings.
+#
+# 				UPDATE t
+# 						SET blob_col=LOAD_FILE('/tmp/picture')
+# 						WHERE id=1;
+#
+# 		) LOCATE(substr, str), LOCATE(substr,str,pos)
+#
+# 			The first syntax returns the position of the first occurence of substring substr in string str.
+#
+# 			The second syntax returns the position of the first occurence of substring substr in string str,
+# 			starting at position pos.
+#
+# 			Returns 0 if substr is not in str.
+#
+# 			Returns NULL if any argument is NULL.
+#
+# 				SELECT LOCATE('bar', 'foobarbar');
+# 					-> 4
+#
+# 				SELECT LOCATE('xbar', 'foobar');
+# 					-> 0
+#
+# 				SELECT LOCATE('bar', 'foobarbar', 5);
+# 					-> 7
+#
+# 			This function is multibyte safe, and is case-sensitive only if at least one
+# 			argument is a binary string.
+#
+# 		) LOWER(str)
+#
+# 			Returns the string str with all characters changed to lowercase according to the current
+# 			char set mapping.
+#
+# 			The default is utf8mb4.
+#
+# 				SELECT LOWER('QUADRATICALLY');
+# 					-> 'quadratically'
+#
+# 			LOWER() (and UPPER)) are ineffective when applied to binary strings (BINARY, VARBINARY, BLOB)
+#
+# 			To perform lettercase conversion, convert the string to a nonbinary string:
+#
+# 				SET @str = BINARY 'New York';
+# 				SELECT LOWER(@str), LOWER(CONVERT(@str USING utf8mb4));
+#
+# 				+----------------+------------------------------------+
+# 				| LOWER(@str) 	  | LOWER(CONVERT(@str USING utf8mb4)) |
+# 				+----------------+------------------------------------+
+# 				| New York 		  | new york 									|
+# 				+----------------+------------------------------------+
+#
+# 			For collations of Unicode character sets, LOWER() and UPPER() work according ot the
+# 			UNicode Collation Algorithm (UCA) version in teh collation name, if there is one,
+# 			and UCA 4.0.0 if no version is specified.
+#
+# 			For example, utf8mb4_0900_ai_ci and utf8_unicode_520_ci work according to UCA 9.0.0
+# 			and 5.2.0, respectively, whereas utf8_unicode_ci works according to UCA 4.0.0
+#
+# 			See SECTION 10.10.1, "UNICODE CHARACTER SETS"
+#
+# 			This function is multibyte safe
+#
+# 			LCASE() used within views is written as LOWER()
+#
+# 		) LPAD(str,len,padstr)
+#
+# 			Returns the string str, left-padded with the string padstr to a length of len characters.
+#
+# 			If str is longer than len, the return value is shortened to len characters.
+# 		
+# 			
+# 				SELECT LPAD('hi',4,'??');
+# 					-> '??hi'
+#
+# 				SELECT LPAD('hi', 1, '??');
+# 					-> 'h'
+#
+# 		) LTRIM(str)
+#
+# 			Returns the string str with leading space characters removed.
+#
+# 				SELECT LTRIM('  barbar');
+# 					-> 'barbar'
+#
+# 			This function is multibyte safe.
+#
+# 		) MAKE_SET(bits, str1, str2, ---)
+#
+# 			Returns a set value (a string containing substrings separated by , characters)
+# 			consisting of the strings taht ahve the corresponding bit in bits set.
+#
+# 			str1 corresponds to bit 0, str2 to bit 1, and so on.
+#
+# 			NULL values in str1, str2, --- aren ot appended to the result.
+#
+# 				SELECT MAKE_SET(1, 'a', 'b', 'c');
+# 					-> 'a'
+#
+# 				SELECT MAKE_SET(1 | 4, 'hello', 'nice', 'world');
+# 					-> 'hello,world'
+#
+# 				SELECT MAKE_SET(1 | 4, 'hello', 'nice', NULL, 'world');
+# 					-> 'hello'
+#
+# 				SELECT MAKE_SET(0, 'a', 'b', 'c');
+# 					-> ''
+#
+# 		) MID(str, pos, len)
+#
+# 			MID(str,pos,len) is a synonym for SUBSTRING(str,pos,len)
+#
+# 		) OCT(N)
+#
+# 			Returns a string representation of the octal value of N, where N is a longlong
+# 			(BIGINT) number.
+#
+# 			This is equivalent to CONV(N,10,8)
+#
+# 			Returns NULL if N is NULL
+#
+# 				SELECT OCT(12);
+# 					-> '14'
+#
+# 		) OCTET LENGTH(STR)
+#
+# 			OCTET_LENGTH() is a synonym for LENGTH()
+#
+# 		) ORD(str)
+#
+# 			If the leftmost character of the string str is a multibyte character,
+# 			returns the code for that character, calculated form the numeric values
+# 			of its constituent bytes using this formula:
+#
+# 				(1st byte code)
+# 			+  (2nd byte code * 256)
+# 			+  (3rd byte code * 256^2) ---
+#
+# 			If the leftmost character is not a multibyte character, ORD() returns 
+# 			the same value as the ASCII() function.
+#
+# 				SELECT ORD('2');;
+# 					-> 50
+#
+# 		) POSITION(substr IN str)
+#
+# 			POSITION(substr IN str) is a synonym for LOCATE(substr, str)
+#
+# 		) QUOTE(str)
+#
+# 			Quotes a string to produce a result that can be used as a properly escaped data value in an SQL statement.
+#
+# 			The string is returned enclosed by single quotation marks and with each instance of backslash(\),
+# 			single quote('), ASCII NUL, and Control+Z preceded by a backslash.
+#
+# 			If the argument is NULL, the return value is the word "NULL" without ecnlosing single quotation marks.
+#
+# 				SELECT QUOTE('Don\'t!');
+# 					-> 'Don\t!'
+# 				SELECT QUOTE(NULL);
+# 					-> NULL
+#
+# 			For comparison, see the quoting rules for literal strings and within the C API in
+# 			SECTION 9.1.1, "STRING LITERALS", and "SECTION 28.7.7.56, "MYSQL_REAL_ESCAPE_STRING_QUOTE()"
+# 			for more info.
+#
+# 		) REPEAT(str, count)
+#
+# 			Returns a string consisting of the string str repeated count times.
+#
+# 			If count is less than 1, returns an empty string.
+#
+# 			Returns NULL if str or count are NULL.
+#
+#
+# 				SELECT REPEAT('MySQL', 3);
+# 					-> 'MySQLMySQLMySQL'
+#
+# 		) REPLACE(str, from str, to str)
+#
+# 			Returns the string str with all occurences of the string from_str replaced by the string 
+# 			to_str.
+#
+# 			REPLACE() performs a case-sensitive match when searching for from_str
+#
+# 				SELECT REPLACE('www.mysql.com', 'w', 'WW');
+# 					-> 'WWWWWW.mysql.com'
+#
+# 			This function is multibyte safe.
+#
+# 		) REVERSE(str)
+#
+# 			Returns the string str with the order of the characters reversed.
+#
+# 				SELECT REVERSE('abc');
+# 					-> 'cba'
+#
+# 			This function is multibyte safe.
+#
+# 		) RIGHT(str,len)
+#
+# 			Returns the rightmost len characters from the string str, or NULL if any
+# 			argument is NULL
+#
+# 				SELECT RIGHT('foobarbar', 4);
+# 					-> 'rbar'
+#
+# 			This function is multibyte safe
+#
+# 		) RPAD(str, len, padstr)
+#
+# 			Returns the string str, right-padded with the string padstr to a length of len characters.
+# 			
+# 			If str is longer than len, the return value is shortened to len characters.
+#
+# 				SELECT RPAD('hi', 5, '?');
+# 					-> 'hi???'
+# 				
+# 				SELECT RPAD('hi', 1, '?');
+# 					-> 'h'
+#
+# 			This function is multibyte safe
+#
+# 		) RTRIM(str)
+#
+# 			Returns the string str with trailing space characters removed.
+#
+# 				SELECT RTRIM('barbar  ');
+# 					-> 'barbar'
+#
+# 			This function is multibyte safe
+#
+# 		) SOUNDEX(str)
+#
+# 			Returns a soundex string from str.
+#
+# 			Two strings that sound almost the same should have identical soundex strings.
+#
+# 			A standard soundex string is four characters long, but hte SOUNDEX() function
+# 			returns an arbitrarily long string.
+#
+# 			You can use SUBSTRING() on the result to get a standard soundex string.
+#
+# 			All nonalphabetic characters in str are ignored.
+#
+# 			ALl international alphabetic characters outside the A-Z range are
+# 			treated as vowels.
+#
+# 				IMPORTANT:
+#
+# 					When using SOUNDEX(), you should be aware of the following limitaitons:
+#
+#
+# 						) This function, as currently implemented - is intended to work well with strings
+# 							that are in the English language only.
+#
+# 							Strings in other langauges may not produce reliable results.
+#
+# 						) THis function is not guaranteed to provide consistent results with strings
+# 							that use multibyte character sets, including utf-8.
+#
+# 							See BUG #22638 for more information.
+#
+# 				SELECT SOUNDHEX('Hello');
+# 					-> 'H400'
+# 
+# 				SELECT SOUNDHEX('Quadratically');
+# 					-> 'Q36324'
+#
+# 			NOTE:
+#
+# 				This function implements the original Soundex algorithm, not hthe more popular enhanced
+# 				version (also described by D. Knuth)
+#
+# 				The differnece is that the origina version discards vowels first and duplicates second, whereas
+# 				the enhanced version discards duplicates first and vowels second.
+#
+# 		) expr1 SOUNDS LIKE expr2
+#
+# 			This is the same as SOUNDEX(expr1) = SOUNDEX(expr2)
+#
+# 		) SPACE(N)
+#
+# 			Returns a string consisting of N Space characters
+#
+# 				SELECT SPACE(6);
+# 					-> '      '
+#
+# 		) SUBSTR(str,pos), SUBSTR(str FROM pos), SUBSTR(str, pos, len), SUBSTR(str FROM pos FOR len)
+#
+# 			SUBSTR() is a synonym for SUBSTRING()
+#
+# 		) SUBSTRING(str,pos), SUBSTRING(str FROM pos), SUBSTRING(str,pos,len), SUBSTRING(str FROM pos FOR len)
+#
+# 			The forms without a len argument return a substring from string str starting at position pos.
+#
+# 			This forms with a len argument returns a substring len chars long from string str,
+# 			starting at position pos.
+#
+# 			The forms that use FROM are standard SQL syntax.
+#
+# 			IT is also possible to use a negative value for pos.
+#
+# 			IN this case, the beginning of the substring is pos characerts
+# 			from the end of the string, rather than the beginning.
+#
+# 			A negative value may be used for pos in any of the forms of this function.
+#
+# 			For all forms of SUBSTRING(), the position of hte first character in the 
+# 			string from which the substring is to be extracted is reckoned as 1.
+#
+# 				SELECT SUBSTRING('Quadratically', 5);
+# 					-> 'ratically'
+#
+# 				SELECT SUBSTRING('foobarbar' FROM 4);
+# 					-> 'barbar'
+#
+# 				SELECT SUBSTRING('Quadratically', 5, 6);
+# 					-> 'ratica'
+#
+# 				SELECT SUBSTRING('Sakila', -3);
+# 					-> 'ila'
+#
+# 				SELECT SUBSTRING('Sakila', -5, 3);
+# 					-> 'aki'
+#
+# 				SELECT SUBSTRING('Sakila' FROM -4 FOR 2);
+# 					-> 'ki'
+#
+# 			THis function is multibyte safe.
+#
+# 			If len is less than 1, the result is the empty string.
+#
+# 		) SUBSTRING INDEX(str, delim, count)
+#
+# 			Returns the substring from string str before count occurences of the delimiter delim.
+#
+# 			If count is positive, everything to the left of the final delimiter (counting from
+# 			the left) is returned.
+#
+# 			iF count is negative, everything to the right of the final delimiter (counting form the right)
+# 			is returned.
+#
+# 			SUBSTRING_INDEX() performs a case-sensitive match when searching for delim.
+#
+# 					SELECT SUBSTRING_INDEX('www.mysql.com', '.', 2);
+# 						-> 'www.mysql'
+#
+# 					SELECT SUBSTRING_INDEX('www.mysql.com', '.', -2);
+# 						-> 'mysql.com'
+#
+# 			The function is multibyte safe.
+#
+# 		) TO_BASE64(str)
+#
+# 			Converts the string argument to base-64 encoded form and returns the result
+# 			as a character string with the connection character set and collation.
+#
+# 			If the argument is not a string, it is converted to a string before conversion
+# 			takes place.
+#
+# 			The result is NULL if the argument is NULL.
+#
+# 			Base-64 encoded strings can be decoded using the FROM_BASE64() function.
+#
+# 				SELECT TO_BASE64('abc'), FROM_BASE64(TO_BASE64('abc'));
+# 					-> 'JWJj', 'abc'
+#
+# 			Different 
+#
+# 			https://dev.mysql.com/doc/refman/8.0/en/string-functions.html			
+#
