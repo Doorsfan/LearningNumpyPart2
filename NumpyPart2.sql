@@ -77642,7 +77642,2009 @@ Need be, i will change this for upcoming repeated cases. */
 # 				SELECT TO_BASE64('abc'), FROM_BASE64(TO_BASE64('abc'));
 # 					-> 'JWJj', 'abc'
 #
-# 			Different 
+# 			Different base-64 encoding schemes exist.
 #
-# 			https://dev.mysql.com/doc/refman/8.0/en/string-functions.html			
+# 			These are the encoding and decoding rules used by TO_BASE64()
+# 			and FROM_BASE64():
 #
+# 				) The encoding for alphabet value 62 is '+'
+#
+# 				) The encoding for alphabet value 63 is '/'
+#
+# 				) Encoded output consists of groups of 4 printable characters.
+#
+# 					Each 3 bytes of the input data are encoded using 4 characters.
+#
+# 					If the last group is incomplete, it is padded with '=' characters
+# 					to a length of 4
+#
+# 				) A newline is added after each 76 characters of encoded output to divide
+# 					long output into multiple lines.
+#
+# 				) Decoding recognizes and ignores newline, carriage return, tab and space.
+#
+# 		) TRIM ([{BOTH | LEADING | TRAILING} [remstr] FROM] str), TRIM([remstr FROM] str)
+#
+# 			Returns the string str with all remstr prefixes or suffixes removed.
+#
+# 			If none of the specifiers BOTH, LEADING or TRAILING is given, BOTH is assumed.
+# 			Remstr is optional, and if not specified, spaces are removed.
+#
+# 				SELECT TRIM('  bar  ');
+# 					-> 'bar'
+# 				
+# 				SELECT TRIM(LEADING 'x' FROM 'xxxbarxxx');
+# 					-> 'barxxx'
+#
+# 				SELECT TRIM(BOTH 'x' FROM 'xxxbarxxx');
+# 					-> 'bar'
+#
+# 				SELECT TRIM(TRAILING 'xyz' FROM 'barxxyz');
+# 					-> 'barx'
+#
+# 			This function is multibyte safe.
+#
+# 		) UCASE(str)
+#
+# 			UCASE() is a synonym for UPPER()
+#
+# 			UCASE() used within views is rewritten as UPPER()
+#
+# 		) UNHEX(str)
+#
+# 			For a string argument str, UNHEX(str) interprets each pair of characters in
+# 			the argument as a hexadecimal number and converts it to the byte represented
+# 			by the number.
+#
+# 			The return value is a binary string.
+#
+# 				SELECT UNHEX('4D7953514C');
+# 					-> 'MySQL'
+#
+# 				SELECT X'4D7953514C';
+# 					-> 'MySQL'
+#
+# 				SELECT UNHEX(HEX('string'));
+# 					-> 'string'
+#
+# 				SELECT HEX(UNHEX('1267'));
+# 					-> '1267'
+#
+# 			The characters in the argument string must be legal hexadecimal digits:
+#
+# 				'0 --- '9', 'A' --- 'F', 'a' --- 'f'
+#
+# 			If the argument contains any nonhexadecimal digits, the result is NULL:
+#
+# 				SELECT UNHEX('GG');
+#
+# 				+------------------+
+# 				| UNHEX('GG') 		 |
+# 				+------------------+
+# 				| NULL 				 |
+# 				+------------------+
+#
+# 			A NULL result can occur if the argument to UNHEX() is a BINARY column, because
+# 			values are padded with 0x00 bytes when stored but those bytes are not stripped on
+# 			retrieval.
+#
+# 			For example, '41' is stored into a CHAR(3) column as '41 ' and retrieved as '41'
+# 			(with the trailing pad space stripped), so UNHEX() for the column value returns 'A'
+#
+# 			By contrast, '41' stored into a BINARY(3) column as '41\0' and retrieved as '41\0'
+# 			(with the trailing pad 0x00 byte not stripped)
+#
+# 			'\0' is not a legal hexadecimal digit, so UNHEX() for the column value returns NULL
+#
+# 			For a numeric argument N, the inverse of HEX(N) is not performed by UNHEX().
+#
+# 			Use CONV(HEX(N),16,10) instead.
+#
+# 			See the description of HEX()
+#
+# 		) UPPER(str)
+#
+# 			Returns the string str with all characters changed to uppercase according to the current
+# 			character set mapping.
+#
+# 			The default is utf8mb4
+#
+# 				SELECT UPPER('Hej');
+# 					-> 'HEJ'
+#
+# 			See the description of LOWER() for information that also applies to UPPER().
+#
+# 			This included information about how to perform lettercase conversion of binary strings
+# 			(BINARY, VARBINARY, BLOB) for which these functions are ineffective, and information about case folding
+# 			for Unicode character sets.
+#
+# 			This function is multibyte safe.
+#
+# 			UCASE() used within views is rewritten as UPPER()
+#
+# 		) WEIGHT_STRING(str [AS {CHAR|BINARY}(N)] [flags])
+#
+# 			This function returns the weight string for the input string.
+#
+# 			The return value is a binary string that represents the comparison and sorting
+# 			value of the string.
+#
+# 			It has these properties:
+#
+# 				) If WEIGHT_STRING(str1) = WEIGHT_STRING(str2), then str1 = str2(str1 and str2 are considered equal)
+#
+# 				) If WEIGHT_STRING(str1) < WEIGHT_STRING(str2), then str1 < str2(str1 sorts before str2)
+#
+# 			WEIGHT_STRING() is a debugging function intended for internal use.
+#
+# 			Its behavior can change without notice between MySQL versions.
+#
+# 			It can be used for testing and debugging of collations, especially
+# 			if you are adding a new collation.
+#
+# 			See SECTION 10.13, "ADDING A COLLATION TO A CHARACTER SET"
+#
+# 			This list briefly summaries the arguments. More details are given in the discussion
+# 			following the list.
+#
+# 				) str: The input string expression
+#
+# 				) AS clause: Optional; cast the input string to a given type and length
+#
+# 				) flags: Optional; unused
+#
+# 			The input string, str, is a string expression.
+#
+# 			If the input is a nonbinary (character) string such as a CHAR, VARCHAR
+# 			or TEXT value, the return value contains the collation weights for the string.
+#
+# 			If the input is a binary (byte) string such as a BINARY, VARBINARY or BLOB value,
+# 			the return value is the same as the input (the weight for each byte in a binary
+# 			string is the byte value)
+#
+# 			If the input is NULL, WEIGHT_STRING() returns NULL.
+#
+# 			Examples:
+#
+# 				SET @s = _utf8mb4 'AB' COLLATE utf8mb4_0900_ai_ci;
+# 				SELECT @s, HEX(@s), HEX(WEIGHT_STRING(@s));
+# 				+-----------+-------------+---------------------------+
+# 				| @s 			| HEX(@s) 	  | HEX(WEIGHT_STRING(@s)) 	|
+# 				+-----------+-------------+---------------------------+
+# 				| AB 			| 4142 		  | 1C471C60 						|
+# 				+-----------+-------------+---------------------------+
+#
+# 				SET @s = _utf8mb4 'ab' COLLATE utf8mb4_0900_ai_ci;
+# 				SELECT @s, HEX(@s), HEX(WEIGHT_STRING(@s));
+# 				+-----------+--------------+-------------------------+
+# 				| @s 			| HEX(@s) 		| HEX(WEIGHT_STRING(@s))  |
+# 				+-----------+--------------+-------------------------+
+# 				| ab 			| 6162 			| 1C471C60 					  |
+# 				+-----------+--------------+-------------------------+
+#
+# 				SET @s = CAST('AB' AS BINARY);
+# 				SELECT @s, HEX(@s), HEX(WEIGHT_STRING(@s));
+# 				+-----------+--------------+--------------------------+
+# 				| @s 			| HEX(@s) 		| HEX(WEIGHT_STRING(@s)) 	|
+# 				+-----------+--------------+--------------------------+
+# 				| AB 			| 4142 			| 4142 							|
+# 				+-----------+--------------+--------------------------+
+#
+# 				SET @s = CAST('ab' AS BINARY);
+# 				SELECT @s, HEX(@s), HEX(WEIGHT_STRING(@s));
+# 				+----------+---------------+--------------------------+
+# 				| @s 		  | HEX(@s) 		| HEX(WEIGHT_STRING(@s))   |
+# 				+----------+---------------+--------------------------+
+# 				| ab 		  | 6162 			| 6162 							|
+# 				+----------+---------------+--------------------------+
+#
+# 			The preceding examples use HEX() to display the WEIGHT_STRING() result.
+#
+# 			Because the result is a binary value, HEX() can be especially useful when
+# 			the result contains nonprinting values, to display it in printable form:
+#
+# 				SET @s = CONVERT(X'C39F' USING utf8) COLLATE utf8_czech_ci;
+# 				SELECT HEX(WEIGHT_STRING(@s));
+# 				+-----------------------------+
+# 				| HEX(WEIGHT_STRING(@s)) 		|
+# 				+-----------------------------+
+# 				| 0FEA0FEA 							|
+# 				+-----------------------------+
+#
+# 			For non-NULL return values, the data type of the value is VARBINARY if its
+# 			length is within the maximum length for VARBINARY, otherwise the data type
+# 			is BLOB.
+#
+# 			The AS clause may be given to cast the input string to a nonbinary or binary string
+# 			and to force it to a given length:
+#
+# 				) AS CHAR(N) casts the string to a nonbinary string and pads it on the right with spaces
+# 					to a length of N characters.
+#
+# 					N must be at least 1. 
+#
+# 					If N is less than the length of the input string, the string is truncated
+# 					to N characters.
+#
+# 					No warning occurs for truncation.
+#
+# 				) AS BINARY(N) is similar but casts the string to a binary string, N is measured
+# 					in bytes (not characters), and padding uses 0x00 bytes (not spaces)
+#
+# 					SET NAMES 'latin1';
+# 					SELECT HEX(WEIGHT_STRING('ab' AS CHAR(4)));
+# 					+------------------------------------------+
+# 					| HEX(WEIGHT_STRING('ab' AS CHAR(4))) 		 |
+# 					+------------------------------------------+
+# 					| 41422020 											 |
+# 					+------------------------------------------+
+#
+# 					SET NAMES 'utf8';
+# 					SELECT HEX(WEIGHT_STRING('ab' AS CHAR(4)));
+# 					+---------------------------------------+
+# 					| HEX(WEIGHT_STRING('ab' AS CHAR(4))) 	 |
+# 					+---------------------------------------+
+# 					| 0041004200200020 							 |
+# 					+---------------------------------------+
+#
+# 					SELECT HEX(WEIGHT_STRING('ab' AS BINARY(4)));
+# 					+---------------------------------------+
+# 					| HEX(WEIGHT_STRING('ab' AS BINARY(4))) |
+# 					+---------------------------------------+
+# 					| 61620000 										 |
+# 					+---------------------------------------+
+#
+# 			The flags clause currently is unused.
+#
+# 12.5.1 STRING COMPARISON FUNCTIONS
+#
+# TABLE 12.8 STRING COMPARISON OPERATORS
+#
+# 		NAME 				Description
+#
+# 		LIKE 				Simple pattern matching
+#
+# 		NOT_LIKE 		Negation of simple pattern matching
+#
+# 		STRCMP() 		Compare two strings
+#
+# If a string function is given a binary string as an argument, the resulting string
+# is also a binary string.
+#
+# A number converted to a string is treated as a bianry string.
+#
+# This affects only comparisons.
+#
+# Normally, if any expression in a string comparison is  case sensitive, the comparison
+# is performed in case-sensitive fashion.
+#
+# 		) expr_LIKE_pat_[ESCAPE_'escape char']
+#
+# 			Pattern matching using an SQL pattern.
+#
+# 			Returns 1 (TRUE) or 0 (FALSE). If either expr or pat is NULL, the result is NULL.
+#
+# 			The pattern need not be a literal string.
+#
+# 			For example, it can be specified as a string expression or table column.
+#
+# 			Per the SQL standard, LIKE performs matching on a per-character basis,
+# 			thus it can produce results different from the = comparison operator:
+#
+# 				SELECT 'ä' LIKE 'ae' COLLATE latin1_german2_ci;
+#
+# 				+----------------------------------------------+
+# 				| 'ä' LIKE 'ae' COLLATE latin1_german2_ci 	  |
+# 				+----------------------------------------------+
+# 				| 											0 				  |
+# 				+----------------------------------------------+
+#
+# 				SELECT 'ä' = 'ae' COLLATE latin1_german2_ci;
+# 				+----------------------------------------------+
+# 				| 'ä' = 'ae' COLLATE latin1_german2_ci 		  |
+# 				+----------------------------------------------+
+# 				| 								1 							  |
+# 				+----------------------------------------------+
+#
+# 			In particular, trailing spaces are significant, which is not true
+# 			for CHAR or VARCHAR comparisons performed with the = operator:
+#
+# 				SELECT 'a' = 'a ', 'a' LIKE 'a ';
+# 				+-----------------+-----------------+
+# 				| 'a' = 'a ' 		| 'a' LIKE 'a ' 	|
+# 				+-----------------+-----------------+
+# 				| 			1 			| 0 					|
+# 				+-----------------+-----------------+
+# 				1 row in set (0.00 sec)
+#
+# 			With LIKE you can use the following two wildcard characters
+# 			in the pattern:
+#
+# 				) % matches any number of characters, even zero characters
+#
+# 				) _ matches exactly one character
+#
+# 					SELECT 'David!' LIKE 'David_';
+# 						-> 1
+#
+# 					SELECT 'David!' LIKE '%D%v%';
+# 						-> 1
+#
+# 			To test for literal instances of a wildcard character, precede it
+# 			by the escape character.
+#
+# 			If you do not specify the ESCAPE character, \ is assumed.
+#
+# 				) \% matches one % character
+#
+# 				) \_ matches one _ character.
+#
+# 					SELECT 'David!' LIKE 'David\_';
+# 						-> 0
+#
+# 					SELECT 'David_' LIKE 'David\_';
+# 						-> 1
+#
+# 			To specify a different escape character, use the ESCAPE clause:
+#
+# 				SELECT 'David_' LIKE 'David|_' ESCAPE '|';
+# 					-> 1
+#
+# 			The escape sequence should be empty or one character long.
+#
+# 			The expression must evaluate as a constant at execution time.
+#
+# 			If the NO_BACKSLASH_ESCAPES SQL mode is enabled, the sequence cannot be empty.
+#
+# 			The following two statements illustrate that string comparisons are not case-sensitive
+# 			unless one of the operands is case-sensitive (uses a case-sensitive collation or is
+# 			a binary string):
+#
+# 				SELECT 'abc' LIKE 'ABC';
+# 					-> 1
+#
+# 				SELECT 'abc' LIKE _utf8mb4 'ABC' COLLATE utf8mb4_0900_as_cs;
+# 					-> 0
+#
+# 				SELECT 'abc' LIKE _utf8mb4 'ABC' COLLATE utf8mb4_bin;
+# 					-> 0
+#
+# 				SELECT 'abc' LIKE BINARY 'ABC';
+# 					-> 0
+#
+# 			As an extension to standard SQL, MySQL permits LIKE on numeric expressions.
+#
+# 				SELECT 10 LIKE '1%';
+# 					-> 1
+#
+# 			NOTE:
+#
+# 				Because MySQL uses C escape syntax in strings (for example, \n to represent newline chars),
+# 				you must doubvle any \ that you use in LIKE strings.
+#
+# 				For example, to search for \n, specify it as \\n.
+#
+# 				To search for \, specify it as \\\\; this is because the backslashes
+# 				are strippedo nce by the parser, and again when the pattern match is made, leaving
+# 				a single one to be matched against.
+#
+# 				Exception:
+#
+# 					At the end of the pattern string, backslash can be specified as \\.
+#
+# 					At the end of the string, backslash stands for itself because there is
+# 					nothing following to escape.
+#
+# 					Suppose that a table contains the following values:
+#
+# 						SELECT filename FROM t1;
+# 						+--------------------+
+# 						| filename 				|
+# 						+--------------------+
+# 						| C: 						|
+# 						| C:\ 					|
+# 						| C:\Programs 			|
+# 						| C:\Programs\ 		|
+# 						+--------------------+
+#
+# 					TO test for values that end with backslash, you can match the values
+# 					using either of the following patterns:
+#
+# 						SELECT filename, filename LIKE '%\\' FROM t1;
+# 						+--------------+------------------------------+
+# 						| filename 		| filename LIKE '%\\' 			 |
+# 						+--------------+------------------------------+
+# 						| C: 				| 							0 			 |
+# 						| C:\ 			| 							1 			 |
+# 						| C:\Programs  | 							0 			 |
+# 						| C:\Programs\ | 							1 			 |
+# 						+--------------+------------------------------+
+#
+# 						SELECT filename, filename LIKE '%\\\\' FROM t1;
+# 						+---------------+------------------------------+
+# 						| filename 		 | filename LIKE '%\\\\' 		  |
+# 						+---------------+------------------------------+
+# 						| C: 				 | 						0 			  |
+# 						| C:\ 			 | 						1 			  |
+# 						| C:\Programs 	 | 						0 			  |
+# 						| C:\Programs\  | 						1 			  |
+# 						+---------------+------------------------------+
+#
+# 		) expr_NOT_LIKE_pat_[ESCAPE_'escape_char']
+#
+# 			This is the same as NOT (expr LIKE pat [ESCAPE 'escape_char'])
+#
+# 			Note:
+#
+# 				Aggregate queries involving NOT_LIKE comparisons with columns containing
+# 				NULL may yield unexpected results.
+#
+# 				For example, consider the following table and data:
+#
+# 					CREATE TABLE foo (bar VARCHAR(10));
+#
+# 					INSERT INTO foo VALUES (NULL), (NULL);
+#
+# 				The query SELECT COUNT(*) FROM foo WHERE bar LIKE '%baz%'; returns 0.
+#
+# 				You might assume that the SELECT COUNT(*) FROM foo WHERE bar NOT LIKE '%baz%';
+# 				would return 2.
+#
+# 				However, this is not the case; the second query returns 0.
+#
+# 				This is because NULL NOT LIKE expr always returns NULL, regardless of the value
+# 				of expr.
+#
+# 				The same is true for aggregate queries involving NULL and comparisons using NOT_RLIKE
+# 				or NOT_REGEXP.
+#
+# 				In such cases, you must test explicitly for NOT NULL using OR (and not AND),
+# 				as shown here:
+#
+# 					SELECT COUNT(*) FROM foo WHERE bar NOT LIKE '%baz%' OR bar IS NULL;
+#
+# 		) STRCMP(expr1, expr2)
+#
+# 			STRCMP() returns 0 if the strings are the same, -1 if the first argument is smaller
+# 			than the second according to the current sort order, and 1 otherwise.
+#
+# 				SELECT STRCMP('text', 'text2');
+# 					-> -1
+#
+# 				SELECT STRCMP('text2', 'text');
+# 					-> 1
+#
+# 				SELECT STRCMP('text', 'text');
+# 					-> 0
+#
+# 			STRCMP() performs the comparison using the collation of the arguments.
+#
+# 				SET @s1 = _utf8mb4 'x' COLLATE utf8mb4_0900_ai_ci;
+# 				SET @s2 = _utf8mb4 'X' COLLATE utf8mb4_0900_ai_ci;
+#
+# 				SET @s3 = _utf8mb4 'x' COLLATE utf8mb4_0900_as_cs;
+# 				SET @s4 = _utf8mb4 'X' COLLATE utf8mb4_0900_as_cs;
+# 			
+# 				SELECT STRCMP(@s1, @s2), STRCMP(@s3, @s4);
+# 				+--------------------+----------------------+
+# 				| STRCMP(@s1, @s2) 	| STRCMP(@s3, @s4) 	  |
+# 				+--------------------+----------------------+
+# 				| 				0 			| 			1 				  |
+# 				+--------------------+----------------------+
+#
+# 			If hte collations are incompatible, one of the arguments must be converted to be
+# 			compatible with the other.
+#
+# 			See SECTION 10.8.4, "COLLATION COERCIBILITY IN EXPRESSIONS"
+#
+# 				SET @s1 = _utf8mb4 'x' COLLATE utf8mb4_0900_ai_ci;
+# 				SET @s2 = _utf8mb4 'X' COLLATE utf8mb4_0900_ai_ci;
+#
+# 				SET @s3 = _utf8mb4 'x' COLLATE utf8mb4_0900_as_cs;
+# 				SET @s4 = _utf8mb4 'X' COLLATE utf8mb4_0900_as_cs;
+#
+# 				SELECT STRCMP(@s1, @s3);
+# 				ERROR 1267 (HY000): Illegal mix of collations (utf8mb4_0900_ai_ci, IMPLICIT)
+# 				and (utf8mb4_0900_as_cs, IMPLICIT) for operation 'strcmp'
+#
+# 				SELECT STRCMP(@s1, @s3 COLLATE utf8mb4_0900_ai_ci);
+# 				+--------------------------------------------------+
+# 				| STRCMP(@s1, @s3 COLLATE utf8mb4_0900_ai_ci) 		|
+# 				+--------------------------------------------------+
+# 				| 													0 				|
+# 				+--------------------------------------------------+
+#
+# 12.5.2 REGULAR EXPRESSIONS
+#
+# TABLE 12.9 REGULAR EXPRESSION FUNCTIONS AND OPERATORS
+#
+# NAME 					DESCRIPTION
+#
+# NOT_REGEXP 			Negation of REGEXP
+#
+# REGEXP 				Whether string matches regular expression
+#
+# REGEXP_INSTR() 		Starting index of substring matching regular expression
+#
+# REGEXP_LIKE() 		Whether string matches regular expression
+#
+# REGEXP_REPLACE() 	Replace substrings matching regular expression
+#
+# REGEXP_SUBSTR() 	Return substring matching regular expression
+#
+# RLIKE 					Whether string matches regular expression
+#
+# A regular expression is a powerful way of specifying a pattern for a complex search.
+#
+# This section discusses the functions and operators available for regular expression
+# matching and illustrates, with examples, some of the special characters and constructs
+# that can be used for regular expression operations.
+#
+# See also SECTION 3.3.4.7, "PATTERN MATCHING"
+#
+# MySQL implements regular expression support using international Components for Unicode
+# (ICU), which provides full Unicode support and is multibyte safe.
+#
+# (Prior to MySQL 8.0.4, MySQL used Henry Spencer's implementation of regex, which operates
+# in byte-wise fashion and is not multibyte safe.
+#
+# For information about ways in which applications that use regex may be affected by the
+# implementation change, see REGULAR EXPRESSION COMPATBILITY CONSIDERATIONS)
+#
+# 		) REGULAR EXPRESSION FUNCTIONS AND OPERATORS
+#
+# 		) REGULAR EXPRESSION SYNTAX
+#
+# 		) REGULAR EXPRESSION RESOURCE CONTROL
+#
+# 		) REGULAR EXPRESSION COMPATIBILITY CONSIDERATIONS
+#
+# REGULAR EXPRESSION FUNCTIONS AND OPERATORS
+#
+# 	) expr_NOT_REGEXP_pat, expr_NOT_RLIKE_pat
+#
+# 		This is the same as NOT (expr REGEXP pat)
+#
+# 	) expr_REGEXP_pat, expr_RLIKE_pat
+#
+# 		Returns 1 if the string expr matches the regular expression specified by the 
+# 		pattern pat, 0 otherwise.
+#
+# 		If expr or pat is NULL, the return value is NULL.
+#
+# 		REGEXP and RLIKE are synonyms for REGEXP_LIKE()
+#
+# 		For additional information about how matching occurs, see the description
+# 		for REGEXP_LIKE()
+#
+# 			SELECT 'Michael!' REGEXP '.*';
+# 			+-------------------------------+
+# 			| 'Michael!' REGEXP '.*' 		  |
+# 			+-------------------------------+
+# 			| 						1 				  |
+# 			+-------------------------------+
+#
+# 			SELECT 'new*\n*line' REGEXP 'new\\*.\\*line';
+# 			+-----------------------------------------+
+# 			| 'new*\n*line' REGEXP 'new\\*.\\*line'   |
+# 			+-----------------------------------------+
+# 			| 						0 								|
+# 			+-----------------------------------------+
+#
+# 			SELECT 'a' REGEXP '^[a-d]';
+# 			+-------------------------+
+# 			| 'a' REGEXP '^[a-d]' 	  |
+# 			+-------------------------+
+# 			| 						1 		  |
+# 			+-------------------------+
+#
+# 			SELECT 'a' REGEXP 'A', 'a' REGEXP BINARY 'A';
+# 			+-----------------+-----------------------+
+# 			| 'a' REGEXP 'A' 	| 'a' REGEXP BINARY 'A' |
+# 			+-----------------+-----------------------+
+# 			| 			1 			| 				0 				|
+# 			+-----------------+-----------------------+
+#
+# 	) REGEXP_INSTR(expr, pat[, pos[, occurence[, return option[, match type]]]])
+#
+# 		Returns the starting index of the substring of the string expr that matches the regular expression
+# 		specified by the pattern pat, 0 if there is no match.
+#
+# 		If expr 0 or pat is NULL, the return value is NULL. Character index begin at 1.
+#
+# 		REGEXP_INSTR() takes these optional arguments:
+#
+# 			) pos: The position in expr at which to start the search. If omitted, the default is 1.
+#
+# 			) occurence: Which occurence of a match to search for. If omitted, the default is 1.
+#
+# 			) return_option: Which type of position to return.
+#
+# 				If this value is 0, REGEXP_INSTR() returns the position of the matched substring's
+# 				first character.
+#
+# 				If this value is 1, REGEXP_INSTR() returns the position following the matched substring.
+#
+# 				If omitted, the default is 0
+#
+# 			) match_type: A string that specifies how to perform matching.
+#
+# 				The meaning is as described for REGEXP_LIKE()
+#
+# 		For additional information about how matching occurs, see the description for
+# 		REGEXP_LIKE()
+#
+# 			SELECT REGEXP_INSTR('dog cat dog', 'dog');
+# 			+-----------------------------------------+
+# 			| REGEXP_INSTR('dog cat dog', 'dog') 	   |
+# 			+-----------------------------------------+
+# 			|								1 					   |
+# 			+-----------------------------------------+
+#
+# 			SELECT REGEXP_INSTR('dog cat dog', 'dog', 2);
+# 			+-----------------------------------------+
+# 			| REGEXP_INSTR('dog cat dog', 'dog', 2)   |
+# 			+-----------------------------------------+
+# 			| 											9 		   |
+# 			+-----------------------------------------+
+#
+# 			SELECT REGEXP_INSTR('aa aaa aaaa', 'a{2}');
+# 			+-----------------------------------------+
+# 			| REGEXP_INSTR('aa aaa aaaa', 'a{2}') 		|
+# 			+-----------------------------------------+
+# 			| 											1 			|
+# 			+-----------------------------------------+
+#
+# 			SELECT REGEXP_INSTR('aa aaa aaaa', 'a{4}');
+# 			+-----------------------------------------+
+# 			| REGEXP_INSTR('aa aaa aaaa', 'a{4}') 		|
+# 			+-----------------------------------------+
+# 			| 										 	8 			|
+# 			+-----------------------------------------+
+#
+# 	) REGEXP_LIKE(expr, pat[, match type])
+#
+# 		Returns 1 if the string expr matches the regular expression specified by the pattern
+# 		pat, 0 otherwise.
+#
+# 		If expr or pat is NULL, the return value is NULL.
+#
+# 		THe pattern can be an extended regular expression, the syntax for which is discussed
+# 		in REGULAR EXPRESSION SYNTAX.
+#
+# 		THe pattern need not be a literal string.
+#
+# 		For example, it can be specified as a string expression or table column.
+#
+# 		The optional match_type argument is a string that may contain any or all the
+# 		following characters specifying how to perform matching:
+#
+# 			) c: Case sensitive matching
+#
+# 			) i: Case insensitive matching
+#
+# 			) m: Multiple-line mode. Recognize line terminators within the string.
+#
+# 				The default behavior is to match line terminators only at the start
+# 				and end of the string expression.
+#
+# 			) n: The . character matches line terminators. The default is for . matching to stop at teh end of a line.
+#
+# 			) u: Unix-only line endings.
+#
+# 				Only the newline characters is recognized as a line ending by the ., ^, and $ match operators.
+#
+# 		If characters specifying contradictory options are specified within match_type, the rightmost one takes precedence.
+#
+# 		By default, regular expression operations use the character set and collation of the expr and pat arguments
+# 		when deciding the type of a character and performing the comparison.
+#
+# 		If the arguments have different character sets or collations, coercibility rules apply as described,
+# 		in SECTION 10.8.4, "COLLATION COERCIBILITY IN EXPRESSIONS"
+#
+# 		Arguments may be specified with explicit collation indicators to change comparison behavior.
+#
+# 			SELECT REGEXP_LIKE('CamelCase', 'CAMELCASE');
+# 			+--------------------------------------------+
+# 			| REGEXP_LIKE('CamelCase', 'CAMELCASE') 		|
+# 			+--------------------------------------------+
+# 			| 							1 							   |
+# 			+--------------------------------------------+
+#
+# 			SELECT REGEXP_LIKE('CamelCase', 'CAMELCASE' COLLATE utf8mb4_0900_as_cs);
+# 			+------------------------------------------------------------------+
+# 			| REGEXP_LIKE('CamelCase', 'CAMELCASE' COLLATE utf8mb4_0900_as_cs) |
+# 			+------------------------------------------------------------------+
+# 			| 											0 											 |
+# 			+------------------------------------------------------------------+
+#
+# 		match_type may be specified with the c or i characters to override the default
+# 		case sensitivity.
+#
+# 		Exception: If either argument is a binary string, the arguments are handled in case-sensitive
+# 						fashion as binary strings, even if match_type contains the i character.
+#
+# 		NOTE:
+#
+# 			Because MySQL uses the C escape syntax in strings (for example, \n to represent the newline character),
+# 			you must double any \ that you use in your expr and pat arguments.
+#
+# 			SELECT REGEXP_LIKE('Michael!', '.*');
+# 			+------------------------------------+
+# 			| REGEXP_lIKE('Michael!', '.*') 		 |
+# 			+------------------------------------+
+# 			| 						1 						 |
+# 			+------------------------------------+
+#
+# 			SELECT REGEXP_LIKE('new*\n*line', 'new\\*.\\*line');
+# 			+------------------------------------------------+
+# 			| REGEXP_LIKE('new*\n*line', 'new\\*.\\*line')   |
+# 			+------------------------------------------------+
+# 			| 								0 								 |
+# 			+------------------------------------------------+
+#
+# 			SELECT REGEXP_LIKE('a', '^[a-d]');
+# 			+-----------------------------------+
+# 			| REGEXP_LIKE('a', '^[a-d]') 			|
+# 			+-----------------------------------+
+# 			| 						1 						|
+# 			+-----------------------------------+
+#
+# 			SELECT REGEXP_LIKE('a', 'A'), REGEXP_LIKE('a', BINARY 'A');
+# 			+-------------------------+------------------------------+
+# 			| REGEXP_LIKE('a', 'A')   | REGEXP_lIKE('a', BINARY 'A') |
+# 			+-------------------------+------------------------------+
+# 			| 					1 			  |  				0 						|
+# 			+-------------------------+------------------------------+
+#
+# 			SELECT REGEXP_LIKE('abc', 'ABC');
+# 			+-----------------------------------+
+# 			| REGEXP_LIKE('abc', 'ABC') 			|
+# 			+-----------------------------------+
+# 			|  				1 							|
+# 			+-----------------------------------+
+#
+# 			SELECT REGEXP_LIKE('abc', 'ABC', 'c');
+# 			+-----------------------------------+
+# 			| REGEXP_LIKE('abc', 'ABC', 'c') 	|
+# 			+-----------------------------------+
+# 			| 					0 						   |
+# 			+-----------------------------------+
+#
+# 	) REGEXP_REPLACE(expr, pat, repl[, pos[, occurence[, match_type]]])
+#
+# 		Replaces occurences in the string expr that match the regular expression
+# 		specified by the pattern pat with the replacement string repl, and returns the
+# 		resulting string.
+#
+# 		If expr, pat, or repl is NULL, the return value is NULL.
+#
+# 		REGEXP_REPLACE() takes these optional arguments:
+#
+# 			) pos: The position in expr at which to start the search. If omitted, the default is 1.
+#
+# 			) occurence: Which occurence of a match to replace.
+#
+# 							If omitted, the default is 0 (which means "replace all occurences")
+#
+# 			) match_type: A string that specifies how to perform matching.
+#
+# 							 The meaning is as described for REGEXP_LIKE()
+#
+# 		For additional information about how matching occurs, see the description for REGEXP_LIKE()
+#
+# 			SELECT REGEXP_REPLACE('a b c', 'b', 'X');
+# 			+-------------------------------------------+
+# 			| REGEXP_REPLACE('a b c', 'b', 'X') 		  |
+# 			+-------------------------------------------+
+# 			| a X c 												  |
+# 			+-------------------------------------------+
+#
+# 			SELECT REGEXP_REPLACE('abc def ghi', '[a-z]+', 'X', 1, 3); #Replace the third occurence
+# 			+---------------------------------------------------+
+# 			| REGEXP_REPLACE('abc def ghi', '[a-z]+', 'X', 1, 3 |
+# 			+---------------------------------------------------+
+# 			| abc def X 													 | 
+# 			+---------------------------------------------------+
+#
+# 	) REGEXP_SUBSTR(expr, pat[, pos[, occurence[, match type]]])
+#
+# 		Returns hte substring of the string expr that matches the regular expression specified
+# 		by the pattern pat, NULL if there is no match.
+#
+# 		If expr or pat is NULL, the return value is NULL
+#
+# 		REGEXP_SUBSTR() takes these optional arguments:
+#
+# 			) pos: The position in expr at which to start the search. If omitted, the default is 1.
+#
+# 			) occurence: Which occurence of a match to search for. If omitted, the default is 1.
+#
+# 			) match_type: A string that specifies how to perform matching. The meaning is as described for REGEXP_LIKE()
+#
+# 		For additional information about how matching occurs, see the description for REGEXP_LIKE()
+#
+# 			SELECT REGEXP_SUBSTR('abc def ghi', '[a-z]+');
+# 			+-----------------------------------------------+
+# 			| REGEXP_SUBSTR('abc def ghi', '[a-z]+') 			|
+# 			+-----------------------------------------------+
+# 			| abc 														|
+# 			+-----------------------------------------------+
+#
+# 			SELECT REGEXP_SUBSTR('abc def ghi', '[a-z]+', 1, 3);
+# 			+------------------------------------------------+
+# 			| REGEXP_SUBSTR('abc def ghi', '[a-z]+', 1, 3) 	 |
+# 			+------------------------------------------------+
+# 			| ghi 														 |
+# 			+------------------------------------------------+
+#
+# REGULAR EXPRESSION SYNTAX
+#
+# A regular expression describes a set of strings.
+#
+# THe simplest regular expression is one that has no special characters in it.
+#
+# For example, the regular expression hello matches hello and nothing else.
+#
+# Nontrivial regular expressions use certain special constructs so that they can match
+# more than one string.
+#
+# For example, the regular expression hello|world contains the | alternation operator
+# and matches either the hello or world
+#
+# As a more complex example, the regular expression B[an]*s matches any of the strings:
+#
+# 		Bananas
+#
+# 		Baaaaas
+#
+# 		Bs
+#
+# and any other string starting with a B, ending with an s and containing any number
+# of a or n characters in between.
+#
+# The following list covers some of the basic special characters and constructs that can be
+# used in regular expressions.
+#
+# For information about the full regular expression syntax supported by the ICU library used
+# to implement regular expression support, visit the <link>
+#
+# 		) ^
+#
+# 			Match the beginning of a string.
+#
+# 			SELECT REGEXP_LIKE('fo\nfo', '^fo$'); 		-> 0
+# 			SELECT REGEXP_LIKE('fofo', '^fo'); 			-> 1
+#
+# 		) $
+#
+# 			Match the end of a string
+#
+# 				SELECT REGEXP_LIKE('fo\no', '^fo\no$'); 	-> 1
+# 				SELECT REGEXP_LIKE('fo\no', '^fo$'); 		-> 0
+#
+# 			
+# 		) .
+#
+# 			Match any character (including carriage return and newline, although to match these
+# 			in the middle of a string, the m (multiple line) match-control character or the
+# 			(?m) within-pattern modifier must be given)
+#
+# 			SELECT REGEXP_LIKE('fofo', '^f.*$'); 		-> 1
+# 			SELECT REGEXP_LIKE('fo\r\nfo', '^f.*$');  -> 0
+#
+# 			SELECT REGEXP_LIKE('fo\r\nfo', '^f.*$', 'm'); -> 1
+#
+# 			SELECT REGEXP_LIKE('fo\r\nfo', '(?m)^f.*$');  -> 1
+#
+# 		) a* 
+#
+# 			Match any sequence of zero or more a characters.
+#
+# 				SELECT REGEXP_LIKE('Ban', '^Ba*n'); 		-> 1
+#
+# 				SELECT REGEXP_LIKE('Baaan', '^Ba*n'); -> 1
+#
+# 				SELECT REGEXP_LIKE('Bn', '^Ba*n'); 	-> 1
+#
+# 		) a+
+#
+# 			Match any sequence of one or more a characters
+#
+# 				SELECT REGEXP_LIKE('Ban', '^Ba+n'); 	-> 1
+# 				SELECT REGEXP_LIKE('Bn', '^Ba+n'); 		-> 0
+#
+# 		) a?
+#
+# 			Match either zero or one a character
+#
+# 				SELECT REGEXP_LIKE('Bn', '^Ba?n'); 		-> 1
+# 				SELECT REGEXP_LIKE('Ban', '^Ba?n'); 	-> 1
+# 				SELECT REGEXP_LIKE('Baan', '^Ba?n'); 	-> 0
+#
+# 		) de|abc
+#
+# 			Alternation; match either of the sequences de or abc
+#
+# 				SELECT REGEXP_LIKE('pi', 'pi|apa'); -> 1
+# 				SELECT REGEXP_LIKE('axe', 'pi|apa'); -> 0
+#
+# 				SELECT REGEXP_LIKE('apa', 'pi|apa'); -> 1
+# 				SELECT REGEXP_LIKE('apa', '^(pi|apa)$'); -> 1
+#
+# 				SELECT REGEXP_LIKE('pi', '^(pi|apa)$'); -> 1
+#
+# 				SELECT REGEXP_LIKE('pix', '^(pi|apa)$'); ->
+#
+# 		) (abc)*
+#
+# 			Match zero or more instances of the sequence abc
+#
+# 				SELECT REGEXP_LIKE('pi', '^(pi)*$'); -> 1
+#
+# 				SELECT REGEXP_LIKE('pip', '^(pi)*$'); -> 0
+#
+# 				SELECT REGEXP_LIKE('pipi', '^(pi)*$'); -> 1
+#
+# 		) {1}, {2,3}
+#
+# 			Repetition; {n} and {m,n} notation provide a more general way of writing
+# 			regular expressions that match many occurences of the previous atom (or "Piece")
+# 			of the pattern.
+#
+# 			m and n are integers.
+#
+# 				) a*
+#
+# 					Can be written as a{0,}
+#
+# 				) a+
+#
+# 					Can be written as a{1,}
+#
+# 				) a?
+#
+# 					Can be written as a{0,1}
+#
+# 			TO be more precise, a{n} matches exactly n instances of a.
+#
+# 			a{n,} matches n or more instances of a
+#
+# 			a{m,n} matches m through n instances of a, inclusive.
+#
+# 			If both m and n are given, m must be less than or equal to n.
+#
+# 				SELECT REGEXP_LIKE('abcde', 'a[bcd]{2}e'); 	-> 0  
+#
+# 				SELECT REGEXP_LIKE('abcde', 'a[bcd]{3}e'); 	-> 1
+# 
+# 				SELECT REGEXP_LIKE('abcde', 'a[bcd]{1,10}e'); -> 1
+#
+# 		) [a-dX], [^a-dX]
+#
+# 			Matches any character that is (or is not, if ^ is used) either a, b, c, d or X.
+#
+# 			A - character between two other characters forms a range that matches all characters
+# 			from the first character to the second.
+#
+# 			For example, [0-9] matches any decimal digit.
+#
+# 			To include a literal ] character, it must immediately follow the opening bracket [.
+#
+# 			To include a literal - character, it must be written first or last.
+#
+# 			Any character that does not have a defined special meaining inside a [] pair matches
+# 			only itself.
+#
+# 				SELECT REGEXP_LIKE('aXbc', '[a-dXYZ]'); 		-> 1
+# 				
+# 				SELECT REGEXP_LIKE('aXbc', '^[a-dXYZ]$'); 	-> 0
+#
+# 				SELECT REGEXP_LIKE('aXbc', '^[a-dXYZ]+$'); 	-> 1
+#
+# 				SELECT REGEXP_LIKE('aXbc', '^[^a-dXYZ]+$');  -> 0
+#
+# 				SELECT REGEXP_LIKE('gheis', '^[^a-dXYZ]+$'); -> 1
+#
+# 				SELECT REGEXP_LIKE('gheisa', '^[^a-dXYZ]+$'); -> 0
+#
+# 		) [=character_class=]
+#
+# 			Within a bracket expression (written using [ and ]), [=character_class=] represents
+# 			an equivalence class.
+#
+# 			It matches all characters with the same collation value, including itself.
+#
+# 			For example, if o and (+) are the members of an equivalence class, [[=o=]],
+# 			[[=(+)=]], and [o(+)] are all synonyms.
+#
+# 			An equivalence class may not be used as an endpoint of a range.
+#
+# 		) [:character_class:]
+#
+# 			Within a bracket expression (written using [ and ]), [:character_class:] represents
+# 			a character class that matches all characters belonging to that class.
+#
+# 			The following table lists the standard class names.
+#
+# 			These names stand for the character classes defined in the ctype(3) manual page.
+#
+# 			A particular locale may provide other class names.
+#
+# 			A character class may not be used as an endpoint of a range.
+#
+# 			CHARACTER CLASS NAME 			MEANING
+#
+# 			alnum 								Alphanumeric characters
+#
+# 			alpha 								Alphabetic characters
+#
+# 			blank 								Whitespace characters
+#
+# 			cntrl 								Control characters
+#
+# 			digit 								Digit characters
+#
+# 			graph 								Graphic characters
+#
+# 			lower 								Lowercase alphabetic characters
+#
+# 			print 								Graphic or space characters
+#
+# 			punct 								Punctuation characters
+#
+# 			space 								Space, tab, newline and carriage return
+#
+# 			upper 								Uppercase alphabetic characters
+#
+# 			xdigit 								Hexadecimal digit characters
+#
+# 				SELECT REGEXP_LIKE('justalnums', '[[:alnum:]]+');  -> 1
+#
+# 				SELECT REGEXP_LIKE('!!', '[[:alnum:]]+'); 			-> 0
+#
+# 		To use a literal instance of a special character in a regular expression, precede it by two
+# 		backslash (\) characters.
+#
+# 		The MySQL parser interpets one of the backslashes, and the regular expression library interprets
+# 		the other.
+#
+# 		For example, to match the string 1+2 taht contains the special + character, only the last one
+# 		of the following regular expressions is the correct one:
+#
+# 			SELECT REGEXP_LIKE('1+2', '1+2'); 		-> 0
+# 			SELECT REGEXP_LIKE('1+2', '1\+2'); 		-> 0
+#
+# 			SELECT REGEXP_LIKE('1+2', '1\\+2'); 	-> 1
+#
+# REGULAR EXPRESSION RESOURCE CONTROL
+#
+# REGEXP_LIKE() and similar functions use resources that can be controlled by setting system variables:
+#
+# 		) The match engine uses memory for its internal stack.
+#
+# 			To control the maximum available memory for the stack in bytes,
+# 			set the regexp_stack_limit system variable.
+#
+# 		) The match engine operates in steps.
+#
+# 			To control the maximum number of steps performed by the engine (and thus indirectly
+# 			the execution time), set the regexp_time_limit system variable.
+#
+# 			Because this limit is expressed as number of steps, it affects execution time only indirectly.
+#
+# 			Typically, it is on the order of milliseconds.
+#
+# REGULAR EXPRESSION COMPATIBILITY CONSIDERATIONS
+#
+# Prior to MySQL 8.0.4, MySQL used the Henry Spencer regular expression library to support
+# regular expression operations, rather than International Components for Unicode (ICU).
+#
+# The following discussion describes differences between the Spencer and ICU libraries
+# that may affect applications:
+#
+# 		) With the Spencer library, the REGEXP and RLIKE operators work in byte-wise fashion,
+# 			so they are not multibyte safe and may produce unexpected results with multibyte
+# 			character sets.
+#
+# 			In addition, these operators compare characters by their byte values and accented characters
+# 			may not compare as equal even if a given collation treats them as equal.
+#
+# 			ICU has full Unicode support and is multibyte safe.
+#
+# 			Its regular expression functions treat all strings as UTF-16.
+#
+# 			You should keep in mind that positional indexes are based on 16-bit chunks and not
+# 			on code points.
+#
+# 			This means that, when passed to such functions, characters using more than one chunk
+# 			may produce unanticipated results, such as those shown here:
+#
+# 				SELECT REGEXP_INSTR('U+1F363U+1F363Ub', 'b');
+# 				+------------------------------------------+
+# 				| REGEXP_INSTR('??b', 'b') 					 |
+# 				+------------------------------------------+
+# 				| 											5 			 |
+# 				+------------------------------------------+
+# 				1 row in set (0.00 sec)
+#
+# 				SELECT REGEXP_INSTR('U+1F363U+1F363bxxx', 'b', 4);
+# 				+------------------------------------------+
+# 				| REGEXP_INSTR('??bxxx', 'b', 4) 			 |
+# 				+------------------------------------------+
+# 				| 										5 				 |
+# 				+------------------------------------------+
+# 				1 row in set (0.00 sec)
+#
+# 			Characters within the Unicode Basic Multilingual Plane, which includes
+# 			characters used by most modern languages, are safe in this regard:
+#
+# 				/* There are some examples here, but i cannot be arsed to handle outside of utf8 casing */
+#
+# 			Emoji, such as the "sushi" character (U+1F363) used in the first two examples,
+# 			are not included in the Basic Multilingual Plane, but rather in Unicode's Supplementary
+# 			Multilingual Plane.
+#
+# 			Another issue can arise with emoji and other 4-byte characters when REGEXP_SUBSTR()
+# 			or a similar function begins searching in the middle of a character.
+#
+# 			Each of the two statements in the following example starts from the second 2-byte position
+# 			in the first argument.
+#
+# 			The first statement works on a string consisting solely of 2-byte (BMP) characters.
+#
+# 			The second statement contains 4-byte characters which are incorrectly interpreted in
+# 			the result because the first two bytes are stripped off and so the remainder of
+# 			the character data is misaligned.
+#
+# 					SELECT REGEXP_SUBSTR('周周周周', '.*', 2);
+#					+------------------------------------------+
+# 					| REGEXP_SUBSTR('周周周周', '.*', 2) 		|
+# 					+------------------------------------------+
+# 					| 周周周 											 |
+# 					+------------------------------------------+
+# 					1 row in set (0.00 sec)
+# 
+# 					SELECT REGEXP_SUBSTR('🍣🍣🍣🍣', '.*', 2);
+# 					+------------------------------------------+
+# 					| REGEXP_SUBSTR('🍣🍣🍣🍣', '.*', 2) 		 |
+# 					+------------------------------------------+
+# 					| ?㳟揘㳟揘㳟揘  									 |
+# 					+------------------------------------------+
+# 					1 row in set (0.00 sec)
+#
+# 		) For the . operator, the Spencer library matches line-terminator characters (carriage return, newline)
+# 			anywhere in string expressions, including in the middle.
+#
+# 			To match line terminator characters in the middle of strings with ICU,
+# 			specify the m match-control character.
+#
+# 		) The Spencer Library supports word-beginning and word-end boundary markers ([[:<:]] and [[:>:]] notation)
+#
+# 			ICU does not.
+#
+# 			For ICU, you can use \b to match word boundaries;
+# 			double the backslash because MySQL interprets it as the escape character within strings.
+#
+# 		) THe Spencer library supports collating element bracket expressions ([.characters.] notation). ICU does not.
+#
+# 		) For repetition counts ({n} and {m,n} notation), the Spencer library has a maximum of 255.
+#
+# 			ICU has no such limit, although the maximum number of match engine steps can be limited by setting
+# 			the regexp_time_limit system variable.
+#
+# 		) ICU interprets parantheses as metacharacters.
+#
+# 			To specify a literal open parenthesis ( in a regular expression, it must be escaped:
+#
+# 				SELECT REGEXP_LIKE('(', '(');
+# 				ERROR 3692 (HY000): Mismatched parenthesis in regular expression.
+#
+# 				SELECT REGEXP_LIKE('(', '\\(');
+# 				+------------------------------+
+# 				| REGEXP_LIKE('(', '\\(') 	    |
+# 				+------------------------------+
+# 				| 								1 		 |
+# 				+------------------------------+
+#
+# 12.5.3 CHARACTER SET AND COLLATION OF FUNCTION RESULTS
+#
+# MySQL has many operators and functions that return a string.
+#
+# This section answers the question: What is the character set and collation of such a string?
+#
+# For simple functions that take string input and return a string result as output, the output's
+# character set and collation are the same as those of the principal input value.
+#
+# For example, UPPER(X) returns a string with the same character string and collation as X.
+#
+# The same applies for INSTR(), LCASE(), LOWER(), LTRIM(), MID(), REPEAT(), REPLACE(),
+# 	REVERSE(), RIGHT(), RPAD(), RTRIM(), SOUNDEX(), SUBSTRING(), TRIM(), UCASE() and UPPER()
+#
+# 	NOTE:
+#
+# 		The REPLACE() function, unlike all other functions, always ignores the collation
+# 		of the string intput and performs a case-sensitive comparison.
+#
+# If a string input or function result is a binary string, the string has the binary character
+# set and collation.
+#
+# This can be checked using the CHARSET() and COLLATION() functions, both of which return
+# binary for a binary string argument:
+#
+# 		SELECT CHARSET(BINARY 'a'), COLLATION(BINARY 'a');
+# 		+-------------------------+------------------------+
+# 		| CHARSET(BINARY 'a')     | COLLATION(BINARY 'a')  |
+# 		+-------------------------+------------------------+
+# 		| binary 					  | binary 						|
+# 		+-------------------------+------------------------+
+#
+# For operations that combine multiple string inputs and return a single string output,
+# the "aggregation rules" of standard SQL apply for determining the collation of hte result:
+#
+# 		) If an explicit COLLATE Y occurs, use Y
+#
+# 		) If explicit COLLATE Y and COLLATE Z occur, raise an error
+#
+# 		) Otherwise, if all collations are Y, use Y
+#
+# 		) Otherwise, the result has no collation
+#
+# For example, with CASE_---_WHEN a THEN b WHEN b THEN c COLLATE X END the resulting collation is X.
+#
+# The same applies for UNION, ||, CONCAT(), ELT(), GREATEST(), IF() and LEAST()
+#
+# For operations that convert to character data, the character set and collation of the
+# strings that result from the operations are defined by the character_set_connection 
+# and collation_connection system variables that determine the default connection character set
+# and collation (see SECTION 10.4, "CONNECTION CHARACTER SETS AND COLLATIONS")
+#
+# This applies only to BIN_TO_UUID(), CAST(), CONV(), FORMAT(), HEX() and SPACE()
+#
+# An exception to the preceding principle occurs for expressions for virtual generated
+# columns.
+#
+# In such expressions, the table character set is used for BIN_TO_UUID(), CONV()
+# or HEX() results, regardless of connection character set.
+#
+# If there is any question about the character set or collation of the result
+# returned by a string function, use the CHARSET() or COLLATION() function to find out:
+#
+# 		SELECT USER(), CHARSET(USER()), COLLATION(USER());
+# 		+---------------+-----------------+--------------------+
+# 		| USER() 		 | CHARSET(USER()) | COLLATION(USER())  |
+# 		+---------------+-----------------+--------------------+
+# 		| test@localhost| utf8 				 | utf8_general_ci    |
+# 		+---------------+-----------------+--------------------+
+#
+# 		SELECT CHARSET(COMPRESS('abc')), COLLATION(COMPRESS('abc'));
+# 		+--------------------------+-----------------------------+
+# 		| CHARSET(COMPRESS('abc')) | COLLATION(COMPRESS('abc'))  |
+# 		+--------------------------+-----------------------------+
+# 		| binary 						| binary 							|
+# 		+--------------------------+-----------------------------+
+#
+# 12.6 NUMERIC FUNCTIONS AND OPERATORS
+#
+# 12.6.1 ARITHMETIC OPERATORS
+# 12.6.2 MATHEMATICAL FUNCTIONS
+#
+# TABLE 12.10 NUMERIC FUNCTIONS AND OPERATORS
+#
+# 	NAME 							DESC
+#
+# ABS() 				Return the absolute value
+#
+# ACOS() 			Return the arc cosine
+#
+# ASIN() 			Return the arc sine
+#
+# ATAN() 			Return the arc tangent
+#
+# ATAN2(), ATAN() Return the arc tangent of the two arguments
+#
+# CEIL() 			Return the smallest integer value not less than the argument
+#
+# CEILING() 		Return the smallest integer value not less than the argument
+#
+# CONV() 			Convert numbers between different number bases
+#
+# COS() 				Return the cosine
+#
+# COT() 				Return the cotangent
+#
+# CRC32() 			Compute a cyclic redundancy check value
+#
+# DEGREES() 		Convert radians to degrees
+#
+# DIV 				Integer division
+#
+# / 					Division operator
+#
+# EXP() 				Raise to the power of
+#
+# FLOOR() 			Return the largest integer value not greater than the argument
+#
+# LN() 				Return the natural logarithm of the argument
+#
+# LOG() 				Return the natural logarithm of the first argument
+#
+# LOG10() 			Return the base-10 logarithm of the argument
+#
+# LOG2() 			Return the base-2 logarithm of the argument
+#
+# - 					Minus operator
+#
+# MOD() 				Return the remainder
+#
+# %, MOD 			Modulo operator
+#
+# PI() 				Return the value of pi
+#
+# + 					Addition operator
+#
+# POW() 				Return the argument raised to the specified power
+#
+# POWER() 			Return the argument raised to the specified power
+#
+# RADIANS() 		Return argument converted to radians
+#
+# RAND() 			Return a random floating-point value
+#
+# ROUND() 			Round the argument
+#
+# SIGN() 			Return the sign of the argument
+#
+# SIN() 				Return the sine of the argument
+#
+# SQRT() 			Return the square root of the argument
+#
+# TAN() 				Return the tangent of the argument
+#
+# * 					Multiplication operator
+#
+# TRUNCATE() 		Truncate to specified number of decimal places
+#
+# - 					Change the sign of the argument
+#
+# 12.6.1 ARITHMETIC OPERATORS
+#
+# TABLE 12.11 ARITHMETIC OPERATORS
+#
+# NAME 			DESCRIPTION
+#
+# DIV 			Integer division
+#
+# / 				Division operator
+#
+# - 				Minus operator
+#
+# %, MOD 		Modulo operator
+#
+# + 				Addition operator
+#
+# * 				Multiplication operator
+#
+# - 				Change the sign of the argument
+#
+# The usual arithmetic operators are available.
+#
+# The result is determined according to the following rules:
+#
+# 		) In the case of -, +, and *, the result is calculated with BIGINT(64-bit) precision
+# 			if both operands are integers.
+#
+# 		) If both operands are integers and any of them are unsigned, the result is an unsigned integer.
+#
+# 			For subtraction, if the NO_UNSIGNED_SUBTRACTION SQL mode is enabled,
+# 			the result is signed even if any operand is unsigned.
+#
+# 		) If any of the operands of a +, -, /, *, % is a real or string value, the precision of the result
+# 			is the precision of the operand with the maximum precision.
+#
+# 		) In division performed with /, the scale of the result when using two exact-value operands
+# 			is the scale of the first operand plus the value of the div_precision_increment system
+# 			variable
+#
+# 			(which is 4 by default)
+#
+# 			For example, the result of the expression 5.05 / 0.014 has a scale of six decimal places
+# 			(360.714286)
+#
+# These rules are applied for each operation, such that nested calculations imply the precision
+# of each component.
+#
+# Hence, (14620 / 9432456) / (24250 / 9432456),
+# resolves first to (0.0014) / (0.0026), with the final result having 8 decimal places
+# (0.60288653)
+#
+# Because of these rules and the way they are applied, care should be taken to ensure that components
+# and subcomponents of a calculation use the appropriate level of precision.
+#
+# See SECTION 12.10, "CAST FUNCTIONS AND OPERATORS"
+#
+# For information about handling of overflow in numeric expression evaluation,
+# see SECTION 11.2.6, "OUT-OF-RANGE AND OVERFLOW HANDLING"
+#
+# Arithmetic operators apply to numbers.
+#
+# For other types of values, alternative operations may be available.
+#
+# For example, to add date values, use DATE_ADD(); see - SECTION 12.7, "DATE AND TIME FUNCTIONS"
+#
+# 		) +
+#
+# 			Addition:
+#
+# 				SELECT 3+5;
+# 					-> 8
+#
+# 		) -
+#
+# 			Subtraction:
+#
+# 				SELECT 3-5;
+# 					-> -2
+#
+# 		) -
+#
+# 			Unary minus. This operator changes the sign of the operand.
+#
+# 				SELECT - 2;
+# 					-> -2
+#
+# 			NOTE:
+#
+# 				If this operator is used with a BIGINT, the return value is also a BIGINT.
+#
+# 				This means that you should avoid using - on integers that may have the value
+# 				of -2^63
+#
+# 		) *
+#
+# 			Multiplication:
+#
+# 				SELECT 3*5;
+# 					-> 15
+# 				etc.
+#
+# 			In this example, under the etc., is an illustration of an out of range BIGINT error, because of too large sizing.
+# 	
+# 		) /
+#
+# 			Division:
+#
+# 				SELECT 3/5;
+# 					-> 0.60
+#
+# 			Division by zero produces a NULL result:
+#
+# 				SELECT 102/(1-1);
+# 					-> NULL
+#
+# 			A division is calculated with BIGINT arithmetic only if performed
+# 			in a context where its result is converted to an integer.
+#
+# 		) DIV
+#
+# 			Integer division.
+#
+# 			Discards from the division result any fractional part to the right of the decimal point.
+#
+# 			If either operand has a noninteger type, the operands are converted to DECIMAL and divided
+# 			using DECIMAL arithmetic before converting the result to BIGINT.
+#
+# 			If the result exceeds BIGINT range, again, an error.
+#
+# 				SELECT 5 DIV 2, -5 DIV 2, 5 DIV -2, -5 DIV -2;
+# 					-> 2, -2, -2, 2
+#
+# 		) N % M, N MOD M
+#
+# 			Modulo operation.
+#
+# 			Returns the remainder of N divided by M.
+#
+# 			For more information, see the description for the MOD() function
+# 			in SECTION 12.6.2, "MATHEMATICAL FUNCTIONS"
+#
+# 12.6.2 MATHEMATICAL FUNCTIONS
+#
+# TABLE 12.12 MATHEMATICAL FUNCTIONS
+#
+# NAME 			Desc
+#
+# ABS() 			Return the absolute value
+#
+# ACOS() 		Return the arc cosine
+#
+# ASIN() 		Return the arc sine
+#
+# ATAN() 		Return the arc tangent
+#
+# ATAN2(), 		Return the arc tangent of the two arguments
+# ATAN()
+#
+# CEIL() 		Return the smallest integer value not less than the argument
+#
+# CEILING() 	Return the smallest integer value not less than the argument
+#
+# CONV() 		Converts numbers between different number bases
+#
+# COS() 			Return the cosine
+#
+# COT() 			Return the cotangent
+#
+# CRC32() 		Compute a cyclic redundancy check value
+#
+# DEGREES() 	Convert radians to degrees
+#
+# EXP() 			Raise to the power of
+#
+# FLOOR() 		Return the largest integer value not greater than the argument
+#
+# LN() 			Return the natural logarithm of the argument
+#
+# LOG() 			Return the natural logarithm of the first argument
+#
+# LOG10() 		Returns the base-10 logarith mof the argument
+#
+# LOG2() 		Returns the base-2 logarith, of the argument
+#
+# MOD() 			Return the remainder
+#
+# PI() 			Return the value of pi
+#
+# POW() 			Return the argument raised to the specified power
+#
+# POWER() 		Return the argument raised to the specified power
+#
+# RADIANS() 	Return argument converted to radians
+#
+# RAND() 		Return a random floating-point value
+#
+# ROUND() 		Round the argument
+#
+# SIGN() 		Return the sign of the argument
+#
+# SIN() 			Return the sine of the argument
+#
+# SQRT() 		Return the square root of the argument
+#
+# TAN() 			Return the tangent of the argument
+#
+# TRUNCATE() 	Truncate to specified number of decimal places
+#
+# All mathematical functions return NULL in the event of an error.
+#
+# 		) ABS(X)
+#
+# 			Returns the absolute value of X
+#
+# 				SELECT ABS(2);
+# 					-> 2
+#
+# 				SELECT ABS(-32);
+# 					-> 32
+#
+# 			This function is safe to use with BIGINT values.
+#
+# 		) ACOS(X)
+#
+# 			Returns the arc cosine of X, that is, the value whose cosine is X.
+#
+# 			Returns NULL if X is not in the range -1 to 1
+#
+# 			SELECT ACOS(1);
+# 				-> 0
+#
+# 			SELECT ACOS(1.0001);
+# 				-> NULL
+#
+# 			SELECT ACOS(0);
+# 				-> 1.5707963267949
+#
+# 		) ASIN(X)
+#
+# 			Returns the arc sine of X, that is, the value whose
+# 			sine is X.
+#
+# 			Returns NULL if X is not in the range -1 to 1
+#
+# 			SELECT ASIN(0.2);
+# 				-> 0.20135792079033
+# 			
+# 			SELECT ASIN('foo');
+#
+# 			+------------------------+
+# 			| ASIN('foo') 				 |
+# 			+------------------------+
+# 			| 			0 					 |
+# 			+------------------------+
+# 			1 row in set, 1 warning (0.00 sec)
+#
+# 			SHOW WARNINGS;
+# 			+---------+-------+-----------------------------------------+
+# 			| Level   | Code  | Message 											|
+# 			+---------+-------+-----------------------------------------+
+# 			| Warning | 1292  | Truncated incorrect DOUBLE value: 'foo' |
+# 			+---------+-------+-----------------------------------------+
+#
+# 		) ATAN(X)
+#
+# 			Returns the arc tangent of X, that is, the value whose tangent is X.
+#
+# 				SELECT ATAN(2);
+# 					-> 1.1071487177941
+#
+# 				SELECT ATAN(-2);
+# 					-> -1.1071487177941
+#
+# 		) ATAN(Y,X), ATAN2(Y,X)
+#
+# 			Returns the arc tangent of the two variables X and Y.
+#
+# 			IT is similar to calculating the arc tangent of Y / X, except that
+# 			the signs of both arguments are used to determine the quadrant of the result.
+#
+# 				SELECT ATAN(-2,2);
+# 					-> -0.785etc.
+#
+# 				SELECT ATAN2(PI(),0);
+# 					-> 1.570796etc.
+#
+# 		) CEIL(X)
+#
+# 			CEIL() is a synonym for CEILING()
+#
+# 		) CEILING(X)
+#
+# 			Returns the smallest integer value not less than X.
+#
+# 				SELECT CEILING(1.23);
+# 					-> 2
+#
+# 				SELECT CEILING(-1.23);
+# 					-> -1
+#
+# 			For exact-value numeric arguments, the return value has an exact-value numeric type.
+# 			For string or floating-point arguments, the return value has a floating-point type.
+#
+# 		) CONV(N,from base, to base)
+#
+# 			Converts numbers between different number bases.
+#
+# 			Returns a string representation of the number N, converted from base
+# 			from_base to base to_base
+#
+# 			Returns NULL if any argument is NULL
+#
+# 			The argument N is interpreted as an integer, but may be specified as
+# 			an integer or a string.
+#
+# 			The minimum base is 2 and the maximum base is 36.
+#
+# 			If from_base is a negative number, N is regarded as a signed number.
+#
+# 			Otherwise, N is treated as unsigned, CONV() works with 64-bit precision.
+#
+# 				SELECT CONV('a', 16, 2);
+# 					-> '1010'
+#
+# 				SELECT CONV('6E',18,8);
+# 					-> '172'
+#
+# 				SELECT CONV(-17,10, -18);
+# 					-> '-H'
+#
+# 				SELECT CONV(10+'10'+'10'+X'0a',10,10);
+# 					-> '40'
+#
+# 		) COS(X)
+#
+# 			Returns the cosine of X, where X is given in radians.
+#
+# 			SELECT COS(PI());
+# 				-> -1
+#
+# 		) COT(X)
+#
+# 			Returns the cotangent of X.
+#
+# 				SELECT COT(12);
+# 					-> -1.57
+# 				
+# 				SELECT COT(0);
+# 					-> out-of-range error
+#
+# 		) CRC32(expr)
+#
+# 			Computes a cylic redundancy check value and returns a 32-bit unsigned value.
+#
+# 			The result is NULL if the argument is NULL.
+#
+# 			The argument is expected to be a string and (if possible), is treated as one
+# 			if it is not.
+#
+# 			SELECT CRC32('MySQL');
+# 				-> 3259397556
+# 			SELECT CRC32('mysql');
+# 				-> 2501908538
+#
+# 		) DEGREES(X)
+#
+# 			Returns the argument X, converted from radians to degrees.
+#
+# 				SELECT DEGREES(PI());
+# 					-> 180
+#
+# 				SELECT DEGREES(PI() / 2);
+# 					-> 90
+#
+# 		) EXP(X)
+#
+# 			Returns the value of e (the base of natural logarithms) raised to the power of X.
+#
+# 			The inverse of this function is LOG() (using a single argument only) or LN()
+#
+# 				SELECT EXP(2);
+# 					-> 7.3890- etc
+#
+# 				SELECT EXP(-2);
+# 					-> 0.135- etc
+#
+# 				SELECT EXP(0);
+# 					-> 1
+#
+# 		) FLOOR(X)
+#
+# 			Returns the largest integer value not greater than X.
+#
+# 				SELECT FLOOR(1.23), FLOOR(-1.23),
+# 					-> 1, -2
+#
+# 			For exact-value numeric arguments, the return value has an exact-value
+# 			numeric type.
+#
+# 			For string or floating-point arguments, the return value has a floating-point type.
+#
+# 		) FORMAT(X, D)
+#
+# 			Formats the number X to a format like '#,###, ###.##', rounded to D decimal places,
+# 			and returns the result as a string.
+#
+# 			For details, see SECTION 12.5, "STRING FUNCTIONS"
+#
+# 		) HEX(N or S)
+#
+# 			This function can be used to obtain a hexadecimal representation of a decimal number
+# 			or a string;
+#
+# 			The manner in which it does so varies according to the argument's type.
+#
+# 			See this function's description in SECTION 12.5, "STRING FUNCTIONS", for details
+#
+# 		) LN(X)
+#
+# 			Returns the natural logarithm of X;
+#
+# 			That is, the base-e logarithm of X.
+#
+# 			If X is less than or equal to 0.0E0, the function returns NULL
+# 			and a warning 'Invalid argument for logarithm' is reported.
+#
+# 				SELECT LN(2);
+# 					-> 0.6937147- etc
+# 				SELECT LN(-2);
+# 					-> NULL
+#
+# 			This function is synonymous with LOG(X).
+#
+# 			The inverse of this function is the EXP() function
+#
+# 		) LOG(X), LOG(B,X)
+#
+# 			If called with one parameter, this function returns the natural logarithm of X.
+#
+# 			If X is less than or equal to 0.0E0, the function returns NULL and a warning
+# 			"Invalid argument for logarithm" is reported.
+#
+# 			The inverse of this function (when called with a single argument)
+# 			is the EXP() function.
+#
+# 				SELECT LOG(2);
+# 					-> 0.69314-etc
+#
+# 				SELECT LOG(-2);
+# 					-> NULL
+#
+# 			If called with two parameters, this function returns the logarithm of X
+# 			to the base B.
+#
+# 			If X is less than or equal to 0, or if B is less than or equal to 1,
+# 			then NULL is returned.
+#
+# 				SELECT LOG(2, 65536);
+# 					-> 16
+#
+# 				SELECT LOG(10, 100);
+# 					-> 2
+#
+# 				SELECT LOG(1,100);
+# 					-> NULL
+#
+# 			LOG(B,X) is equivalent to LOG(X) / LOG(B)
+#
+# 		) LOG2(X)
+#
+# 			Returns the base-2 logarithm of X.
+#
+# 			If X is less than or equal to 0.0E0, the function returns NULL
+# 			and a warning "Invalid argument for logarithm" is reported.
+#
+# 				SELECT LOG2(65536);
+# 					-> 16
+#
+# 				SELECT LOG2(-100);
+# 					-> NULL
+#
+# 			LOG2() is useful for finding out how many bits a number reuqires for storage.
+#
+# 			This function is equivalent to the expression LOG(X) / LOG(2)
+#
+# 		) LOG10(X)
+#
+# 			Returns the base-10 logarithm of X.
+#
+# 			If X is less than or equal to 0.0E0, the function returns NULL
+# 			and a warning "Invalid argument for logarithm" is reported.
+#
+# 				SELECT LOG10(2);
+# 					-> 0.03010-etc
+#
+# 				SELECT LOG10(100);
+# 					-> 2
+#
+# 				SELECT LOG10(-100);
+# 					-> NULL
+#
+# 			LOG10(X) is equivalent to LOG(10,X)
+#
+# 		) MOD(N,M), N % M, N MOD M
+#
+# 			Modulo operation.
+#
+# 			Returns the remainder of N divided by M.
+#
+# 				SELECT MOD(234, 10);
+# 					-> 4
+#
+# 				SELECT 253 % 7;
+# 					-> 1
+#
+# 				SELECT MOD(29,9);
+# 					-> 2
+#
+# 				SELECT 29 MOD 9;
+# 					-> 2
+#
+# 			This function is safe to use with BIGINT values.
+#
+# 			MOD() also works on values that have a fractional part and
+# 			returns the exact remainder after division:
+#
+# 				SELECT MOD(34.5,3);
+# 					-> 1.5
+#
+# 			MOD(N,0) returns NULL
+#
+# 		) PI()
+#
+# 			Returns the value of pi
+#
+# 			The default number of decimal places displayed is seven, but MySQL uses
+# 			the full double-precision value internally.
+#
+# 				SELECT PI();
+# 					-> 3.141593
+#
+# 				SELECT PI()+0.000000000000;
+# 					-> 3.14159265-etc
+#
+# 		) POW(X,Y)
+#
+# 			Returns the value of X raised to the power of Y
+#
+# 				SELECT POW(2,2);
+# 					-> 4
+#
+# 				SELECT POW(2, -2);
+# 					-> 0.25
+#
+# 		) POWER(X,Y)
+#
+# 			Synonym to POW()
+#
+# 		) RADIANS(X)
+#
+# 			Returns the argument X, converted from degrees to radians.
+#
+# 			(Note that radians equal 180 degrees)
+#
+# 				SELECT RADIANS(90);
+# 					-> 1.570796-etc
+#
+# 		) RAND([N])
+#
+# 			Returns a random floating-point value v in the range 0 <= v < 1.0. 
+#
+# 			To obtain a random integer R in the range i <= R < j, 			
+# 			use the expression FLOOR(i + RAND() * (j - i))
+#
+# 			For example, to obtain a random integer in the range of
+# 			7 <= R < 12, use the following statement:
+#
+# 				SELECT FLOOR(7 + (RAND() * 5));
+#
+# 			If an integer argument N is specified, it is used as the seed value:
+#
+# 				) With a constant initializer argument, the seed is initialized once when the statement is prepared,,
+# 					prior to execution.
+#
+# 				) With a nonconstant initializer argument (such as a column name),
+# 					the seed is initialized with the value for each invocation of RAND()
+#
+# 			One implication of this behavior is that for equal argument values, RAND(N) returns
+# 			the same value each time, and thus produces a repeatable sequence of column values.
+#
+# 			In the following example, the sequence of values produced by RAND(3) is the same both
+# 			places it occurs.
+#
+# 				CREATE TABLE t (i INT);
+# 				Query OK, 0 rows affected (0.42 sec)
+#
+# 				INSERT INTO t VALUES(1), (2), (3);
+# 				Query OK, 3 rows affected (0.00 sec)
+# 				Records: 3 Duplicates: 0 Warnings: 0
+#
+# 				SELECT i, RAND() FROM t;
+# 				+-------+----------------------+
+# 				| i 	  | RAND() 					 |
+# 				+-------+----------------------+
+# 				| 1 	  | 0.619-etc 				 |
+# 				| 2 	  | 0.938-etc 				 |
+# 				| 3 	  | 0.834-etc 				 |
+# 				+-------+----------------------+
+# 				3 rows in set (0.00 sec)
+#
+# 				SELECT i, RAND(3) FROM t;
+# 				+-------+----------------------+
+# 				| i 	  | RAND(3) 				 |
+# 				+-------+----------------------+
+# 				| 1 	  | 0.90-etc 				 |
+# 				| 2 	  | 0.373-etc 				 |
+# 				| 3 	  | 0.148-etc 				 |
+# 				+-------+----------------------+
+# 				3 rows in set (0.00 sec)
+#
+# 				SELECT i, RAND() FROM t;
+# 				+-------+----------------------+
+# 				| i 	  | RAND() 					 |
+# 				+-------+----------------------+
+# 				| 1 	  | 0.358-etc 				 |
+# 				| 2 	  | 0.289-etc 				 |
+# 				| 3 	  | 0.370-etc 				 |
+# 				+-------+----------------------+
+# 				3 rows in set (0.00 sec) 		
+#
+# 				SELECT i, RAND(3) FROM t;
+# 				+--------+---------------------+
+# 				| i 	   | RAND(3) 				 |
+# 				+--------+---------------------+
+# 				| 1 		| 0.905-etc 			 |
+# 				| 2 	   | 0.373-etc 			 |
+# 				| 3 		| 0.148-etc 			 |
+# 				+--------+---------------------+
+# 				3 rows in set (0.01 sec)
+#	
+# https://dev.mysql.com/doc/refman/8.0/en/mathematical-functions.html
