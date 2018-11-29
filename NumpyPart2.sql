@@ -79646,5 +79646,2010 @@ Need be, i will change this for upcoming repeated cases. */
 # 				| 3 		| 0.148-etc 			 |
 # 				+--------+---------------------+
 # 				3 rows in set (0.01 sec)
-#	
-# https://dev.mysql.com/doc/refman/8.0/en/mathematical-functions.html
+#
+# RAND() in a WHERE clause is evaluated for every row (when selecting from one table)
+# or combination of rows (when selecting from a multiple-table join).
+#
+# Thus, for optimizer purposes, RAND() is not a constant value and cannot be used
+# for index optimizations.
+#
+# For more information, see SECTION 8.2.1.18,, "FUNCTION CALL OPTIMIZATION"
+#
+# Use of a column with RAND() values in an ORDER BY or GROUP BY clause may yield
+# unexpected results because for either clause a RAND() expression can be evaluated
+# multiple times for the same row, each time returning a different result.
+#
+# If the goal is to retrieve rows in random order, you can use a statement like this:
+#
+# 		SELECT * FROM tbl_name ORDER BY RAND();
+#
+# To select a random sample from a set of rows, combine ORDER BY RAND() with LIMIT:
+#
+# 		SELECT * FFROM table1, table2 WHERE a=b AND c<d ORDER BY RAND() LIMIT 1000;
+#
+# RAND() is not meant to be a perfect random generator. It is a fast way to generate
+# random numbers on demand that is portable between platforms for the same MySQL version.
+#
+# This funciton is unsafe for statement-based replication. A warning is logged if you use
+# this function when binlog_format is set to STATEMENT. (Bug #49222)
+#
+# 		) ROUND(X), ROUND(X, D)
+#
+# 			Rounds the argument X to D decimal places.
+#
+# 			The rounding algorithm depends on the data type of X.
+#
+# 			D defaults to 0 if not specified. D can be negative to cause
+# 			D digits left of the decimal point of the value X to become zero.
+#
+# 				SELECT ROUND(-1.23);
+# 					-> -1
+#
+# 				SELECT ROUND(-1.58);
+# 					-> -2
+#
+# 				SELECT ROUND(1.58);
+# 					-> 2
+#
+# 				SELECT ROUND(1.298, 1);
+# 					-> 1.3
+#
+# 				SELECT ROUND(1.298, 0);
+# 					-> 1
+#
+# 				SELECT ROUND(23.298, -1);
+# 					-> 20
+#
+# 			The return value has the same type as the first argument (assuming that it is integer,
+# 			double or decimal)
+#
+# 			This means that for an integer argument, the result is an integer (no decimal places):
+#
+# 				SELECT ROUND(150.000,2), ROUND(150,2);
+# 				+----------------------+------------------------+
+# 				| ROUND(150.000,2) 	  | ROUND(150,2) 				|
+# 				+----------------------+------------------------+
+# 				| 			150.00 		  | 		150 					|
+# 				+----------------------+------------------------+
+#
+# 			ROUND() uses the following rules depending on the type of the first argument:
+#
+# 				) For exact-value numbers, ROUND() uses the "round half away from zero" or
+# 					"round toward nearest" rule:
+#
+# 						A value with a fractional part of .5 or greater is rounded up to the next
+# 						integer if positive or down to the next integer if negative.
+#
+# 						(In other words, it is rounded away from zero)
+#
+# 						A value with a fractional part less than .5 is rounded down to the
+# 						next integer if positive or up to the next integer if negative.
+#
+# 				) For approximate-value numbers, the result depends on the C library.
+#
+# 					On many systems, this means that ROUND() uses the "round to nearest even" rule:
+#
+# 						A value with a fractional part exactly halfway between two integers is
+# 						rounded to the nearest even integer.
+#
+# 			The following example shows how rounding differs for exact and approximate values:
+#
+# 				SELECT ROUND(2.5), ROUND(25E-1);
+# 				+----------------+----------------------+
+# 				| ROUND(2.5) 	  | ROUND(25E-1) 			 |
+# 				+----------------+----------------------+
+# 				| 3 				  | 2 						 |
+# 				+----------------+----------------------+
+#
+# 			For more information, see SECTION 12.24, "PRECISION MATH"
+#
+# 	) SIGN(X)
+#
+# 		Returns the sign of the argument as -1,0 or 1, depending on whether X is negative,
+# 		zero or positive.
+#
+# 			SELECT SIGN(-32);
+# 				-> -1
+#
+# 			SELECT SIGN(0);
+# 				-> 0
+#
+# 			SELECT SIGN(234);
+# 				-> 1
+#
+# 	) SIN(X)
+#
+# 		Returns the sine of X, where X is given in radians.
+#
+# 			SELECT SIN(PI());
+# 				-> 1.2246-etc
+# 			SELECT ROUND(SIN(PI()));
+# 				-> 0
+#
+# 	) SQRT(X)
+#
+# 		Returns hte square root of a nonnegative number X
+#
+# 			SELECT SQRT(4);
+# 				-> 2
+#
+# 			SELECT SQRT(20);
+# 				-> 4.4721-etc
+#
+# 			SELECT SQRT(-16);
+# 				-> NULL
+#
+# 	) TAN(X)
+#
+# 		Returns the tangent of X, where X is given in radians.
+#
+# 			SELECT TAN(PI());
+# 				-> 1.224-etc
+#
+# 			SELECT TAN(PI()+1);
+# 				-> 1.5574-etc
+#
+# 	) TRUNCATE(X,D)
+#
+# 		Returns the number X, truncated to D decimal places.
+#
+# 		If D is 0, the result has no decimal point or fractional part.
+#
+# 		D can be negative to cause D digits left of the decimal point of
+# 		the value X to become zero.
+#
+# 			SELECT TRUNCATE(1.223, 1);
+# 				-> 1.2
+#
+# 			SELECT TRUNCATE(1.999,1);
+# 				-> 1.9
+#
+# 			SELECT TRUNCATE(1.999,0);
+# 				-> 1
+#
+# 			SELECT TRUNCATE(-1.999,1);
+# 				-> -1.9
+#
+# 			SELECT TRUNCATE(122, -2);
+# 				-> 100
+#
+# 			SELECT TRUNCATE(10.28*100,0);
+# 				-> 1028
+#
+# 		All numbers are rounded towards zero.
+#
+# 12.7 DATE AND TIME FUNCTIONS
+#
+# This section describes the functions that can be used to manipulate temporal values.
+#
+# See SECTION 11.3, "DATE AND TIME TYPES", for a description of the range of values each
+# date and time type has and the valid formats in which values may be specified.
+#
+# TABLE 12.13 DATE AND TIME FUNCTIONS
+#
+# 		NAME 							DESCRIPTION
+#
+# ADDDATE() 						Add time values (intervals) to a date value
+#
+# ADDTIME() 						Add time
+#
+# CONVERT_TZ() 					Convert from one time zone to another
+#
+# CURDATE() 						Returns the current date
+#
+# CURRENT_DATE(),  				Synonyms for CURDATE()
+# CURRENT_DATE	
+#
+# CURRENT_TIME(), 				Synonyms for CURTIME()
+# CURRENT_TIME
+#
+# CURRENT_TIMESTAMP(), 			Synonyms for NOW()
+# CURRENT_TIMESTAMP 
+#
+# CURTIME() 						Returns the current time
+#
+# DATE() 							Extract the date part of a date or datetime expression
+#
+# DATE_ADD() 						Add time values (intervals) to a date value
+#
+# DATE_FORMAT() 					Format date as specified
+#
+# DATE_SUB() 						Subtract a time value (interval) from a date
+#
+# DATEDIFF() 						Subtract two dates
+#
+# DAY() 								Synonym for DAYOFMONTH()
+#
+# DAYNAME() 						Return the name of the weekday
+#
+# DAYOFMONTH() 					Return the day of the month (0-31)
+#
+# DAYOFWEEK() 						Return the weekday index of the argument
+#
+# DAYOFYEAR() 						Return the day of the year (1-366)
+#
+# EXTRACT() 						Extract part of a date
+#
+# FROM_DAYS() 						Convert a day number to a date
+#
+# FROM_UNIXTIME() 				Format Unix timestamp as a date
+#
+# GET_FORMAT() 					Return a date format string
+#
+# HOUR() 							Extract the hour
+#
+# LAST_DAY 							Return the last day of the month for the argument
+#
+# LOCALTIME(), 					Synonym for NOW()
+# LOCALTIME
+#
+# LOCALTIMESTAMP, 				Synonym for NOW()
+# LOCALTIMESTAMP()
+#
+# MAKEDATE() 						Create a date from the year and day of year
+#
+# MAKETIME() 						Create time from hour, minute, second
+#
+# MICROSECOND() 					Return the microseconds from argument
+#
+# MINUTE() 							Return the minute from the argument
+#
+# MONTH() 							Return the month from the date passed
+#
+# MONTHNAME() 						Return the name of the month
+#
+# NOW() 								Return the current date and time
+#
+# PERIOD_ADD() 					Add a period to a year-month
+#
+# PERIOD_DIFF() 					Return the number of months between periods
+#
+# QUARTER() 						Return the quarter from a date argument
+#
+# SEC_TO_TIME() 					Converts seconds to 'HH:MM:SS' format
+#
+# SECOND() 							Return the second (0-59)
+#
+# STR_TO_DATE() 					Convert a string to a date
+#
+# SUBDATE() 						Synonym for DATE_SUB() when invoked with three arguments
+#
+# SUBTIME() 						Subtract times
+#
+# SYSDATE() 						Return the time at which the function executes
+#
+# TIME() 							Extract the time portion of the expression passed
+#
+# TIME_FORMAT() 					Format as time
+#
+# TIME_TO_SEC() 					Return the argument converted to seconds
+#
+# TIMEDIFF() 						Subtract time
+#
+# TIMESTAMP() 						With a single argument, this function returns the date or datetime expression;
+# 										with two arguments, the sum of the arguments
+#
+# TIMESTAMPADD() 					Add an interval to a datetime expression
+#
+# TIMESTAMPDIFF() 				Subtract an interval from a datetime expression
+#
+# TO_DAYS() 						Return the date argument converted to days
+#
+# TO_SECONDS() 					Return the date or datetime argument converted to seconds since Year 0
+#
+# UNIX_TIMESTAMP() 				Return a Unix timestamp
+#
+# UTC_DATE() 						Return the current UTC date
+#
+# UTC_TIME() 						Return the current UTC time
+#
+# UTC_TIMESTAMP() 				Return the current UTC date and time
+#
+# WEEK() 							Return the week number
+#
+# WEEKDAY() 						Return the weekday index
+#
+# WEEKOFYEAR() 					Return the calendar week of the date (1-53)
+#
+# YEAR() 							Return the year
+#
+# YEARWEEK() 						Return the year and week
+#
+# Here is an example that uses date functions.
+#
+# The following query selects all rows with a date_col value from
+# within the last 30 days:
+#
+# 		SELECT something FROM tbl_name
+# 		WHERE DATE_SUB(CURDATE(), INTERVAL 30 DAY) <= date_col;;
+#
+# The query also selects rows with dates that lie in the future.
+#
+# Functions that expect date values usually accept datetime values and ignore the time part.
+#
+# Functions that expect time values usually accept datetime values and ignore the date part.
+#
+# Functions that return the current date or time each are evaluated only once per query at the
+# start of query execution.
+#
+# This means that multiple references to a function such as NOW() within a single query always
+# produce the same result.
+#
+# For our purposes, a single query also includes a call to a stored program (stored routine, trigger
+# or event) and all subprograms called by that program).
+#
+# This principle also applies to CURDATE(), CURTIME(), UTC_DATE(), UTC_TIME(), UTC_TIMESTAMP(),
+# and to any of their synonyms.
+#
+# The CURRENT_TIMESTAMP(), CURRENT_TIME(), CURRENT_DATE(), and FROM_UNIXTIME() functions return
+# values in the connection's current time zone, which is available as the value of the time_zone
+# system variable.
+#
+# In addition, UNIX_TIMESTAMP() assumes that its argument is a datetime value in the current time zone.
+#
+# See SECTION 5.1.13, "MYSQL SERVER TIME ZONE SUPPORT"
+#
+# Some date functions can be used with "zero" dates or incomplete dates such as '2001-11-00',
+# whereas others cannot.
+#
+# Functions that extract parts of dates typically work with incomplete dates and thus can return
+# 0 when you might otherwise expect a nonzero value.
+#
+# For example:
+#
+# 		SELECT DAYOFMONTH('2001-11-00'), MONTH('2005-00-00');
+# 			-> 0, 0
+#
+# Other functions expect complete dates and return NULL for incomplete dates.
+#
+# These include functions that perform date arithmetic or that map parts of
+# dates to names.
+#
+# For example:
+#
+# 		SELECT DATE_ADD('2006-05-00', INTERVAL 1 DAY);
+# 			-> NULL
+#
+# 		SELECT DAYNAME('2006-05-00');
+# 			-> NULL
+#
+# Several functions are more strict when passed a DATE() function value as their argument
+# and reject incomplete dates with a day part of zero.
+#
+# These functions are affected:
+#
+# 		CONVERT_TZ(), DATE_ADD(), DATE_SUB(), DAYOFYEAR(), LAST_DAY() (permits a day part of zero),
+# 		TIMESTAMPDIFF(), TO_DAYS(), TO_SECONDS(), WEEK(), WEEKDAY(), WEEKOFYEAR(), YEARWEEK()
+#
+# Fractional seconds for TIME, DATETIME and TIMESTAMP values are supported, with up to microsecond
+# precision.
+#
+# Functions that take temporal arguments accept values with fractional seconds.
+#
+# Return values from temporal functions include fractional seconds as appropriate.
+#
+# 		) ADDDATE(date, INTERVAL expr unit), ADDDATE(expr,days)
+#
+# 			When invoked with the INTERVAL form of the second argument, ADDDATE() is a synonym
+# 			for DATE_ADD()
+#
+# 			The related function SUBDATE() is a synonym for DATE_SUB()
+#
+# 			For information on the INTERVAL unit argument, see TEMPORAL INTERVALS
+#
+# 				SELECT DATE_ADD('2008-01-02', INTERVAL 31 DAY);
+# 					-> '2008-02-02'
+#
+# 				SELECT ADDDATE('2008-01-02', INTERVAL 31 DAY);
+# 					-> '2008-02-02'
+#
+# 			WHen invoked with the days form of the second argument, MySQL treats it
+# 			as an integer number of days to be added to expr.
+#
+# 				SELECT ADDDATE('2008-01-02', 31);
+# 					-> '2008-02-02'
+#
+# 		) ADDTIME(expr1, expr2)
+#
+# 			ADDTIME() adds expr2 to expr1 and returns the result.
+#
+# 			expr1 is a time or datetime expression, and expr2 is a time expression.
+#
+# 				SELECT ADDTIME('2007-12-31 23:59:59.999999', '1 1:1:1.000002');
+# 					-> '2008-01-02 01:01:01.000001'
+#
+# 				SELECT ADDTIME('01:00:00.999999', '02:00:00.999998');
+# 					-> '03:00:01.999997'
+#
+# 		) CONVERT_TZ(dt, from tz, to tz)
+#
+# 			CONVERT_TZ() converts a datetime value dt from the time zone given by from_tz to
+# 			the time zone given by to_tz and returns the resulting value.
+#
+# 			Time zones are specified as described in SECTION 5.1.13, "MYSQL SERVER TIME ZONE SUPPORT".
+#
+# 			This function returns NULL if the arguments are invalid.
+#
+# 			If the value falls out of the supported range of the TIMESTAMP type when converted
+# 			from from_tz to UTC, no conversion occurs.
+#
+# 			The TIMESTAMP range is described in SECTION 11.1.2, "DATE AND TIME TYPE OVERVIEW"
+#
+# 				SELECT CONVERT_TZ('2004-01-01 12:00:00', 'GMT', 'MET');
+# 					-> '2004-01-01 13:00:00'
+#
+# 				SELECT CONVERT_TZ('2004-01-01 12:00:00', '+00:00', '+10:00');
+# 					-> '2004-01-01 22:00:00'
+#
+# 			NOTE:
+#
+# 				To use named time zones such as 'MET' or 'Europe/Moscow', the time zone tables
+# 				must be properly set up.
+#
+# 				see SECTION 5.1.13, "MYSQL SERVER TIME ZONE SUPPORT", for instructions.
+#
+# 		) CURDATE()
+#
+# 			Returns the current date as a value in 'YYYY-MM-DD' or YYYYMMDD format, depending
+# 			on whether the function is used in a string or numeric context.
+#
+# 				SELECT CURDATE();
+# 					-> '2008-06-13'
+#
+# 				SELECT CURDATE() + 0;
+# 					-> 20080613
+#
+# 		) CURRENT_DATE, CURRENT_DATE()
+#
+# 			CURRENT_DATE and CURRENT_DATE() are synonyms for CURDATE()
+#
+# 		) CURRENT_TIME, CURRENT_TIME([fsp])
+#
+# 			CURRENT_TIME and CURRENT_TIME() are synonyms for CURTIME()
+#
+# 		) CURRENT_TIMESTAMP, CURRENT_TIMESTAMP([fsp])
+#
+# 			CURRENT_TIMESTAMP and CURRENT_TIMESTAMP() are synonyms for NOW()
+#
+# 		) CURTIME([fsp])
+#
+# 			Returns the current time as a value in 'HH:MM:SS' or HHMMSS format, depending on
+# 			whether the function is used in a string or numeric context.
+#
+# 			The value is expressed in the current time zone.
+#
+# 			If the fsp argument is given to specify a fractional seconds precision from 0 to 6,
+# 			the return value includes a fractional seconds part of that many digits.
+#
+# 				SELECT CURTIME();
+# 					-> '23:50:26'
+#
+# 				SELECT CURTIME() + 0;
+# 					-> 235026.000000
+#
+# 		) DATE(expr)
+#
+# 			Extracts the date part of the date or datetime expression expr
+#
+# 				SELECT DATE('2003-12-31 01:02:03');
+# 					-> '2003-12-31'
+#
+# 		) DATEDIFF(expr1, expr2)
+#
+# 			DATEDIFF() returns expr1 - expr2 expressed as a value in days from one date
+# 			to the other.
+#
+# 			expr1 and expr2 are date or date-and-time expressions.
+#
+# 			Only the date parts of the values are used in the calculation.
+#
+# 				SELECT DATEDIFF('2007-12-31 23:59:59', '2007-12-30');
+# 					-> 1
+#
+# 				SELECT DATEDIFF('2010-11-30 23:59:59', '2010-12-31');
+# 					-> 31
+#
+# 		) DATE_ADD(date, INTERVAL expr unit), DATE_SUB(date, INTERVAL expr unit)
+#
+# 			These functions perform date arithmetic.
+#
+# 			The date argument specifies the starting date or datetime value.
+#
+# 			expr is an expression specifying the interval values to be added or subtracted
+# 			from the starting date.
+#
+# 			expr is evaluated as a string; it may start with a - for negative intervals.
+#
+# 			unit is a keyword indicating the units in which the expression should be interpreted.
+#
+# 			For more information about temporal interval syntax, including a full list of unit specifiers,
+# 			the expected form of the expr argument for each unit value, and rules for operand 
+# 			interpretation in temporal arithmetic, see TEMPORAL INTERVALS.
+#
+# 			The return value depends on the arguments:
+#
+# 				) DATE if the date argument is a DATE value and your calculations involve only YEAR,
+# 					MONTH and DAY parts (that is, no time parts)
+#
+# 				) DATETIME if the first argument is a DATETIME(or TIMESTAMP) value, or if the first argument
+# 					is a DATE and the unit value uses HOURS, MINUTES, or SECONDS.
+#
+# 				) String otherwise.
+#
+# 			To ensure that the result is DATETIME, you can use CAST() to convert the first argument
+# 			to DATETIME.
+#
+# 				SELECT DATE_ADD('2018-05-01', INTERVAL 1 DAY);
+# 					-> '2018-05-02'
+# 				SELECT DATE_SUB('2018-05-01', INTERVAL 1 YEAR);
+# 					-> '2017-05-01'
+#
+# 				SELECT DATE_ADD('2020-12-31 23:59:59',
+# 									  INTERVAL 1 SECOND);
+# 					-> '2021-01-01 00:00:00'
+#
+# 				SELECT DATE_ADD('2018-12-31 23:59:59',
+# 									  INTERVAL 1 DAY);
+# 					-> '2019-01-01 23:59:59'
+#
+# 				SELECT DATE_ADD('2100-12-31 23:59:59',
+# 									  INTERVAL '1:1' MINUTE_SECOND);
+# 					-> '2101-01-01 00:01:00'
+#
+# 				SELECT DATE_SUB('2025-01-01 00:00:00',
+# 									  INTERVAL '1 1:1:1' DAY_SECOND);
+# 					-> '2024-12-30 22:58:59'
+#
+# 				SELECT DATE_ADD('1900-01-01 00:00:00',
+# 									  INTERVAL '-1 10' DAY_HOUR);
+# 					-> '1899-12-30 14:00:00'
+#
+# 				SELECT DATE_SUB('1998-01-02', INTERVAL 31 DAY);
+# 					-> '1997-12-02'
+#
+# 				SELECT DATE_ADD('1992-12-31 23:59:59.000002',
+# 							INTERVAL '1.999999' SECOND_MICROSECOND);
+# 					-> '1993-01-01 00:00:01.000001'
+#
+# 		) DATE_FORMAT(date, format)
+#
+# 			Formats the date value according to the format string.
+#
+# 			THe following specifies may be used in the format string.
+#
+# 			The % character is required before format specifier characters.
+#
+# 				SPECIFIER 			DESC
+#
+# 				%a 					Abbreviated weekday name (Sun--Sat)
+#
+# 				%b 					Abbreivated month name (Jan--Dec)
+#
+# 				%c 					Month, numeric(0--12)
+#
+# 				%D 					Day of the month with English suffix (0th, 1st, 2nd, 3rd, ---)
+#
+# 				%d 					Day of the month, numeric (00--31)
+#
+# 				%e 					Day of the month, numeric (0--31)
+#
+# 				%f 					Microseconds (000000-999999)
+#
+# 				%H 					Hour (00-23)
+#
+# 				%h 					Hour (01--12)
+#
+# 				%I 					Hour (01--12)
+#
+# 				%i 					Minutes, numeric (00--59)
+#
+# 				%j 					Day of year (001--366)
+#
+# 				%k 					Hour (0--23)
+#
+# 				%l 					hour (1--12)
+#
+# 				%M 					Month name (January--December)
+#
+# 				%m 					Month, numeric (00--12)
+#
+# 				%p 					AM or PM
+#
+# 				%r 					Time, 12-hour (hh:mm:ss followed by AM or PM)
+#
+# 				%S 					Seconds (00--59)
+#
+# 				%s 					Seconds (00--59)
+#
+# 				%T 					Time, 24-hour (hh:mm:ss)
+#
+# 				%U 					Week (00--53), where Sunday is the first day of the week; WEEK() mode 0
+#
+# 				%u 					Week (00--53), where Monday is the first day of the week; WEEK() mode 1
+#
+# 				%V						Week (01--53), where Sunday is the first day of the week; WEEK() mode 2; used with %X
+#
+# 				%v 					Week (01--53), where Monday is the first day of the week; WEEK() mode 3, used with %x
+#
+# 				%W 					Weekday name (Sunday--Saturday)
+#
+# 				%w 					Day of the week (0=Sunday--6=Saturday
+#
+# 				%X 					Year for the week where Sunday is the first day of the week, numeric, four digits; used with %V
+#
+# 				%x 					Year for the week, where Monday is the first day of the week, numeric, four digits; used with %v
+#
+# 				%Y 					Year, numeric, four digits
+#
+# 				%y 					Year, numeric, (Two digits)
+#
+# 				%% 					A literal % character
+#
+# 				%x 					x, for any "x" not listed above
+#
+# Ranges for the month and day specifiers begin with zero due to the fact that
+# MySQL permits the storing of incomplete dates such as '2014-00-00'
+#
+# The language used for day and month names and abbreviations is controlled by the
+# value of the lc_time_names system variable
+#
+# (SECTION 10.15, "MYSQL SERVER LOCALE SUPPORT")
+#
+# For the %U, %u, %V, and %v specifiers, see the description of the WEEK() function
+# for information about the mode values.
+#
+# The mode affects how week numbering occurs.
+#
+# DATE_FORMAT() returns a string with a character set and collation given by character_set_connection
+# and collation_connection so that it can return month and weekday names containing non-ASCII chars.
+#
+# 		SELECT DATE_FORMAT('2009-10-04 22:23:00', '%W %M %Y');
+# 			-> 'Sunday October 2009'
+#
+# 		SELECT DATE_FORMAT('2007-10-04 22:23:00', '%H:%i:%s');
+# 			-> '22:23:00'
+#
+# 		SELECT DATE_FORMAT('1900-10-04 22:23:00',
+# 								'%D %y %a %d %m %b %j');
+# 			-> '4th 00 Thu 04 10 Oct 277'
+#
+# 		SELECT DATE_FORMAT('1997-10-04 22:23:00',
+# 								'%H %k %I %r %T %S %w');
+# 			-> '22 22 10 10:23:00 PM 22:23:00 00 6'
+#
+# 		SELECT DATE_FORMAT('1999-01-01', '%X %V');
+# 			-> '1998 52'
+#
+# 		SELECT DATE_FORMAT('2006-06-00', '%d');
+# 			-> '00'
+#
+# 	) DATE_SUB(date, INTERVAL expr unit)
+#
+# 		See the description for DATE_ADD()
+#
+# 	) DAY(date)
+#
+# 		DAY() is a synonym for DAYOFMONTH()
+#
+# 	) DAYNAME(date)
+#
+# 		Returns the name of the weekday for date.
+#
+# 		The language used for the name is controlled by the value of the lc_time_names
+# 		system variable
+#
+# 		(SECTION 10.15, "MySQL SERVER LOCALE SUPPORT")
+#
+# 			SELECT DAYNAME('2007-02-03');
+# 				-> 'Saturday'
+#
+# 	) DAYOFMONTH(date)
+#
+# 		Returns the day of the month for date, in the range 1 to 31, or 0 for dates such as 
+# 		'0000-00-00' or '2008-00-00' that have a zero day part.
+#
+# 			SELECT DAYOFMONTH('2007-02-03');
+# 				-> 3
+#
+# 	) DAYOFWEEK(date)
+#
+# 		Returns the weekday index for date (1 = Sunday, 2 = Monday, ---, 7 = Saturday)
+#
+# 		These index values correspond to the ODBC standard.
+#
+# 			SELECT DAYOFWEEK('2007-02-03');
+# 				-> 7
+#
+# 	) DAYOFYEAR(date)
+#
+# 		Returns the day of the year for date, in teh range 1 to 366
+#
+# 			SELECT DAYOFYEAR('2007-02-03');
+# 				-> 34
+#
+# 	) EXTRACT(unit FROM date)
+#
+# 		The EXTRACT() function uses the same kinds of unit specifiers as DATE_ADD() or
+# 		DATE_SUB(), but extracts parts from the date rather than performing date arithmetic.
+#
+# 		For information on the unit argument, see TEMPORAL INTERVALS
+#
+# 			SELECT EXTRACT(YEAR FROM '2019-07-02');
+# 				-> 2019
+#
+# 			SELECT EXTRACT(YEAR_MONTH FROM '2019-07-02 01:02:03');
+# 				-> 201907
+#
+# 			SELECT EXTRACT(DAY_MINUTE FROM '2019-07-02 01:02:03');
+# 				-> 20102
+#
+# 			SELECT EXTRACT(MICROSECOND
+# 								FROM '2003-01-02 10:30:00.000123');
+# 				-> 123
+#
+# 	) FROM_DAYS(N)
+#
+# 		Given a day number N, returns a DATE Value
+#
+# 			SELECT FROM_DAYS(730669);
+# 				-> '2000-07-03'
+#
+# 		Use FROM_DAYS() with caution on old dates.
+#
+# 		It is not inteded for use with values that precede the advent of the Gregorian
+# 		calendar (1582)
+#
+# 		See SECTION 12.8, "WHAT CALENDAR IS USED BY MYSQL?"
+#
+# 	) FROM_UNIXTIME(unix timestamp), FROM_UNIXTIME(unix timestamp, format)
+#
+# 		Returns a representation of the unix_timestamp argument as a value in 'YYYY-MM-DD HH:MM:SS'
+# 		or YYYYMMDDHHMMSS format, depending on whether the function is used in a string or numeric context.
+#
+# 		The value is expressed in the current time zone.
+#
+# 		unix_timestamp is an internal timestamp value such as is produced by the
+# 		UNIX_TIMESTAMP() function
+#
+# 		If format is given, the result is formatted according to the format string, which is used
+# 		the same way as listed in the entry for hte DATE_FORMAT() function
+#
+# 		SELECT FROM_UNIXTIME(1447430881);
+# 			-> '2015-11-13 10:08:01'
+#
+# 		SELECT FROM_UNIXTIME(1447430881) + 0;
+# 			-> 20151113100801
+#
+# 		SELECT FROM_UNIXTIME(UNIX_TIMESTAMP(),
+# 			-> '%Y %D %M %h:%i:%s %x');
+# 			
+# 			-> '2015 13th November 10:08:01 2015'
+#
+# 		NOTE:
+#
+# 			If you use UNIX_TIMESTAMP() and FROM_UNIXTIME() to convert between TIMESTAMP values
+# 			and Unix timestamp values, the conversion is lossy because the mapping is not one-to-one
+# 			in both directions.
+#
+# 			For details, see the description of the UNIX_TIMESTAMP() function
+#
+# 	) GET_FORMAT({DATE|TIME|DATETIME}, {'EUR'|'USA'|'JIS'|'ISO'|'INTERNAL'})
+#
+# 		Returns a format string.
+#
+# 		This function is useful in combination with the DATE_FORMAT() and the
+# 		STR_TO_DATE() functions.
+#
+# 		The possible values for the first and second arguments result in several
+# 		possible format strings (for the specifiers used, see the table in the DATE_FORMAT()
+# 		function description)
+#
+# 		ISO format refers to ISO 9075, not ISO 8601
+#
+# 		FUNCTION CALL 									RESULT
+#
+# 		GET_FORMAT(DATE, 'USA') 					'%m.%d.%Y'
+#
+# 		GET_FORMAT(DATE, 'JIS') 					'%Y-%m-%d'
+#
+# 		GET_FORMAT(DATE, 'ISO') 					'%Y-%m-%d'
+#
+# 		GET_FORMAT(DATE; 'EUR') 					'%d.%m.%Y'
+#
+# 		GET_FORMAT(DATE, 'INTERNAL') 				'%Y%m%d'
+#
+# 		GET_FORMAT(DATETIME, 'USA') 				'%Y-%m-%d %H.%i.%s'
+#
+# 		GET_FORMAT(DATETIME, 'JIS') 				'%Y-%m-%d %H:%i:%s'
+#
+# 		GET_FORMAT(DATETIME, 'ISO') 				'%Y-%m-%d %H:%i:%s'
+#
+# 		GET_FORMAT(DATETIME, 'EUR') 				'%Y-%m-%d %H.%i.%s'
+#
+# 		GET_FORMAT(DATETIME, 'INTERNAL') 		'%Y%m%d%H%i%s'
+#
+# 		GET_FORMAT(TIME, 'USA') 					'%h:%i:%s %p'
+#
+# 		GET_FORMAT(TIME, 'JIS') 					'%H:%i:%s'
+#
+# 		GET_FORMAT(TIME, 'ISO') 					'%H:%i:%s'
+#
+# 		GET_FORMAT(TIME, 'EUR') 					'%H.%i.%s'
+#
+# 		GET_FORMAT(TIME, 'INTERNAL') 				'%H%i%s'
+#
+# 		TIMESTAMP can also be used as the first argument to GET_FORMAT(),
+# 		in which case the function returns the same values as for DATETIME.
+#
+# 			SELECT DATE_FORMAT('2003-10-03', GET_FORMAT(DATE, 'EUR'));
+# 				-> '03.10.2003'
+#
+# 			SELECT STR_TO_DATE('10.31.2003', GET_FORMAT(DATE, 'USA'));
+# 				-> '2003-10-30'
+#
+# 	) HOUR(time)
+#
+# 		Returns the hour for time.
+#
+# 		The range of the return value is 0 to 23 for time-of-day values.
+#
+# 		However, the range of TIME values actually is much larger, so HOUR can
+# 		return values greater than 23.
+#
+# 			SELECT HOUR('10:05:03');
+# 				-> 10
+#
+# 			SELECT HOUR('272:59:59');
+# 				-> 272
+#
+# 	) LAST_DAY(date)
+#
+# 		Takes a date or datetime value and returns the corresponding value for hte last day
+# 		of the month.
+#
+# 		Returns NULL if the argument is invalid.
+#
+# 			SELECT LAST_DAY('2003-02-05');
+# 				-> '2003-02-28'
+#
+# 			SELECT LAST_DAY('2004-02-05');
+# 				-> '2004-02-29'
+#
+# 			SELECT LAST_DAY('2004-01-01 01:01:01');
+# 				-> '2004-01-31'
+#
+# 			SELECT LAST_DAY('2003-03-32');
+# 				-> NULL
+#
+# 	) LOCALTIME, LOCALTIME([fsp])
+#
+# 		LOCALTIME and LOCALTIME() are synonyms for NOW()
+#
+# 	) LOCALTIMESTAMP, LOCALTIMESTAMP([fsp])
+#
+# 		LOCALTIMESTAMP and LOCALTIMESTAMP() are synonyms for NOW()
+#
+# 	) MAKEDATE(year, dayofyear)
+#
+# 		Returns a date, given year and day-of-year values.
+#
+# 		dayofyear must be greater than 0 or the result is NULL
+#
+# 			SELECT MAKEDATE(2011,31), MAKEDATE(2011,32);
+# 				-> '2011-01-31', '2011-02-01'
+#
+# 			SELECT MAKEDATE(2011,365), MAKEDATE(2014,365);
+# 				-> '2011-12-31', '2014-12-31'
+#
+# 			SELECT MAKEDATE(2011,0);
+# 				-> NULL
+#
+# 	) MAKETIME(hour,minute,second)
+#
+# 		Returns a time value calculated from the hour, minute and second arguments.
+#
+# 		The second argument can have a fractional part.
+#
+# 			SELECT MAKETIME(12,15,30);
+# 				-> '12:15:30'
+#
+# 	) MICROSECOND(expr)
+#
+# 		Returns the microseconds from the time or datetime expression expr as
+# 		a number in the range from 0 to 999999
+#
+# 			SELECT MICROSECOND('12:00:00.123456');
+# 				-> 123456
+#
+# 			SELECT MICROSECOND('2019-12-31 23:59:59.000010');
+# 				-> 10
+#
+# 	) MINUTE(time)
+#
+# 		Returns the minute for time, in the range 0 to 59
+#
+# 			SELECT MINUTE('2008-02-03 10:05:03');
+# 				-> 5
+#
+# 	) MONTH(date)
+#
+# 		Returns the month for date, in the range 1 to 12 for January ot December, or 0 for dates
+# 		such as '0000-00-00' or '2008-00-00' that have a zero month part.
+#
+# 			SELECT MONTH('2008-02-03');
+# 				-> 2
+#
+# 	) MONTHNAME(date)
+#
+# 		Returns the full name of hte month for date.
+#
+# 		The language used for the name is controlled by the value of the lc_time_names system
+# 		variable (SECTION 10.15, "MYSQL SERVER LOCALE SUPPORT")
+#
+# 			SELECT MONTHNAME('2008-02-03');
+# 				-> 'February'
+#
+# 	) NOW([fsp])
+#
+# 		Returns the current date and time as a value in 'YYYY-MM-DD HH:MM:SS' or YYYYMMDDHHMMSS format,
+# 		depending on whether the function is used in a string or numeric context.
+#
+# 		The value is expressed in the current time zone.
+#
+# 		If hte fsp argument is given to specify a fractional seconds precision from 0 to 6,
+# 		the return value includes a fractional seconds part of that many digits.
+#
+# 			SELECT NOW();
+# 				-> '2007-12-15 23:50:26'
+# 			
+# 			SELECT NOW() + 0;
+# 				-> 20071215235026.000000
+#
+# 		NOW() returns a constant time that indicates the time at which the statement began to execute.
+#
+# 		(Within a stored function or trigger, NOW() returns the time at which the function or trigger
+# 			statement began to execute.)
+#
+# 		This differs from the behavior for SYSDATE(), which returns the exact time at which it executes.
+#
+# 			SELECT NOW(), SLEEP(2), NOW();
+# 			+-----------------------------+--------------+--------------------------+
+# 			| NOW() 								| SLEEP(2) 		| NOW() 							|
+# 			+-----------------------------+--------------+--------------------------+
+# 			| 2006-04-12 13:47:36 			| 0 				| 2006-04-12 13:47:36 		|
+# 			+-----------------------------+--------------+--------------------------+
+#
+# 			SELECT SYSDATE(), SLEEP(2), SYSDATE();
+# 			+-----------------------------+---------------+-------------------------+
+# 			| SYSDATE() 					   | SLEEP(2) 		 | SYSDATE() 					|
+# 			+-----------------------------+---------------+-------------------------+
+# 			| 2006-04-12 13:47:44 			| 0 				 | 2006-04-12 13:47:46 	   |
+# 			+-----------------------------+---------------+-------------------------+
+#
+# 		In addition, the SET TIMESTAMP statement affects the value returned by NOW()
+# 		but not by SYSDATE().
+#
+# 		This means that timestamp settings in the binary log have no effect on invocations
+# 		of SYSDATE()
+#
+# 		Setting the timestamp to a nonzero value causes each subsequent invocation of NOW()
+# 		to return that value.
+#
+# 		Setting the timestamp to zero cancels this effect so that NOW() once again returns
+# 		the current date and time.
+#
+# 		See the description for SYSDATE() for additional information about the differences
+# 		between the two functions.
+#
+# 	) PERIOD_ADD(P, N)
+#
+# 		Adds N months to period P (in the format YYMM or YYYYMM).
+#
+# 		Returns a value in the format YYYYMM.
+#
+# 		Note that the period argument P is NOT a date value.
+#
+# 			SELECT PERIOD_ADD(200801, 2);
+# 				-> 200803
+#
+# 	) PERIOD_DIFF(P1, P2)
+#
+# 		Returns the number of months between periods P1 and P2.
+#
+# 		P1 and P2 should be in the format YYMM or YYYYMM.
+#
+# 		Note that the period arguments P1 and P2 are NOT date values.
+#
+# 			SELECT PERIOD_DIFF(200802, 200703);
+# 				-> 11
+#
+# 	) QUARTER(date)
+#
+# 		Returns the quarter of hte year for date, in the range 1 to 4
+#
+# 			SELECT QUARTER('2008-04-01');
+# 				-> 2
+#
+# 	) SECOND(time)
+#
+# 		Returns the second for time, in the range 0 to 59
+#
+# 			SELECT SECOND('10:05:03');
+# 				-> 3
+#
+# 	) SEC_TO_TIME(seconds)
+#
+# 		Returns the seconds argument, converted to hours, minutes, and seconds, as 
+# 		a TIME Value.
+#
+# 		THe range of the result is constrained to that of the TIME data type.
+#
+# 		A warning occurs if the argument corresponds to a value outside that range.
+#
+# 			SELECT SEC_TO_TIME(2378);
+# 				-> '00:39:38'
+#
+# 			SELECT SEC_TO_TIME(2378) + 0;
+# 				-> 3938
+#
+# 	) STR_TO_DATE(str, format)
+#
+# 		This is the inverse of the DATE_FORMAT() function.
+#
+# 		It takes a string str and a format string format.
+#
+# 		STR_TO_DATE() returns a DATETIME value if the format string contains both
+# 		date and time parts, or a DATE or TIME value if the string contains only date or
+# 		time parts.
+#
+# 		If the date, time or datetime value extracted from str is illegal,
+# 		STR_TO_DATE() returns NULL and produces a warning.
+#
+# 		The server scans str attempting to match format ot it.
+#
+# 		The format string can contain literal characters and format specifiers
+# 		beginning with %.
+#
+# 		Literal characters in format must match literally in str.
+#
+# 		Format specifiers in format must match a date or time part in str.
+#
+# 		For the specifiers that can be used in format, see the DATE_FORMAT()
+# 		function description.
+#
+# 			SELECT STR_TO_DATE('01,5,2013', '%d, %m, %Y');
+# 				-> '2013-05-01'
+#
+# 			SELECT STR_TO_DATE('May 1, 2013', '%M %d,%Y');
+# 				-> '2013-05-01'
+#
+# 		Scanning starts at the beginning of str and fails if format is found not to match.
+#
+# 		Extra characters at the end of the str are ignored.
+#
+# 			SELECT STR_TO_DATE('a09:30:17', 'a%h:%i:%s');
+# 				-> '09:30:17'
+#
+# 			SELECT STR_TO_DATE('a09:30:17', '%h:%i:%s');
+# 				-> NULL
+#
+# 			SELECT STR_TO_DATE('09:30:17a', '%h:%i:%s');
+# 				-> '09:30:17'
+#
+# 		Unspecified date or time parts have a value of 0, so incompletely specified values
+# 		in str produce a result with some or all parts set to 0:
+#
+# 			SELECT STR_TO_DATE('abc', 'abc');
+# 				-> '0000-00-00'
+#
+# 			SELECT STR_TO_DATE('9', '%m');
+# 				-> '0000-09-00'
+#
+# 			SELECT STR_TO_DATE('9', '%s');
+# 				-> '00:00:09'
+#
+# 		Range checking on the parts of date values is as described in SECTION 11.3.1, "THE DATE, DATETIME, AND TIMESTAMP TYPES"
+#
+# 		This means, for example, that "zero" dates or dates with part values of 0 are permitted
+# 		unless the SQL mode is set to disallow such values.
+#
+# 			SELECT STR_TO_DATE('00/00/0000', '%m/%d/%Y');
+# 				-> '0000-00-00'
+#
+# 			SELECT STR_TO_DATE('04/31/2004', '%m/%d/%Y');
+# 				-> '2004-04-31'
+#
+# 		If the NO_ZERO_DATE or NO_ZERO_IN_DATE SQL mode is enabled, zero dates or part
+# 		of dates are disallowed.
+#
+# 		In that case, STR_TO_DATE() returns NULL and generates a warning:
+#
+# 			SET sql_mode = '';
+# 			SELECT STR_TO_DATE('15:35:00', '%H:%i:%s');
+# 			+-----------------------------------------+
+# 			| STR_TO_DATE('15:35:00', '%H:%i:%s') 		|
+# 			+-----------------------------------------+
+# 			| 15:35:00 										   |
+# 			+-----------------------------------------+
+#
+# 			SET sql_mode = 'NO_ZERO_IN_DATE';
+# 			SELECT STR_TO_DATE('15:35:00', '%h:%i:%s');
+# 			+--------------------------------------------+
+# 			| STR_TO_DATE('15:35:00', '%h:%i.%s') 			|
+# 			+--------------------------------------------+
+# 			| NULL 													|
+# 			+--------------------------------------------+
+#
+# 			SHOW WARNINGS\G
+# 			****************************** 1. row ******************************
+# 			LeveL: Warning
+# 			 Code: 1411
+# 			Message: Incorrect datetime value: '15:35:00' for function str_to_date
+#
+# 		NOTE:
+#
+# 			You cannot use format "%X%V" to convert a year-week string to a date because
+# 			the combination of a year and week does not uniquely identify a year and month
+# 			if hte week crosses a month boundary.
+#
+# 			To convert a year-week to a date, you should also specify the weekday:
+#
+# 				SELECT STR_TO_DATE('200442 Monday', '%X%V %W');
+# 					-> '2004-10-18'
+#
+# ) SUBDATE(date, INTERVAL expr unit), SUBDATE(expr, days)
+#
+# 		When invoked with the INTERVAL form of the second argument, SUBDATE() is a synonym
+# 		for DATE_SUB()
+#
+# 		For information on the INTERVAL unit argument, see the discussion for DATE_ADD()
+#
+# 			SELECT DATE_SUB('2008-01-02', INTERVAL 31 DAY);
+# 				-> '2007-12-02'
+#
+# 			SELECT SUBDATE('2008-01-02', INTERVAL 31 DAY);
+# 				-> '2007-12-02'
+#
+# 		The second form enables the use of an integer value for days.
+#
+# 		IN such cases, it is interpreted as the number of days ot be subtracted
+# 		from the date or datetime expresison expr.
+#
+# 			SELECT SUBDATE('2008-01-02 12:00:00', 31);
+# 				-> '2007-12-02 12:00:00'
+#
+# ) SUBTIME(expr1, expr2)
+#
+# 		SUBTIME() returns expr1 - expr2 expressed as a value in the same format as
+# 		expr1.
+#
+# 		Expr1 is a time or datetime expression, and expr2 is a time expression.
+#
+# 			SELECT SUBTIME('2007-12-31 23:59:59.999999', '1 1:1:1.000002');
+# 				-> '2007-12-30 22:58:58.999997'
+#
+# 			SELECT SUBTIME('01:00:00-999999', '02:00:00.999998');
+# 				-> '-00:59:59.999999'
+#
+# ) SYSDATE([fsp])
+#
+# 		Returns the current date and time as value in 'YYYY-MM-DD HH:MM:SS' or 
+# 		YYYYMMDDHHMMSS format, depending on whether the function is used in a string
+# 		or numeric context.
+#
+# 		If the fsp argument is given to specify a fractional seconds precision from 0 to 6,
+# 		the return value includes a fractional seconds part of that many digits.
+#
+# 		SYSDATE() returns the time at which it executes.
+#
+# 		This differs from the behavior for NOW(), which returns a constant time that
+# 		indicates the time at which the statement began to execute.
+#
+# 		(Within a stored function or trigger, NOW() returns the time at which the function
+# 			or triggering statement began to execute)
+#
+# 			SELECT NOW(), SLEEP(2), NOW();
+# 			+---------------------------------+--------------------+--------------------------+
+# 			| NOW() 									 | SLEEP(2) 			 | NOW() 						 |
+# 			+---------------------------------+--------------------+--------------------------+
+# 			| 2006-04-12 13:47:36 				 | 0 						 | 2006-04-12 13:47:36 		 |
+# 			+---------------------------------+--------------------+--------------------------+
+#
+# 			SELECT SYSDATE(), SLEEP(2), SYSDATE();
+# 			+---------------------------------+--------------------+---------------------------+
+# 			| SYSDATE() 							 | SLEEP(2) 			 | SYSDATE() 					  |
+# 			+---------------------------------+--------------------+---------------------------+
+# 			| 2006-04-12 13:47:44 				 |  	0 					 | 2006-04-12 13:47:46 		  |
+# 			+---------------------------------+--------------------+---------------------------+
+#
+# 		In addition, the SET TIMESTAMP statement affects the value returned by NOW() but not by SYSDATE().
+#
+# 		This means that timestamp settings in the binary log have no effect on invocations of SYSDATE()
+#
+# 		Because SYSDATE() can return different values even within the same statement, and is not affected
+# 		by SET TIMESTAMP, it is nondeterministic and therefore unsafe for replication if statement
+# 		based binary logging is used.
+#
+# 		If that is a problem, you can use row-based logging.
+#
+# 		Alternatively, you can use the --sysdate-is-now option to cause SYSDATE() to be an alias for NOW().
+#
+# 		This works if the option is used on both the master and the slave.
+#
+# 		The nondeterministic nature of SYSDATE() also means that indexes cannot be used for evaluating 
+# 		expressions that refer to it.
+#
+# ) TIME(expr)
+#
+# 		Extracts the time part of the time or datetime expression expr and returns it as a string.
+#
+# 		This function is unsafe for statement-based replication.
+#
+# 		A warning is logged if you use this function when binlog_format is set to STATEMENT.
+#
+# 			SELECT TIME('2003-12-31 01:02:03');
+# 				-> '01:02:03'
+#
+# 			SELECT TIME('2003-12-31 01:02:03.000123');
+# 				-> '01:02:03.000123'
+#
+# ) TIMEDIFF(expr1, expr2)
+#
+# 		TIMEDIFF() returns expr1 - expr2 expressed as a time value.
+#
+# 		expr1 and expr2 are time or date-and-time expressions, but both must be of the same type.
+#
+# 		The result returned by TIMEDIFF() is limited to the range allowed for TIME values.
+#
+# 		Alternatively, you can use either of the functions TIMESTAMPDIFF() and UNIX_TIMESTAMP(),
+# 		both of which return integers.
+#
+# 			SELECT TIMEDIFF('2000:01:01 00:00:00',
+# 								 '2000:01:01 00:00:00.000001');
+#
+# 				-> '-00:00:00.000001'
+#
+# 			SELECT TIMEDIFF('2008-12-31 23:59:59.000001',
+# 								 '2008-12-30 01:01:01.000002');
+#
+# 				-> '46:58:57.999999'
+#
+# ) TIMESTAMP(expr), TIMESTAMP(expr1, expr2)
+#
+# 		With a single argument, this function returns the date or datetime expression expr
+# 		as a datetime value.
+#
+# 		With two arguments, it adds the time expression expr2 to the date or datetime expression
+# 		expr1 and returns the result as a datetime value.
+#
+# 			SELECT TIMESTAMP('2003-12-31');
+# 				-> '2003-12-31 00:00:00'
+#
+# 			SELECT TIMESTAMP('2003-12-31 12:00:00', '12:00:00');
+# 				-> '2004-01-01 00:00:00'
+#
+# ) TIMESTAMPADD(unit, interval, datetime expr)
+#
+# 		Adds the integer expression interval to the date or datetime expression
+# 		datetime_expr.
+#
+# 		The unit for interval is given by the unit argument, which should be one
+# 		of the following values:
+#
+# 			MICROSECOND (microseconds)
+#
+# 			SECOND
+#
+# 			MINUTE
+#
+# 			HOUR
+#
+# 			DAY
+#
+# 			WEEK
+#
+# 			MONTH
+#
+# 			QUARTER
+#
+# 			YEAR
+#
+# 		The unit value may be specified using one of keywords as shown, or with a prefix
+# 		of SQL_TSI_.
+#
+# 		For example, DAY and SQL_TSI_DAY both are legal.
+#
+# 			SELECT TIMESTAMPADD(MINUTE,1,'2003-01-02');
+# 				-> '2003-01-02 00:01:00'
+#
+# 			SELECT TIMESTAMPADD(WEEK,1,'2003-01-02');
+# 				-> '2003-01-09'
+#
+# ) TIMESTAMPDIFF(unit, datetime expr1, datetime expr2)
+#
+# 	 	Returns datetime_expr2 - datetime_expr1, where datetime_expr1 and datetime_expr2 are date
+# 		or datetime expressions.
+#
+# 		One expression may be a date and the other a datetime; a date value is treated as a datetime
+# 		having the time part '00:00:00' where necessary.
+#
+# 		The unit for the result (an integer) is given by the unit argument.
+#
+# 		The legal values for unit are the same as those listed in the description
+# 		of the TIMESTAMPADD() function
+#
+# 			SELECT TIMESTAMPDIFF(MONTH, '2003-02-01', '2003-05-01');
+# 				-> 3
+#
+# 			SELECT TIMESTAMPDIFF(YEAR, '2002-05-01', '2001-01-01');
+# 				-> -1
+#
+# 			SELECT TIMESTAMPDIFF(MINUTE, '2003-02-01', '2003-05-01 12:05:55');
+# 				-> 128885
+#
+# 		NOTE:
+#
+# 			The order of hte date or datetime arguments for htis function is the opposite of that used
+# 			with the TIMESTAMP() function when invoked with 2 arguments.
+#
+# ) TIME_FORMAT(time, format)
+#
+# 		This is used like the DATE_FORMAT() function, but the format string may contain format specifiers
+# 		only for hours, minutes, seconds and microseconds.
+#
+# 		Other specifiers produce a NULL value or 0.
+#
+# 		If the time value contains an hour part that is greater than 23, the %H and %k hour format
+# 		specifiers produce a value larger than the usual range of 0--23
+#
+# 		The other hour format specifiers produce the hour value modulo 12
+#
+# 			SELECT TIME_FORMAT('100:00:00', '%H %k %h %I %l');
+# 				-> '100 100 04 04 4'
+#
+# ) TIME_TO_SEC(time)
+#
+# 		Returns the time argument, converted to seconds.
+#
+# 			SELECT TIME_TO_SEC('22:23:00');
+# 				-> 80580
+#
+# 			SELECT TIME_TO_SEC('00:39:38');
+# 				-> 2378
+#
+# ) TO_DAYS(date)
+#
+# 		Given a date date, returns a day number (the numbers of days since year 0)
+#
+# 			SELECT TO_DAYS(950501);
+# 				-> 728779
+#
+# 			SELECT TO_DAYS('2007-10-07');
+# 				-> 733321
+#
+# 		TO_DAYS() is not intended for use with values that precede the advent of the Gregorian 
+# 		calendar (1582), because it does not take into account the days that were lost when the
+# 		calendar was changed.
+#
+# 		For dates before 1582 (and possibly a later year in other locales), results from this
+# 		function are not reliable.
+#
+# 		See SECTION 12.8, "WHAT CALENDAR IS USED BY MYSQL?" for details
+#
+# 		Remember that MySQL converts two-digit year values in dates to four-digit form
+# 		using the rules in SECTION 11.3, "DATE AND TIME TYPES".
+#
+# 		For example, '2008-10-07' and '08-10-07' are seen as identical dates:
+#
+# 			SELECET TO_DAYS('2008-10-07'), TO_DAYS('08-10-07');
+# 				-> 733687, 733687
+#
+# 		In MySQL, the zero date is defined as '0000-00-00', even though this date
+# 		is itself considered invalid.
+#
+# 		This means that, for '0000-00-00' and '0000-01-01' TO_DAYS() returns the values
+# 		shown here:
+#
+# 			SELECT TO_DAYS('0000-00-00');
+# 			+----------------------------+
+# 			| to_days('0000-00-00') 	  |
+# 			+----------------------------+
+# 			| 						NULL 		  |
+# 			+----------------------------+
+# 			1 row in set, 1 warning (0.00 sec)
+#
+# 			SHOW WARNINGS;
+# 			+---------------+-----------+---------------------------------------------+
+# 			| Level 			 | Code 		 | Message 												  |
+# 			+---------------+-----------+---------------------------------------------+
+# 			| Warning 		 | 1292 		 | Incorrect datetime value: '0000-00-00' 	  |
+# 			+---------------+-----------+---------------------------------------------+
+# 			1 row in set (0.00 sec)
+#
+# 			SELECT TO_DAYS('0000-01-01');
+# 			+-----------------------------+
+# 			| to_days('0000-01-01') 		|
+# 			+-----------------------------+
+# 			| 						1 				|
+# 			+-----------------------------+
+# 			1 row in set (0.00 sec)
+#
+# 		This is true whether or not the ALLOW_INVALID_DATES SQL server mode is enabled.
+#
+# 	) TO_SECONDS(expr)
+#
+# 		Given a date or datetime expr, returns the number of seconds since the year 0.
+#
+# 		If expr is not a valid date or datetime value, returns NULL.
+#
+# 			SELECT TO_SECONDS(950501);
+# 				-> 62966505600
+#
+# 			SELECT TO_SECONDS('2009-11-29');
+# 				-> 634266720000
+#
+# 			SELECT TO_SECONDS('2009-11-29 13:43:32');
+# 				-> 63426721412
+#
+# 			SELECT TO_SECONDS( NOW() );
+# 				-> 63426721458
+#
+# 		Like TO_DAYS(), TO_SECONDS() is not intended for use with values that precede the advent
+# 		of the Gregorian calendar (1582), because it does not take into account the days that were lost
+# 		when the calendar was changed.
+#
+# 		For dates before 1582 (and possibly a later year in other locales), results from this function
+# 		are not reliable.
+#
+# 		See SECTION 12.8, "WHAT CALENDAR IS USED BY MYSQL?", For details.
+#
+# 		Like TO_DAYS(), TO_SECONDS(), converts to-digit year values in dates to four-digit form
+# 		using the rules in SECTION 11.3 "DATE AND TIME TYPES"
+#
+# 		In MySQL, the zero date is defined as '0000-00-00', even though this date is itself considered
+# 		invalid.
+#
+# 		This means that, for '0000-00-00' and '0000-01-01', TO_SECONDS() returns the values shown here:
+#
+# 			SELECT TO_SECONDS('0000-00-00');
+# 			+-------------------------------+
+# 			| TO_SECONDS('0000-00-00') 	  |
+# 			+-------------------------------+
+# 			| 						NULL 			  |
+# 			+-------------------------------+
+# 			1 row in set, 1 warning (0.00 sec)
+#
+# 			SHOW WARNINGS;
+# 			+----------------+-----------+------------------------------------------+
+# 			| Level 			  | Code 	  | Message 											|
+# 			+----------------+-----------+------------------------------------------+
+# 			| Warning 		  | 1292 	  | Incorrect datetime value: '0000-00-00' 	|
+# 			+----------------+-----------+------------------------------------------+
+# 			1 row in set (0.00 sec)
+#
+# 			SELECT TO_SECONDS('0000-01-01');
+# 			+-------------------------------------+
+# 			| TO_SECONDS('0000-01-01') 			  |
+# 			+-------------------------------------+
+# 			| 								86400 		  |
+# 			+-------------------------------------+
+# 			1 row in set (0.00 sec)
+#
+# 		This is true whether or not hte ALLOW_INVALID_DATES SQL server mode is enabled.
+#
+# 	) UNIX_TIMESTAMP(), UNIX_TIMESTAMP(date)
+#
+# 		If called with no argument, returns a Unix timestamp (seconds since '1970-01-01 00:00:00' UTC)
+#
+# 		The return value is an integer if no argument is given or the argument doesn ot include
+# 		a fractional seconds part, or DECIMAL if an argument is given that includes a fractional seconds part.
+#
+# 		If UNIX_TIMESTAMP() is called with a date argument, it returns the value of the argument as
+# 		seconds since '1970-01-01 00:00:00' UTC.
+#
+# 		The date argument may be a DATE, DATETIME, or TIMESTAMP string, or a number in YYMMDD, YYMMDDHHMMSS,
+# 		YYYYMMDD, or YYYYMMDDHHMMSS format.
+#
+# 		If the argument includes a time part, it may optionally include a fractional seconds part.
+#
+# 		The server interprets date as a value in the current time zone and converts it to
+# 		an internal value in UTC.
+#
+# 		Clients can set their time zone as described in SECTION 5.1.13, "MYSQL SERVER TIME ZONE SUPPORT"
+#
+# 			SELECT UNIX_TIMESTAMP();
+# 				-> 1447431666
+#
+# 			SELECT UNIX_TIMESTAMP('2015-11-13 10:20:19');
+# 				-> 1447431619
+#
+# 			SELECT UNIX_TIMESTAMP('2015-11-13 10:20:19.012');
+# 				-> 1447431619.012
+#
+# 		When UNIX_TIMESTAMP() is used on a TIMESTAMP column, the function returns the internal timestamp
+# 		value directly, with no implicit "string-to-Unix timestamp" conversion.
+#
+# 		If you pass an out-of-range date to UNIX_TIMESTAMP(), it returns 0.
+#
+# 		The valid range of values is the same as for the TIMESTAMP data type:
+#
+# 			'1970-01-01 00:00:01.000000' UTC to '2038-01-19 03:14:07.999999' UTC.
+#
+# 		If you use UNIX_TIMESTAMP() and FROM_UNIXTIME() to convert between TIMESTAMP values
+# 		and Unix timestamp values, the conversion is lossy because the mapping is not one-to-one 
+# 		in both directions.
+#
+# 		For example, due to conventions for local time zone changes, it is possible for two
+# 		UNIX_TIMESTAMP() to map two TIMESTAMP values to the same Unix timestamp value.
+#
+# 		FROM_UNIXTIME() will map that value back to only one of the original TIMESTAMP values.
+#
+# 		Here is an example, using TIMESTAMP values in the CET time zone:
+#
+# 			SELECT UNIX_TIMESTAMP('2005-03-27 03:00:00');
+# 			+-----------------------------------------------+
+# 			| UNIX_TIMESTAMP('2005-03-27 03:00:00') 			|
+# 			+-----------------------------------------------+
+# 			| 								1111885200 				   |
+# 			+-----------------------------------------------+
+#
+# 			SELECT UNIX_TIMESTAMP('2005-03-27 02:00:00'); 
+# 			+-----------------------------------------------+
+# 			| UNIX_TIMESTAMP('2005-03-27 02:00:00') 			|
+# 			+-----------------------------------------------+
+# 			| 								1111885200 					|
+# 			+-----------------------------------------------+
+#
+# 			SELECT FROM_UNIXTIME(1111885200); 			
+# 			+---------------------------------+
+# 			| FROM_UNIXTIME(1111885200) 		 |
+# 			+---------------------------------+
+# 			| 2005-03-27 03:00:00 				 |
+# 			+---------------------------------+
+#
+# 		If you want ot subtract UNIX_TIMESTAMP() columns, you might want to
+# 		cast the result to signed integers.
+#
+# 		See SECTION 12.10, "CAST FUNCTIONS AND OPERATORS"
+#
+# ) UTC_DATE, UTC_DATE()
+#
+# 		Returns the current UTC date as a value in 'YYYY-MM-DD' or YYYYMMDD format,
+# 		depending on whether the function is used in a string or numeric context.
+#
+# 			SELECT UTC_DATE(), UTC_DATE() + 0;
+# 				-> '2003-08-14', 200030814
+#
+# ) UTC_TIME, UTC_TIME([fsp])
+#
+# 		Returns the current UTC time as a value in 'HH:MM:SS' or
+# 		HHMMSS format, depending on whether the function is used in a string or
+# 		numeric context.
+#
+# 		If the fsp argument is given to specify a fractional second precision from
+# 		0 to 6, the return value includes a fractional seconds part of that many digits.
+#
+# 			SELECT UTC_TIME(), UTC_TIME() + 0;
+# 				-> '18:07:53', 180753.000000
+#
+# ) UTC_TIMESTAMP, UTC_TIMESTAMP([fsp])
+#
+# 		Returns the current UTC datea nd time as avalue in 'YYYY-MM-DD HH:MM:SS' or
+# 		YYYYMMDDHHMMSS format, depending on whether the function is used in a string or
+# 		numeric context.
+#
+# 		If the fsp argument is given to specify a fractional seconds precision from
+# 		0 to 6, the return value includes a fractional seconds part of that many digits.
+#
+# 			SELECT UTC_TIMESTAMP(), UTC_TIMESTAMP() + 0;
+# 				-> '2003-08-14 18:08:04', 20030814180804.000000
+#
+# ) WEEK(date[,mode])
+#
+# 		This function returns the week number for date.
+#
+# 		The two-argument form of WEEK() enables you to specify whether hte week
+# 		starts on Sunday or Monday and whether the return value should be in the range
+# 		from 0 to 53 or from 1 to 53.
+#
+# 		If the mode argument is omitted, the value of the default_week_format
+# 		system variable is used.
+#
+# 		See SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# 		The following table describes how the mode argument works.
+#
+# 		MODE 		FIRST DAY OF WEEK 		RANGE 					WEEK 1 is the first week --
+# 		
+# 		0 			Sunday 						0-53 						With a Sunday in this year
+#
+# 		1 			Monday 						0-53 						With 4 or more days this year
+#
+# 		2 			Sunday 						1-53 						With a Sunday in this year
+#
+# 		3 			Monday 						1-53 						With 4 or more days this year
+#
+# 		4 			Sunday 						0-53 						With 4 or more days this year
+#
+# 		5  		Monday 						0-53 						With a Monday in this year
+#
+# 		6 			Sunday 						1-53 						With 4 or more days this year
+#
+# 		7 			Monday 						1-53 						with A monday inthis year
+#
+# 		For mode values with a meaning of "with 4 or more days this year", weeks are numbered
+# 		according to ISO 8601:1988
+#
+# 			) If the week containing January 1 has 4 or more days inthe new year, it is week 1
+#
+# 			) Otherwise, it is the last week of hte previous year, and the next week is week 1
+#
+# 				SELECT WEEK('2008-02-20');
+# 					-> 7
+#
+# 				SELECT WEEK('2008-02-20', 0);
+# 					-> 7
+#
+# 				SELECT WEEK('2008-02-20', 1);
+# 					-> 8
+#
+# 				SELECT WEEK('2008-12-31', 1);
+# 					-> 53
+#
+# 		If a date falls in the last week of the previous year, MySQL returns 0 if you do not use 2, 3, 6 or 7 as the
+# 		optional mode argument:
+#
+# 			SELECT YEAR('2000-01-01'), WEEK('2000-01-01', 0);
+# 				-> 2000, 0
+#
+# 		One might argue that WEEK() should return 52 because the given date actually occurs in the
+# 		52nd week of 1999.
+#
+# 		WEEK() returns 0 instead so that hte return value is "the week number in the given year"
+#
+# 		This makes use of the WEEK() function reliable when combined with other functions that
+# 		extract a date part from a date.
+#
+# 		If you prefer a result evaluated with respect to the year that contains the first day
+# 		of the week for the given date, use 0, 2, 5 or 7 as the optional mode argument.
+#
+# 			SELECT WEEK('2000-01-01' 2);
+# 				-> 52
+#
+# 		Alternatively, use hte YEARWEEK() function:
+#
+# 			SELECT YEARWEEK('2000-01-01');
+# 				-> 199952
+#
+# 			SELECT MID(YEARWEEK('2000-01-01'), 5, 2);
+# 				-> '52'
+#
+# 	) WEEKDAY(date)
+#
+# 		Returns the weekday index for date (0 = Monday, 1 = Tuesday, --- 6 = Sunday)
+#
+# 			SELECT WEEKDAY('2008-02-03 22:23:00');
+# 				-> 6
+#
+# 			SELECT WEEKDAY('2007-11-06');
+# 				-> 1
+#
+# 	) WEEKOFYEAR(date)
+#
+# 		Returns the calendar week of the date as a number in the range from 1 to 53.
+#
+# 		WEEKOFYEAR() is a compatbility function that is equivalent to WEEK(date, 3)
+#
+# 			SELECT WEEKOFYEAR('2008-02-20');
+# 				-> 8
+#
+# 	) YEAR(date)
+#
+# 		Returns hte year for date, in the range 1000 to 9999, or 0 for the "zero" date.
+#
+# 			SELECT YEAR('1987-01-01');
+# 				-> 1987
+#
+#  ) YEARWEEK(date), YEARWEEK(date, mode)
+#
+# 		Returns year and week for a date.
+#
+# 		The year in the result may be different from the year in the date argument for the first and the last
+# 		week of the year.
+#
+# 		The mode argument works exactly like the mode argument to WEEK()
+#
+# 		For the single-argument syntax, a mode value of 0 is used.
+#
+# 		Unlike WEEK(), the value of default_week_format does not influence YEARWEEK()
+#
+# 			SELECT YEARWEEK('1987-01-01');
+# 				-> 198652
+#
+# 		The week number is different from what the WEEK() function would return (0) for optional
+# 		arguments 0 or 1, as WEEK() then returns the week in the context of the given year.
+#
+# 12.8 WHAT CALENDAR IS USED BY MYSQL
+#
+# MySQL uses what is known as a proleptic Gregorian calendar.
+#
+# Every country that has switched from the Julian to the Gregorian calendar has had
+# to discard at least ten days during the switch:
+#
+# To see how this works, consider the month of October 1582, when the first Julian-to-Gregorian
+# swith occurred.
+#
+# 		MONDAY 			TUESDAY 			WEDNESDAY 		THURSDAY 		FRIDAY 		SATURDAY 		SUNDAY
+# 		1 					2 					3 					4 					15 			16 				17
+# 		18 				19 				20 				21 				22 			23 				24
+# 		25 				26 				27 				28 				29 			30 				31
+#
+# There are no dates between October 4 and Ocotber 15.
+#
+# This discontinuity is called the Cutover.
+#
+# Any dates before the cutover are Julian, and any dates following the cutover are Gregorian.
+#
+# Dates during a cutover are nonexistent.
+#
+# A calendar applied to dates when it was not actually in use is called proleptic.
+#
+# THus, if we assume there never was a cutover and Gregorian rules always rule, we have
+# a proleptic Gregorian calendar.
+#
+# This is what is used by MySQL, as is reuqired by standard SQL.
+#
+# FOr this reason, dates prior ot the cutover stored as MySQL DATE or DATETIME
+# values must be adjusted to compensate for the difference.
+#
+# IT is important to realize that the cutover did not occur at the same itme in all
+# countries.
+#
+# That hte later it happened, the more days were lost.
+#
+# FOr example, in Great Britain, it took palce in 1752, when Wednesday September 2 was followed
+# by Thursday September 14
+#
+# Russia remained on the Julian calendar until 1918, losing 13 days in the process, and what is
+# popularly refered to as its "October REvolution" occured in November according to the Gregorian
+# calendar.
+#
+# 12.9 FULL-TEXT SEARCH FUNCTIONS
+#
+# 12.9.1 NATURAL LANGUAGE FULL-TEXT SEARCHES
+# 12.9.2 BOOLEAN FULL-TEXT SEARCHES
+# 12.9.3 FULL-TEXT SEARCHES WITH QUERY EXPANSION
+#
+# 12.9.4 FULL-TEXT STOPWORDS
+# 12.9.5 FULL-TEXT RESTRICTIONS
+# 12.9.6 FINE-TUNING MYSQL FULL-TEXT SEARCH
+#
+# 12.9.7 ADDING A COLLATION FOR FULL-TEXT INDEXING
+# 12.9.8 NGRAM FULL-TEXT PARSER
+# 12.9.9 MECAB FULL-TEXT PARSER PLUGIN
+#
+# MATCH_(col1,col2, ---) AGAINST (expr [search modifier])
+# 
+# 		search_modifier:
+# 		{
+# 				IN NATURAL LANGUAGE MODE
+# 		 	| IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION
+# 		 	| IN BOOLEAN MODE
+# 		 	| WITH QUERY EXPANSION
+# 		}
+# 			
+#
+# MySQL has support for full-text indexing and searching:
+#
+# 		) A full-text index in MySQL is an index of type FULLTEXT
+#
+# 		) Full-text indexes can be used only with InnoDB or MyISAM tables, and can be 
+# 			created only for CHAR, VARCHAR or TEXT columns.
+#
+# 		) MySQL provides a built-in full-text ngram parser that supports CHinese, Japanese and Korean
+# 			(CJK), and an installable MeCab full-text parser plugin for Japanese.
+#
+# 			Parsing differences are outlined IN SECTION 12.9.8, "NGRAM FULL-TEXT PARSER" and
+# 			SECTION 12.9.9,, "MECAB FULL-TEXT PARSER PLUGIN"
+#
+# 		) A FULLTEXT index definition can be given in the CREATE_TABLE statement when a table
+# 			is created, or added later using ALTER_TABLE or CREATE_INDEX
+#
+# 		) For large data sets, it is much faster to load your data int oa table that has no FULLTEXT
+# 			index and then create the index after that, than to load data into a table that has an 
+# 			existing FULLTEXT index.
+#
+# Full-text searching is performed using MATCH()_---_AGAINST syntax
+#
+# MATCH() takes a comma-separated list that names the columns to be searched.
+#
+# AGAINST takes a string to search for, and an optional modifier that indicates
+# what type of search to perform.
+#
+# The search string must be a string value that is constant during query evaluation.
+#
+# This rules out, for example, a table column because that can differ for each row.
+#
+# There are three types of full-text searches:
+#
+# 		) A natural language search interprets the search string as a phrase in natural human language (a phrase in free text)
+#
+# 			There are no special operators, with the exception of double quotes (") characters
+#
+# 			THe stopword list applies
+#
+# 			FOr more information about stopword lists, see SECTION 12.9.4, "FULL-TEXT STOPWORDS"
+#
+# 			Full-text searches are natural language searches if the IN NATURAL LANGUAGE MODE modifier
+# 			is given or if no modifier is given.
+#
+# 			For more information, see SECTION 12.9.1, "NATURAL LANGUAGE FULL-TEXT SEARCHES"
+#
+# 		) A boolean search interprets the search string using the rules of a special query language.
+#
+# 			THe string contains the words to search for.
+#
+# 			IT can also contain operators that specify requirements such that a word must be present
+# 			or absent in matching rows, or that it should be weighted higher or lower than usual.
+#
+# 			Certain common words (stopwords) are omitted from the search index and do not match if present
+# 			in the search string.
+#
+# 			The IN BOOLEAN MODE modifier specifies a boolean search.
+#
+# 			For more information, see SECTION 12.9.2, "BOOLEAN FULL-TEXT SEARCHES"
+#
+# 		) A query expansion search is a modification of a natural language search.
+#
+# 			The search string is used to perform a natural language search.
+#
+# 			Then words from the most relevant rows returned by the search are added
+# 			to the search string and the search is done again.
+#
+# 			The query returns the rows from the second search.
+#
+# 			The IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION or WITH QUERY EXPANSION modifier
+# 			specifies a query expansion search.
+#
+# 			For more information, see SECTION 12.9.3, "FULL-TEXT SEARCHES WITH QUERY EXPANSION"
+#
+# For information about FULLTEXT query performance, see SECTION 8.3.5, "COLUMN INDEXES"
+#
+# For more information about InnoDB FULLTEXT indexes, see SECTION 15.6.2.4, "INNODB FULLTEXT INDEXES"
+#
+# Constraints on full-text searching are listed in SECTION 12.9.5, "FULL-TEXT RESTRICTIONS"
+#
+# The myisam_ftdump utility dumps the contents of a MyISAM full-text index.
+#
+# This may be helpful for debugging full-text queries.
+#
+# See SECTION 4.6.3, "myisam_ftdump -- DISPLAY FULL-TEXT INDEX INFORMATION"
+#
+# 12.9.1 NATURAL LANGUAGE FULL-TEXT SEARCHES
+#
+# By default or with the IN NATURAL LANGUAGE MODE modifier, teh MATCH() function performs
+# a natural language search for a string against a text collection.
+#
+# A collection is a set of one or more columns included in a FULLTEXT Index.
+#
+# The search string is given as the argument to AGAINST()
+#
+# FOr each row in the table, MATCH() returns a relevance value; that is, a similarity
+# measure between the search string and the text in that row in the columns named
+# in the MATCH() list.
+#
+# 		CREATE TABLE articles (
+# 			id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
+# 			title VARCHAR(200),
+# 			body TEXT,
+# 			FULLTEXT (title, body)
+# 		) ENGINE=InnoDB;
+# 		Query OK, 0 rows affected (0.08 sec)
+#
+# 		INSERT INTO articles (title, body) VALUES
+# 			('MySQL Tutorial', 'DBMS stands for DataBase --'),
+# 			etc.
+# 		Query OK, 6 rows affected (0.01 sec)
+# 		Records: 6 Duplicates: 0 Warnings: 0
+#
+# 		SELECT * FROM articles
+# 		WHERE MATCH (title, body)
+# 		AGAINST ('database' IN NATURAL LANGUAGE MODE);
+# 		+-------+------------------------------------+--------------------------------+
+# 		| id 	  | title 										| body 									|
+# 		+-------+------------------------------------+--------------------------------+
+# 		| 1 	  | MySQL Tutorial 					| DBMS stands for DataBase ---    		|
+# 		| 5 	  | MySQL vs. YourSQL 				| In the following databasecomparison 	|
+# 		+-------+------------------------------+--------------------------------------+
+# 		2 rows in set (0.00 sec)
+#
+# By default, the search is performed in case-insensitive fashion.
+#
+# To perform a case-sensitive full-text search, use a case-sensiive or binary collation
+# for the indexed columns.
+#
+# For example, a column htat uses utf8mb4 char set can be assigned a collation of 
+# utf8mb4_0900_as_cs or utf8mb4_bin to make it case-sensiive for full-text searches.
+#
+# When MATCH() is used in a WHERE clause, as in the example shown earlier, the rows returned
+# are automatically sorted with the highest relevance first.
+#
+# Relevance values are nonnegative floating points.
+#
+# Zero relevance means no similarity.
+#
+# Relevance is computed based on the number of words in the row (document),
+# the number of unique words in the row, the total number of words in the collection,
+# and the number of rows that contain a particular word.
+#
+# NOTE:
+#
+# 		The term "document" may be used interchangably with the term "row", and both terms
+# 		refer to the indexed part of the row.
+#
+# 		THe term "collection" refers to the indexed columns and ecompasses all rows.
+#
+# To simply count matches, you could use a query as:
+#
+# 		SELECT COUNT(*) FROM articles
+# 		WHERE MATCH (title,body)
+# 		AGAINST ('database' IN NATURAL LANGUAGE MODE);
+#
+# 		+---------------+
+# 		| COUNT(*) 		 |
+# 		+---------------+
+# 		| 			2 		 |
+# 		+---------------+
+# 		1 row in set (0.00 sec)
+#
+# You might find it quicker to rewrite it as follows:
+#
+# 		SELECT
+# 		COUNT(IF(MATCH (title,body) AGAINST ('database' IN NATURAL LANGUAGE MODE), 1, NULL))
+# 		AS count
+# 		FROM articles;
+# 		+--------+
+# 		| count 	|
+# 		+--------+
+# 		| 	2 		|
+# 		+--------+
+# 		1 row in set (0.03 sec)
+#
+# The first query does some extra work (Sorting the results by relevance), but also can use
+# an index lookup based on the WHERE clause.
+#
+# The index lookup might make the first query faster if the search matches few rows.
+#
+# The second query performs a full table scan, which might be faster than the index
+# lookup if the search term was present in most rows.
+#
+# For natural-language full-text searches, the columns namedin the MATCH() function must be the same
+# columns included in some FULLTEXT index in your table.
+#
+# For hte preceding query, note that hte columns named in teh MATCH() function (title and body)
+# are the same as those named in the definition of the article table's FULLTEXT index.
+#
+# To search the title or body separately, you would create separate FULLTEXT indexes for each column.
+#
+# You can also perform a boolean search or a search with query epxansion.
+#
+# These search types are described in SECTION 12.9.2, "BOOLEAN FULL-TEXT SEARCHES", and
+# SECTION 12.9.3, "FULL-TEXT SEARCHES WITH QUERY EXPANSION"
+#
+# A full-text search that uses an index can name columns only from a single table in the MATCH() clause
+# because an index cannot span multiple tables.
+#
+# For MyISAM tables, a boolean search can be done in the absence of an index (albeit more slowly),
+# in which case it is possible to name columns from multiple tables.
+#
+# THe preceding example is a basic illustration that shows how to use the MATCH() function
+# where rows are returned in order of decreasing relevance.
+#
+# The next example shows how to retrieve the relevance values explicitly.
+#
+# Returned rows are not oredered because the SELECT statement includes neither WHERE
+# nor ORDER BY clauses:
+#
+# 	https://dev.mysql.com/doc/refman/8.0/en/fulltext-natural-language.html
+# 		
+# 
