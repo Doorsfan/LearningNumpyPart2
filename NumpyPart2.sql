@@ -83653,4 +83653,2010 @@ Need be, i will change this for upcoming repeated cases. */
 #
 # 				) CHAR[(N)] [charset_info]
 #
-# 						https://dev.mysql.com/doc/refman/8.0/en/cast-functions.html
+# 					Produces a string with the CHAR data type.
+#
+# 					If the optional length N is given, CHAR(N) causes the cast to use no more than
+# 					N characters of the argument.
+#
+# 					No padding occurs for values shorter than N characters.
+#
+# 					With no charset_info clause, CHAR produces a string with the default character set.
+#
+# 					To specify the character set explicitly, these charset_info values are permitted:
+#
+# 						) CHARACTER SET charset_name: Produces a string with the given character set
+#
+# 						) ASCII: Shorthand for CHARACTER SET latin1
+#
+# 						) UNICODE: Shorthand for CHARACTER SET ucs2
+#
+# 					In all cases, the string has the default collation for the character set
+#
+# 				) DATE
+#
+# 					Produces a DATE value
+#
+# 				) DATETIME
+#
+# 					Produces a DATETIME value
+#
+# 				) DECIMAL[(M[,D])]
+#
+# 					Produces a DECIMAL value.
+#
+# 					If the optional M and D values are given, they specify the maximum number of
+# 					digits (the precision) and the number of digits following the decimal point (the scale)
+#
+# 				) JSON
+#
+# 					Produces a JSON value.
+#
+# 					For details on the rules for conversion of values between JSON and other types,
+# 					see COMPARISON AND ORDERING OF JSON VALUES
+#
+# 				) NCHAR[(N)]
+#
+# 					Like CHAR, but produces a string with the national character set.
+#
+# 					see SECTION 10.3.7, "THE NATIONAL CHARACTER SET"
+#
+# 					Unlike CHAR, NCHAR does not permit trailing character set
+# 					information to be specified.
+#
+# 				) SIGNED [INTEGER]
+#
+# 					Produces a signed integer value
+#
+# 				) TIME
+#
+# 					Produces a TIME value
+#
+# 				) UNSIGNED [INTEGER]
+#
+# 					Produces an unsigned integer value
+#
+# 12.11 XML FUNCTIONS
+#
+# Table 12.15 XML FUNCTIONS
+#
+# 		Name 					Description
+#
+# 	ExtractValue() 		Extracts a value from an XML string using XPath notation
+#
+# 	UpdateXML() 			Return replaced XML fragment
+#
+# 	This section discusses XML and related functionality in MySQL.
+#
+# 	NOTE:
+#
+# 		It is possible to obtain XML formatted output from MySQL in the mysql and
+# 		mysqldump clients by invoking them with the --xml option.
+#
+# 		See SECTION 4.5.1, "MYSQL - THE MYSQL COMMAND-LINE CLIENT", and SECTION 4.5.4, "MYSQLDUMP - A DATABASE BACKUP PROGRAM"
+#
+# Two functions providing basic XPath 1.0 (XML Path Language, version 1.0) capabilities are available.
+#
+# Some basic information about XPath syntax and usage is provided later in this section;
+# however, an in-depth discussion of these topics is beyond the scope of this manual, and you should
+# refer to the XML PATH LANGUAGE (XPATH) 1.0 STANDARD for more info.
+#
+# A useful resource for those new to XPath or who desire a refresher in the basics, resources exist.
+#
+# NOTE:
+#
+# 		These functions remain under development.
+#
+# 		We continue to improve these and other aspects of XML and XPath functionality
+# 		in MySQL 8.0 and onwards.
+#
+# XPath expressions used with these functions support user variables and local stored program
+# variables.
+#
+# User variables are weakly checked; variables local to stored programs are strongly checked (see also BUG #26518):
+#
+# 		) USER VARIABLES (WEAK CHECKING)
+#
+# 			Variables using the syntax $@variable_name (that is, user variables) are not checked.
+#
+# 			No warnings or errors are issued by the server if a variable has the wrong type
+# 			or has previously not been assigned a value.
+#
+# 			This also means the user is fully responsible for any typographical errors,
+# 			since no warnings will be given if (for example) $@myvariable is used where
+# 			$@myvariable was intended.
+#
+# 			Example:
+#
+# 				SET @xml = '<a><b>X</b><b>Y</b></a>';
+# 				Query OK, 0 rows affected (0.00 sec)
+#
+# 				SET @i =1, @j = 2;
+# 				Query OK, 0 rows affected (0.00 sec)
+#
+# 				SELECT @i, ExtractValue(@xml, '//b[$@i]');
+# 				+---------+------------------------------------+
+# 				| @i 		 | ExtractValue(@xml, '//b[$@i]') 	  |
+# 				+---------+------------------------------------+
+# 				| 1 		 | X 											  |
+# 				+---------+------------------------------------+
+# 				1 row in set (0.00 sec)
+#
+# 				SELECT @j, ExtractValue(@xml, '//b[$@j]');
+# 				+---------+------------------------------------+
+# 				| @j 		 | ExtractValue(@xml, '//b[$@j]') 	  |
+# 				+---------+------------------------------------+
+# 				| 2 		 | Y 											  |
+# 				+---------+------------------------------------+
+# 				1 row in set (0.00 sec) 
+#
+# 				SELECT @k, ExtractValue(@xml, '//b[$@k]'); 	
+# 				+---------+------------------------------------+
+# 				| @k 	    | ExtractValue(@xml, '//b[$@k]') 	  |
+# 				+---------+------------------------------------+
+# 				| NULL 	 | 											  |
+# 				+---------+------------------------------------+
+# 				1 row in set (0.00 sec)
+#
+# 		) VARIABLES IN STORED PROGRAMS (STRONG CHECKING)
+#
+# 			Variables using the syntax $variable_name can be declared
+# 			and used with these functions when they are called inside stored programs.
+#
+# 			Such variables are local to the stored program in which they are defined,
+# 			and are strongly checked for type and value.
+#
+# 			Example:
+#
+# 				DELIMITER |
+#
+# 				CREATE PROCEDURE myproc ()
+# 				BEGIN
+# 					DECLARE i INT DEFAULT 1;
+# 					DECLARE xml VARCHAR(25) DEFAULT '<a>X</a><a>Y</a><a>Z</a>';
+# 
+# 					WHILE i < 4 DO
+# 						SELECT xml, i, ExtractValue(xml, '//a[$i]');
+# 						SET i = i+1;
+# 					END WHILE;
+# 				END |
+# 			Query OK, 0 rows affected (0.01 sec)
+#
+# 			DELIMITER ;
+#
+# 			CALL myproc();
+# 			+-----------------------------------+--------+-------------------------------+
+# 			| xml 									   | i 	   | ExtractValue(xml, '//a[$i]')  |
+# 			+-----------------------------------+--------+-------------------------------+
+# 			| <a>X</a><a>Y</a><a>Z</a> 			| 1 		| X 									  |
+# 			+-----------------------------------+--------+-------------------------------+
+# 			1 row in set (0.00 sec)
+#
+# 			+-----------------------------------+--------+-------------------------------+
+# 			| xml 										| i 	   | ExtractValue(xml, '//a[$i]')  |
+# 			+-----------------------------------+--------+-------------------------------+
+# 			| <a>X</a><a>Y</a><a>Z</a> 			| 2 		| Y 									  |
+# 			+-----------------------------------+--------+-------------------------------+
+# 			1 row in set (0.01 sec)
+#
+# 			+-----------------------------------+--------+-------------------------------+
+# 			| xml 										| i 		| ExtractValue(xml, '//a[$i]')  |
+# 			+-----------------------------------+--------+-------------------------------+
+# 			| <a>X</a><a>Y</a><a>Z</a> 			| 3 		| Z 									  |
+# 			+-----------------------------------+--------+-------------------------------+
+# 			1 row in set (0.01 sec) 
+#
+# 		Parameters. Variables used in XPath expressions inside stored routines that are passed in
+# 		as parameters are also subject to strong checking.
+#
+# Expressions containing user variables or variables local to stored programs must otherwise
+# (except for notation) conform to the rules for XPath expressions containing variables as given
+# in the XPath 1.0 specification.
+#
+# NOTE:
+#
+# 		A user variable used to stored an XPath expression is treated as an empty string.
+#
+# 		Because of this, it is not possible to store an XPath expression as a user variable.
+# 		(Bug #32911)
+#
+# 	) ExtractValue(xml frag, xpath expr)
+#
+# 		ExtractValue() takes two string arguments,a fragment of XML markup xml_frag
+# 		and an XPath expression xpath_expr (also known as a locator);
+#
+# 		It returns the text (CDATA) of the first text node which is a child of the element
+# 		or elements matched by the XPath expression.
+#
+# 		Using this function is equivalent of performing a match using the xpath_expr
+# 		after appending /text().
+#
+# 		In other words, 
+#
+# 			ExtractValue('<a><b>Sakila</b></a>', '/a/b')
+#
+# 			And
+#
+# 			ExtractValue('<a><b>Sakila</b></a>', '/a/b text()') 
+#
+# 		produce the same result.
+#
+# 		If multiple matches are found, the content of the first child text node of each matching
+# 		element is returned (in the order matched) as a single, space-delimited string.
+#
+# 		If no matching text node is found for the expression (including the implicit /text()) -
+# 		for whatever reason, as long as xpath_expr is valid and xml_frag consists of elements
+# 		which are properly nested and closed - an empty string is returned.
+#
+# 		No distinction is made between a match on an empty element and no match at all.
+#
+# 		This is by design.
+#
+# 		If you need to determine whether no matching element was found in xml_frag or such
+# 		an element was found but contained no child text nodes, you should test the result
+# 		of an expression that uses the XPath count() function.
+#
+# 		For example, both of these statements return an empty string, as shown here:
+#
+# 			SELECT ExtractValue('<a><b/></a>', '/a/b');
+# 			+-------------------------------------------+
+# 			| ExtractValue('<a><b/></a>', '/a/b') 		  |
+# 			+-------------------------------------------+
+# 			| 														  |
+# 			+-------------------------------------------+
+# 			1 row in set (0.00 sec)
+#
+# 			SELECT ExtractValue('<a><c/></a>', '/a/b');
+# 			+-------------------------------------------+
+# 			| ExtractValue('<a><c/></a>', '/a/b') 		  |
+# 			+-------------------------------------------+
+# 			|  													  |
+# 			+-------------------------------------------+
+# 			1 row in set (0.00 sec)
+#
+# However, you can determine whether there was actually a matching element
+# using the following:
+#
+# 			SELECT ExtractValue('<a><b/></a>', 'count(/a/b)');
+# 			+-------------------------------------------------+
+# 			| ExtractValue('<a><b/></a>', 'count(/a/b)') 	  |
+# 			+-------------------------------------------------+
+# 			| 1 															  |
+# 			+-------------------------------------------------+
+# 			1 row in set (0.00 sec)
+#
+# 			SELECT ExtractValue('<a><c/></a>', 'count(/a/b)');
+# 			+-------------------------------------------------+
+# 			| ExtractValue('<a><c/></a>', 'count(/a/b)') 	  |
+# 			+-------------------------------------------------+
+# 			| 0 															  |
+# 			+-------------------------------------------------+
+# 			1 row in set (0.01 sec)
+#
+# IMPORTANT:
+#
+# 		ExtractValue() returns only CDATA, and does not return any tags that might be contained
+# 		within a matching tag, nor any of their content (see the result returned as val1 in the following example)
+#
+# 		SELECT
+# 			ExtractValue('<a>ccc<b>ddd</b></a>', '/a') AS val1,
+# 			ExtractValue('<a>ccc<b>ddd</b></a>', '/a/b') AS val2,
+# 			ExtractValue('<a>ccc<b>ddd</b></a>', '//b') AS val3,
+# 			ExtractValue('<a>ccc<b>ddd</b><b>eee</b></a>', '//b') AS val5;
+#
+# 		+-------+--------+---------+---------+-----------+
+# 		| val1  | val2   | val3 	| val4 	 | val5 	    |
+# 		+-------+--------+---------+---------+-----------+
+# 		| ccc   | ddd    | ddd     |         | ddd eee   |
+# 		+-------+--------+---------+---------+-----------+
+#
+# This function uses the current SQL collation for making comparisons with contains(), performing
+# the same collation aggregation as other string functions (such as CONCAT()), in taking into account
+# the collation coercibility of their arguments;
+#
+# See SECTION 10.8.4, "COLLATION COERCIBILITY IN EXPRESSIONS", for an explanation of the rules
+# governing this behavior.
+#
+# (Previously, binary - that is, case sensitive - comparing was always used)
+#
+# NULL is returned if xml_frag contains elements which are not properly nested or closed,
+# and a warning is generated, as shown in this example:
+#
+# 		SELECT ExtractValue('<a>c</a><b', '//a');
+# 		+------------------------------------------+
+# 		| ExtractValue('<a>c</a><b', '//a') 		 |
+# 		+------------------------------------------+
+# 		| NULL 												 |
+# 		+------------------------------------------+
+# 		1 row in set, 1 warning (0.00 sec)
+#
+# 		SHOW WARNINGS\G
+# 		*********************** 1. row ***********************
+# 			Level: Warning
+# 			 Code: 1525
+# 		Message : Incorrect XML value: 'parse error at line 1 pos 11:
+# 					 END-OF-INPUT unexpected ('>' wanted)'
+# 		1 row in set (0.00 sec)
+#
+# 		SELECT ExtractValue('<a>c</a><b/>', '//a');
+# 		+-------------------------------------------+
+# 		| ExtractValue('<a>c</a><b/>', '//a') 		  |
+# 		+-------------------------------------------+
+# 		| c 													  |
+# 		+-------------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# ) UpdateXML(xml target, xpath expr, new xml)
+#
+# 		This function replaces a single portion of a given fragment of XML markup
+# 		xml_target with a new XML fragment new_xml, and then returns the changed XML.
+#
+# 		The portion of xml_target that is replaced matches an XPath expression xpath_expr
+# 		supplied by the user.
+#
+# 		If no expression matching xpath_expr is found, or if multiple matches are found,
+# 		the function returns the original xml_target XML fragment.
+#
+# 		All three arguments should be strings.
+#
+# 			SELECT
+# 				UpdateXML('<a><b>ccc</b><d></d></a>', '/a', '<e>fff</e>') AS val1,
+#
+# 				UpdateXML('<a><b>ccc</b><d></d></a>', '/b', '<e>fff</e>') AS val2,
+#
+# 				UpdateXML('<a><b>ccc</b><d></d></a>', '//b', '<e>fff</e>') AS val3,
+#
+# 				UpdateXML('<a><b>ccc</b><d></d></a>', '/a/d', '<e>fff</e>') AS val4,
+#
+# 				UpdateXML('<a><d></d><b>ccc</b><d></d></a>', '/a/d', '<e>fff</e>') AS val5
+# 			\G
+#
+# 		**************************** 1. row ******************************
+# 		val1: <e>fff</e>
+#
+# 		val2: <a><b>ccc</b><d></d></a>
+#
+# 		val3: <a><e>fff</e><d></d></a>
+#
+# 		val4: <a><b>ccc</b><e>fff</e></a>
+#
+# 		val5: <a><d></d><b>ccc</b><d></d></a>
+#
+# NOTE:
+#
+# 		A discussion in depth of XPath syntax and usage are beyond the scope of this manual.
+#
+# 		Please see the XML Path Language (XPath) 1.0 specification for definitive information.
+#
+# 		A useful resource for those new to XPath or who are wishing a refresher in the basics,
+# 		see external resources.
+#
+# Descriptions and examples of some basic XPath expressions follow:
+#
+# 		) /tag
+#
+# 			Matches <tag/> if and only if <tag/> is the root element
+#
+# 			Example: /a has a match in <a><b/></a> because it matches the outermost (root) tag.
+#
+# 						It does not match the inner a element in <b><a/></b> because in this instance
+# 						it is the child of another element.
+#
+# 		) /tag1/tag2
+#
+# 			Matches <tag2/> if and only if it is a child of <tag1/>, and <tag1/> is the root element.
+#
+# 			Example:
+#
+# 					/a/b matches the b element in the XML fragment <a><b/></a> because it is a child of the root element
+# 					a.
+#
+# 					It does not have a match in <b><a/></b> because in this case, b is the root element
+# 					(and hence the child of no other element)
+#
+# 					Not does the XPath expression have a match in <a><c><b/></c></a>;
+#
+# 					Here, b is a descendant of a, but not actually a child of a.
+#
+# 					This construct is extendable to three or more elements.
+#
+# 					For example, the XPath expression /a/b/c matches the c element
+# 					in the fragment <a><b><c/></b></a>
+#
+# 		) //tag
+#
+# 			Matches any instance of <tag>
+#
+# 			Example: //a matches the a element in any of the following:
+#
+# 				<a><b><c/></b></a>; <c><a><b/></a></b>; <c><b><a/></b></c>
+#
+# 			// can be combined with /
+#
+# 			For example, //a/b matches the b element in either of the fragments:
+#
+# 				<a><b/></a>
+#
+# 				or
+#
+# 				<c><a><b/></a></c>
+#
+# 			NOTE:
+#
+# 				//tag is the equivalent of /descendant-or-self::*/tag
+#
+# 				A common error is to confuse this with /descendant-or-self::tag,,
+# 				although the later expression can actually lead to very different results,
+# 				as can be seen here:
+#
+# 					SET @xml = '<a><b><c>w</c><b>x</b><d>y</d>z</b></a>';
+# 					Query OK, 0 rows affected (0.00 sec)
+#
+# 					SELECT @xml;
+# 					+---------------------------------------------------+
+# 					| @xml 															 |
+# 					+---------------------------------------------------+
+# 				   | <a><b><c>w</c><b>x</b><d>y</d>z</b></a> 			 |
+# 					+---------------------------------------------------+
+# 					1 row in set (0.00 sec)
+#
+# 					SELECT ExtractValue(@xml, '//b[1]');
+# 					+---------------------------------------------------+
+# 					| ExtractValue(@xml, '//b[1]') 							 |
+# 					+---------------------------------------------------+
+# 					| x z 															 |
+# 					+---------------------------------------------------+
+# 					1 row in set (0.00 sec)
+#
+# 					SELECT ExtractValue(@xml, '//b[2]'); 	
+# 					+---------------------------------+
+# 					| ExtractValue(@xml, '//b[2]') 	 |
+# 					+---------------------------------+
+# 					|											 |
+# 					+---------------------------------+
+# 					1 row in set (0.01 sec)
+#
+# 					SELECT ExtractValue(@xml, '/descendant-or-self::*/b[1]');
+# 					+-------------------------------------------------------+
+# 					| ExtractValue(@xml, '/descendant-or-self::*/b[1]') 	  |
+# 					+-------------------------------------------------------+
+# 					| x z 																  |
+# 					+-------------------------------------------------------+
+# 					1 row in set (0.06 sec)
+#
+# 					SELECT ExtractValue(@xml, '/descendant-or-self::*/b[2]');
+# 					+-------------------------------------------------------+
+# 					| ExtractValue(@xml, '/descendant-or-self::*/b[2]') 	  |
+# 					+-------------------------------------------------------+
+# 					| 																		  |
+# 					+-------------------------------------------------------+
+# 					1 row in set (0.00 sec)
+#
+# 					SELECT ExtractValue(@xml, '/descendant-or-self::b[1]');
+# 					+-------------------------------------------------------+
+# 					| ExtractValue(@xml, '/descendant-or-self::b[1]') 		  |
+# 					+-------------------------------------------------------+
+# 					| z 																	  |
+# 					+-------------------------------------------------------+
+# 					1 row in set (0.00 sec)
+#
+# 					SELECT ExtractValue(@xml, '/descendant-or-self::b[2]');
+# 					+-------------------------------------------------------+
+# 					| ExtractValue(@xml, '/descendant-or-self::b[2]') 		  |
+# 					+-------------------------------------------------------+
+# 					| x 																	  |
+# 					+-------------------------------------------------------+
+# 					1 row in set (0.00 sec)
+#
+# ) The * operator acts as a "wildcard" that matches any element.
+#
+# 		For example, the expression /*/b matches the b element in either of the
+# 		XML fragments <a><b/></a> or <c><b/></c>
+#
+# 		However, the expression does not produce a match in the fragment <b><a/></b>
+# 		because b must be a child of some other element.
+#
+# 		The wildcard may be used in any position:
+#
+# 			The expression /*/b/* will match any child of a b element that
+# 			is itself not the root element.
+#
+# ) You can match any of several locators using the | (UNION) operator.
+#
+# 		For example, the expression //b|//c matches all b and c elements in the XML target.
+#
+# ) It is also possible to match an element based on the value of one or more of its attributes.
+#
+# 		This is done using the syntax tag[@attribute="value"]
+#
+# 		For example, the expression:
+#
+# 		//b[@id="idB"] 
+#
+# 			matches the second b element in the fragment
+# 		
+# 		<a><b id="idA"/><c/><b id="idB"/></a>
+#
+# 		To match against any element having:
+#
+# 		attribute="value" 
+#
+# 			use the XPath expression
+# 		
+# 		//*[attribute="value"]
+#
+# 		To filter multiple attribute values, simply use multiple attribute-comparison clauses
+# 		in succession.
+#
+# 		For example, the expression:
+#
+# 			 //b[@c="x"][@d="y"] 
+# 		
+# 		matches the element
+#
+# 			<b c="x" d="y"/>
+#
+# 		occuring anywhere in a given XML fragment.
+#
+# 		To find elements for which the same attribute matches any of several values, you can use
+# 		multiple locators joined by the | operator.
+#
+# 		For example, to match all b elements whose c attributes have either of the values 23 or 17,
+# 		use the expression:
+#
+# 			//b[@c="23"]|//b[@c="17"]
+#
+# 		You can also use the logical or operator for this purpose:
+#
+# 			//b[@c="23" or @c="17"]
+#
+# 		NOTE:
+#
+# 			The difference between or and | is that or joins conditions,
+# 			while | joins result sets.
+#
+# XPATH LIMITATIONS.
+#
+# The XPath syntax supported by these functions is currently subject to the
+# following limitations:
+#
+# 		) Nodeset-to-nodeset comparison (such as '/a/b[@c=@d]') is not supported
+#
+# 		) All of the standard XPath comparison operators are supported. (Bug #22823)
+#
+# 		) Relative locator expressions are resolved in the context of the root node.
+#
+# 			For example, consider the following query and result:
+#
+# 				SELECT ExtractValue(
+# 					'<a><b c="1">X</b><b c="2">Y</b></a>',
+# 					'a/b'
+# 				) AS result;
+#
+# 				+-------------------------+
+# 				| result 					  |
+# 				+-------------------------+
+# 				| X Y 						  |
+# 				+-------------------------+
+# 				1 row in set (0.03 sec)
+#
+# 			In this case, the locator a/b resolves to /a/b
+#
+# 			Relative locators are also supported within predicates.
+#
+# 			In the following example, d[--/@c="1"] is resolved as /a/b[@c="1"]/d:
+#
+# 				SELECT ExtractValue(
+# 					'<a>
+# 					  <b c="1"><d>X</d></b>
+# 					  <b c="2"><d>X</d></b>
+# 					</a>'
+# 					'a/b/d[--/@c="1"]')
+# 				AS result;
+#
+# 				+------------------+
+# 				| result 			 |
+# 				+------------------+
+# 				| X 					 |
+# 				+------------------+
+# 				1 row in set (0.00 sec)
+#
+# 		) Locators prefixed with expressions that evaluate as scalar values -
+#
+# 			including variable references, literals, numbers, and scalar function
+# 			calls - are not permitted, and their use results in an error.
+#
+# 		) The :: operator is not supported in combination with node types such as the following:
+#
+# 			) axis::comment()
+#
+# 			) axis::text()
+#
+# 			) axis::processing-instructions()
+#
+# 			) axis:node()
+#
+# 			However, name tests (such as axis::name and axis::*) are supported,
+# 			as shown in these examples:
+#
+# 				SELECT ExtractValue('<a><b>x</b><c>y</c></a>', '/a/child::b');
+# 				+-----------------------------------------------------------+
+# 				| ExtractValue('<a><b>x</b><c>y</c></a>', '/a/child::b')    |
+# 				+-----------------------------------------------------------+
+# 				| x 																			|
+# 				+-----------------------------------------------------------+
+# 				1 row in set (0.02 sec)
+#
+# 				SELECT ExtractValue('<a><b>x</b><c>y</c></a>', '/a/child::*');
+# 				+-----------------------------------------------------------+
+# 				| ExtractValue('<a><b>x</b><c>y</c></a>', '/a/child::*') 	|
+# 				+-----------------------------------------------------------+
+# 				| x y 																	   |
+# 				+-----------------------------------------------------------+
+# 				1 row in set (0.01 sec)
+#
+# 	) "Up-and-down" navigation is not supported in cases where the path would lead "above" the root element.
+#
+# 		That is, you cannot use expressions which match on descendants of ancestors of a given element,
+# 		where one or more of the ancestors of the current element is also an ancestor of the root element
+#
+# 		(See BUG #16321)
+#
+# 	) The following XPath functions are not supported, or have known issues as indicated:
+#
+# 		) id()
+#
+# 		) lang()
+#
+# 		) local-name()
+#
+# 		) name()
+#
+# 		) namespace-uri()
+#
+# 		) normalize-space()
+#
+# 		) starts-with()
+#
+# 		) string()
+#
+# 		) substring-after()
+#
+# 		) substring-before()
+#
+# 		) translate()
+#
+# 	) The following axes are not supported:
+#
+# 		) following-sibling
+#
+# 		) following
+#
+# 		) preceding-sibling
+#
+# 		) preceding
+#
+# XPath expressions passed as arguments to ExtractValue() and UpdateXML() may contain the colon character
+# (:) in element selectors, which enables their use with markup employing XML namespaces notation.
+#
+# For example:
+#
+# 		SET @xml = '<a>111<b:c>222<d>333</d><e:f>444</e:f></b:c></a>';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		SELECT ExtractValue(@xml, '//e:f');
+# 		+----------------------------------+
+# 		| ExtractValue(@xml, '//e:f') 	  |
+# 		+----------------------------------+
+# 		| 444 									  |
+# 		+----------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		SELECT UpdateXML(@xml, '//b:c', '<g:h>555</g:h>');
+# 		+--------------------------------------------+
+# 		| UpdateXML(@xml, '//b:c', '<g:h>555</g:h>') |
+#		+--------------------------------------------+
+# 		| <a>111<g:h>555</g:h></a> 						|
+# 		+--------------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# This is similar in some respects to what is permitted by Apache Xalan and some other parsers,
+# and is much simpler than requiring namespace declarations or the use of namespace-uri() and
+# local-name() functions.
+#
+# ERROR HANDLING
+#
+# For both ExtractValue() and UpdateXML(), the XPath locator used must be valid
+# and the XML to be searched must consist of elements which are properly
+# nested and closed.
+#
+# If the locator is invalid, an error is generated:
+#
+# 		SELECT ExtractValue('<a>c</a><b/>', '/&a');
+# 		ERROR 1105 (HY000): XPath syntax error: '&a'
+#
+# If xml_frag does not consist of elements which are properly nested
+# and closed, NULL is returned and a warning is generated, as shown in this example:
+#
+# 		SELECT ExtractValue('<a>c</a><b', '//a');
+# 		+------------------------------------------+
+# 		| ExtractValue('<a>c</a><b', '//a') 		 |
+# 		+------------------------------------------+
+# 		| NULL 												 |
+# 		+------------------------------------------+
+# 		1 row in set, 1 warning (0.00 sec)
+#
+# 		SHOW WARNINGS\G
+# 		****************************** 1. row **************************
+# 			Level: Warning
+# 			 Code: 1525
+# 		 Message: Incorrect XML value: 'parse error at line 1 pos 11:
+# 					 END-OF-INPUT unexpected ('>' wanted)'
+# 		 1 row in set (0.00 sec)
+#
+# 		SELECT ExtractValue('<a>c</a><b/>', '//a');
+# 		+-------------------------------------------+
+# 		| ExtractValue('<a>c</a><b/>', '//a') 		  |
+# 		+-------------------------------------------+
+# 		| c 													  |
+# 		+-------------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# IMPORTANT:
+#
+# 		The replacement XML used as the third argument to UpdateXML() is NOT checked
+# 		to determine whether it consists solely of elements which are properly nested
+# 		and closed.
+#
+# XPATH INJECTION
+#
+# Code injection occurs when malicious code is introduced into the system to gain unauthorized
+# access to privileges and data.
+#
+# It is based on exploiting assumptions made by developers about the type and content of
+# data input from users.
+#
+# XPath is no exception in this regard.
+#
+# A common scenario in which this can happen is the case of application which handles
+# authorization by matching the combination of a login name and a PW with those found 
+# in an XML file, using an XPath expression like this one:
+#
+# 		//user[login/text()='neapolitan' and password/text()='1c3cr34m']/attribute::id
+#
+# This is the XPath equivalent of an SQL statement like this one:
+#
+# 		SELECT id FROM users WHERE login='neapolitan' AND password'1c3cr34m';
+#
+# <?php
+#
+# 		$file = "users.xml";
+#
+# 		$login = $POST["login"];
+# 		$password = $POST["password"];
+#
+# 		$xpath = "//user[login/text()=$login and password/text()=$password]/attribute::id";
+#
+# 		if( file_exists($file))
+# 		{
+# 			$xml = simplexml_load_file($file);
+#
+# 			if($result = $xml->xpath($xpath))
+# 				echo "You are now logged in as $result[0].";
+# 			else
+# 				echo "Invalid login name or password.";
+# 		}
+# 		else
+# 			exit("Failed to open $file.");
+# ?>
+#
+# No checks are performed on the input.
+#
+# This means that a malevolent user can "short-circuit" the test by entering ' or 1=1
+# for both the login name and password, resulting in $xpath being evaluated as shown here:
+#
+# 		//user[login/text()='' or 1=1 and password/text()='' or 1=1]/attribute::id
+#
+# Since the expression inside the square brackets always evaluate as true, it is effectively
+# the same as this one, which matches the id attribute of every user element in the XML
+# document:
+#
+# 		//user/attribute::id
+#
+# One way to circumvent this is simply by quoting the variable names to be interpolated
+# in the definitoon of $xpath, forcing the values passed from a web form to be converted to strings:
+#
+# 		$xpath = "//user[login/text()='$login' and password/text()='$password']/attribute::id";
+#
+# This is the same strategy that is often recommended for preventing SQL injection attacks.
+#
+# In general, the practices you should follow for preventing XPath injection attacks are the
+# same as for preventing SQL injections:
+#
+# 		) Never accept untested data from users in your app
+#
+# 		) Check all user-submitted data for type; reject or convert the data that is of the wrong type
+#
+# 		) Test numeric data for out of range values;
+#
+# 			Truncate, round, or reject values that are out of range.
+#
+# 			Test strings for illegal characters and either strip them out or reject
+# 			input containing them.
+#
+# 		) Do not output explicit error messages that might provide an unauthorized user
+# 			which clues that could be used to compromise the system;
+#
+# 			Log these to a file or database table instead
+#
+# Just as an SQL injection attack can be used to obtain information about DB schemas,
+# so can XPath injection be used to traverse XML files to uncover their structure,
+# as discussed in external sources.
+#
+# It is also important to check the output being sent back to the client.
+#
+# Consider what can happen when we use the MySQL ExtractValue() function:
+#
+# 		SELECT ExtractValue(
+# 			LOAD_FILE('users.xml'),
+# 			'//user[login/text()="" or 1=1 and password=text()="" or 1=1]/attribute::id'
+# 		) AS id;
+# 		+-------------------------------------+
+# 		| id 											  |
+# 		+-------------------------------------+
+# 		| 00327 13579 02403 42354 28570 		  |
+# 		+-------------------------------------+
+# 		1 row in set (0.01 sec)
+#
+# Because ExtractValue() returns multiple matches as a single space-delimited string,
+# this injection attack provides every valid ID contained within users.xml to the user
+# as a single row of output.
+#
+# As an extra safeguard(), you should also test output before returning it
+# to the user.
+#
+# Here is a simple example:
+#
+# 		SELECT @id = ExtractValue(
+# 			LOAD_FILE('users.xml'),
+# 			'//user[login/text()="" or 1=1 and password/text()="" or 1=1]/attribute::id'
+# 		);
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		SELECT IF(
+# 				INSTR(@id, ' ') = 0,
+# 				@id,
+# 				'Unable to retrieve user ID')
+# 		AS singleID;
+# 	
+# +-------------------------------------+
+# | SingleID 									 |
+# +-------------------------------------+
+# | Unable to retrieve user ID 			 |
+# +-------------------------------------+
+# 1 row in set (0.00 sec)
+#
+# In general, the guidelines for returning data to users securely are the same as
+# for accepting user input.
+#
+# These can be summed up as:
+#
+# 		) Always test outgoing data for type and permissible values.
+#
+# 		) Never permit unauthorized users to view error messages that might provide information
+# 			about the application that could be used to exploit it.
+#
+# 12.12 BIT FUNCTIONS AND OPERATORS
+#
+# TABLE 12.16 BIT FUNCTIONS AND OPERATORS
+#
+# NAME 				DESC
+#
+# BIT_COUNT() 		Return the number of bits that are set
+#
+# & 					Bitwise AND
+#
+# ~ 					Bitwise inversion
+#
+# | 					Bitwise OR
+#
+# ^	 				Bitwise XOR
+#
+# << 					Left shift
+#
+# >> 					Right shift
+#
+# Bit functions and operators comprise:
+#
+# 		BIT_COUNT()
+#
+# 		BIT_AND()
+#
+# 		BIT_OR()
+#
+# 		BIT_XOR()
+#
+# 		&
+#
+# 		|
+#
+# 		^
+#
+# 		~
+#
+# 		<<
+#
+# 		>>
+#
+# (The BIT_AND(), BIT_OR() and BIT_XOR() aggregate functions are described in the
+# SECTION 12.20.1, "AGGREGATE (GROUP BY) FUNCTION DESCRIPTIONS")
+#
+# Prior to MySQL 8.0, bit functions and operators required BIGINT (64-bit integer)
+# arguments and returned BIGINT values, so they had a maximum range of 64 bits.
+#
+# Non-BIGINT arguments were converted to BIGINT prior to performing the operation
+# and truncation could occur.
+#
+# In MySQL 8.0, bit functions and operators permit binary string type arguments
+# (BINARY, VARBINARY, and the BLOB types) and a value of like type, which enables them
+# to take arguments and produce return values larger than 64 bits.
+#
+# Nonbinary string arguments are converted to BIGINT and processed as such, as before.
+#
+# AN implication of this change in behavior is that bit operations on binary string
+# arguments might produce a different result in MySQL 8.0 than in 5.7
+#
+# For information about how to prepare MySQL 5.7 for potentional incompatibilities
+# between 5.7 and 8.0, see BIT FUNCTIONS AND OPERATORS in the 5.7 version
+#
+# 		) BIT OPERATIONS PRIOR TO MYSQL 8.0
+#
+# 		) BIT OPERATIONS IN MYSQL 8.0
+#
+# 		) BINARY STRING BIT-OPERATION EXAMPLES
+#
+# 		) BITWISE AND, OR, AND XOR OPERATIONS
+#
+# 		) BITWISE COMPLEMENT AND SHIFT OPERATIONS
+#
+# 		) BIT_COUNT() OPERATIONS
+#
+# 		) BIT_AND(), BIT_OR() AND BIT_XOR() OPERATIONS
+#
+# 		) SPECIAL HANDLING OF HEXADECIMAL LITERALS, BIT LITERALS, AND NULL LITERALS
+#
+# 		) BIT-OPERATION INCOMPATIBILITIES WITH MYSQL 5.7
+#
+# BIT OPERATIONS PRIOR TO MYSQL 8.0
+#
+# Bit operations prior to MySQL 8.0 handle only unsigned 64-bit integer argument
+# and result values (that is, unsigned BIGINT values)
+#
+# Conversion of arguments of other types to BIGINT occurs as necessary.
+#
+# Examples:
+#
+# 		) This statement operates on numeric literals, treated as unsigned 64-bit integers:
+#
+# 			SELECT 127 | 128, 128 << 2, BIT_COUNT(15);
+# 			+------------+---------------+--------------------+
+# 			| 127 | 128  | 128 << 2 	  | BIT_COUNT(15) 	  |
+# 			+------------+---------------+--------------------+
+# 			| 		255 	 | 512 			  |  	4 					  |
+# 			+------------+---------------+--------------------+
+#
+# 		) This staetment performs to-number conversions on the string arguments ('127' to 127 and so forth)
+# 			before performing the same operations as the first statement and producing the same results:
+#
+# 				SELECT '127' | '128', '128' << 2, BIT_COUNT('15');
+# 				+--------------+-----------------+-------------------+
+# 				| '127' | '128'| '128' << 2 		| BIT_COUNT('15')   |
+# 				+--------------+-----------------+-------------------+
+# 				| 			255 	| 		512 			| 		4 				  |
+# 				+--------------+-----------------+-------------------+
+#
+# 		) This statement uses hexadecimal literals for the bit-operation arguments.
+#
+# 			MySQL by default treats hexadecimal literals as binary strings, but in numeric
+# 			context evaluates them as numbers (see SECTION 9.1.4, "HEXADECIMAL LITERALS")
+#
+# 			Prior to 8.0, numeric context includes bit operations.
+#
+# 			Examples:
+#
+# 				SELECT X'7F' | X'80', X'80' << 2, BIT_COUNT(X'0F');
+# 				+-----------------+---------------+---------------------+
+# 				| X'7F' | X'80'   | X'80' << 2    | BIT_COUNT(X'0F') 	  |
+# 				+-----------------+---------------+---------------------+
+# 				| 			255 		| 		512 		 | 		4 				  |
+# 				+-----------------+---------------+---------------------+
+#
+# 			Handling of bit-value literals in bit operations is similar to hexadecimal
+# 			literals (that is, as numbers)
+#
+# BIT OPERATIONS IN MYSQL 8.0
+#
+# MySQL 8.0 extends bit operations to handle binary string arguments directly (without conversion)
+# and produce binary string results.
+#
+# (Arguments that are not integers or binary strings are still converted to integers, as before)
+#
+# This extension enhances bit operations in the following ways:
+#
+# 		) Bit operations become possible on values longer than 64-bits
+#
+# 		) It is easier to perform bit operations on values that are more naturally represented
+# 			as binary strings than as integers.
+#
+# For example, consider UUID values and IPv6 addresses, which have human-readable text formats like
+# this:
+#
+# 		UUID: 6ccd780c-baba-1026-9564-5b8c656024db
+# 		IPv6: fe80::219:d1ff:fe91:1a72
+#
+# It is cumbersome to operate on text strings in those formats.
+#
+# An alternative is to convert them to  fixed-length binary strings without delimiters.
+# 
+# UUID_TO_BIN() and INET6_ATON() each produce a value of data type BINARY(16), a binary string
+# 16 bytes (128 bits) long.
+#
+# The following statements illustrate this (HEX() is used to produce displayable values):
+#
+# 		SELECT HEX(UUID_TO_BIN('6ccd780c-baba-1026-9564-5b8c656024db'));
+# 		+----------------------------------------------------------------+
+# 		| HEX(UUID_TO_BIN('6ccd780c-baba-1026-9564-5b8c656024db')) 		  |
+# 		+----------------------------------------------------------------+
+# 		| 6CCD780CBABA102695645B8C656024DB 										  |
+# 		+----------------------------------------------------------------+
+#
+# 		SELECT HEX(INET6_ATON('fe80::219:d1ff:fe91:1a72')); 		
+# 		+-------------------------------------------------+
+# 		| HEX(INET6_ATON('fe80::219:d1ff:fe91:1a72')) 	  |
+# 		+-------------------------------------------------+
+# 		| FE800000000000000000000219D1FFFFE911A72 		  |
+# 		+-------------------------------------------------+
+#
+# Those binary values are easily manipulable with bit operations to perform actions
+# such as extracting the timestamp from UUID values, or extracting the network and host
+# parts of IPv6 addresses. 
+#
+# (For examples, see later in this discussion)
+#
+# Arguments that count as binary strings include column values, routine parameters, local
+# variables, and user-defined variables that have a binary string type:
+#
+# 		BINARY, VARBINARY or one of the BLOB types
+#
+# What about hexadecimal literals and bit literals?
+#
+# Recall that those are binary strings by default in MySQL, but numbers in numeric context.
+#
+# How are they handled for bit operations in MysQL 8.0?
+#
+# It has been common to specify arguments to bit operations using hexadecimal literals or bit literals
+# with the intent that they represent numbers, so MySQL continues to evaluate bit operations in numeric
+# context when all bit arguments are hexadecimal or bit literals, for backward compatbility.
+#
+# If you require evaluation as binary strings instead, that is easily accomplished:
+#
+# 	Use the _binary introducer for at least one literal
+#
+# 		) These bit operations evaluate the hexadecimal literals and bit literals as integers:
+#
+# 			SELECT X'40' | X'01', b'11110001' & b'01001111';
+# 			+----------------+---------------------------------+
+# 			| X'40' | X'01'  | b'11110001' & b'01001111' 		|
+# 			+----------------+---------------------------------+
+# 			| 			65 	  | 			65 							|
+# 			+----------------+---------------------------------+
+#
+# 		) These bit operations evaluate the hexadecimal literals and bit literals as binary strings,
+# 			due to the _binary introducer:
+#
+# 			SELECT _binary X'40' | X'01', b'11110001' & _binary b'010001111';
+# 			+------------------------+----------------------------------------+
+# 			| _binary X'40' | X'01'  | b'11110001' & _binary b'01001111' 		|
+# 			+------------------------+----------------------------------------+
+# 			| 	A 							 | A 													|
+# 			+------------------------+----------------------------------------+
+#
+# Although the bit operations in both statements produce a result with a numeric value
+# of 65, the second statement operates in binary-string context, for which 65 is ASCII A.
+#
+# In numeric evaluation context, permitted values of hexadecimal literal and bit literal
+# arguments have a maximum of 64 bits, as do results.
+#
+# By contrast, in binary-string evaluation context, permitted arguments (and results)
+# can exceed 64 bits:
+#
+# 		SELECT _binary X'4040404040404040' | X'0102030405060708';
+# 		+--------------------------------------------------------+
+# 		| _binary X'40404040404040' | X'0102030405060708' 			|
+# 		+---------------------------+----------------------------+
+# 		| ABCDEFGH 																|
+# 		+--------------------------------------------------------+
+#
+# There are several ways to refer to a hexadecimal literal or bit literal in a bit operation
+# to cause binary-string evaluation:
+#
+# 		_binary literal
+# 		BINARY literal
+# 		CAST(literal AS BINARY)
+#
+# Another way to produce binary-string evaluation of hexadecimal literals or bit literals to assign them
+# to user-defined variables, which results in variables that have a binary string type:
+#
+# 		SET @v1 = X'40', @v2 = X'01', @v3 = b'11110001', @v4 = b'01001111'
+# 		SELECT @v1 | @v2, @v3 & @v4;
+# 		+------------+--------------+
+# 		| @v1 | @v2  | @v3 & @v4 	 |
+# 		+------------+--------------+
+# 		| A 			 | A 				 |
+# 		+------------+--------------+
+#
+# In binary-string context, bitwise operation argumnents must have the same length
+# or an ER_INVALID_BITWISE_OPERANDS_SIZE error occurs:
+#
+# 		SELECT _binary X'40' | X'0001';
+# 		ERROR 3513 (HY000): Binary operands of bitwise
+# 		operators must be of equal length
+#
+# To satisfy the equal-length requirement, pad the shorter value with leading zero digits or,
+# if the longer value begins with leading zero digits and a shorter result value is acceptable,
+# strip them:
+#
+# 		SELECT _binary X'0040' | X'0001';
+# 		+---------------------------------+
+# 		| _binary X'0040' | X'0001' 		 |
+# 		+---------------------------------+
+# 		| A 										 |
+# 		+---------------------------------+
+#
+# 		SELECT _binary X'40' | X'01';
+# 		+----------------------------+
+# 		| _binary X'40' | X'01' 	  |
+# 		+----------------------------+
+# 		| A 								  |
+# 		+----------------------------+
+#
+# Padding or stripping can also be accomplished using functions such as:
+#
+# 		LPAD()
+#
+# 		RPAD()
+#
+# 		SUBSTR()
+#
+# 		CAST()
+#
+# In such cases, the expression arguments are no longer all literals and
+# _binary becomes unnecessary. Examples:
+#
+# 		SELECT LPAD(X'40', 2, X'00') | X'0001';
+# 		+---------------------------------------+
+# 		| LPAD(X'40', 2, X'00') | X'0001' 		 |
+# 		+---------------------------------------+
+# 		| A 												 |
+# 		+---------------------------------------+
+#
+# 		SELECT X'40' | SUBSTR(X'0001', 2, 1);
+# 		+---------------------------------------+
+# 		| X'40' | SUBSTR(X'0001', 2, 1) 			 |
+# 		+---------------------------------------+
+# 		| A 												 |
+# 		+---------------------------------------+
+#
+# BINARY STRING BIT-OPERATION EXAMPLES
+#
+# The following example illustrates use of bit operations to extract parts of a 
+# UUID value, in this case, the timestamp and IEEE 802 node number.
+#
+# This technique requires bitmasks for each extracted part.
+#
+# Convert the text UUID to the corresponding 16-byte binary value so that it
+# can be manipulated using bit operations in binary-string context:
+#
+# 		SET @uuid = UUID_TO_BIN('6ccd780c-baba-1026-9564-5b8c656024db');
+# 		SELECT HEX(@uuid);
+# 		+----------------------------------+
+# 		| HEX(@uuid) 							  |
+# 		+----------------------------------+
+# 		| 6CCD780CBABA102695645B8C656024DB |
+# 		+----------------------------------+
+#
+# Construct bitmasks for the timestamp and node number parts of the value.
+#
+# The timestamp comprises the first three parts (64 bits, bits 0 to 63)
+# and the node number is the last part (48 bits, bits 80 to 127):
+#
+# 		SET @ts_mask = CAST(X'FFFFFFFFFFFFFFFF' AS BINARY(16));
+# 		SET @node_mask = CAST(X'FFFFFFFFFFFF' AS BINARY(16)) >> 80;
+# 		SELECT HEX(@ts_mask);
+#
+# 		+----------------------------------+
+# 		| HEX(@ts_mask) 						  |
+# 		+----------------------------------+
+# 		| FFFFFFFFFFFFFFFF0000000000000000 |
+# 		+----------------------------------+
+#
+# 		SELECT HEX(@node_mask);
+# 		+----------------------------------+
+# 		| HEX(@node_mask) 					  |
+# 		+----------------------------------+
+# 		| 0000000000000000FFFFFFFFFFFFFFFF |
+# 		+----------------------------------+
+#
+# The CAST(--- AS BINARY(16)) function is used here because the masks
+# must be the same length as the UUID value against which they are applied.
+#
+# The same result can be produced using other functions to pad the masks
+# ot hte required length:
+#
+# 		SET @ts_mask= RPAD(X'FFFFFFFFFFFFFFFF' , 16, X'00');
+# 		SET @node_mask = LPAD(X'FFFFFFFFFFFF', 16, X'00');
+#
+# Use hte masks to extract the timestamp and node number parts:
+#
+# 		SELECT HEX(@uuid & @ts_mask) AS 'timestamp part';
+# 		+-----------------------------------------------+
+# 		| timestamp part 											|
+# 		+-----------------------------------------------+
+# 		| 6CCD780CBABA102600000000000000000000 			|
+# 		+-----------------------------------------------+
+#
+# 		SELECT HEX(@uuid & @node_mask) AS 'node part';
+# 		+---------------------------------------------+
+# 		| node part 											 |
+# 		+---------------------------------------------+
+# 		| 00000000000000000000000005B8C656024DB 		 |
+# 		+---------------------------------------------+
+#
+# The preceding examples use these bit operations:
+#
+# 		Right shift (>>) and bitwise AND (&)
+#
+# 	NOTE:
+#
+# 		UUID_TO_BIN() takes a flag that causes some bit rearrangement in the
+# 		resulting binary UUID value.
+#
+# 		If you use that flag, modify the extraction masks accordingly.
+#
+# The next example uses bit operations to extract the network and host parts of an
+# IPv6 address.
+#
+# Suppose that hte network part has a length of 80 bits.
+#
+# Then the host part has a length of 128 - 80 = 48 bits.
+#
+# To extract the network and host parts of the address, convert it to a binary
+# string, then use bit operations in binary-string context.
+#
+# Convert the text IPv6 address to the corresponding binary string:
+#
+# 		SET @ip = INET6_ATON('fe80::219:d1ff:fe91:1a72');
+#
+# Define the network length in bits:
+#
+# 		SET @net_len = 80;
+#
+# Construct network and host masks by shifting the all-ones address left or right
+#
+# To do this, begin with the address ::, which is shorthand for all zeros,
+# as you can see by converting it to a binary string like this:
+#
+# 		SELECT HEX(INET6_ATON('::')) AS 'all zeros';
+# 		+----------------------------------------------+
+# 		| all zeros 											  |
+# 		+----------------------------------------------+
+# 		| 000000000000000000000000000000000 			  |
+# 		+----------------------------------------------+
+#
+# To produce the complementary value (all ones), use the ~ operator
+# to invert the bits:
+#
+# 		SELECT HEX(~INET6_ATON('::')) AS 'all ones';
+# 		+------------------------------------------+
+# 		| all ones 											 |
+# 		+------------------------------------------+
+# 		| FFFFFFFFFFFFFFFFFFFFFFFFFFFFF 				 |
+# 		+------------------------------------------+
+#
+# Shift the all-ones value left or right to produce the network and host masks:
+#
+# 		SET @net_mask = ~INET6_ATON('::') << (128 - @net_len);
+# 		SET @host_mask = ~INET6_ATON('::') >> @net_len;
+#
+# Display the masks to verify that they cover the correct parts of the address:
+#
+# 		SELECT INET6_NTOA(@net_mask) AS 'network mask';
+# 		+-------------------------------------------+
+# 		| network mask 									  |
+# 		+-------------------------------------------+
+# 		| ffff:ffff:ffff:ffff:ffff:: 					  |
+# 		+-------------------------------------------+
+#
+# 		SELECT INET6_NTOA(@host_mask) AS 'host mask';
+# 		+-------------------------------+
+# 		| host mask 						  |
+# 		+-------------------------------+
+# 		| ::ffff:255.255.255.255 		  |
+# 		+-------------------------------+
+#
+# Extracta nd dispaly the network and host parts of hte address:
+#
+# 		SET @net_part = @ip & @net_mask;
+# 		SET @host_part = @ip & @host_mask;
+# 		SELECT INET6_NTOA(@net_part) AS 'network part';
+# 		+------------------+
+# 		| network part 	 |
+# 		+------------------+
+# 		| fe80::219:0:0:0  |
+# 		+------------------+
+#
+# 		SELECT INET6_NTOA(@host_part) AS 'host part';
+# 		+------------------+
+# 		| host part 		 |
+# 		+------------------+
+# 		| ::d1ff:fe91:1a72 |
+# 		+------------------+
+#
+# The preceding example uses these bit operations:
+#
+# 		Complement (~)
+#
+# 		Left shift (<<)
+#
+# 		bitwise AND (&)
+#
+# The remaining discussion provides details on argument handling for each
+# group of bit operations, more information about literal-value handling in
+# bit operations, and potential incompatibilities between 8.0 and older versions.
+#
+# BITWISE AND, OR, AND XOR OPERATIONS
+#
+# For &, |, and ^ bit operations,, the result type dependso n whether the arguments are evaluated as binary strings or numbers:
+#
+# 		) Binary-string evaluation occurs when the arguments have a binary string type, and at least one of them is not
+# 			a hexadecimal literal, bit literal or NULL literal.
+#
+# 			Numeric evaluation occurs otherwise, with argument conversion to unsigned 64-bit integers as necessary
+#
+# 		) Binary-string evaluation produces a binary string of the same length as the arguments.
+#
+# 			If the arguments have unequal lengths, an ER_INVALID_BITWISE_OPERANDS_SIZE error occurs.
+#
+# 			Numeric evaluation produces an unsigned 64-bit integer.
+#
+# Examples of numeric evaluation:
+#
+# 		SELECT 64 | 1, X'40' | X'01';
+# 		+---------+------------------+
+# 		| 64 | 1  | X'40' | X'01' 	  |
+# 		+---------+------------------+
+# 		| 	65 	 | 65 				  |
+# 		+---------+------------------+
+#
+# Examples of binary-string evaluation:
+#
+# 		SELECT _binary X'40' | X'01';
+# 		+-----------------------------+
+# 		| _binary X'40' | X'01' 		|
+# 		+-----------------------------+
+# 		| A 									|
+# 		+-----------------------------+
+#
+# 		SET @var1 = X'40', @var2 = X'01';
+# 		SELECT @var1 | @var2;
+# 		+----------------------+
+# 		| @var1 	| @var2 		  |
+# 		+----------------------+
+# 		| A 						  |
+# 		+----------------------+
+#
+# BITWISE COMPLEMENT AND SHIFT OPERATIONS
+#
+# For ~, << and >> bit operations, the result type depends on whether the bit argument
+# is evaluated as a binary string or number:
+#
+# 		) Binary-string evaluation occurs when the bit argument has a binary string type,
+# 			and is not a hexadecimal literal, bit literal, or NULL literal.
+#
+# 			Numeric evaluation occurs otherwise, with argument conversion to an unsigned 64-bit
+# 			integer as necessary
+#
+# 		) Binary-string evaluation produces a binary string of the same length as the bit argument.
+#
+# 			Numeric evaluation produces an unsigned 64-bit integer
+#
+# For shift operations, bits shifted off the end of the value are lost without warning, regardless
+# of the argument type.
+#
+# In particular, if the shift count is greater or equal to the number of bits in the bit argument,
+# all bits in the result are 0.
+#
+# Examples of numeric evaluation:
+#
+# 		SELECT ~0, 64 << 2, X'40' << 2;
+# 		+--------------------------+------------+----------------------+
+# 		| ~0 								| 64 << 2 	 | X'40' << 2 			   |
+# 		+--------------------------+------------+----------------------+
+# 		| 18446744073709551615 	   | 256 		 | 256 						|
+# 		+--------------------------+------------+----------------------+
+#
+# Examples of binary-string evaluation:
+#
+# 		SELECT HEX(_binary X'1111000022220000' >> 16);
+# 		+------------------------------------------+
+# 		| HEX(_binary X'1111000022220000' >> 16 	 |
+# 		+------------------------------------------+
+# 		| 0000111100002222 								 |
+# 		+------------------------------------------+
+#
+# 		SELECT HEX(_binary X'1111000022220000' << 16);
+# 		+------------------------------------------+
+# 		| HEX(_binary X'1111000022220000' << 16    |
+# 		+------------------------------------------+
+# 		| 0000222200000000 								 |
+# 		+------------------------------------------+
+#
+# 		SET @var1 = X'F0F0F0F0';
+# 		SELECT HEX(~@var1);
+# 		+-----------------------+
+# 		| HEX(~@var1) 				|
+# 		+-----------------------+
+# 		| 0F0F0F0F 					|
+# 		+-----------------------+
+#
+# BIT_COUNT() OPERATIONS
+#
+# THe BIT_COUNT() function always returns an unsigned 64-bit integer,
+# or NULL if the argument is NULL.
+#
+# 		SELECT BIT_COUNT(127);
+# 		+-----------------+
+# 		| BIT_COUNT(127)  |
+# 		+-----------------+
+# 		| 				7 		|
+# 		+-----------------+
+#
+# 		SELECT BIT_COUNT(b'010101'), BIT_COUNT(_binary b'010101');
+# 		+---------------------+-------------------------------------+
+# 		| BIT_COUNT(b'010101')| BIT_COUNT(_binary b'010101') 			|
+# 		+---------------------+-------------------------------------+
+# 		| 				3 			 | 			3 									|
+# 		+---------------------+-------------------------------------+
+#
+# BIT_AND(), BIT_OR(), AND BIT_XOR() OPERATIONS
+#
+# For the BIT_AND(), BIT_OR() and BIT_XOR() bit functions, the result type depends on whether
+# the function argument values are evaluated as binary strings or numbers:
+#
+# 		) Binary-string evaluation occurs when the argument values have a binary string type,
+# 			and the argument is not a hexadecimal literal, but literal, or NULL literal.
+#
+# 			Numeric evaluation occurs otherwise, with argument value conversion to unsigned
+# 			64-bit integers as necessary.
+#
+# 		) Binary-string evaluation produces a binary string of the same length as the argument values.
+#
+# 			If argument values have unequal lengths, an ER_INVALID_BITWISE_OPERANDS_SIZE error
+# 			occurs.
+#
+# 			If hte argument size exceeds 511 bytes, an ER_INVALID_BITWISE_AGGREGATE_OPERANDS_SIZE
+# 			error occurs.
+#
+# 			Numeric evaluation produces an unsigned 64-bit integer.
+#
+# NULL values do not affect the result unless all values are NULL.
+#
+# In that case, the result is a neutral value having the same length as the length
+# of the argument values (all bits 1 for BIT_AND(), all bits 0 for BIT_OR(), and BIT_XOR())
+#
+# Example:
+#
+# 		CREATE TABLE t (group_id INT, a VARBINARY(6));
+# 		INSERT INTO t VALUES (1, NULL);
+# 		INSERT INTO t VALUES (1, NULL);
+#
+# 		INSERT INTO t VALUES (2, NULL);
+# 		INSERT INTO t VALUES (2, X'1234');
+# 		INSERT INTO t VALUES (2, X'FF34');
+#
+# 		SELECT HEX(BIT_AND(a)), HEX(BIT_OR(a)), HEX(BIT_XOR(a))
+# 		FROM t GROUP BY group_id;
+#
+# 		+---------------------+------------------+-------------------+
+# 		| HEX(BIT_AND(a)) 	 | HEX(BIT_OR(a))   | HEX(BIT_XOR(a))   |
+# 		+---------------------+------------------+-------------------+
+# 		| FFFFFFFFFFFF 		 | 000000000000 	  | 000000000000 	    |
+# 		| 1234 					 | FF34 				  | ED00 				 |
+# 		+---------------------+------------------+-------------------+
+#
+# SPECIAL HANDLING OF HEXADECIMAL LITERALS, BIT LITERALS, AND NULL LITERALS
+#
+# For backwards compatibility, MySQL 8.0e valuates bit operations in numeric context
+# when all bit arguments are hexadecimal literals, bit literals or NULL Literals.
+#
+# That is, bit operations on binary-string bit arguments do not use binary-string evaluation
+# if all bit arguments are unadorned hexadecimal literals, bit literals, or NULL literals.
+#
+# (This does not apply to such literals if they are written with a _binary introducer, BINARY operator,
+# or other way of specifying them explicitly as binary strings)
+#
+# The literal handling just described is the same as prior to MySQL 8.0
+#
+# Eexaxmples:
+#
+# 		) These bit operations evaluate the literals in numeric context and produce a BIGINT result:
+#
+# 			b'0001' | b'0010'
+# 			X'0008' << 8
+#
+# 		) These bit operations evaluate NULL in numeric context and produce a BIGINT result that has a NULL value:
+#
+# 			NULL & NULL
+# 			NULL >> 4
+#
+# In MySQL 8.0, you can cause those operations to evaluate the arguments in binary-string context
+# by indicating explicitly that at least one argument is a binary string:
+#
+# 		_binary b'0001' | b'0010'
+# 		_binary X'0008' << 8
+# 		BINARY NULL & NULL
+# 		BINARY NULL >> 4
+#
+# The result of hte last two expressions is NULL, just as without the BINARY operator, but the data
+# type of the result is a binary string type rather than an integer type.
+#
+# BIT-OPERATION INCOMPATIBILITIES WITH 5.7
+#
+# Because bit operations can handle binary string arguments natively in MySQL 8.0,
+# some expressions produce a different result in 8.0 than in 5.7
+#
+# The five problematic expression types to watch out for are:
+#
+# 		nonliteral_binary { & | ^ } binary
+# 		binary { & | ^ } nonliteral_binary
+# 		nonliteral_binary { << >> } anything
+# 		~ nonliteral_binary
+# 		AGGR_BIT_FUNC(nonliteral_binary)
+#
+# Those expressions return BIGINT in MySQL 5.7, binary string in 8.0
+#
+# Explanation of notation:
+#
+# 		) { op1 op2 --- }: List of operators that apply to the given expression type
+#
+# 		) binary. Any kind of binary string argument, including a hexadecimal literal, bit literal or NULL literal
+#
+# 		) nonliteral_binary. An argument that is a binary string value other than a hexadecimal literal, bit literal, or NULL literal
+#
+# 		) AGGR_BIT_FUNC: An aggregate function that takes bit-value arguments: BIT_AND(), BIT_OR(), BIT_XOR()
+#
+# For more info on incompatibilities - see BIT FUNCTIONS AND OPERATORS in MySQL 5.7
+#
+# THe following list describes available bit functions and operators:
+#
+# 		) |
+#
+# 			Bitwise OR
+#
+# 			The result type depends on whether the arguments are evaluated as binary strings or numbers:
+#
+# 				) Binary-string evaluation occurs when the arguments have a binary string type,
+# 					and at least one of them is not a hexadecimal literal, bit literal, or NULL literal.
+#
+# 					NUmeric evaluation occurs otherwise, with argument conversion to unsigned 64-bit integers as called for.
+#
+# 				) Binary-string evaluation produces a binary string of hte same length as the arguments.
+#
+# 					If the arguments have unequal lengths, an ER_INVALID_BITWISE_OPERANDS_SIZE error occurs.
+#
+# 					Numeric evaluation produces an unsigned 64-bit integer
+#
+# 			For more information, see the introductory discussion in thsi section.
+#
+# 				SELECT 29 | 15;
+# 					-> 31
+#
+# 				SELECT _binary X'40404040' | X'01020304';
+# 					-> 'ABCD'
+#
+# 		) &
+#
+# 			Bitwise AND
+#
+# 			The result type depends on whether the arguments are evaluated as binary strings or numbers:
+#
+# 				) Binary-string evaluation occurs when the arguments have a binary string type,
+# 					and at least one of them is not a hexadecimal literal, bit literal or NULL literal.
+#
+# 					NUmeric evaluation occurs otherwise, with argument conversion to unsigned 64-bit integers as called for.
+#
+# 				) Binary-string evaluation produces a binary string of hte same length as the arguments.
+#
+# 					If the arguments have unequal lengths, an ER_INVALID_BITWISE_OPERANDS_SIZE error occurs.
+#
+# 					Numeric evaluation produces an unsigned 64-bit integer
+#
+# 			For more info, see introductionary discsusion i nthsi section.
+#
+# 				SELECT 29 & 15;
+# 					-> 13
+#
+# 				SELECT HEX(_binary X'FF' & b'11110000');
+# 					-> 'F0'
+#
+# 		) ^
+#
+# 			Bitwise XOR
+#
+# 			The result type depends on whether the arguments are evaluated as binary strings or numbers:
+#
+# 				) Binary-string evaluation occurs when the arguments have a bianry string type, and at least one
+# 					of them is not a hexadecimal literal, bit literal or NULL literal.
+#
+# 					nUmeric evaluation occurs otherwise, with argument conversion to unsigned 64-bit integers
+# 					as called for.
+#
+# 				) Binary-string evaluation produces a binary string of the same length as the arguments.
+#
+# 					If the arguments have unequal lengths, an ER_INVALID_BITWISE_OPERANDS_SIZE error occurs.
+#
+# 					NUmeric evaluation produces an unsigned 64-bit integer.
+#
+# 			For more information, see the introductory discussion in this section.
+#
+# 				SELECT 1 ^ 1;
+# 					-> 0
+#
+# 				SELECT 1 ^ 0;
+# 					-> 1
+#
+# 				SELECT 11 ^ 3;
+#  				-> 8
+#
+#  			SELECT HEX(_binary X'FEDC' ^ X'1111');
+# 					-> 'EFCD'
+#
+# 		) <<
+#
+# 			Shifts a longlong (BIGINT) number or binary string to the left.
+#
+# 			The result type depends on whether the bit argument is evaluated as binary strong or number:
+#
+# 				) Binary-string evaluation occurs when the big argument has a bianr ystring type, and is not a hexadecimal literal,
+# 					bit literal or NULL literal.
+#
+# 					Numeric evaluation occurs otherwise, with argument conversion to an unsigned 64-bit int as called for.
+#
+# 				) Binary-string evaluation produces a binary string of the same length as the bit argument.
+#
+# 					Numeric evaluation produces an unsigned 64-bit integer
+#
+# 			Bits shifted off the end of the value are lost without warning, regardless of argument type.
+#
+# 			In particular, if the shift count is greater or equal to the number of bits in the big argument,
+# 			all bits in the result are 0.
+#
+# 			For more info, see the introduction.
+#
+# 				SELECT 1 << 2;
+# 					-> 4
+#
+# 				SELECT HEX(_binary X'00FF00FF00FF' << 8);
+# 					-> 'FF00FF00FF00'
+#
+# 		) >>
+#
+# 			Shifts a longlong (BIGINT) number or binary string to the right
+#
+# 			The result depends on whether the bit argument is evaluated as a binary string or number:
+#
+# 				) Binary-string evaluation occurs when the bit argument has a binary string type,
+# 					and is not a hexadecimal literal, bit literal or NULL literal.
+#
+# 					Numeric evaluation occurs otherwise, with argument conversion to an unsigned 64-bit integer 
+# 					as called for
+#
+# 				) Binary-string evaluation produces a binary string of the same length as the bit argument.
+#
+# 					Numeric evaluation produces an unsigned 64-bit int
+#
+# 			Bits shifted off the end of the value are lost without warning, regardless of the argument type.
+#
+# 			IN particular, if the shift count is greater or equal to the number of bits in the bit argument,
+# 			all bits in the result are 0.
+#
+# 			For more information, see the introductory disscusion:
+#
+# 				SELECT 4 >> 2;
+# 					-> 1
+# 
+# 				SELECT HEX(_binary X'00FF00FF00FF' >> 8);
+# 					-> '0000FF00FF00'
+#
+#
+# 		) ~
+#
+# 			Invert all bits
+#
+# 			The result type depends on whether the bit argument is evaluated as a binary string or number:
+#
+# 				) Binary string evaluation occurs when the bit argument has a binary string type, and is not a 
+# 					hexadecimal literal, bit literal, or NULL literal.
+#
+# 					NUmeric evaluation occurs otherwise, with argument conversion to an unsigned 64-bit
+# 					integer as called for
+#
+# 				) Binary-string evaluation produces a bianry string of the same length as the bit argument.
+#
+# 					Numeric evaluation produces an unsigned 64-bit integer
+#
+# 			For more information, see the intro.
+#
+# 				SELECT 5 & ~1;
+# 					-> 4
+#
+# 				SELECT HEX(~X'0000FFFF1111EEEE');
+# 					-> 'FFFF0000EEEE1111'
+#
+# 		) BIT_COUNT(N)
+#
+# 			returns the number of bits that are set in the argument N as an unsigned 64-bit integer,
+# 			or NULL if the argument is NULL
+#
+# 				SELECT BIT_COUNT(64); BIT_COUNT(BINARY 64);
+# 					-> 1, 7
+#
+# 				SELECT BIT_COUNT('64'), BIT_COUNT(_binary '64');
+# 					-> 1, 7
+#
+# 				SELECT BIT_COUNT(X'40'), BIT_COUNT(_binary X'40');
+# 					-> 1, 1
+#
+# 12.13 ENCRYPTION AND COMPRESSION FUNCTIONS
+#
+# TABLE 12.17 ENCRYPTION FUNCTIONS
+#
+# NAME 													DESC
+#
+# AES_DECRYPT() 			Decrypt using AES
+#
+# AES_ENCRYPT() 			Encrypt using AES
+#
+# ASYMMETRIC_DECRYPT() 	Decrypt ciphertext using private or public key
+#
+# ASYMMETRIC_DERIVE() 	Derive symmetric key from asymmetric keys
+#
+# ASYMMETRIC_ENCRYPT() 	Encrypt cleartext using private orp ublic key
+#
+# ASYMMETRIC_SIGN() 		Generate signature from digest
+#
+# ASYMMETRIC_VERIFY() 	Verify that signature matches digest
+#
+# COMPRESS() 				Return result as a binary string
+#
+# CREATE_ASYMMETRIC_PRIV_KEY() 	Create private key
+#
+# CREATE_ASYMMETRIC_PUB_KEY() 	Create public key
+#
+# CREATE_DH_PARAMETERS() 			Generate shared DH secret
+#
+# CREATE_DIGEST() 					Generate digest from string
+#
+# DECODE() 								Decodes a string encrypted using ENCODE()
+#
+# DES_DECRYPT() 						Decrypt a string
+#
+# DES_ENCRYPT() 						Encrypt a string
+#
+# ENCODE() 								Encode a string
+#
+# ENCRYPT() 							Encrypt a string
+#
+# MD5() 									Calculate MD5 checksum
+#
+# PASSWORD() 							Calculate and return a password string
+#
+# RANDOM_BYTES() 						Return a random byte vector
+#
+# SHA1(), SHA() 						Calculate an SHA-1 160-bit checksum
+#
+# SHA2() 								Calculate an SHA-2 checksum
+#
+# STATEMENT_DIGEST() 				Compute statement digest hash value
+#
+# STATEMENT_DIGEST_TEXT() 			Compute normalized statement digest
+#
+# UNCOMPRESS() 						Uncompress a string compressed
+#
+# UNCOMPRESSED_LENGTH() 			Return the length of a string before compression
+#
+# VALIDATE_PASSWORD_STRENGTH() 	Determine strength of PW
+#
+# Many encryption and compression functions returns strings for which the result might contain 
+# arbitrary byte values.
+#
+# if you want to store these results, use a column with a VARBINARY or BLOB binary string data type.
+#
+# This will avoid potential problems with trailing space removal or character set conversion that
+# would change data values, such as may occur if you use a nonbinary string data type (CHAR, VARCHAR, TEXT)
+#
+# SOme encryption functions return strings of ASCII characters:
+#
+# 		MD5()
+#
+# 		SHA()
+#
+# 		SHA1()
+#
+# 		SHA2()
+#
+# 		STATEMENT_DIGEST()
+#
+# 		STATEMENT_DIGEST_TEXT()
+#
+# Their return value is a string that hs a character set and collation determined by the
+# character_set_connection and collation_connection system variables.
+#
+# This is a nonbinary string unless the character set is binary
+#
+# If an application stores values from a function such as MD5 or SHA1 that returns as tring of
+# hex digits, more efficient storage and comparisons can be obtained by converting the hex
+# representation to binary using UNHEX() and storing hte result in a BINARY(N) column
+#
+# Each pair of hexadecimal digits requires one byte in binary form,
+# so the value of N depends on the length of the hex string.
+#
+# N is 16 or an MD5(), and a 20 for a SHA1()
+#
+# For SHA2() N ranges from 28 to 32 depending on the argument specifying
+# the desired bit length of the result
+#
+# The size penalty for storing hte hex string in a CHAR column is at least two times,
+# up to eight times if the value is stored in a column that uses the utf8 char set
+#
+# (where ach character uses 4 bytes)
+#
+# Strong the string also results in slower comparisons because of the larger values
+# and the need to take character set collation rules into account.
+#
+# Suppose that an application stores MD5() string values in a CHAR(32) column:
+#
+# 		CREATE TABLE md5_tbl (md5_val CHAR(32), ---);
+# 		INSERT INTO md5_tbl (md5_val, ---) VALUES(MD5('abcdef'), ---);
+#
+# To convert hex strings to more compact format, modify the application
+# to use UNHEX() and BINARY(16) instead:
+#
+# 		CREATE TABLE md5_tbl (md5_val BINARY(16), ---);
+# 		INSERT INTO md5_tbl (md5_val, ---) VALUES(UNHEX(MD5('abcdef')), ---);
+#
+# Applications should be prepared to handle the very rare case that a hashing function
+# produces the same value for two differnet input values
+#
+# One way to make collisions detectable is to make the hash column a primary key
+#
+# NOTE:
+#
+# 		Exploiits for the MD5 and SHA--1 algorithms have become known.
+#
+# 		You may wish to consider using another one-way encryption function
+# 		described in this section instead, such as SHA2()
+#
+# CAUTION:
+#
+# 		PWs or other sensitive values supplied as args to encryption functions
+# 		are sent in cleartext to the MySQL server unless an SSL connection
+# 		is used.
+#
+# 		Also, such values will appear in any MySQL logs to which they are written.
+#
+# 		To avoid these types of exposures, applicaitons dcan encrypt sensitive
+# 		values on the client side before sending them to the server.
+#
+# 		The same considerations apply to encryption keys.
+#
+# 		To avoid exposing these, applications can use stored procedures to encrypt
+# 		and decrypt values on the server side
+#
+# ) AES_DECRYPT(crypt str, key str[, init vector])
+#
+# 		THis function decrypts data using the official AES (ADvanced Encryption Stnadard Algorithm)
+#
+# 		For more informaiton, see the description for AES_ENCRYPT()
+#
+# 		THe optional initialization vector argument, init_vector
+#
+# 		statements that use AES_DECRYPT() are unsafe for statement based replication
+#
+# ) AES_ENCRYPT(str,key str[, init vector])
+#
+# 		AES_ENCRYPT() and AES_DECRYPT() implement encryption and decryption of data using
+# 		the official AES (Advanced Encryption Standard) algorithm, previously known
+# 		as "Rijndael"
+#
+# 		The AES standard permits various key lengths
+#
+# 		By default these functions implement AES with a 128-bit key length.
+#
+# 		Key lengths of 196 or 256 bits can be used, as described later.
+#
+# 		the key length is a trade off between performance and security
+#
+# 		AES_ENCRYPT() encrypts the string str using the key string key_str and returns
+# 		a binary string containing the encrypted output.
+#
+# 		AES_DECRYPT() decrypts the encrypted string crypt_str using the key string
+# 		key_str and returns the original cleartext string
+#
+# 		If either function argument is NULL, the function returns NULL
+#
+# 		The str and crypt_str arguments can be any length, and padding is automatically
+# 		added to str so it is a multiple of a block as required by block-based algos
+# 		such as AES.
+#
+# 		THis padding is automatically removed by the AES_DECRYPT() function
+#
+# 		The length of crypt-str can be calculated using this formula:
+#
+# 			16 * (trunc(string_length / 16) + 1)
+#
+# 		For a key length of 128 bits, the most secure way to pass a key to the
+# 		key_str argument is to create a truly random 128-bit value and pass
+# 		it as a binary value.
+#
+# 		For example:
+#
+# 			INSERT INTO t
+# 			VALUES (1, AES_ENCRYPT('text', UNHEX('<string>')));
+#
+# 		A passphrase can be used to generate an AES key by hashing hte passphrase.
+#
+# 		For example:
+#
+# 			INSERT iNTO t
+# 			VALUES (1, AES_ENCRYPT('text', UNHEX(SHA2('My secret passphrase',512))));
+#
+# 		Do not pass a password or passphrase directly to crypt_str, hash it first.
+#
+# 		Previous versions of this documentation suggested the former approach, but it is
+# 		no longer recommended as the examples shown here are more secure.
+#
+# 		If AES_DECRYPT() detects in valid data or incorrect padding, it returns NULL.
+#
+# 		However, it is possible for AES_DECRYPT() to return a non-NULL value
+# 		(possibly garbage) if the input data or the key is invalid.
+#
+# 		AES_ENCRYPT() and AES_DECRYPT() permit control of the block encryption mode and take
+# 		and optional init_vector initialization vector argument:
+#
+# 			) The block_encryption_mode system variable controls the mode for block-based encryption 
+# 				algorithms.
+#
+# 				its default value is aes-128-ecb, which signifies encryption using a key length
+# 				of 128 bits and ECB mode.
+#
+# 				For a description of hte permitted values of this variabe, see SECTION 5.1.8. "SERVER SYSTEM VARIABLES"
+#
+# 			) The optional init_vector argument provides an intiializaiton vector for block encryption
+# 				modes that require it.
+#
+# 		FOrm odes that require the optional init_vector argument, it must be 16 bytes or longer
+# 		(bytes in excess of 16 are ignored)
+#
+# 		An error occurs if init_vector is missing
+#
+# 		For modes that do not require init_vector, it is ignored and a warning is generated
+# 		if it is specified.
+#
+# 		A random string of bytes to use for the initialization vector
+# 		can be produced by calling RANDOM_BYTES(16)
+#
+# 		For encryption modes that reuqire an initialization vector, the same vector
+# 		must be used for encryption and decryption.
+#
+# 			https://dev.mysql.com/doc/refman/8.0/en/encryption-functions.html
+# 
