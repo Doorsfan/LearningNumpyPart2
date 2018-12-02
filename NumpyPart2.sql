@@ -85644,7 +85644,7 @@ Need be, i will change this for upcoming repeated cases. */
 # 			) The optional init_vector argument provides an intiializaiton vector for block encryption
 # 				modes that require it.
 #
-# 		FOrm odes that require the optional init_vector argument, it must be 16 bytes or longer
+# 		For codes that require the optional init_vector argument, it must be 16 bytes or longer
 # 		(bytes in excess of 16 are ignored)
 #
 # 		An error occurs if init_vector is missing
@@ -85655,8 +85655,2014 @@ Need be, i will change this for upcoming repeated cases. */
 # 		A random string of bytes to use for the initialization vector
 # 		can be produced by calling RANDOM_BYTES(16)
 #
-# 		For encryption modes that reuqire an initialization vector, the same vector
+# 		For encryption modes that require an initialization vector, the same vector
 # 		must be used for encryption and decryption.
 #
-# 			https://dev.mysql.com/doc/refman/8.0/en/encryption-functions.html
+# 			SET block_encryption_mode = 'aes-256-cbc';
+# 			SET @key_str = SHA2('My secret passphrase',512);
+# 			SET @init_vector = RANDOM_BYTES(16);
+#
+# 			SET @crypt_str = AES_ENCRYPT('text',@key_str,@init_vector);
+# 			SELECT AES_DECRYPT(@crypt_str,@key_str,@init_vector);
+# 			+---------------------------------------------------+
+# 			| AES_DECRYPT(@crypt_str,@key_str,@init_vector) 	 |
+# 			+---------------------------------------------------+
+# 			| text 															 |
+# 			+---------------------------------------------------+
+#
+# 		The following table lists each permitted block encryption mode, the SSL
+# 		libraries that support it, and whether the initialization vector argument
+# 		is required.
+#
+# 			BLOCK ENCRYPTION MODE 	SSL LIBRARIES THAT SUPPORT MODE 		INITIALIZATION VECTOR REQUIRED
+# 			
+# 			ECB 							OpenSSL, wolfSSL 							No
+#
+# 			CBC 							OpenSSL, wolfSSL 							Yes
+#
+# 			CFB1 							OpenSSL 										Yes
+#
+# 			CFB8 							OpenSSL 										Yes
+#
+# 			CFB128 						OpenSSL 										Yes
+#
+# 			OFB 							OpenSSL 										Yes
+#
+# 		Statements that use AES_ENCRYPT() or AES_DECRYPT() are unsafe for statement-based replication.
+#
+# 	) COMPRESS(string to compress)
+#
+# 		Compresses a string and returns the result as a binary string.
+#
+# 		This function requires MySQL to have been compiled with a compression library
+# 		such as zlib.
+#
+# 		Otherwise, the return value is always NULL.
+#
+# 		The compressed string can be uncompressed with UNCOMPRESS()
+#
+# 			SELECT LENGTH(COMPRESS(REPEAT('a',1000)));
+# 				-> 21
+#
+# 			SELECT LENGTH(COMPRESS(''));
+# 				-> 0
+#
+# 			SELECT LENGTH(COMPRESS('a'));
+# 				-> 13
+#
+# 			SELECT LENGTH(COMPRESS(REPEAT('a',16)));
+# 				-> 15
+#
+# 		The compressed string contents are stored the following way:
+#
+# 			) Empty strings are stored as empty strings
+#
+# 			) Nonempty strings are stored as a 4-byte length of the uncompressed string 
+# 				(low byte first), followed by the compressed string.
+#
+# 				If the string ends with space, an extra . character is added to avoid problems
+# 				with endspace trimming should the result be stored in a CHAR or VARCHAR column.
+#
+# 				(However, use of nonbinary string data types such as CHAR or VARCHAR to store compressed
+# 				strings is not recommended anyway because character set conversion may occur.
+#
+# 				Use a VARBINARY or BLOB binary string column instead.)
+#
+# 	) DECODE(crypt str, pass str)
+#
+# 		This function was removed in 8.0.3
+#
+# 		Consider using AES_ENCRYPT() and AES_DECRYPT() instead
+#
+# 	) DES_DECRYPT(crypt str[,key str])
+#
+# 		Removed in 8.0.3
+#
+# 		Consider using AES_ENCRYPT() and AES_DECRYPT() instead.
+#
+# 	) DES_ENCRYPT(str[, {key num|key str}])
+#
+# 		Removed in 8.0.3
+#
+# 		Consider using AES_ENCRYPT() and AES_DECRYPT() instead
+#
+# 	) ENCODE(str,pass str)
+#
+# 		Removed in 8.0.3
+#
+# 		Consider using AES_ENCRYPT() and AES_DECRYPT() instead
+#
+# 	) ENCRYPT(str[,salt])
+# 		
+# 		Removed in 8.0.3
+#
+# 		For one-way hashing, consider using SHA2() instead
+#
+# 	) MD5(str)
+#
+# 		Calculates an MD5 128-bit checksum for the string.
+#
+# 		The value is returned as a string of 32 hexadecimal digits, or NULL if the
+# 		argument was NULL.
+#
+# 		The return value can, for example, be used as a hash key.
+#
+# 		See the notes at the beginning of this section about storing hash values efficiently.
+#
+# 		The return value is a string in the connection character set.
+#
+# 		If FIPS mode is enabled, MD5() returns NULL.
+#
+# 		See SECTION 6.6, "FIPS SUPPORT"
+#
+# 			SELECT MD5('testing');
+# 				-> '<string>'
+#
+# 		This is the "RSA Data Security, Inc. MD5 Message-Digest Algorithm"
+#
+# 		See the note regarding the MD5 algorithm at the beginning of this section.
+#
+# 	) PASSWORD(str)
+#
+# 		This function was removed in MySQL 8.0.11
+#
+# 	) RANDOM_BYTES(len)
+#
+# 		This function returns a binary string of len random bytes generated using the random
+# 		number generator of the SSL library.
+#
+# 		Permitted values of len range from 1 to 1024.
+#
+# 		For values outside that range, RANDOM_BYTES() generates a warning and returns NULL
+#
+# 		RANDOM_BYTES() can be used to provide the initialization vector for the AES_DECRYPT()
+# 		and AES_ENCRYPT() functtions.
+#
+# 		For use in that context, len must be at least 16
+#
+# 		Larger values are permitted, but bytes in excess of 16 are ignored.
+#
+# 		RANDOM_BYTES() generates a random value, which makes its result nondeterministic.
+#
+# 		Consequently, statements that use this function are unsafe for statement-based replication.
+#
+# 	) SHA1(str), SHA(str)
+#
+# 		Calculates an SHA-1 160-bit checksum for the string, as described in RFC 3174 (Secure Hash Algorithm)
+#
+# 		The value is returned as a string of 40 hexadecimal digits, or NULL if the argument was NULL.
+#
+# 		One of the possible uses for this function is as a hash key.
+#
+# 		See the notes at the beginning of this section about storing hash values
+# 		efficiently.
+#
+# 		SHA() is synonymous with SHA1()
+#
+# 		The return value is a string in the connection character set.
+#
+# 			SELECT SHA1('abc');
+# 				-> '<string>'
+#
+# 		SHA1() can be considered a cryptographically more secure equivalent of MD5()
+#
+# 		However, see the note regarding the MD5 and SHA-1 algorithms at the beginning
+# 		this section.
+#
+# 	) SHA2(str, hash length)
+#
+# 		Calculates the SHA-2 family of hash functions (SHA-224, SHA-256, SHA-384 and SHA-512)
+#
+# 		The first argument is the cleartext string to be hashed.
+#
+# 		The second argument indicates the desired bit length of the result, which must have a value
+# 		of 224, 256, 384, 512 or 0 (which is equivalent to 256)
+#
+# 		If either argument is NULL or the hash length is not one of the permitted values, the return
+# 		value is NULL.
+#
+# 		Otherwise, the function result is a hash value containing the desired number of bits.
+#
+# 		See the notes at the beginning of this section about storing hash values efficiently.
+#
+# 		The return value is a string in the connection character set.
+#
+# 			SELECT SHA2('abc', 224);
+# 				-> '<string>'
+#
+# 		This function works only if MySQL has been configured with SSL support.
+# 		See SECTION 6.4, "USING ENCRYPTED CONNECTIONS"
+#
+# 		SHA2() can be considered cryptographically more secure than MD5() or SHA1()
+#
+# 	) STATEMENT_DIGEST(statement)
+#
+# 		Given an SQL statement as a string, returns the statement digest hash value as
+# 		a string in the connection character set or NULL if the argument is NULL.
+#
+# 		The related STATEMENT_DIGEST_TEXT() function returns the normalized statement digest.
+#
+# 		For informaiton about statement digesting, see SECTION 26.10, "PERFORMANCE SCHEMA STATEMENT DIGESTS AND SAMPLING"
+#
+# 		Both functions use the MySQL parser to parse the statement.
+#
+# 		If parsing fails, an error occurs.
+#
+# 		The error message includes the parse error only if the statement is provided as a literal string.
+#
+# 		The max_digest_length system variable determines the maximum number of bytes available to these
+# 		functions for computing normalized statement digests.
+#
+# 			SET @stmt = 'SELECT * FROM mytable WHERE cola = 10 AND colb = 20';
+# 			SELECT STATEMENT_DIGEST(@stmt);
+# 			+-----------------------------------------------------------------+
+# 			| STATEMENT_DIGEST(@stmt) 														|
+# 			+-----------------------------------------------------------------+
+# 			| <string> 																			|
+# 			+-----------------------------------------------------------------+
+#
+# 			SELECT STATEMENT_DIGEST_TEXT(@stmt);
+# 			+-----------------------------------------------------------------+
+# 			| STATEMENT_DIGEST_TEXT(@stmt) 												|
+# 			+-----------------------------------------------------------------+
+# 			| SELECT * FROM `mytable` WHERE `cola` = ? AND `colb` = ? 			|
+# 			+-----------------------------------------------------------------+
+#
+# 	) STATEMENT_DIGEST_TEXT(statement)
+#
+# 		Given an SQL statement as a string, returns the normalized statement digest as
+# 		a string in the connection character set, or NULL if the argument is NULL.
+#
+# 		For additional discussion and examples, see the description of the related STATEMENT_DIGEST()
+# 		function.
+#
+# 	) UNCOMPRESS(string to uncompress)
+#
+# 		Uncompresses a string compressed by the COMPRESS() function.
+#
+# 		If the argument is not a compressed value, the result is NULL.
+#
+# 		This function requires MySQL to have been compiled with a compression
+# 		library such as zlib.
+#
+# 		Otherwise, the return value is always NULL
+#
+# 			SELECT UNCOMPRESS(COMPRESS('any string'));
+# 				-> 'any string'
+# 			SELECT UNCOMPRESS('any string');
+# 				-> NULL
+#
+# 	) UNCOMPRESSED_LENGTH(compressed string)
+#
+# 		Returns the length that hte compressed string had before being compressed.
+#
+# 			SELECT UNCOMPRESSED_LENGTH(COMPRESS(REPEAT('a',30)));
+# 				-> 30
+#
+# 	) VALIDATE_PASSWORD_STRENGTH(str)
+#
+# 		Given an argument representing a cleartext password, this function returns an integer
+# 		to indicate how strong the password is.
+#
+# 		The return value ranges from 0 (weak) to 100 (strong)
+#
+# 		Password assessment by VALIDATE_PASSWORD_STRENGTH() is done by the validate_password
+# 		component.
+#
+# 		If that component is not installed, the function always returns 0.
+#
+# 		For information about installing validate_password, see SECTION 6.5.3, "THE PASSWORD VALIDATION COMPONENT"
+#
+# 		To examine or configure the parameters that affect password testing, check or set the system
+# 		variables implemented by validate_password
+#
+# 		See SECTION 6.5.3.2, "PASSWORD VALIDATION OPTIONS AND VARIABLES"
+#
+# 		The password is subjected to increasingly strict tests and the return value reflects which
+# 		tests were satisfied, as shown in the following table.
+#
+# 		In addition, if the validate_password.check_user_name system variable is enabled and the
+# 		password matches the user name, VALIDATE_PASSWORD_STRENGTH() returns 0 regardless of
+# 		how other validate_password system variables are set.
+#
+# 			PASSWORD TEST 										RETURN VALUE
+#
+# 			Length < 4 											0
+#
+# 			Length > 4 and < validate_password.length 25
+#
+# 			Satisfies policy 1 (LOW) 						50
+#
+# 			Satisfies policy 2 (MEDIUM) 					75
+#
+# 			Satisfies policy 3 (STRONG) 					100
+#
+# 12.14 LOCKING FUNCTIONS
+#
+# This section describes functions used to manipulate user-level locks.
+#
+# TABLE 12.18 LOCKING FUNCTIONS
+#
+# 	NAME 							DESCRIPTION
+#
+# GET_LOCK() 					Get a named lock
+#
+# IS_FREE_LOCK() 				Whether the named lock is free
+#
+# IS_USED_LOCK() 				Whether the named lock is in use; return connection identifier if true
+#
+# RELEASE_ALL_LOCKS() 		Releases all current named locks
+#
+# RELEASE_LOCK() 				Releases the named lock
+#
+# 	) GET_LOCK(str, timeout)
+#
+# 		Tries to obtain a lock with a name given by the string str, using a timeout of  timeout seconds.
+#
+# 		A negative timeout values means infinite timeout.
+#
+# 		The lock is exclusive.
+#
+# 		While held by one session, other sessions cannot obtain a lock of the same name.
+#
+# 		Returns 1 if hte lock was obtained successfully, 0 if the attempt timed out
+# 		(for example, because another client has previously locked the name), or NULL 
+# 		if an error occurred (such as running out of memory or the thread was killed with mysqladmin kill)
+#
+# 		A lock obtained with GET_LOCK() is released explicitly by executing RELEASE_LOCK()
+# 		or implicitly when your session terminates (either normally or abnormally)
+#
+# 		Locks obtained with GET_LOCK() are not released when transactions commit or roll back.
+#
+# 		GET_LOCK() is implemented using the metadata locking (MDL) subsystem.
+#
+# 		Multiple simultaneous locks can be acquired and GET_LOCK() does not release any existing
+# 		locks.
+#
+# 		For example, suppose that you execute these statements:
+#
+# 			SELECT GET_LOCK('lock1', 10);
+# 			SELECT GET_LOCK('lock2', 10);
+#
+# 			SELECT RELEASE_LOCK('lock2');
+# 			SELECT RELEASE_LOCK('lock1');
+#
+# 		The second GET_LOCK() acquires a second lock and both RELEASE_LOCK() calls return 1 (success)
+#
+# 		It is even possible for a given session to acquire multiple locks for the same name.
+#
+# 		Other sessions cannot acquire a lock with that name until the acquiring session
+# 		releases all its locks for the name.
+#
+# 		Uniquely named locks acquired with GET_LOCK() appear in the Performance Schema 
+# 		metadata_locks table.
+#
+# 		The OBJECT_TYPE column says USER LEVEL LOCK and the OBJECT_NAME column indicates
+# 		the lock name.
+#
+# 		In the case that multiple locks are acquired for the same name, only the first lock
+# 		for the name registers a row in the metadata_locks table.
+#
+# 		Subsequent locks for the name increment a counter in the lock but do not acquire
+# 		additional metadata locks.
+#
+# 		The metadata_locks row for the lock is deleted when the last lock instance on the name
+# 		is released.
+#
+# 		The capability of acquiring multiple locks means there is the possibility of deadlock
+# 		among clients.
+#
+# 		When this happens, the server chooses a caller and terminates its lock-acquisition
+# 		request with an ER_USER_LOCK_DEADLOCK error.
+#
+# 		This error does not cause transactions to roll back.
+#
+# 		MySQL enforces a maximum length on lock names of 64 characters.
+#
+# 		GET_LOCK() can be used to implement application locks or to simulate record locks.
+#
+# 		Names are locked on a server-wide basis. If a name has been locked within one
+# 		session, GET_LOCK() blocks any request by another session for a lock with the
+# 		same name.
+#
+# 		This enables clients that agree on a given lock name to use the name to perform
+# 		coooperative advisory locking.
+#
+# 		But be aware that it also enables a client that is not amongst the set of cooperating
+# 		clients to lock a name, either inadvertedly or deliberately, and thus prevent any
+# 		of the cooperating clients from locking that name.
+#
+# 		One way to reduce the likelihood of this is to use lock names that are database-specific
+# 		or application-specific.
+#
+# 		For example, use lock names of the form db_name.str or app_name.str
+#
+# 		If multiple clients are waiting for a lock, the order in which they will acquire it is undefined.
+#
+# 		Applications should not assume that clients will acquire the lock in the same order
+# 		that they issued the lock requests.
+#
+# 		GET_LOCK() is unsafe for statement-based replication.
+#
+# 		A warning is logged if you use this function when binlog_format is set
+# 		to STATEMENT.
+#
+# 			CAUTION:
+#
+# 				With the capability of acquiring multiple named locks, it is possible
+# 				for a single statement to acquire a large number of locks.
+#
+# 				For example:
+#
+# 					INSERT INTO --- SELECT GET_LOCK(t1.col_name) FROM t1;
+#
+# 				These types of statements may have certain adverse effects.
+#
+# 				For example, if the statement fails part way through and rolls back,
+# 				locks acquired up to the point of failure will still exist.
+#
+# 				If the intent is for there to be a correspondence between rows inserted
+# 				and locks acquired, that intent will not be satisfied.
+#
+# 				Also, if it is important that locks are granted in a certain order,
+# 				be aware that result set order may differ depending on which execution
+# 				plan the optimizer chooses.
+#
+# 				For these reasons, it may be best to limit applications to a single
+# 				lock-acquisition call per statement.
+#
+# 		A different locking interface is available as either a plugin service or a set
+# 		of user-defined functions.
+#
+# 		This interface provides lock namespaces and distinct read and write locks,
+# 		unlike the interface provided by GET_LOCK() and related functions.
+#
+# 		For details, see SECTION 29.3.1, "THE LOCKING SERVICE"
+#
+# 	) IS_FREE_LOCK(str)
+#
+# 		Checks whether the lock named str is free to use (that is, not locked).
+#
+# 		Returns 1 if the lock is free (no one is using the lock), 0 if the lock
+# 		is in use, and NULL if an error occurs (such as an incorrect argument)
+#
+# 		This function is unsafe for statement-based replication.
+#
+# 		A warning is logged if you use this function when binlog_format
+# 		is set to STATEMENT.
+#
+# 	) IS_USED_LOCK(str)
+#
+# 		Checks whether the lock named str is in use (that is, locked).
+#
+# 		If so, it returns the connection identifier of the client session
+# 		that holds the lock.
+#
+# 		Otherwise, it returns NULL
+#
+# 		This function is unsafe for statement-based replication.
+#
+# 		A warning is logged if you use this function when binlog_format
+# 		is set to STATEMENT.
+#
+# 	) RELEASE_ALL_LOCKS()
+#
+# 		Releases all named locks held by the current session and returns the number
+# 		of locks released (0 if there were none)
+#
+# 		This function is unsafe for statement-based replication.
+#
+# 		A warning is logged if you use this function when binlog_format
+# 		is set to STATEMENT.
+#
+# 	) RELASE_LOCK(str)
+#
+# 		Releases the lock named by the string str that was obtained with GET_LOCK().
+#
+# 		Returns 1 if the lock was released, 0 if the lock was not established by
+# 		this thread (in which case the lock is not released), and NULL if the named
+# 		lock did not exist.
+#
+# 		The lock does not exist if it was never obtained by a call to GET_LOCK() or
+# 		if it has previously been released.
+#
+# 		The DO statement is convenient to use with RELEASE_LOCK(). See SECTION 13.2.3, "DO SYNTAX"
+#
+# 		This function is unsafe for statement-based replication.
+#
+# 		A warning is logged if you use this function when binlog_format is set to STATEMENT.
+#
+# 12.15 INFORMATION FUNCTIONS
+#
+# TABLE 12.19 INFORMATION FUNCTIONS
+#
+# 		Name 								Desc
+#
+# BENCHMARK() 			Repeatedly execute an expression
+#
+# CHARSET() 			Return the character set of the argument
+#
+# COERCIBILITY() 		Return the collation coercibility value of the string argument
+#
+# COLLATION() 			Return the collation of the string argument
+#
+# CONNECTION_ID() 	Return the connection ID (thread ID) for the connection
+#
+# CURRENT_ROLE() 		Returns the current active roles
+#
+# CURRENT_USER(), 	The authenticated user name and host name
+# CURRENT_USER
+#
+# DATABASE() 			Return the default (current) database name
+#
+# FOUND_ROWS() 		For a SELECT with a LIMIT clause, the number of rows that would be
+# 							returned were there no LIMIT clause
+#
+# ICU_VERSION() 		ICU library version
+#
+# LAST_INSERT_ID() 	Value of the AUTOINCREMENT column for the last INSERT
+#
+# ROLES_GRAPHML() 	Returns a GraphML document representing memory role subgraphs
+#
+# ROW_COUNT() 			The number of rows updated
+#
+# SCHEMA() 				Synonym for DATABASE()
+#
+# SESSION_USER() 		Synonym for USER()
+#
+# SYSTEM_USER() 		Synonym for USER()
+#
+# USER() 				The user name and host name provided by the client
+#
+# VERSION() 			Return a string that indicates the MySQL server version
+#
+# 		) BENCHMARK(count,expr)
+#
+# 			The BENCHMARK() function executes the expression expr repeatedly count times.
+#
+# 			It may be used to time how quickly MySQL processes the expression.
+# 			The result value is always 0.
+#
+# 			The intended use is from within the mysql client, which reports
+# 			query execution times:
+#
+# 				SELECT BENCHMARK(1000000, AES_ENCRYPT('hello', 'goodbye'));
+# 				+---------------------------------------------------------+
+# 				| BENCHMARK(1000000, AES_ENCRYPT('hello', 'goodbye')) 	 |
+# 				+---------------------------------------------------------+
+# 				| 									0 										 |
+# 				+---------------------------------------------------------+
+# 				1 row in set (4.74 sec)
+#
+# 			The time reported is elapsed time on the client end, not CPU time on
+# 			the server end.
+#
+# 			It is advisable to execute BENCHMARK() several times, and to interpret
+# 			the result with regard to how heavily loaded the server machine is.
+#
+# 			BENCHMARK() is intended for measuring the runtime performance of scalar expresions,
+# 			which has some significant implications for the way that you use it
+# 			and interpret the results:
+#
+# 				) Only scalar expressions can be used.
+#
+# 					Although the expression can be a subquery, it must return
+# 					a single column and at most a single row.
+#
+# 					For example, BENCHMARK(10, (SELECT * FROM t)) will fail if the
+# 					table t has more than one column or more than one row.
+#
+# 				) Executing a SELECT expr statement N times differs from executing SELECT BENCHMARK(N, expr)
+# 					in terms of the amount of overhead involved.
+#
+# 					The two have very different execution profiles and you should not expect them
+# 					to take the same amount of time.
+#
+# 					The former involves the parser, optimizer, table locking, and runtime evaluation
+# 					N times each.
+#
+# 					The latter involves only runtime evaluation N times, and all the other components
+# 					just once.
+#
+# 					Memory structures already allocated are reused, and runtime optimizations such as 
+# 					local caching of results already evaluated for aggregate functions can alter
+# 					the results.
+#
+# 					Use of BENCHMARK() thus measures performance of the runtime component by giving more
+# 					weight to that component and removing the "noise" introduced by the network, parser, optimizer,
+# 					and so forth.
+#
+# 		) CHARSET(str)
+#
+# 			Returns the character set of the string argument
+#
+# 				SELECT CHARSET('abc');
+# 					-> 'utf8'
+#
+# 				SELECT CHARSET(CONVERT('abc' USING latin1));
+# 					-> 'latin1'
+#
+# 				SELECT CHARSET(USER());
+# 					-> 'utf8'
+#
+# 		) COERCIBILITY(str)
+#
+# 			Returns the collation coercibility value of the string argument
+#
+# 				SELECT COERCIBILITY('abc' COLLATE utf8_swedish_ci);
+# 					-> 0
+#
+# 				SELECT COERCIBILITY(USER());
+# 					-> 3
+#
+# 				SELECT COERCIBILITY('abc');
+# 					-> 4
+#
+# 				SELECT COERCIBILITY(1000);
+# 					-> 5
+#
+# 			The return values have the meanings shown in the following table.
+#
+# 			Lower values have higher precedence.
+#
+# 				COERCIBILITY 	MEANING 					EXAMPLE
 # 
+# 					0 				Explicit collation 	Value with COLLATE clause
+#
+# 					1 				No collation 			Concatenation of strings with different collations
+#
+# 					2 				Implicit collation 	Column value, stored routine parameter or local variable
+#
+# 					3 				System constant 		USER() return value
+#
+# 					4 				Coercible 				Literal string
+#
+# 					5 				Numeric 					Numeric or temporal value
+#
+# 					5 				Ignorable 				NULL or an expression derived from NULL
+#
+# 			For more information, see SECTION 10.8.4, "COLLATION COERCIBILITY IN EXPRESSIONS"
+#
+# 		) COLLATION(str)
+#
+# 			Returns the collation of thte string argument
+#
+# 				SELECT COLLATION('abc');
+# 					-> 'utf8_general_ci'
+#
+# 				SELECT COLLATION(_utf8mb4'abc');
+# 					-> 'utf8mb4_0900_ai_ci'
+#
+# 				SELECT COLLATION(_latin1'abc');
+# 					-> 'latin1_swedish_ci'
+#
+# 		) CONNECTION_ID()
+#
+# 			Returns the connection ID (thread ID) for the connection.
+#
+# 			Every connection has an ID that is unique among the set of currently
+# 			connected clients.
+#
+# 			The value returned by CONNECTION_ID() is the same type of value as displayed
+# 			in the ID column of the INFORMATION_SCHEMA.PROCESSLIST table, the Id column
+# 			of SHOW_PROCESSLIST output, and the PROCESSLIST_ID column of the Performance
+# 			Schema threads table.
+#
+# 				SELECT CONNECTION_ID();
+# 					-> 23786
+#
+#
+# 		) CURRENT_ROLE()
+#
+# 			Returns a utf8 string containing the current active roles for the current session,
+# 			separated by commas, or NONE if there are none.
+#
+# 			The value reflects the setting of the sql_quote_show_create system variable.
+#
+# 			Suppose that an account is granted roles as follows:
+#
+# 				GRANT 'r1', 'r2' TO 'u1'@'localhost';
+# 				SET DEFAULT ROLE ALL TO 'u1'@'localhost';
+#
+# 			In sessions for u1, the initial CURRENT_ROLE() value names the default account roles.
+#
+# 			Using SET_ROLE changes that:
+#
+# 				SELECT CURRENT_ROLE();
+# 				+---------------------------------+
+# 				| CURRENT_ROLE() 						 |
+# 				+---------------------------------+
+# 				| `r1`@`%`, `r2`@`%` 				 |
+# 				+---------------------------------+
+#
+# 				SET ROLE 'r1'; SELECT CURRENT_ROLE();
+# 				+--------------------+
+# 				| CURRENT_ROLE() 		|
+# 				+--------------------+
+# 				| `r1`@`%` 				|
+# 				+--------------------+
+#
+# 		) CURRENT_USER, CURRENT_USER()
+#
+# 			Returns the user name and host name combination for the MySQL account that hte server
+# 			used to authenticate the current client.
+#
+# 			This account determines your access privileges.
+#
+# 			The return value is a string in the utf8 character set.
+#
+# 			The value of CURRENT_USER() can differ from the value of USER()
+#
+# 				SELECT USER();
+# 					-> 'davida@localhost'
+# 				SELECT * FROM mysql.user;
+# 				ERROR 1044: Access denied for user ''@'localhost' to
+# 				database 'mysql'
+# 				SELECT CURRENT_USER();
+# 					-> '@localhost'
+#
+# 			The example illustrates that although the client specified a user name
+# 			of davida (as indicated by the value of the USER() function), the server
+# 			authenticated the client using an anonymous user account (as seen by the empty user
+# 			name part of the CURRENT_USER() value)
+#
+# 			One way this might occur is that there is no account listed in the grant tables
+# 			for davida.
+#
+# 			Within a stored program or view, CURRENT_USER() returns the account for the user
+# 			who defined the object (as given by its DEFINER value) unless defined with the
+# 			SQL SECURITY INVOKER characteristic
+#
+# 			In the latter case, CURRENT_USER() returns the object's invoker
+#
+# 			Triggers and events have no option to define the SQL SECURITY characteristic,
+# 			so for these objects, CURRENT_USER() returns the account for the user who
+# 			defined the object.
+#
+# 			To return the invoker, use USER() or SESSION_USER()
+#
+# 			The following statements support use of the CURRENT_USER() function to take
+# 			place of the name (and, possibly, a host for) an affected user or a definer;
+#
+# 			IN such cases, CURRENT_USER() is expanded where and as needed:
+#
+# 				) DROP_USER
+#
+# 				) RENAME_USER
+#
+# 				) GRANT
+#
+# 				) REVOKE
+#
+# 				) CREATE_FUNCTION
+#
+# 				) CREATE_PROCEDURE
+#
+# 				) CREATE_TRIGGER
+#
+# 				) CREATE_EVENT
+#
+# 				) CREATE_VIEW
+#
+# 				) ALTER_EVENT
+#
+# 				) ALTER_VIEW
+#
+# 				) SET_PASSWORD
+#
+# 			For information about the implications that this expansion of CURRENT_USER() 
+# 			has for replication, see SECTION 17.4.1.8, "REPLICATION OF CURRENT_USER()"
+#
+# 		) DATABASE()
+#
+# 			Returns the default (current) database name as a string in the utf8 character set.
+#
+# 			If there is no default database, DATABASE() returns NULL.
+#
+# 			Within a stored routine, the default database is the database that the routine is associated with,
+# 			which is not necessarily the same as the database that is the default in the calling context.
+#
+# 				SELECT DATABASE();
+# 					-> 'test'
+#
+# 			If there is no default database, DATABASE() returns NULL
+#
+# 		) FOUND_ROWS()
+#
+# 			A SELECT statement may include a LIMIT clause to restrict the number of rows the
+# 			server returns to the client.
+#
+# 			In some cases, it is desirable to know how many rows the statement would have returned
+# 			without the LIMIT, but without running the statement again.
+#
+# 			To obtain this row count, include an SQL_CALC_FOUND_ROWS option in
+# 			the SELECT statement, and then invoke FOUND_ROWS() afterward:
+#
+# 				SELECT SQL_CALC_FOUND_ROWS * FROM tbl_name
+# 					WHERE id > 100 LIMIT 10;
+# 				SELECT FOUND_ROWS();
+#
+# 			The second SELECT returns a number indicating how many rows the first SELECT
+# 			would have returned had it been written without the LIMIT clause.
+#
+# 			In the absence of the SQL_CALC_FOUND_ROWS option in the most recent successful
+# 			SELECT statement, FOUND_ROWS() returns the number of rows in the result set
+# 			returned by that statement.
+#
+# 			If the statement includes a LIMIT clause, FOUND_ROWS() returns the number of
+# 			rows up to the limit.
+#
+# 			For example, FOUND_ROWS() returns 10 or 60, respectivelly, if the statement
+# 			includes LIMIT 10 or LIMIT 50, 10
+#
+# 			The row count available through FOUND_ROWS() is transient and not intended to be
+# 			available past the statement following the SELECT SQL_CALC_FOUND_ROWS statement.
+#
+# 			If you need to refer to the value later, save it:
+#
+# 				SELECT SQL_CALC_FOUND_ROWS * FROM ---;
+# 				SET @rows = FOUND_ROWS();
+#
+# 			if you are using SELECT SQL_CALC_FOUND_ROWS, MySQL must calculate how many rows
+# 			are in the full result set.
+#
+# 			However, this is faster than running the query again without LIMIT, because the
+# 			result set need not be sent to the client.
+#
+# 			SQL_CALC_FOUND_ROWS and FOUND_ROWS() can be useful in situations when you want to
+# 			restrict the number of rows that a query returns, but also determine the
+# 			number of rows in the full result set without running the query again.
+#
+# 			An example is a Web script that presents a paged display containing links
+# 			to the pages that show other sections of a search result.
+#
+# 			Using FOUND_ROWS() enables you to determine how many other pages are needed
+# 			for the rest of hte result.
+#
+# 			The use of SQL_CALC_FOUND_ROWS and FOUND_ROWS() is more complex for UNION statements
+# 			than for simple SELECT statements, because LIMIT may occur at multiple places
+# 			in a UNION.
+#
+# 			It may be applied to individual SELECT statements in the UNION, or global
+# 			to the UNION result as a whole.
+#
+# 			The intent of SQL_CALC_FOUND_ROWS for UNION is that it should return the row count
+# 			that would be returned without a global LIMIT.
+#
+# 			The conditions for use of SQL_CALC_FOUND_ROWS with UNION are:
+#
+# 				) The SQL_CALC_FOUND_ROWS keyword must appear in the first SELECT of the UNION.
+#
+# 				) The value of FOUND_ROWS() is exact only if UNION_ALL is used.
+#
+# 					If UNION without ALL is used, duplicate removal occurs and the
+# 					value of FOUND_ROWS() is only approximate.
+#
+# 				) If no LIMIT is present in the UNION, SQL_CALC_FOUND_ROWS is ignored and
+# 					returns the number of rows in the temporary table that is created
+# 					to process the UNION.
+#
+# 			Beyond the cases described here, the behavior of FOUND_ROWS() is undefined (for example,
+# 			its value following a SELECT statement that fails with an error)
+#
+# 			IMPORTANT:
+#
+# 				FOUND_ROWS() is not replicated reliably using statement-based replication.
+#
+# 				This function is automatically replicated using row-based replication.
+#
+# 		) ICU_VERSION()
+#
+# 			The version of the INternational Components for Unicode (ICU) library used to support
+# 			regular expression operations
+#
+# 			(See SECTION 12.5.2, "REGULAR EXPRESSIONS")
+#
+# 			This function is primarily intended for use in test cases.
+#
+# 		) LAST_INSERT_ID(), LAST_INSERT_ID(expr)
+#
+# 			With no argument, LAST_INSERT_ID() returns a BIGINT UNSIGNED (64-bit) value
+# 			representing the first automatically generated value successfully inserted
+# 			for an AUTO_INCREMENT column as a result of the most recently executed 
+# 			INSERT statement.
+#
+# 			The value of LAST_INSERT_ID() remains unchanged if no rows are successfully
+# 			inserted.
+#
+# 			With an argument, LAST_INSERT_ID() returns an unsigned integer.
+#
+# 			For example, after inserting a row that generates an AUTO_INCREMENT value,
+# 			you can get the value like this:
+#
+# 				SELECT LAST_INSERT_ID();
+# 					-> 195
+#
+# 			The currently executing staetment does not affect the value of LAST_INSERT_ID()
+#
+# 			Suppose that you generate an AUTO_INCREMENT value with one statement, and then
+# 			refer to LAST_INSERT_ID() in a multiple-row INSERT statement that inserts rows
+# 			into a table with its own AUTO_INCREMENT column.
+#
+# 			The value of LAST_INSERT_ID() will remain stable in the second statement;
+# 			Its value for the second and later rows is not affected by the earlier row
+# 			insertions.
+#
+# 			(However, if you mix references to LAST_INSERT_ID() and LAST_INSERT_ID(expr),
+# 				the effect is undefined)
+#
+# 			If the previous statement returned an error, the value of LAST_INSERT_ID() is
+# 			undefined.
+#
+# 			For transactional tables, if the statement is rolled back due to an error, the
+# 			value of LAST_INSERT_ID() is left undefined.
+#
+# 			For manual ROLLBACK, the value of LAST_INSERT_ID() is not restored to that
+# 			before the transaction;
+#
+# 			it remains as it was at the point of the ROLLBACK.
+#
+# 			Within the body of a stored routine (procedure or function) or a trigger
+# 			, the value of LAST_INSERT_ID() changes the same way as for statements
+# 			executed outside the body of these kinds of objects.
+#
+# 			The effect of a stored routine or trigger upon the value of LAST_INSERT_ID()
+# 			that is seen by following statements depends on the kind of routine:
+#
+# 				) If a stored procedure executes statements that change the value of
+# 					LAST_INSERT_ID(), the changed value is seen by statements that follow
+# 					the procedure call.
+#
+# 				) For stored functions and triggers that change the value, the value 
+# 					is restored when the function or trigger ends, so following
+# 					statements will not see a changed value.
+#
+# 			The ID that was generated is maintained in the server on a per-connection basis.
+#
+# 			This means that the value returned by the function to a given client is the first
+# 			AUTO_INCREMENT value generated for the most recent statement affecting an
+# 			AUTO_INCREMENT column by that client.
+#
+# 			This value cannot be affected by other clients, even if they generate
+# 			AUTO_INCREMENT values of their own.
+#
+# 			This behavior ensures that each client can retrieve its own ID without 
+# 			concern for the activity of other clients, and without the need for locks
+# 			or transactions.
+#
+# 			The value of LAST_INSERT_ID() is not changed if you set the AUTO_INCREMENT
+# 			column of a row to a non-"magic" value (that is, a value that is not NULL and
+# 			not 0)
+#
+# 			IMPORTANT:
+#
+# 				If you insert multiple rows using a single INSERT statement, LAST_INSERT_ID()
+# 				returns the value generated for the first inserted row only.
+#
+# 				The reason for this is to make it possible to reproduce easily the same
+# 				INSERT statement against some other server.
+#
+# 			For example:
+#
+# 				USE test;
+#
+# 				CREATE TABLE t (
+# 				id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+# 				name VARCHAR(10) NOT NULL
+# 				);
+#
+# 				INSERT INTO t VALUES (NULL, 'Bob');
+#
+# 				SELECT * FROM t;
+# 				+-------+--------------+
+# 				| id 	  | name 		  |
+# 				+-------+--------------+
+# 				| 1 	  | Bob  		  |
+# 				+-------+--------------+
+#
+# 				SELECT LAST_INSERT_ID();
+# 				+----------------------+
+# 				| LAST_INSERT_ID() 	  |
+# 				+----------------------+
+# 				| 						1 	  |
+# 				+----------------------+
+#
+# 				INSERT INTO t VALUES
+# 					(NULL, 'Mary'), (NULL, 'Jane'), (NULL, 'Lisa');
+#
+# 				SELECT * FROM t;
+# 				+------+----------+
+# 				| id   | name 		|
+# 				+------+----------+
+# 				| 1 	 | Bob 		|
+# 				| 2 	 | Mary 	   |
+# 				| 3 	 | Jane 		|
+# 				| 4 	 | Lisa 		|
+# 				+------+----------+
+#
+# 				SELECT LAST_INSERT_ID();
+# 				+------------------------+
+# 				| LAST_INSERT_ID() 		 |
+# 				+------------------------+
+# 				| 			2 					 |
+# 				+------------------------+
+#
+# 			ALthough the second INSERT statement inserted three new rows into t, the ID
+# 			generated for the first of these rows was 2, and it is this value that is returned
+# 			by LAST_INSERT_ID() for the following SELECT statement.
+#
+# 			If you use INSERT_IGNORE and the row is ignored, the LAST_INSERT_ID() remains
+# 			unchanged from the current value (or 0 is returned if the connection has not yet performed
+# 			a successful INSERT) and, for non-transactional tables, the AUTO_INCREMENT counter is not incremented.
+#
+# 			For InnoDB tables, the AUTO_INCREMENT counter is incremented if innodb_autoinc_lock_mode is set
+# 			to 1 or 2, as demonstrated in the following example:
+#
+# 				USE test;
+#
+# 				SELECT @@innodb_autoinc_lock_mode;
+# 				+----------------------------------+
+# 				| @@innodb_autoinc_lock_mode 		  |
+# 				+----------------------------------+
+# 				| 								1 			  |
+# 				+----------------------------------+
+#
+# 				CREATE TABLE `t` (
+# 					`id` INT(11) NOT NULL AUTO_INCREMENT,
+# 					`val` INT(11) DEFAULT NULL,
+# 				PRIMARY KEY (`id`),
+# 				UNIQUE KEY `i1` (`val`)
+# 				) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+#
+# 				# INsert two rows
+#
+# 				INSERT INTO t (val) VALUES (1), (2);
+#
+# 				# With auto_increment_offset=1, the inserted rows
+# 				# result in an AUTO_INCREMENT value of 3
+#
+# 				SHOW CREATE TABLE t\G
+# 				************************* 1. row ************************
+# 						Table: t
+# 				Create Table: CREATE TABLE `t` (
+# 					`id` int(11) NOT NULL AUTO_INCREMENT,
+# 					`val` int(11) DEFAULT NULL,
+# 				  PRIMARY KEY (`id`),
+# 				  UNIQUE KEY `i1` (`val`)
+# 				 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1
+#
+# 				# LAST_INSERT_ID() returns the first automatically generated value
+# 				# that is successfully inserted for the AUTO_INCREMENT column
+#
+# 				SELECT LAST_INSERT_ID();
+# 				+-------------------------+
+# 				| LAST_INSERT_ID() 		  |
+# 				+-------------------------+
+# 				| 				1 				  |
+# 				+-------------------------+
+#
+# 				# The attempted insertion of duplicate rows fail but errors are ignored
+#
+# 				INSERT IGNORE INTO t (val) VALUES (1), (2);
+# 				Query OK, 0 rows affected (0.00 sec)
+# 				Records: 2 Duplicates: 2 Warnings: 0
+#
+# 				# With innodb_autoinc_lock_mode=1, the AUTO_INCREMENT counter
+# 				# is incremented for the ignored rows
+#
+# 				SHOW CREATE TABLE t\G
+# 				************************** 1. row **********************
+# 						Table: t
+# 				Create Table: CREATE TABLE `t` (
+# 					`id` int(11) NOT NULL AUTO_INCREMENT,
+# 					`val` int(11) DEFAULT NULL,
+# 					PRIMARY KEY (`id`),
+# 					UNIQUE KEY `i1` (`val`)
+# 				) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1
+#
+# 				# The LAST_INSERT_ID is unchanged because the previous insert was unsuccessful
+#
+# 				SELECT LAST_INSERT_ID();
+# 				+----------------------+
+# 				| LAST_INSERT_ID() 	  |
+# 				+----------------------+
+# 				| 				1 			  |
+# 				+----------------------+
+#
+# 			For more information, see SECTION 15.6.1.4, "AUTO_INCREMENT HANDLING IN INNODB"
+#
+# 			If expr is given as an argument to LAST_INSERT_ID(), the value of the argument is returned by
+# 			the function and is remembered as the next value to be returned by LAST_INSERT_ID().
+#
+# 			This can be used to simulate sequences:
+#
+# 				a. Create a table to hold the sequence counter and initialize it:
+#
+# 					CREATE TABLE sequence (id INT NOT NULL);
+# 					INSERT INTO sequence VALUES (0);
+#
+# 				b. Use the table to generate sequence numbers like this:
+#
+# 					UPDATE sequence SET id=LAST_INSERT_ID(id+1);
+# 					SELECT LAST_INSERT_ID();
+#
+# 			The UPDATE statement increments the sequence counter and causes the
+# 			next call to LAST_INSERT_ID() to return the updated value.
+#
+# 			The SELECT statement retrieves that value.
+#
+# 			The mysql_insert_id() C API function can also be used to get hte value.
+#
+# 			See SECTION 28.7.7.38, "MYSQL_INSERT_ID()"
+#
+# 		You can generate sequences without calling LAST_INSERT_ID(), but the utility of
+# 		using the function this way is that the ID value is maintained in the server
+# 		as the last automatically generated value.
+#
+# 		It is multi-user safe because multiple clients can issue the UPDATE statement
+# 		and get their own sequence value with the SELECT statement (or mysql_insert_id()),
+# 		without affecting or being affected by other clients that generate their own
+# 		sequence values.
+#
+# 		Note that mysql_insert_id() is only updated afer INSERT and UPDATE statements,
+# 		so you cannot use the C API function to retrieve the value for LAST_INSERT_ID(expr)
+# 		after executing other SQL statements like SELECT or SET.
+#
+# 	) ROLES_GRAPHML()
+#
+# 		Returns a utf8 string containing a GraphML document representing memory role subgraphs.
+#
+# 		The ROLE_ADMIN or SUPER privilege is required to see content in the <graphml> element.
+#
+# 		Otherwise, the result shows only an empty element:
+#
+# 			SELECT ROLES_GRAPHML();
+# 			+---------------------------------------------------+
+# 			| ROLES_GRAPHML() 									       |
+# 			+---------------------------------------------------+
+# 			| <?xml version="1.0" encoding="UTF-8"?><graphml/>	 |
+# 			+---------------------------------------------------+
+#
+# 	) ROW_COUNT()
+#
+# 		ROW_COUNT() returns a value as follows:
+#
+# 			) DDL statements: 0. This applies to statements such as CREATE_TABLE or DROP_TABLE
+#
+# 			) DML statements other than SELECT:
+#
+# 				The number of affected rows.
+#
+# 				This applies to statements such as UPDATE, INSERT, or DELETE (as before),
+# 				but now also to statements such as ALTER_TABLE and LOAD_DATA_INFILE.
+#
+# 			) SELECT: -1 if hte statement returns a result set, or the number of rows "affected" if it does not.
+#
+# 				For example, for SELECT * FROM t1, ROW_COUNT() returns -1
+#
+# 				For SELECT * FROM t1 INTO OUTFILE 'file_name', ROW_COUNT() returns the
+# 				number of rows written to the file.
+#
+# 			) SIGNAL statements: 0
+#
+# 		For UPDATE statements, the affected-rows value by default is the number of rows
+# 		actually changed.
+#
+# 		If you specify the CLIENT_FOUND_ROWS flag to mysql_real_connect() when connecting to
+# 		mysqld, the affected-rows value is the number of rows "found", that is, mathced by the WHERE clause.
+#
+# 		For REPLACE statements, the affected-rows value is 2 if the new row replaced an old row,
+# 		because in this case, one row was inserted after the duplicate was deleted.
+#
+# 		For INSERT_---_ON_DUPLICATE_KEY_UPDATE statements, the affected-rows value per row is 1 if
+# 		the row is inserted as a new row, 2 if an existing row is updated, and 0 if an existing row
+# 		is set to its current values.
+#
+# 		If you specify the CLIENT_FOUND_ROWS flag, the affected-rows value is 1 (not 0) if an existing
+# 		row is set to its current values.
+#
+# 		The ROW_COUNT() value is similar to the value from the mysql_affected_rows() C API function
+# 		and the row count that the mysql client displays following statement execution.
+#
+# 			INSERT INTO t VALUES(1),(2),(3);
+# 			Query OK, 3 rows affected (0.00 sec)
+# 			Records: 3 DUplicates: 0 Warnings: 0
+#
+# 			SELECT ROW_COUNT();
+# 			+-----------------+
+# 			| ROW_COUNT() 	   |
+# 			+-----------------+
+# 			| 			3 			|
+# 			+-----------------+
+# 			1 row in set (0.00 sec)
+#
+# 			DELETE FROM t WHERE i IN(1,2);
+# 			Query OK, 2 rows affected (0.00 sec)
+#
+# 			SELECT ROW_COUNT();
+# 			+----------------+
+# 			| ROW_COUNT() 	  |
+# 			+----------------+
+# 			| 			2 		  |
+# 			+----------------+
+# 			1 row in set (0.00 sec)
+#
+# 		
+# 		IMPORTANT:
+#
+# 			ROW_COUNT() is not replicated reliably using statement-based replication.
+#
+# 			This function is automatically replicated using row-based replication.
+#
+# 	) SCHEMA()
+#
+# 		This function is a synonym for DATABASE()
+#
+# 	) SESSION_USER()
+#
+# 		SESSION_USER() is a synonym for USER()
+#
+# 	) SYSTEM_USER()
+#
+# 		SYSTEM_USER() is a synonym for USER()
+#
+# 	) USER()
+#
+# 		Returns the current MySQL user name and host name as a string in the utf8 character set.
+#
+# 			SELECT USER();
+# 				-> 'davida@localhost'
+#
+# 		The value indicates the user name you specified when connecting to the server, and the client
+# 		host from which you connected.
+#
+# 		The value can be different from that of CURRENT_USER()
+#
+# 	) VERSION()
+#
+# 		Returns a string that indicates the MySQL server version.
+#
+# 		The string uses the utf8 character set.
+#
+# 		The value might have a suffix in addition to the version number.
+#
+# 		See the description of the version system variable in SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# 		This function is unsafe for statement-based replication.
+# 		A warning is logged if you use this function when binlog_format is set to STATEMENT.
+#
+# 			SELECT VERSION();
+# 				-> '8.0.15-standard'
+#
+# 12.16 SPATIAL ANALYSIS FUNCTIONS
+#
+# MySQL provides functions to perform various operations on spatial data.
+#
+# These functions can be grouped into several major categories according to the type
+# of operation they perform:
+#
+# 		) Functions that create geometries in various formats (WKT, WKB, internal)
+#
+# 		) Functions that convert geometries between formats
+#
+# 		) Functions that access qualitative or quantitative properties of a geometry
+#
+# 		) Functions that describe relations between two geometries
+#
+# 		) Functions that create new geometries from existing ones
+#
+# For general background about MySQL support for using spatial data, see SECTION 11.5, "SPATIAL DATA TYPES"
+#
+# 12.16.1 SPATIAL FUNCTION REFERENCE
+#
+# The following table lists each spatial function and provides a short description of each one.
+#
+# TABLE 12.20 SPATIAL FUNCTIONS
+#
+# 		NAME 											DESCRIPTION
+#
+# GeomCollection() 		Construct geometry collection from geometries
+#
+# GeometryCollection() 	Construct geometry collection from geometries
+#
+# LineString() 			Construct LineString from Point values
+#
+# MBRContains() 			Whether MBR of one geometry contains MBR of another
+#
+# MBRCoveredBy() 			Whether one MBR is covered by another
+#
+# MBRCovers() 				Whether one MBR covers another
+#
+# MBRDisjoint() 			Whether MBRs of two geometries are disjoint
+#
+# MBREquals() 				Whether MBRs of two geometries are equal
+#
+# MBRIntersects() 		Whether MBRs of two geometries intersect
+#
+# MBROverlaps() 			Whether MBRs of two geometries overlap
+#
+# MBRTouches() 			Whether MBRs of two geometries touch
+#
+# MBRWithin() 				Whether MBR of one geometry is within MBR of another
+#
+# MultiLineString() 		Construct MultiLineString from LineString values
+#
+# MultiPoint() 			Construct MultiPoint from Point values
+#
+# MultiPolygon() 			Construct MultiPolygon from Polygon values
+#
+# Point() 					Construct point from coordinates
+#
+# Polygon() 				Construct Polygon from LineString arguments
+#
+# ST_Area() 				Return Polygon or MultiPolygon area
+#
+# ST_AsBinary(), 			Convert from internal geometry format to WKB
+# ST_AsWKB()	
+#
+# ST_AsGeoJSON() 			Generate GeoJSON object from geometry
+#
+# ST_AsText(), 			Convert from internal geometry format to WKT
+# ST_ASWKT()
+#
+# ST_Buffer() 				Return geometry of points within given distance from geometry
+#
+# ST_Buffer_Strategy() 	Produce strategy option for ST_Buffer()
+#
+# ST_Centroid() 			Return centroid as a point
+#
+# ST_Contains() 			Whether one geometry contains another
+#
+# ST_ConvexHull() 		Return convex hull of geometry
+#
+# ST_Crosses() 			Whether one geometry crosses another
+#
+# ST_Difference() 		Return point set difference of two geometries
+#
+# ST_Dimension() 			Dimension of geometry
+#
+# ST_Disjoint() 			Whether one geometry is disjoint from another
+#
+# ST_Distance() 			The distance of one geometry from another
+#
+# ST_Distance_Sphere() 	Minimum distance on earth between two geometries
+#
+# ST_EndPoint() 			End Point of LineString
+#
+# ST_Envelope() 			Return MBR of geometry
+#
+# ST_Equals() 				Whether one geometry is equal to another
+#
+# ST_ExteriorRing() 		Return exterior ring of Polygon
+#
+# ST_GeoHash() 			Produce a geohash value
+#
+# ST_GeomCollFromText(), 				Return geometry collection from WKT
+# ST_GeometryCollectionFromText(),
+# ST_GeomCollFromTxt()
+#
+# ST_GeomCollFromWKB(), 				Return Geometry collection from WKB
+# ST_GeometryCollectionFromWKB()
+#
+# ST_GeometryN() 							Return N-th geometry from geometry collection
+#
+# ST_GeometryType() 						Return name of geometry type
+#
+# ST_GeomFromGeoJSON() 					Generate geometry from GeoJSON object
+#
+# ST_GeomFromText(), 					Return Geometry from WKT
+# ST_GeometryFromText()
+#
+# ST_GeomFromWKB(), 						Return geometry from WKB
+# ST_GeometryFromWKB()
+#
+# ST_InteriorRingN() 					Return N-th interior ring of Polygon
+#
+# ST_Intersection() 						Return point set intersection of two geometries
+#
+# ST_Intersects() 						Whether one geometry intersects another
+#
+# ST_IsClosed() 							Whether a geometry is closed and simple
+#
+# ST_IsEmpty() 							Placeholder function
+#
+# ST_IsSimple() 							Whether a geometry is simple
+#
+# ST_IsValid() 							Whether a geometry is valid
+#
+# ST_LatFromGeoHash() 					Return latitude from geohash value
+#
+# ST_Latitude() 							Return latitude of Point
+#
+# ST_Length() 								Return length of LineString
+#
+# ST_LineFromText(), 					Construct LineString from WKT
+# ST_LineStringFromText()
+#
+# ST_LineFromWKB(), 						Construct LineString from WKB
+# ST_LineStringFromWKB()
+#
+# ST_LongFromGeoHash() 					Return longitude from geohash value
+#
+# ST_Longitude() 							Return longitude of Point
+#
+# ST_MakeEnvelope() 						Rectangle around two points
+#
+# ST_MLineFromText(), 					Construct MultiLineString from WKT
+# ST_MultiLineStringFromText()
+#
+# ST_MLineFromWKB(), 					Construct MultiLineString from WKB
+# ST_MultiLineStringFromWKB()
+#
+# ST_MPointFromText(), 					Construct MultiPoint from WKT
+# ST_MultiPointFromText()
+#
+# ST_MPointFromWKB(), 					Construct multiPoint from WKB
+# ST_MultiPointFromWKB()
+#
+# ST_MPolyFromText(), 					Construct MultiPolygon from WKT
+# ST_MultiPolygonFromText()
+#
+# ST_MPolyFromWKB(), 					Construct MultiPolygon from WKB
+# ST_MultiPolygonFromWKB()
+#
+# ST_NumGeometries() 					Return number of geometries in geometry collection
+#
+# ST_NumINteriorRing(), 				Return number of interior rings in Polygon
+# ST_NumINteriorRings()
+#
+# ST_NumPoints() 							Return number of points in LineString
+#
+# ST_Overlaps() 							Whether one geometry overlaps another
+#
+# ST_PointFromGeoHash() 				Convert geohash value to POINT value
+#
+# ST_PointFromText() 					Construct Point from WKT
+#
+# ST_PointFromWKB() 						Construct Point from WKB
+#
+# ST_PointN() 								Return N-th point from LineString
+#
+# ST_PolyFromText(), 					Construct Polygon from WKT
+# ST_PolygonFromText()
+#
+# ST_PolyFromWKB(), 						Construct Polygon from WKB
+# ST_PolygonFromWKB()
+#
+# ST_Simplify() 							Returned simplified geometry
+#
+# ST_SRID() 								Return spatial reference system ID for geometry
+#
+# ST_StartPoint() 						Start Point of LineString
+#
+# ST_SwapXY() 								Return argument with X/Y coordinates swapped
+#
+# ST_SymDifference() 					return point set symmetric difference of two geometries
+#
+# ST_Touches() 							Whether one geometry touches another
+#
+# ST_Transform() 							Transform coordinates of geometry
+#
+# ST_Union() 								Return point set union of two geometries
+#
+# ST_Validate() 							Return validated geometry
+#
+# ST_Within() 								Whether one geometry is within another
+#
+# ST_X() 									Return X coordinate of Point
+#
+# ST_Y() 									Return Y coordinate of Point
+#
+# 12.16.2 ARGUMENT HANDLING BY SPATIAL FUNCTIONS
+#
+# Spatial values, or geometries, have the properties described at SECTION 11.5.2.2, "GEOMETRY CLASS"
+#
+# The following discussion list general spatial function argument-handling characteristics.
+#
+# Specific functions or groups of functions may have additional argument-handling characteristics,
+# as discussed in the sections where those function descriptions occur.
+#
+# Spatial functions are defined only for valid geometry values.
+#
+# The spatial reference identifier (SRID) of a geometry identifies the coordinate space
+# in which the geoemtry is defined.
+#
+# In MySQL, the SRID value is an integer associated with the geometry value.
+#
+# The maximum usable SRID value is 2^32-1
+#
+# If a larger value is given, only the lower 32 bits are used.
+#
+# SRID 0 represents an infinite flat Cartesian plane with no units assigned to its axes.
+#
+# To ensure SRID 0 behavior, create geometry values using SRID 0.
+#
+# SRID 0 is the default for new geometry values if no SRID is specified.
+#
+# Geometry values produced by any spatial function inherit the SRID of the geometry
+# arguments.
+#
+# Spatial functions that take multiple geometry arguments require those arguments to have
+# the same SRID values (that is, same value in the lower 32 bits)
+#
+# Assuming equal SRIDs, spatial functions do nothing with them after performing the equality
+# check; geometry values are implicitly handled using Cartesian coordinates (SRID 0)
+#
+# If a spatial function returns ER_GIS_DIFFERENT_SRIDS, it means that the geometry arguments
+# did not all have the same SRID.
+#
+# You must modify them to have the same SRID.
+#
+# The Open Geospatial Consortium guidelines require that input polygons already be closed,
+# so unclosed polygons are rejected as invalid rather than being closed.
+#
+# Empty geometry-collection handling is as follows:
+#
+# 		An empty WKT input geometry collection may be specified as
+# 		'GEOMETRYCOLLECTION()'
+#
+# This is also the output WKT resulting from a spatial operation that
+# produces an empty geometry collection.
+#
+# During parsing of a nested geometry collection, teh collection is flattened
+# and its basic components are used in various GIS operations to compute results.
+#
+# This provides additional flexibility to users because it is unnecessary to be concerned
+# about the uniqueness of geometry data.
+#
+# Nested geometry collections may be produced from nested GIS function calls
+# without having to be explicitly flattened first.
+#
+# 12.16.3 FUNCTIONS THAT CREATE GEOMETRY VALUES FROM WKT VALUES
+#
+# These functions take as arguments a Well-Known Text (WKT) representation and, optionally
+# a spatial reference system identifier (SRID)
+#
+# They return the corresponding geometry.
+#
+# For a description of WKT format, see Well-Known Text (WKT) Format
+#
+# Functions in this section detect arguments in either Cartesian or geographical spatial
+# reference systems (SRSs), and return results appropriate to the SRs.
+#
+# ST_GeomFromText() accepts a WKT value of any geometry type as its first argument.
+#
+# Other functions provide type-specific construction functions for construction
+# of geometry values of each geometry type.
+#
+# Functions such as ST_MPointFromText() and ST_GeomFromText() that accept WKT-format
+# representations of MultiPoint values permit individual points within values
+# to be surrounded by parentheses.
+#
+# For example,, both of the following function calls are valid:
+#
+# 		ST_MPointFromText('MULTIPOINT (1 1, 2 2, 3 3)')
+# 		ST_MPointFromText('MULTIPOINT ((1 1), (2 2), (3 3))')
+#
+# Functions such as ST_GeomFromText() that accept WKT geometry collection arguments
+# understand both OpenGIS 'GEOMETRYCOLLECTION EMPTY' standard syntax and 
+# MYSQL 'GEOMETRYCOLLECTION()' nonstandard syntax.
+#
+# Functions such as ST_AsWKT() that produce WKT values produce 'GEOMETRYCOLLECTION EMPTY'
+# standard syntax:
+#
+# 		SET @s1 = ST_GeomFromText('GEOMETRYCOLLECTION()');
+# 		SET @s2 = ST_GeomFromText('GEOMETRYCOLLECTION EMPTY');
+# 		SELECT ST_AsWKT(@s1), ST_AsWKT(@s2);
+#
+# 		+----------------------------+----------------------------------+
+# 		| ST_AsWKT(@s1) 				  | ST_AsWKT(@s2) 						 |
+# 		+----------------------------+----------------------------------+
+# 		| GEOMETRYCOLLECTION EMPTY   | GEOMETRYCOLLECTION EMPTY 			 |
+# 		+----------------------------+----------------------------------+
+#
+# Unless otherwise specified, functions in this section handle their arguments as follows:
+#
+# 		) If any geometry argument is NULL or is not a syntactically well-formed geometry,
+# 			or if the SRID argument is NULL, the return value is NULL.
+#
+# 		) By default, geographic coordinates (latitude, longitude) are interpreted as in the order
+# 			specified by the spatial reference system of geometry arguments.
+#
+# 			An optional options argument may be given to override the default axis order.
+#
+# 			options consists of a list of comma-separated key=value
+#
+# 			The only permitted key value is axis-order, with permitted values
+# 			of lat-long, long-lat and srid-defined (the default)
+#
+# 			If the options argument is NULL, the return value is NULL.
+#
+# 			If the options argument is invalid, an error occurs to indicate why.
+#
+# 		) If an SRID argument refers to an undefined spatial reference system (SRS),
+# 			an ER_SRS_NOT_FOUND error occurs.
+#
+# 		) For geographic SRS geometry arguments, if any argument has a longitude or latitude that
+# 			is out of range, an error occurs:
+#
+# 			) If a longitude value is not in the range (-180, 180], an ER_LONGITUDE_OUT_OF_RANGE error occurs.
+#
+# 			) If a latitude value is not in the range [-90, 90], an ER_LATITUDE_OUT_OF_RANGE error occurs.
+#
+# 		Ranges shown are in degrees.
+#
+# 		If an SRS uses another unit, the range uses the corresponding values in its unit.
+#
+# 		The exact range limits deviate slightly due to floating-point arithmetic.
+#
+# These functions are available for creating geometries from WKT values:
+#
+# 		) ST_GeomCollFromText(wkt[, srid[, options]]),
+# 			ST_GeometryCollectionFromText(wkt[, srid[, options]]),
+# 			ST_GeomCollFromTxt(wkt[, srid[, options]])
+#
+# 			Constructs a GeometryCollection value using its WKT representation and SRID.
+#
+# 			These functions handle their arguments as described in the introduction to this section.
+#
+# 				SET @g = "MULTILINESTRING((10 10, 11 11), (9 9, 10 10))";
+# 				SELECT ST_AsText(ST_GeomCollFromText(@g));
+# 				+--------------------------------------------+
+# 				| ST_AsText(ST_GeomCollFromText(@g)) 			|
+# 				+--------------------------------------------+
+# 				| MULTILINESTRING((10 10,11 11),(9 9,10 10)) |
+# 				+--------------------------------------------+
+#
+# 		) ST_GeomFromText(wkt[, srid [, options]]),
+# 			ST_GeometryFromText(wkt[, srid [, options]])
+#
+# 			Constructs a geometry value of any type using its WKT
+# 			representation and SRID.
+#
+# 			These functions handle their arguments as described
+# 			in the introduction to this section.
+#
+# 		) ST_LineFromText(wkt[, srid [, options]]),
+# 			ST_LineStringFromText(wkt[, srid [, options]])
+#
+# 			Constructs a LineString value using its WKT representation
+# 			and SRID.
+#
+# 			These functions handle their arguments as described in the
+# 			introduction to this section.
+#
+# 		) ST_MLineFromText(wkt[, srid [, options]]),
+# 			ST_MultiLineStringFromText(wkt[, srid [, options]])
+#
+# 			Constructs a MultiLineString value using its WKT representation
+# 			and SRID.
+#
+# 			These functions handle their arguments as described in the intro
+#
+# 		) ST_MPointFromText(wkt[, srid[, options]]),
+# 			ST_MultiPointFromText(wkt[, srid[, options]])
+# 			
+# 			Constructs a MultiPoint value using its WKT representation
+# 				and SRID.
+#
+# 			These functions handle their arguments as described in the intro
+#
+# 		) ST_MPolyFromText(wkt[, srid[, options]]),
+# 			ST_MultiPolygonFromText(wkt[, srid[, options]])
+#
+# 			Constructs a MultiPolygon value using its WKT representation
+# 				and SRID.
+#
+# 			These functions handle their arguments as described in the intro
+#
+# 		) ST_PointFromText(wkt[, srid[, options]])
+#
+# 			Constructs a Point value using its WKT representation and SRID.
+#
+# 			ST_PointFromText() handles its arguments as described in the intro
+#
+# 		) ST_PolyFromText(wkt[, srid[, options]]),
+# 			ST_PolygonFromText(wkt[, srid[, options]])
+#
+# 			Constructs a Polygon value using its WKT representation and SRID
+#
+# 			These functions handle their arguments as described in the intro.
+#
+# 12.16.4 FUNCTIONS THAT CREATE GEOMETRY VALUES FROM WKB VALUES
+#
+# These functions take as arguments a BLOB containing a Well-Known Binary (WKB) representation,
+# and, optionally, a spatial reference system identifier (SRID)
+#
+# They return the corresponding geometry.
+#
+# For a description of WKB format, see Well-Known Binary (WKB) Format
+#
+# Functions in this section detect arguments in either Cartesian or geographical
+# spatial reference systems (SRSs), and return results appropriate to the SRS.
+#
+# ST_GeomFromWKB() accepts a WKB value of any geometry type as its first argument.
+#
+# Other functions provide type-specific construction functions for construction of
+# geometry values ofe ach geometry type.
+#
+# Prior to 8.0, these functions also accepted geometry objects as returned by the functions
+# in SECTION 12.16.5, "MYSQL-SPECIFIC FUNCTIONS THAT CREATE GEOMETRY VALUES"
+#
+# Geometry arguments are no longer permitted and produce an error.
+#
+# to migrate calls from using geometry arguments to using WKB arguments,
+# follow these guidelines:
+#
+# 		) Rewrite constructs such as ST_GeomFromWKB(Point(0, 0)) as Point(0, 0)
+#
+# 		) Rewrite constructs such as ST_GeomFromWKB(Point(0, 0), 4326) as ST_SRID(Point(0, 0), 4326)
+# 			or ST_GeomFromWKB(ST_AsWKB(Point(0, 0)), 4326)
+#
+# UNless otherwise specified,, functions in this section handle their arguments as follows:
+#
+# 		) If the WKB or SRID argument is NULL, the return value is NULL
+#
+# 		) By default, geographic coordinates (latitude, longitude) are interpreted as in the
+# 			order specified by the spatial reference system of geometry arguments.
+#
+# 			An optional options argument may be given to override the default axis order.
+#
+# 			Options consists of a list of comma-separated key=value.
+#
+# 			The only permitted key value is axis-order,, with permitted values of
+# 			lat-long, long-lat and srid-defined (the default)
+#
+# 			If the options argument is NULL, the return value is NULL.
+#
+# 			If the options argument is invalid, an error occurs to indicate why.
+#
+# 		) If an SRID argument refers to an undefined spatial reference system (SRS),
+# 			an ER_SRS_NOT_FOUND error occurs.
+#
+# 		) For geogrpahic SRS geometry arguments, if any argument has a longitude or latitude
+# 			that is out of range, an error occurs:
+#
+# 				) If a longitude value is not in the range (-180, 180], an ER_lONGITUDE_OUT_OF_RANGE error occurs.
+#
+# 				) If a latitude value is not in the range [-90, 90], an ER_LATITUDE_OUT_OF_RANGE error occurs.
+#
+# 			Ranges shown are in degrees.
+#
+# 			If an SRS uses another unit, the range uses the corresponding values in its unit.
+#
+# 			The exact range limits deviate slightly due to floating-point arithemtic.
+#
+#  these functions are available for creating geometries from WKB values:
+#
+# 		) ST_GeomCollFromWKB(wkb[, srid[, optional]]),
+# 			ST_GeometryCollectionFromWKB(wkb[, srid [, options]])
+#
+# 			Constructs a GeometryCollection value using its WKB representation and SRID.
+#
+# 			These functions handle their arguments as described in the intro.
+#
+# 		) ST_GeomFromWKB(wkb[, srid[, options]]),
+# 			ST_GeometryFromWKB(wkb[, srid [, options]])
+#
+# 			Constructs a geometry value of any type using its WKB representation and SRID.
+#
+# 			These functions handle their arguments as descriebd in the intro.
+#
+# 		) ST_LineFromWKB(wkb[,, srid[, options]]),
+# 			ST_LineStringFromWKB(wkb[, srid [, options]])
+#
+# 			Constructs a LineString value using its WKB representation and SRID.
+#
+# 			These functions handle their arguments as described in the intro.
+#
+# 		) ST_MLineFromWKB(wkb[, srid [, options]]),
+# 			ST_MultiLineStringFromWKB(wkb[, srid[, options]])
+#
+# 			Consturcts a MultiLineString value using its WKB representation and SRID.
+#
+# 			These functions handle their arguments as described in the intro.
+#
+# 		) ST_MPointFromWKB(wkb[,, srid[, options]]),
+# 			ST_MultiPointFromWKB(wkb[, srid[, options]])
+#
+# 			Constructs a MultiPoint value using its WKB representation and SRID.
+#
+# 			These functions handle their arguments as described in the intro.
+#
+# 		) ST_MPolyFromWKB(wkb[, srid[, options]]),
+# 			ST_MultiPolygonFromWKB(wkb[, srid[, options]])
+#
+# 			Constructs a MultiPolygon value using its WKB representation and SRID.
+#
+# 			These functions handle their arguments as described in the intro.
+#
+# 		) ST_PointFromWKB(wkb[, srid[, options]])
+# 	
+# 			Constructs a Point value using its WKB representation and SRID.
+#
+# 			ST_PointFromWKB() handles its arguments as described in the intro.
+#
+# 		) ST_PolyFromWKB(wkb[, srid[, options]]),
+# 			ST_PolygonFromWKB(wkb[, srid [, options]])
+#
+# 			Constructs a Polygon value using its WKB representation and SRID.
+#
+# 			These functions handle their args as described in the intro.
+#
+# 12.16.5 MYSQL-SPECIFIC FUNCTIONS THAT CREATE GEOMETRY VALUES
+#
+# MySQL provides a set of useful nonstandard functions for creating geometry values.
+#
+# The functions described in this section are MySQL extensions to the OpenGIS specificaiton.
+#
+# These functions produce geometry objects from either WKB values or geometry objects ass arguments.
+#
+# If any arugment is not a proper WKB or geometry representaiton of their proper
+# object type, the return value is NULl.
+#
+# For example, you can insert the geometry return value from Point() directly into a POINT column:
+#
+# 		INSERT INTO t1 (pt_col) VALUES(Point(1,2));
+#
+# ) GeomCollection(g [, g] ---)
+#
+# 		COnstructs a GeomCollection value from the geometry arguments.
+#
+# 		GeomCollection() returns all the proper geometries contained in teh arguments even if
+# 		a nonsupported geometry is present.
+#
+# 		GeomCollection() with no arguments is permitted as a way to create an empty geometry.
+#
+# 		Also, functions such as ST_GeomFromText() that accept WKT geometry collection arguments
+# 		understand both OpenGIS 'GEOMETRYCOLLECTION EMPTY' standard syntax and MySQL
+# 		'GEOMETRYCOLLECTION()' nonstandard syntax.
+#
+# 		GeomCollection() and GeometryCollection() are synonymous, with GeomCollection()
+# 		the preferred function.
+#
+# ) GeometryCollection(g [, g] ---)
+#
+# 		Constructs a GeomCollection value from the geometry arguments:
+#
+# 		GeometryCollection() returns all the proper geometries contained in teh arguments
+# 		even if a nonsupported geometry is present.
+#
+# 		GeometryCollection() with no arguments is permitted as a way to create an empty geoemtry.
+#
+# 		Also, functions such as ST_GeomFromText() that accept WKT geometry collection arguments
+# 		understand both OpenGIS 'GEOMETRYCOLLECTION EMPTY' standard syntax and MySQL 
+# 		'GEOMETRYCOLLECTION()' nonstandard syntax.
+#
+# 		GeomCollection() and GeometryCollection() are synonymous with GeomCollection() the preferred
+# 		function.
+#
+# ) LineString(pt [, pt] ---)
+#
+# 		Constructs a LineString value from a number of Point or WKB Point arguments.
+#
+# 		if the number of arguments is less than two, the return value is NULL.
+#
+# ) MultiLineString(ls [,, ls] ---)
+#
+# 		Constructs a MultiLineString value using LineString or WKB LineSTring arguments
+#
+# ) MultiPoint(pt [, pt2] ---)
+#
+# 		Constructs a MultiPoint value using Point or WKB Point arguments.
+#
+# ) MultiPolygon(poly [, poly] ---)
+#
+# 		Constructs a MultiPolygon value from a set of Polygon or WKB Polygon arguments.
+#
+# ) Point(x, y)
+#
+# 		Constructs a Point using its coordinates
+#
+# ) Polygon(ls [, ls] ----)
+#
+# 		Constructs a Polygon value from a number of LineString or WKB LineString arguments.
+#
+# 		If any argument does not represent a LinearRing(that is, not a closed and simple LineString),
+# 		the return value is NULL
+#
+# 12.16.6 GEOMETRY FORMAT CONVERSION FUNCTIONS
+#
+# MySQL supports the functions listed in this section for converting geometry values
+# from internal geometry format to WKT or WKB format, or for swapping the order of X
+# and Y coordinates.
+#
+# There are also functions to convert a string from WKT or WKB format to internal
+# geometry format.
+#
+# See SECTION 12.16.3, "FUNCTIONS THAT CREATE GEOMETRY VALUES FROM WKT VALUES"
+#
+# and
+#
+# SECTION 12.16.4, "FUNCTIONS THAT CREATE GEOMETRY VALUES FROM WKB VALUES"
+#
+# Functions such as ST_GeomFromText() that accept WKT geometry collection arguments
+# understand both OpenGIS 'GEOMETRYCOLLECTION EMPTY' standard syntax and MySQL
+# 'GEOMETRYCOLLECTION()' nonstandard syntax.
+#
+# Another way to produce an empty geometry collection is by calling GeometryCollection()
+# with no arguments.
+#
+# Functions usch as ST_AsWKT() that produce WKT values produce 'GEOMETRYCOLLECTION EMPTY'
+# standard syntax:
+#
+# 		SET @s1 = ST_GeomFromText('GEOMETRYCOLLECTION()');
+# 		SET @s2 = ST_GeomFromText('GEOMETRYCOLLECTION EMPTY');
+# 		SELECT ST_AsWKT(@s1), ST_AsWKT(@s2);
+#
+# 		+---------------------------+--------------------------+
+# 		| ST_AsWKT(@s1) 				 | ST_AsWKT(@s2) 			    |
+# 		+---------------------------+--------------------------+
+# 		| GEOMETRYCOLLECTION EMPTY  | GEOMETRYCOLLECTION EMPTY |
+# 		+---------------------------+--------------------------+
+#
+# 		SELECT ST_AsWKT(GeomCollection());
+# 		+--------------------------------+
+# 		| ST_AsWKT(GeomCollection()) 		|
+# 		+--------------------------------+
+# 		| GEOMETRYCOLLECTION EMPTY 		|
+# 		+--------------------------------+
+#
+# Unless otherwise specified, funcitons in this section handle their arguments as follows:
+#
+# 	) If any argument is NULL, the return value is NULL
+#
+# 	) If any geometry argument is not a syntactically well-formed geometry,
+# 		an ER_GIS_INVALID_DATA error occurs.
+#
+# 	) If any geometry argument is an undefined spatial reference system, the axes
+# 		are output in the order they appear in the geometry and an
+# 		ER_WARN_SRS_NOT_FOUND_AXIS_ORDER warning occurs.
+#
+# 	) By default, geographic coordinates (latitude, longitude) are interpreted as in the order
+# 		specified by the spatial reference system of geometry arguments.
+#
+# 		An optional options argument may be given to override the default axis order.
+#
+# 		options consist of a list of comma-separated key=value 
+#
+# 		The only permitted kkey value is axis-order, with permitted values of 
+# 		lat-long, long-lat and srid-defined (the default)
+#
+# 		If the options argument is NULL, the return value is NULL.
+#
+# 		If the options argument is invalid, an error occurs to indicate why.
+#
+# 	) otherwise, the return value is non-NULL
+#
+# These functions are available for format conversions
+# or coordinate swapping:
+#
+# 		) ST_AsBinary(g [, options]),
+# 			ST_AsWKB(g [, options])
+#
+# 			Converts a value in internal geometry format to its WKB
+# 			representation and returns the binary result.
+#
+# 			The function return value has geogrpahic coordinates (latitude, longitude)
+# 			in the order specified by the spatial reference system that applies
+# 			to the geometry argument.
+#
+# 			An optional options argument may be given to override the default axis order.
+#
+# 			ST_AsBinary() and ST_AsWKB() handle their arguments as described in the
+# 			intro to this section.
+#
+# 				SET @g = ST_LineFromText('LINESTRING(0 5, 5 10, 10 15)', 4326);
+# 				SELECT ST_AsText(ST_GeomFromWKB(ST_AsWKB(@g)));
+#
+# 				+-------------------------------------------+
+# 				| ST_AsText(ST_GeomFromWKB(ST_AsWKB(@g)))   |
+# 				+-------------------------------------------+
+# 				| LINESTRING(5 0, 10 5, 15 10) 				  |
+# 				+-------------------------------------------+
+#
+# 				SELECT ST_AsText(ST_GeomFromWKB(ST_AsWKB(@g, 'axis-order=long-lat')));
+# 				+----------------------------------------------------------------+
+# 				| ST_AsText(ST_GeomFromWKB(ST_AsWKB(@g, 'axis-order=long-lat'))) |
+# 				+----------------------------------------------------------------+
+# 				| LINESTRING(0 5, 5 10, 10 15) 											  |
+# 				+----------------------------------------------------------------+
+#
+# 				SELECT ST_AsText(ST_GeomFromWKB(ST_AsWKB(@g, 'axis-order=lat-long')));
+# 				+----------------------------------------------------------------+
+# 				| ST_AsText(ST_GeomFromWKB(ST_AsWKB(@g, 'axis-order=lat-long'))) |
+# 				+----------------------------------------------------------------+
+# 				| LINESTRING(5 0, 10 5, 15 10) 											  |
+# 				+----------------------------------------------------------------+
+#
+# 	) ST_AsText(g [, options]),
+# 		ST_AsWKT(g [, options])
+#
+# 		Converts a value in intenral geometry format to its wkt representation
+# 		and returns the string result.
+#
+# 		The function return value has geographic coordinates (latitude, longitude) in the
+# 		order specified by the spatial reference system that applies to the geometry argument.
+#
+# 		An optional options argument may be given to override the default axis order.
+#
+# 		ST_AsText() and ST_AsWKT() handle their arguments as described in the intro to this section.
+#
+# 
+# 	https://dev.mysql.com/doc/refman/8.0/en/gis-format-conversion-functions.html
