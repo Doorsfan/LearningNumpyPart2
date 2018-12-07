@@ -89669,7 +89669,2017 @@ Need be, i will change this for upcoming repeated cases. */
 # 				an ER_NOT_IMPLEMENTED_FOR_GEOGRAPHIC_SRS error occurs.
 #
 # 				SET @ls1 = ST_GeomFromText('LINESTRING(0 0)');
+# 				SET @ls2 = ST_GeomFromText('LINESTRING(0 0, 1 1)');
+# 				SELECT ST_AsText(ST_Validate(@ls1));
+# 				+------------------------------------+
+# 				| ST_AsText(ST_Validate(@ls1)) 		 |
+# 				+------------------------------------+
+# 				| NULL 										 |
+# 				+------------------------------------+
 #
+# 				SELECT ST_AsText(ST_Validate(@ls2));
+# 				+------------------------------------+
+# 				| ST_AsText(ST_Validate(@ls2)) 		 |
+# 				+------------------------------------+
+# 				| LINESTRING(0 0,1 1) 					 |
+# 				+------------------------------------+
+#
+# 12.17 JSON FUNCTIONS
+#
+# 12.17.1 JSON FUNCTION REFERENCE
+# 12.17.2 FUNCTIONS THAT CREATE JSON VALUES
+# 12.17.3 FUNCTIONS THAT SEARCH JSON VALUES
+# 12.17.4 FUNCTIONS THAT MODIFY JSON VALUES
+# 12.17.5 FUNCTIONS THAT RETURN JSON VALUE ATTRIBUTES
+# 12.17.6 JSON TABLE FUNCTIONS
+# 12.17.7 JSON UTILITY FUNCTIONS
+#
+# The functions described in this section perform operations on JSON values.
+#
+# For discussion of the JSON data type and additional examples showing how to use
+# these functions, see SECTION 11.6, "THE JSON DATA TYPE"
+#
+# For functions that take a JSON argument, an error occurs if the argument is not a valid
+# JSON value.
+#
+# Arguments parsed as JSON are indicated by json_doc; arguments indicated by val
+# are not parsed.
+#
+# A set of spatial functions for operating on GeoJSON values is also available.
+# See SECTION 12.16.11, "SPATIAL GEOJSON FUNCTIONS"
+#
+# 12.17.1 JSON FUNCTION REFERENCE
+#
+# TABLE 12.21 JSON FUNCTIONS
+#
+# Name 									Description
+#
+# JSON_ARRAY() 						Create JSON array
+#
+# JSON_ARRAY_APPEND() 				Append data to JSON document
+#
+# JSON_ARRAY_INSERT() 				Insert into JSON array
+#
+# -> 										Return value from JSON column after evaluating path; equivalent
+# 											to JSON_EXTRACT()
+#
+# JSON_CONTAINS() 					Whether JSON document contains specific object at path
+#
+# JSON_CONTAINS_PATH() 				Whether JSON document contains any data at path
+#
+# JSON_DEPTH() 						Maximum depth of JSON document
+#
+# JSON_EXTRACT() 						Return data from JSON document
+#
+# ->> 									Return value from JSON column after evaluating path and unquoting the result;
+# 											equivalent to JSON_UNQUOTE(JSON_EXTRACT())
+#
+# JSON_INSERT() 						Insert data into JSON document
+#
+# JSON_KEYS() 							Array of keys from JSON document
+#
+# JSON_LENGTH() 						Number of elements in JSON document
+#
+# JSON_MERGE() (deprecated 8.0.3) Merge JSON documents, preserving duplicate keys.
+# 											Deprecated synonym for JSON_MERGE_PRESERVE()
+#
+# JSON_MERGE_PATCH() 				Merge JSON documents, replacing values of duplicate keys
+#
+# JSON_MERGE_PRESERVE() 			Merge JSON documents, preserving duplicate keys
+#
+# JSON_OBJECT() 						Create JSON object
+#
+# JSON_PRETTY() 						Prints a JSON document in human-readable format, with each array
+# 											element or object member printed on a new line, indented two spaces
+# 											with respect to its parent.
+#
+# JSON_QUOTE() 						Quote JSON document
+#
+# JSON_REMOVE() 						Remove data from JSON document
+#
+# JSON_REPLACE() 						Replace values in JSON document
+#
+# JSON_SEARCH() 						Path to value within JSON document
+#
+# JSON_SET() 							Insert data into JSON document
+#
+# JSON_STORAGE_FREE() 				Freed space within binary representation of a JSON column value following a partial update
+#
+# JSON_STORAGE_SIZE() 				Space used for storage of binary representation of a JSON document;
+# 											for a JSON column, the space used when the document was inserted,
+# 											prior to any partial updates.
+#
+# JSON_TABLE() 						Returns data from a JSON expression as a relational table
+#
+# JSON_TYPE() 							Type of JSON value
+#
+# JSON_UNQUOTE() 						Unquote JSON value
+#
+# JSON_VALID() 						Whether JSON value is valid
+#
+# MySQL supports two aggregate JSON functions JSON_ARRAYAGG() and JSON_OBJECTAGG()
+#
+# See SECTION 12.20, "AGGREGATE (GROUP BY) FUNCTIONS", for description of these.
+#
+# MySQL also supports "pretty-printing" of JSON values in an easy-to-read format, using
+# the JSON_PRETTY() function.
+#
+# You can see how much storage space a given JSON value takes up, and how much space remains
+# for additional storage, using JSON_STORAGE_SIZE() and JSON_STORAGE_FREE(), respectively.
+#
+# For complete descriptions of these functions, see SECTION 12.17.7, "JSON UTILITY FUNCTIONS"
+#
+# 12.17.2 FUNCTIONS THAT CREATE JSON VALUES
+#
+# The functions listed in this section compose JSON values from component elements.
+#
+# 		) JSON_ARRAY([val[, val] ---])
+#
+# 			Evaluates a (possibly empty) list of values and returns a JSON array containing those values.
+#
+# 				SELECT JSON_ARRAY(1, "abc", NULL, TRUE, CURTIME());
+# 				+--------------------------------------------+
+# 				| JSON_ARRAY(1, "abc", NULL, TRUE, CURTIME())|
+# 				+--------------------------------------------+
+# 				| [1, "abc", null, true, "11:30:24.000000"]  |
+# 				+--------------------------------------------+
+#
+# 		) JSON_OBJECT([key, val[, key, val] ---])
+#
+# 			Evaluates a (possibly empty) list of key-value pairs and returns a JSON object
+# 			containing those pairs.
+#
+# 			An error occurs if any key name is NULL or the number of argument is odd.
+#
+# 				SELECT JSON_OBJECT('id', 87, 'name', 'carrot');
+# 				+----------------------------------------------+
+# 				| JSON_OBJECT('id', 87, 'name', 'carrot') 	  |
+# 				+----------------------------------------------+
+# 				| {"id": 87, "name": "carrot"} 					  |
+# 				+----------------------------------------------+
+#
+# 		) JSON_QUOTE(string)
+#
+# 			Quotes a string as a JSON value by wrapping it with double quote characters
+# 			and escaping interior quote and other characters, then returning the result as
+# 			a utf8mb4 string.
+#
+# 			Returns NULL if the argument is NULL
+#
+# 			This function is typically used to produce a valid JSON string literal for
+# 			inclusion within a JSON document.
+#
+# 			Certain special characters are escaped with backslashes per the escape sequence
+# 			shown in TABLE 12.22, "JSON_UNQUOTE() SPECIAL CHARACTER ESCAPE SEQUENCES"
+#
+# 				SELECT JSON_QUOTE('null'), JSON_QUOTE('"null"');
+# 				+---------------------+--------------------------+
+# 				| JSON_QUOTE('null')  | JSON_QUOTE('"null"') 	 |
+# 				+---------------------+--------------------------+
+# 				| "null" 				 | "\"null\"" 					 |
+# 				+---------------------+--------------------------+
+#
+# 				SELECT JSON_QUOTE('[1, 2, 3]');
+# 				+-------------------------------+
+# 				| JSON_QUOTE('[1, 2, 3]') 		  |
+# 				+-------------------------------+
+# 				| "[1, 2, 3]" 						  |
+# 				+-------------------------------+
+#
+# 			You can also obtain JSON values by casting values of other types to the JSON type
+# 			using CAST(value AS JSON), see CONVERTING BETWEEN JSON AND NON-JSON VALUES, for more information.
+#
+# 			Two aggregate functions generating JSON values are available 
+#
+# 			JSON_ARRAYAGG() returns a result set as a single JSON array, and JSON_OBJECTTAG()
+# 			returns a result set as a single JSON object.
+#
+# 			For more information, see SECTION 12.20, "AGGREGATE (GROUP BY) FUNCTIONS"
+#
+# 12.17.3 FUNCTIONS THAT SEARCH JSON VALUES
+#
+# The functions in this section perform search operations on JSON values to extract
+# data from them, report whether data exists at a location within them, or report the
+# path to data within them.
+#
+# 		) JSON_CONTAINS(target, candidate[, path])
+#
+# 			Indicates by returning 1 or 0 whether a given candidate JSON document is contained
+# 			within a target JSON document, or - if a path argument was supplied - whether 
+# 			the candidate is found at a specific path within the target.
+#
+# 			Returns NULL if any argument is NULL, or if the path argument does not identify
+# 			a section of the target document.
+#
+# 			An error occurs if target or candidate is not a valid JSON document, or if the
+# 			path argument is not a valid path expression or contains a * or ** wildcard.
+#
+# 			To check only whether any data exists at the path, use JSON_CONTAINS_PATH() instead.
+#
+# 			The following rules define containment:
+#
+# 				) A candidate scalar is contained in a target scalar if and only if they are comparable
+# 					and are equal.
+#
+# 					Two scalar values are comparable if they have the same JSON_TYPE() types, with the
+# 					exception that values of types INTEGER and DECIMAL are also comparable to each other.
+#
+# 				) A candidate array is contained in a target array if and only if every element in the
+# 					candidate is contained in some element of the target.
+#
+# 				) A candidate nonarray is contained in a target array if and only if the candidate
+# 					is contained in some elements of the target.
+#
+# 				) A candidate object is contained in a target object if and only if for each key in the 
+# 					candidate there is a key with the same name in the target and the value associated
+# 					with the candidate key is contained in the value associated with the target key.
+#
+# 			Otherwise, the candidate value is not contained in the target document.
+#
+# 				SET @j = '{"a": 1, "b": 2, "c": {"d": 4}}';
+# 				SET @j2 = '1';
+# 				SELECT JSON_CONTAINS(@j, @j2, '$.a');
+# 				+-----------------------------------+
+# 				| JSON_CONTAINS(@j, @j2, '$.a') 	   |
+# 				+-----------------------------------+
+# 				| 								1 				|
+# 				+-----------------------------------+
+#
+# 				SELECT JSON_CONTAINS(@j, @j2, '$.b');
+# 				+-----------------------------------+
+# 				| JSON_CONTAINS(@j, @j2, '$.b') 		|
+# 				+-----------------------------------+
+# 				| 								0 				|
+# 				+-----------------------------------+
+#
+# 				SET @j2 = '{"d": 4}';
+# 				SELECT JSON_CONTAINS(@j, @j2, '$.a');
+# 				+-----------------------------------+
+# 				| JSON_CONTAINS(@j, @j2, '$.a') 	   |
+# 				+-----------------------------------+
+# 				| 								0 				|
+# 				+-----------------------------------+
+#
+# 				SELECT JSON_CONTAINS(@j, @j2, '$.c');
+# 				+-----------------------------------+
+# 				| JSON_CONTAINS(@j, @j2, '$.c') 		|
+# 				+-----------------------------------+
+# 				| 								1 				|
+# 				+-----------------------------------+
+#
+# 		) JSON_CONTAINS_PATH(json_doc, one_or_all, path[, path] ---)
+#
+# 			Returns 0 or 1, to indicate whether a JSON document contains data at a given
+# 			path or paths.
+#
+# 			Returns NULL if any argument is NULL.
+#
+# 			An error occurs if the json_doc argument is not a valid JSON document,
+# 			any path argument is not a valid path expression, or one_or_all is not 'one' or 'all'
+#
+# 			To check for a specific value at a path, use JSON_CONTAINS() instead
+#
+# 			The return value is 0 if no specified path exists within the document.
+# 			Otherwise, the return value depends on the one_or_all argument:
+#
+# 				) 'one': 1 if at least one path exists within the document, 0 otherwise
+#
+# 				) 'all': 1 if all paths exist within the document, 0 otherwise
+#
+# 					SET @j = '{"a": 1, "b": 2, "c": {"d": 4}}';
+# 					SELECT JSON_CONTAINS_PATH(@j, 'one', '$.a', '$.e');
+# 					+--------------------------------------------------+
+# 					| JSON_CONTAINS_PATH(@j, 'one', '$.a', '$.e') 		|
+# 					+--------------------------------------------------+
+# 					| 												1 					|
+# 					+--------------------------------------------------+
+#
+# 					SELECT JSON_CONTAINS_PATH(@j, 'all', '$.a', '$.e');
+# 					+--------------------------------------------------+
+# 					| JSON_CONTAINS_PATH(@j, 'all', '$.a', '$.e') 		|
+# 					+--------------------------------------------------+
+# 					| 													0 			   |
+# 					+--------------------------------------------------+
+#
+# 					SELECT JSON_CONTAINS_PATH(@j, 'one', '$.c.d'); 	
+# 					+------------------------------------------+
+# 					| JSON_CONTAINS_PATH(@j, 'one', '$.c.d')   |
+# 					+------------------------------------------+
+# 					| 										1 				 |
+# 					+------------------------------------------+
+#
+# 					SELECT JSON_CONTAINS_PATH(@j, 'one', '$.a.d');
+# 					+------------------------------------------+
+# 					| JSON_CONTAINS_PATH(@j, 'one', '$.a.d') 	 |
+# 					+------------------------------------------+
+# 					| 										0 				 |
+# 					+------------------------------------------+
+#
+# 		) JSON_EXTRACT(json_doc, path[, path] ---)
+#
+# 			Returns data from a JSON document, selected from the parts of the document
+# 			matched by the path arguments.
+#
+# 			Returns NULL if any argument is NULL or no paths locate a value in the document.
+#
+# 			An error occurs if the json_doc argument is not a valid JSON document or any path
+# 			argument is not a valid path expression.
+#
+# 			The return value consists of all values matched by the path arguments.
+#
+# 			If it is possible that those arguments could return multiple values, the matched
+# 			values are autowrapped as an array, in the order corresponding to the paths that
+# 			produced them.
+#
+# 			Otherwise, the return value is the single matched value.
+#
+# 				SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]');
+# 				+------------------------------------------------+
+# 				| JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]') 	 |
+# 				+------------------------------------------------+
+# 				| 20 															 |
+# 				+------------------------------------------------+
+#
+# 				SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]');
+# 				+----------------------------------------------------+
+# 				| JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]') |
+# 				+----------------------------------------------------+
+# 				| [20, 10] 														  |
+# 				+----------------------------------------------------+
+#
+# 				SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[2][*]');
+# 				+---------------------------------------------------+
+# 				| JSON_EXTRACT('[10, 20, [30, 40]]', '$[2][*]') 	 |
+# 				+---------------------------------------------------+
+# 				| [30, 40] 														 |
+# 				+---------------------------------------------------+
+#
+# 			MySQL supports the -> operator as shorthand for this function as used with 2 arguments
+# 			where the left hand side is a JSON column identifier (not an expression) and the right hand
+# 			side is the JSON path to be matched within the column.
+#
+# 	) column->path
+#
+# 		The -> operator serves as an alias for the JSON_EXTRACT() function when used with two
+# 		arguments, a column identifier on the left and a JSON path on the right that is evaluated
+# 		against the JSON document (the column value)
+#
+# 		You can use such expressions in place of column identifiers wherever they occur in SQL
+# 		statements.
+#
+# 		The two SELECT statements shown here produce the same output:
+#
+# 			SELECT c, JSON_EXTRACT(c, "$.id"), g
+# 			FROM jemp
+# 			WHERE JSON_EXTRACT(c, "$.id") > 1
+# 			ORDER BY JSON_EXTRACT(c, "$.name");
+# 			+-------------------------------------+-----------------+----------+
+# 			| c 											  | c->"$.id" 		  | g 		 |
+# 			+-------------------------------------+-----------------+----------+
+# 			| {"id": "3", "name": "Barney"} 		  | "3" 				  | 3 		 |
+# 			| {"id": "4", "name": "Betty"} 		  | "4" 				  | 4 		 |
+# 			| {"id": "2", "name": "Wilma"} 		  | "2" 				  | 2 		 |
+# 			+-------------------------------------+-----------------+----------+
+# 			3 rows in set (0.00 sec)
+#
+# 			SELECT c, c->"$.id", g
+# 			FROM jemp
+# 			WHERE c->"$.id" > 1
+# 			ORDER BY c->"$.name";
+# 			+-------------------------------------+-----------------+----------+
+# 			| c 									 		  | c->"$.id" 		  | g 		 |
+# 			+-------------------------------------+-----------------+----------+
+# 			| {"id": "3", "name": "Barney"} 		  | "3" 				  | 3 		 |
+# 			| {"id": "4", "name": "Betty"} 		  | "4" 				  | 4 		 |
+# 			| {"id": "2", "name": "Wilma"} 		  | "2" 				  | 2 		 |
+# 			+-------------------------------------+-----------------+----------+
+# 			3 rows in set (0.00 sec)
+#
+# 		This functionality is not limited to SELECT, as shown here:
+#
+# 			ALTER TABLE jemp ADD COLUMN n INT;
+# 			Query OK, 0 rows affected (0.68 sec)
+# 			Records: 0 Duplicates: 0 Warnings: 0
+#
+# 			UPDATE jemp SET n=1 WHERE c->"$.id" = "4";
+# 			Query OK, 1 row affected (0.04 sec)
+# 			Rows matched: 1 Changed: 1 Warnings: 0
+#
+# 			SELECT c, c->"$.id", g, n
+# 			FROM jemp
+# 			WHERE JSON_EXTRACT(c, "$.id") > 1
+# 			ORDER BY c->"$.name";
+# 			+------------------------------------+--------------+--------+---------+
+# 			| c 											 | c->"$.id" 	 | g 		 | n 		  |
+# 			+------------------------------------+--------------+--------+---------+
+# 			| {"id": "3", "name": "Barney"} 		 | "3" 			 | 3 		 | NULL    |
+# 			| {"id": "4", "name": "Betty"} 		 | "4" 			 | 4 		 | 1 		  |
+# 			| {"id": "2", "name": "Wilma"} 		 | "2" 			 | 2 		 | NULL 	  |
+# 			+------------------------------------+--------------+--------+---------+
+# 			3 rows in set (0.00 sec)
+#
+# 			DELETE FROM jemp WHERE c->"$.id" = "4";
+# 			Query OK, 1 row affected (0.04 sec)
+#
+# 			SELECT c, c->"$.id", g, n
+# 			FROM jemp
+# 			WHERE JSON_EXTRACT(c, "$.id") > 1
+# 			ORDER BY c->"$.name";
+# 			+------------------------------------+-------------+---------+----------+
+# 			| c 											 | c->"$.id"   | g 		 | n 			|
+# 			+------------------------------------+-------------+---------+----------+
+# 			| {"id": "3", "name": "Barney"} 		 | "3" 			| 3 		 | NULL 	   |
+# 			| {"id": "2", "name": "Wilma"} 		 | "2" 			| 2 		 | NULL 		|
+# 			+------------------------------------+-------------+---------+----------+
+# 			2 rows in set (0.00 sec)
+#
+# 		(See INDEXING A GENERATED COLUMN TO PROVIDE A JSON COLUMN INDEX, for the statements used to
+# 			create and populate the table just shown)
+#
+# 		This also works with JSON array values, as shown here:
+#
+# 			CREATE TABLE tj10 (a JSON, b INT);
+# 			Query OK, 0 rows affected (0.26 sec)
+#
+# 			INSERT INTO tj10
+# 			VALUES ("[3,10,5,17,44]", 33), ("[3,10,5,17,[22,44,66]]", 0);
+# 			Query OK, 1 row affected (0.04 sec)
+#
+# 			SELECT a->"$[4]" FROM tj10;
+# 			+-------------------+
+# 			| a->"$[4]" 		  |
+# 			+-------------------+
+# 			| 44 					  |
+# 			| [22, 44, 66] 	  |
+# 			+-------------------+
+# 			2 rows in set (0.00 sec)
+
+# 			SELECT * FROM tj10 WHERE a->"$[0]" = 3;
+# 			+----------------------------------+------------+
+# 			| a 										  | b 			|
+# 			+----------------------------------+------------+
+# 			| [3, 10, 5, 17, 44] 				  | 33 			|
+# 			| [3, 10, 5, 17, [22, 44, 66]]     | 0 			|
+# 			+----------------------------------+------------+
+# 			2 rows in set (0.00 sec)
+#
+# 		Nested arrays are supported.
+#
+# 		An expression using -> evaluates as NULL if no matching key is found in the target
+# 		JSON document, as shown here:
+#
+# 			SELECT * FROM tj10 WHERE a->"$[4][1]" IS NOT NULL;
+# 			+----------------------------------+------------+
+# 			| a 										  | b 		   |
+# 			+----------------------------------+------------+
+# 			| [3, 10, 5, 17, [22, 44, 66]] 	  | 0 			|
+# 			+----------------------------------+------------+
+#
+# 			SELECT a->"$[4][1]" FROM tj10;
+# 			+--------------------+
+# 			| a->"$[4][1]" 		|
+# 			+--------------------+
+# 			| NULL 					|
+# 			| 44 						|
+# 			+--------------------+
+# 			2 rows in set (0.00 sec)
+#
+# 		This is the same behavior as seen in such cases when using JSON_EXTRACT():
+#
+# 			SELECT JSON_EXTRACT(a, "$[4][1]") FROM tj10;
+# 			+---------------------------------+
+# 			| JSON_EXTRACT(a, "$[4][1]") 		 |
+# 			+---------------------------------+
+# 			| NULL 									 |
+# 			| 44 										 |
+# 			+---------------------------------+
+# 			2 rows in set (0.00 sec)
+#
+# 	) column->>path
+#
+# 		This is an improved, unquoting extraction operator.
+#
+# 		Whereas the -> operator simply extracts avalue, the ->> operator in addition
+# 		unquotes the extracted result.
+#
+# 		In other words, given a JSON column value column and a path expression path,
+# 		the following three expressions return the same value:
+#
+# 			) JSON_UNQUOTE(JSON_EXTRACT(column, path))
+# 	
+# 			) JSON_UNQUOTE(column->path)
+#
+# 			) column->>path
+#
+# 		The ->> operator can be used wherever JSON_UNQUOTE(JSON_EXTRACT)) would be allowed.
+#
+# 		This includes (but is not limited to) SELECT lists, WHERE and HAVING clauses,
+# 		and ORDER BY and GROUP BY clauses.
+#
+# 		The next few statements demonstrate some ->> operator equivalences with other expressions
+# 		in the mysql client:
+#
+# 			SELECT * FROM jemp WHERE g > 2;
+# 			+-------------------------------+----------+
+# 			| c 								     | g 		 |
+# 			+-------------------------------+----------+
+# 			| {"id": "3", "name": "Barney"} | 3 		 |
+# 			| {"id": "4", "name": "Betty"}  | 4 		 |
+# 			+-------------------------------+----------+
+# 			2 rows in set (0.01 sec)
+#
+# 			SELECT c->'$.name' AS name
+# 				FROM jemp WHERE g > 2;
+# 			+----------------+
+# 			| name 			  |
+# 			+----------------+
+# 			| "Barney" 		  |
+# 			| "Betty" 		  |
+# 			+----------------+
+# 			2 rows in set (0.00 sec)
+#
+# 			SELECT JSON_UNQUOTE(c->'$.name') AS name
+# 				FROM jemp WHERE g > 2;
+# 			+---------------+
+# 			| name 			 |
+# 			+---------------+
+# 			| Barney 		 |
+# 			| Betty 			 |
+# 			+---------------+
+# 			2 rows in set (0.00 sec)
+#
+# 			SELECT c->>'$.name' AS name
+# 				FROM jemp WHERE g > 2;
+# 			+--------------+
+# 			| name 			|
+# 			+--------------+
+# 			| Barney 	   |
+# 			| Betty 			|
+# 			+--------------+
+# 			2 rows in set (0.00 sec)
+#
+# 	See INDEXING A GENERATED COLUMN TO PROVIDE A JSON COLUMN INDEX, for the SQL
+# 	statements used to create and populate the jemp table in the set of examples
+# 	just shown.
+#
+# 	This operator can also be used with JSON arrays, as shown here:
+#
+# 		CREATE TABLE tj10 (a JSON, b INT);
+# 		Query OK, 0 rows affected (0.26 sec)
+#
+# 		INSERT INTO tj10 VALUES
+# 			('[3,10,5, "x",44]', 33),
+# 			('[3,10,5,17,[22,"y",66]]', 0);
+# 		Query OK, 2 rows affected (0.04 sec)
+# 		Records: 2 Duplicates: 0 Warnings: 0
+#
+# 		SELECT a->"$[3]", a->"$[4][1]" FROM tj10;
+# 		+-----------------+------------------------+
+# 		| a->"$[3]" 		| a->"$[4][1]" 			 |
+# 		+-----------------+------------------------+
+# 		| "x" 				| NULL 						 |
+# 		| 17 					| "y" 						 |
+# 		+-----------------+------------------------+
+# 		2 rows in set (0.00 sec)
+#
+# 		SELECT a->>"$[3]", a->>"$[4][1]" FROM tj10;
+# 		+-----------------+------------------------+
+# 		| a->>"$[3]" 		| a->>"$[4][1]" 			 |
+# 		+-----------------+------------------------+
+# 		| x 					| NULL 						 |
+# 		| 17 					| y 							 |
+# 		+-----------------+------------------------+
+# 		2 rows in set (0.00 sec)
+#
+# As with ->, the ->> operator is always expanded in the output
+# of EXPLAIN, as the following example demonstrates:
+#
+# 		EXPLAIN SELECT c->>'$.name' AS name
+# 			FROM jemp WHERE g > 2\G
+# 		****************************** 1. row ************************
+# 						id: 1
+# 			select_type: SIMPLE
+# 					table: jemp
+# 			partitions : NULL
+# 					type : range
+# 		possible_keys : i
+# 					 key : i
+# 				key_len : 5
+# 					 ref : NULL
+# 					rows : 2
+# 				filtered: 100.00
+# 				   Extra: Using where
+# 		1 row in set, 1 warning (0.00 sec)
+#
+# 		SHOW WARNINGS\G
+# 		******************************** 1. row *******************************
+# 			Level: Note
+# 			 Code: 1003
+# 		 Message: /* select#1 */ select
+# 		 json_unquote(json_extract(`jtest`.`jemp`.`c`,'$.name')) AS 
+# 		 `name` from `jtest`.`jemp` where (`jtest`.`jemp`.`g` > 2)
+# 		1 row in set(0.00 sec)
+#
+# This is similar to how MySQL expands the -> operator in the same circumstances.
+#
+# 		) JSON_KEYS(json_doc[, path])
+#
+# 			Returns the keys from the top-level value of a JSON object as a JSON array,
+# 			or, if a path argument is given, the top-level keys from the selected path.
+#
+# 			Returns NULL if any argument is NULL, the json_doc argument is not an object,
+# 			or path, if given, does not locate an object.
+#
+# 			An error occurs if the json_doc argument is not a valid JSON document
+# 			or the path argument is not a valid path expression or contains a * or ** wildcard.
+#
+# 			The result array is empty if the selected object is empty.
+#
+# 			If the top-level value has nested subobjects, the return value does not include
+# 			keys from those subobjects:
+#
+# 				SELECT JSON_KEYS('{"a": 1, "b": {"c": 30}}');
+# 				+--------------------------------------------+
+# 				| JSON_KEYS('{"a": 1, "b": {"c": 30}}') 		|
+# 				+--------------------------------------------+
+# 				| ["a", "b"] 											|
+# 				+--------------------------------------------+
+#
+# 				SELECT JSON_KEYS('{"a": 1, "b": {"c": 30}}', '$.b');
+# 				+----------------------------------------------+
+# 				| JSON_KEYS('{"a": 1, "b": {"c": 30}}', '$.b') |
+# 				+----------------------------------------------+
+# 				| ["c"] 													  |
+# 				+----------------------------------------------+
+#
+# 		) JSON_SEARCH(json doc, one or all, search str [, escape char[, path] ---])
+#
+# 			Returns the path to the given string within a JSON document.
+#
+# 			Returns NULL if any of the json_doc, search_str, or path arguments are
+# 			NULL, no path exists within the document, or search_str is not found.
+#
+# 			An error occurs if the json_doc argument is not a valid JSON document,
+# 			any path argument is not a valid path expression, one_or_all is not
+# 			'one' or 'all', or escape_char is not a constant expression:
+#
+# 			The one_or_all argument affects the search as follows:
+#
+# 				) 'one': The search terminates after the first match and returns one path string.
+#
+# 							It is undefined which match is considered first.
+#
+# 				) 'all': The search returns all matching path strings such that no duplicate paths are included.
+#
+# 							If there are multiple strings, they are autowrapped as an array.
+#
+# 							The order of the array elements is undefined.
+#
+# 			Within the search_str search string argument, the % and _ characters work as for the LIKE operator:
+#
+# 				% matches any number of characters (including zero characters),
+# 				and _ matches exactly one character.
+#
+# 			To sppecify a literal % or _ character in the search string, precede it by the escape character.
+#
+# 			The default is \ if the escape_char argument is missing or NULL.
+#
+# 			Otherwise, escape_char must be a constant that is empty or one character.
+#
+# 			For more information, about matching and escape character behavior, see the description
+# 			of LIKE in SECTION 12.5.1, "STRING COMPARISON FUNCTIONS"
+#
+# 			For escape character handling, a difference from the LIKE behavior is that the escape
+# 			character for JSON_SEARCH() must evaluate to a constant at compile time, not just at
+# 			execution time.
+#
+# 			For example, if JSON_SEARCH() is used in a prepared statement and the escape_char argument
+# 			is supplied using a ? parameter,, the parameter value might be constant at execution time,
+# 			but is not at compile time.
+#
+# 				SET @j = '["abc", [{"k": "10"}, "def"], {"x":"abc"}, {"y":"bcd"}]';
+#
+# 				SELECT JSON_SEARCH(@j, 'one', 'abc');
+# 				+------------------------------------------+
+# 				| JSON_SEARCH(@j, 'one', 'abc') 				 |
+# 				+------------------------------------------+
+# 				| "$[0]" 											 |
+# 				+------------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', 'abc');
+# 				+-------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', 'abc') 		  |
+# 				+-------------------------------------+
+# 				| ["$[0]", "$[2].x"] 					  |
+# 				+-------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', 'ghi');
+# 				+-----------------------------------+
+# 				| JSON_SEARCH(@j, 'all', 'ghi') 	   |
+# 				+-----------------------------------+
+# 				| NULL 										|
+# 				+-----------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', '10');
+# 				+------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '10') 		 |
+# 				+------------------------------------+
+# 				| "$[1][0].k" 								 |
+# 				+------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', '10', NULL, '$');
+# 				+-----------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '10', NULL, '$') |
+# 				+-----------------------------------------+
+# 				| "$[1][0].k" 										|
+# 				+-----------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', '10', NULL, '$[*]');
+# 				+--------------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '10', NULL, '$[*]') |
+# 				+--------------------------------------------+
+# 				| "$[1][0].k" 											|
+# 				+--------------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', '10', NULL, '$**.k');
+# 				+---------------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '10', NULL, '$**.k') |
+# 				+---------------------------------------------+
+# 				| "$[1][0].k" 											 |
+# 				+---------------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', '10', NULL, '$[*][0].k');
+# 				+------------------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '10', NULL, '$[*][0].k')|
+# 				+------------------------------------------------+
+# 				| "$[1][0].k" 												 |
+# 				+------------------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', '10', NULL, '$[1]');
+# 				+------------------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '10', NULL, '$[1]') 	 |
+# 				+------------------------------------------------+
+# 				| "$[1][0].k" 												 |
+# 				+------------------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', '10', NULL, '$[1][0]');
+# 				+------------------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '10', NULL, '$[1][0]')  |
+# 				+------------------------------------------------+
+# 				| "$[1][0].k"  											 |
+# 				+------------------------------------------------+
+#
+# 				SELECT JSON_SEWARCH(@j, 'all', 'abc', NULL, '$[2]');
+#  			+-------------------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', 'abc', NULL, '$[2]') 	  |
+# 				+-------------------------------------------------+
+# 				| "$[2].x" 													  |
+# 				+-------------------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', '%a%);
+# 				+------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '%a%') 		 |
+# 				+------------------------------------+
+# 				| ["$[0]", "$[2].x"] 					 |
+# 				+------------------------------------+
+#  
+# 				SELECT JSON_SEARCH(@j, 'all', '%b%');
+# 				+------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '%b%') 		 |
+# 				+------------------------------------+
+# 				| ["$[0]", "$[2].x", "$[3].y"] 		 |
+# 				+------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', '%b%', NULL, '$[0]');
+# 				+---------------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '%b%', NULL, '$[0]') |
+# 				+---------------------------------------------+
+# 				| "$[0]" 												 |
+# 				+---------------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', '%b%', NULL, '$[2]');
+# 				+---------------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '%b%', NULL, '$[2]') |
+# 				+---------------------------------------------+
+# 				| "$[2].x" 												 |
+# 				+---------------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', '%b%', NULL, '$[1]');
+# 				+---------------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '%b%', NULL, '$[1]') |
+# 				+---------------------------------------------+
+# 				| NULL 													 |
+# 				+---------------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', '%b%', '', '$[1]');
+# 				+---------------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '%b%', '', '$[1]')   |
+# 				+---------------------------------------------+
+# 				| NULL 													 |
+# 				+---------------------------------------------+
+#
+# 				SELECT JSON_SEARCH(@j, 'all', '%b%', '', '$[3]');
+# 				+---------------------------------------------+
+# 				| JSON_SEARCH(@j, 'all', '%b%', '', '$[3]') 	 |
+# 				+---------------------------------------------+
+# 				| "$[3].y" 												 |
+# 				+---------------------------------------------+
+#
+# For more information about the JSON path syntax supported by MySQL,
+# including rules governing the wildcard operators * and **, see JSON PATH SYNTAX.
+#
+# 12.17.4 FUNCTIONS THAT MODIFY JSON VALUES
+#
+# The functions in this section modify JSON values and return the result.
+#
+# 		) JSON_ARRAY_APPEND(json doc, path, val[, path, val] ---)
+#
+# 			Appends values to the end of the indicated arrays within a JSON document
+# 			and returns the result.
+#
+# 			Returns NULL if any argument is NULL.
+#
+# 			An error occurs if the json_doc argument is not a valid JSON document
+# 			or any path argument is not a valid path expression or contains a * or ** wilcard.
+#
+# 			The path-value pairs are evaluated left to right.
+#
+# 			The document produced by evaluating one pair becomes the new value against
+# 			which the next pair is evaluated.
+#
+# 			If a path selects a scalar or object value, that value is autowrapped within an array
+# 			and the new value is added to that array.
+#
+# 			Pairs for which the path does not identify any value in the JSON document are ignored.
+#
+# 				SET @j = '["a", ["b", "c"], "d"]';
+# 				SELECT JSON_ARRAY_APPEND(@j, '$[1]', 1);
+# 				+--------------------------------------+
+# 				| JSON_ARRAY_APPEND(@j, '$[1]', 1) 	   |
+# 				+--------------------------------------+
+# 				| ["a", ["b", "c", 1], "d"] 				|
+# 				+--------------------------------------+
+#
+# 				SELECT JSON_ARRAY_APPEND(@j, '$[0]', 2);
+# 				+--------------------------------------+
+# 				| JSON_ARRAY_APPEND(@j, '$[0]', 2) 		|
+# 				+--------------------------------------+
+# 				| [["a", 2], ["b", "c"], "d"] 			|
+# 				+--------------------------------------+
+#
+# 				SELECT JSON_ARRAY_APPEND(@j, '$[1][0]', 3);
+# 				+--------------------------------------+
+# 				| JSON_ARRAY_APPEND(@j, '$[1][0]', 3)  |
+# 				+--------------------------------------+
+# 				| ["a", [["b", 3], "c"], "d"]				|
+# 				+--------------------------------------+
+#
+# 				SET @j = '{"a": 1, "b": [2, 3], "c": 4}';
+# 				SELECT JSON_ARRAY_APPEND(@j, '$.b', 'x');
+# 				+--------------------------------------+
+# 				| JSON_ARRAY_APPEND(@j, '$.b', 'x') 	|
+# 				+--------------------------------------+
+# 				| {"a": 1, "b": [2, 3, "x"], "c": 4}   |
+# 				+--------------------------------------+
+#
+# 				SELECT JSON_ARRAY_APPEND(@j, '$.c', 'y');
+# 				+--------------------------------------+
+# 				| JSON_ARRAY_APPEND(@j, '$.c', 'y') 	|
+# 				+--------------------------------------+
+# 				| {"a": 1, "b": [2, 3], "c": [4, "y"]} |
+# 				+--------------------------------------+
+#
+# 				SET @j = '{"a": 1}';
+# 				SELECT JSON_ARRAY_APPEND(@j, '$', 'z');
+# 				+--------------------------------------+
+# 				| JSON_ARRAY_APPEND(@j, '$', 'z' 		|
+# 				+--------------------------------------+
+# 				| [{"a": 1}, "z"] 						   |
+# 				+--------------------------------------+
+#
+# 			In MySQL 5.7, this function was named JSON_APPEND(). That name is no longer supported in 8.0
+#
+# 	) JSON_ARRAY_INSERT(json_doc, path, val[, path, val] ---)
+#
+# 		Updates a JSON document, inserting into an array within the document and returning
+# 		the modified document.
+#
+# 		Returns NULL if any argument is NULL.
+#
+# 		An error occurs if the json_doc argument is not a valid JSON document
+# 		or any path argument is not a valid path expression or contains a * or
+# 		** wildcard or does not end with an array element identifier.
+#
+# 		The path-value pairs are evaluated left to right.
+#
+# 		The document produced by evaluating one pair becomes the new value against
+# 		which the next pair is evaluated.
+#
+# 		Pairs for which the path does not identify any array in the JSON document are ignored.
+#
+# 		If a path identifies an array element, the corresponding value is inserted at that
+# 		element position, shifting any following values to the right.
+#
+# 		If a path identifies an array position past the end of an array, the value is inserted
+# 		at the end of the array.
+#
+# 			SET @j = '["a", {"b": [1, 2]}, [3, 4]]';
+# 			SELECT JSON_ARRAY_INSERT(@j, '$[1]', 'x');
+# 			+--------------------------------------------+
+# 			| JSON_ARRAY_INSERT(@j, '$[1]', 'x') 			|
+# 			+--------------------------------------------+
+# 			| ["a", "x", {"b": [1, 2]}, [3, 4]] 		   |
+# 			+--------------------------------------------+
+#
+# 			SELECT JSON_ARRAY_INSERT(@j, '$[100]', 'x');
+# 			+--------------------------------------------+
+# 			| JSON_ARRAY_INSERT(@j, '$[100]', 'x') 		|
+# 			+--------------------------------------------+
+# 			| ["a", {"b": [1, 2]}, [3, 4], "x"] 			|
+# 			+--------------------------------------------+
+#
+# 			SELECT JSON_ARRAY_INSERT(@j, '$[1].b[0]', 'x');
+# 			+------------------------------------------+
+# 			| JSON_ARRAY_INSERT(@j, '$[1].b[0]', 'x')  |
+# 			+------------------------------------------+
+# 			| ["a", {"b": ["x", 1, 2]}, [3, 4]] 		 |
+# 			+------------------------------------------+
+#
+# 			SELECT JSON_ARRAY_INSERT(@j, '$[2][1]', 'y');
+# 			+------------------------------------------+
+# 			| JSON_ARRAY_INSERT(@j, '$[2][1]', 'y') 	 |
+# 			+------------------------------------------+
+# 			| ["a", {"b": [1, 2]}, [3, "y", 4]] 		 |
+# 			+------------------------------------------+
+#
+# 			SELECT JSON_ARRAY_INSERT(@j, '$[0]', 'x', '$[2][1]', 'y');
+# 			+----------------------------------------------------+
+# 			| JSON_ARRAY_INSERT(@j, '$[0]', 'x', '$[2][1]', 'y') |
+#  		+----------------------------------------------------+
+# 			| ["x", "a", {"b": [1, 2]}, [3, 4]] 					  |
+# 			+----------------------------------------------------+
+#
+# 		earlier modifications affect the positions of the following elements in the array,
+# 		so subsequent paths in the same JSON_ARRAY_INSERT() call should take this into
+# 		account.
+#
+# 		In the final example, the second path inserts nothing because the path no longer
+# 		matches anything after the first insert.
+#
+# 	) JSON_INSERT(json_doc, path, val[, path, val] ---)
+#
+# 		Inserts data into a JSON document and returns the result.
+#
+# 		Returns NULL if any argument is NULL. 
 # 
+# 		An error occurs if the json_doc argument is not a valid JSON
+# 		document or any path argument is not a valid path expression
+# 		or contains a * or ** wildcard.
 #
-# 	https://dev.mysql.com/doc/refman/8.0/en/spatial-convenience-functions.html
+# 		The path-value pairs are evaluated left to right.
+#
+# 		The document produced by evaluating one pair becomes the new value against
+# 		which the next pair is evaluated.
+#
+# 		A path-value pair for an existing path in the document is ignored and does not
+# 		overwrite the existing document value.
+#
+# 		A path-value pair for a nonexisting path in the document adds the value
+# 		to the document if the path identifies one of these types of values:
+#
+# 			) A member not present in an exsting object.
+#
+# 				The member is added to the object and associated with the new value.
+#
+# 			) A position past the end of an existing array.
+#
+# 				THe array is extended with the new value.
+#
+# 				If the existing value is not an array, it is autowrapped as an array,
+# 				then extended with the new value.
+#
+# 		Otherwise, a path-value pair for a nonexisting path in the document is ignored
+# 		and has no effect.
+#
+# 		For a comparison of JSON_INSERT(), JSON_REPLACE(), and JSON_SET(), see the discussion
+# 		of JSON_SET()
+#
+# 			SET @j = '{ "a": 1, "b": [2, 3]}';
+# 			SELECT JSON_INSERT(@j, '$.a', 10, '$.c', '[true, false]');
+# 			+--------------------------------------------------------+
+# 			| JSON_INSERT(@j, '$.a', 10, '$.c', '[true, false]') 	   |
+# 			+--------------------------------------------------------+
+# 			| {"a": 1, "b": [2, 3], "c": "[true, false]"} 			   |
+# 			+--------------------------------------------------------+
+#
+# 		The third and final value listed in the result is a quoted string and
+# 		not an array like the second one (which is not quoted in the output);
+#
+# 		No casting of values to the JSON type is performed.
+#
+# 		To insert the array as an array, you must perform such casts explicitly
+# 		as shown here:
+#
+# 			SELECT JSON_INSERT(@j, '$.a', 10, '$.c', CAST('[true, false]' AS JSON));
+# 			+------------------------------------------------------------------+
+# 			| JSON_INSERT(@j, '$.a', 10, '$.c', CAST('[true, false]' AS JSON)) |
+# 			+------------------------------------------------------------------+
+# 			| {"a": 1, "b". [2, 3], "c": [true, false]} 								 |
+# 			+------------------------------------------------------------------+
+# 			1 row in set (0.00 sec)
+#
+# 	) JSON_MERGE(json_doc, json_doc[, json_doc] ---)
+#
+# 		Merges two or more JSON documents. Synonym for JSON_MERGE_PRESERVE(); deprecated
+# 		in MySQL 8.0.3 and subject to removal in a future release.
+#
+# 			SELECT JSON_MERGE('[1, 2]', '[true, false]');
+# 			+-------------------------------------------+
+# 			| JSON_MERGE('[1, 2]', '[true, false]') 	  |
+# 			+-------------------------------------------+
+# 			| [1, 2, true, false]							  |
+# 			+-------------------------------------------+
+# 			1 row in set, 1 warning (0.00 sec)
+#
+# 			SHOW WARNINGS\G
+# 			******************************* 1. row ***********************************
+# 				Level: Warning
+# 				 Code: 1287
+# 			  Message: 'JSON_MERGE' is deprecated and will be removed in a future release. \
+# 				Please use JSON_MERGE_PRESERVE/JSON_MERGE_PATCH instead
+# 			1 row in set (0.00 sec)
+#
+# 		For additional examples, see the entry for JSON_MERGE_PRESERVE()
+#
+# 	) JSON_MERGE_PATCH(json doc, json_doc[, json_doc] ---)
+#
+# 		Performs an RFC 7396 compliant merge of two or more JSON documents and returns the merged result,
+# 		without preserving members having duplicate keys.
+#
+# 		Raises an error if at least one of the documents passed as arguments to this function is not valid.
+#
+# 			) NOTE
+#
+# 				For an exaplnation and example of the differences between this function and JSON_MERGE_PRESERVE(),
+# 				See JSON_MERGE_PATCH() COMPARED WITH JSON_MERGE_PRESERVE()
+#
+# 		JSON_MERGE_PATCH() performs a merge as follows:
+#
+# 			a. If the first argument is not an object, the result of the merge is the same as if an empty
+# 				object had been merged with the second argument.
+#
+# 			b. If the second argument is not an object, the result of the merge is the second argument
+#
+# 			c. If both arguments are objects, the result of the merge is an object with the following members:
+#
+# 				) All members of the first object which do not have a corresponding member with the same key in the second object.
+#
+# 				) All members of the second object which do not have a corresponding key in the first object, and whose value is not the JSON null literal.
+#
+# 				) All members with a key that exists in both the first and the second object, and whose value in the second object is
+# 					not the JSON null literal.
+#
+# 					The values of these members are the results of recursively merging the value in teh first object with the value
+# 					in the second object.
+#
+# 		For additional information, see NORMALIZATION, MERGING, AND AUTOWRAPPING OF JSON VALUES.
+#
+# 			SELECT JSON_MERGE_PATCH('[1, 2]', '[true, false]');
+# 			+-------------------------------------------------+
+# 			| JSON_MERGE_PATCH('[1, 2]', '[true, false]') 	  |
+# 			+-------------------------------------------------+
+# 			| [true, false] 											  |
+# 			+-------------------------------------------------+
+#
+# 			SELECT JSON_MERGE_PATCH('{"name": "x"}', '{"id": 47}');
+# 			+-------------------------------------------------+
+# 			| JSON_MERGE_PATCH('{"name": "x"}', '{"id": 47}') |
+# 			+-------------------------------------------------+
+# 			| {"id": 47, "name": "x"} 								  |
+# 			+-------------------------------------------------+
+#
+# 			SELECT JSON_MERGE_PATCH('1', 'true');
+# 			+----------------------------------+
+# 			| JSON_MERGE_PATCH('1', 'true') 	  |
+# 			+----------------------------------+
+# 			| true 									  |
+# 			+----------------------------------+
+#
+# 			SELECT JSON_MERGE_PATCH('[1, 2]', '{"id": 47}');
+# 			+----------------------------------------------+
+# 			| JSON_MERGE_PATCH('[1, 2]', '{"id": 47}')     |
+# 			+----------------------------------------------+
+# 			| {"id": 47} 											  |
+# 			+----------------------------------------------+
+#
+# 			SELECT JSON_MERGE_PATCH('{ "a": 1, "b":2 }',
+# 				'{ "a": 3, "c":4 }');
+# 			+------------------------------------------------------------+
+# 			| JSON_MERGE_PATCH('{ "a": 1, "b":2 }', '{ "a": 3, "c":4 }') |
+# 			+------------------------------------------------------------+
+# 			| {"a": 3, "b": 2, "c": 4} 											 |
+# 			+------------------------------------------------------------+
+#
+# 			SELECT JSON_MERGE_PATCH('{ "a": 1, "b":2 }', '{ "a": 3, "c": 4 }',
+# 				'{ "a": 5, "d":6 }');
+# 			+-----------------------------------------------------------------------------------+
+# 			| JSON_MERGE_PATCH('{ "a": 1, "b":2 }', '{ "a": 3, "c":4 }', '{ "a": 5, "d": 6 }')  |
+# 			+-----------------------------------------------------------------------------------+
+# 			| {"a": 5, "b": 2, "c": 4, "d": 6} 																	|
+# 			+-----------------------------------------------------------------------------------+
+#
+# 	You can use this function to remove a member by specifying null as the value of the same member in the 
+#  second argument, as shown here:
+#
+# 		SELECT JSON_MERGE_PATCH('{"a":1, "b":2}', '{"b":null}');
+# 		+------------------------------------------------------------+
+# 		| JSON_MERGE_PATCH('{"a":1, "b":2}', '{"b":null}') 			 |
+# 		+------------------------------------------------------------+
+# 		| {"a": 1} 																	 |
+# 		+------------------------------------------------------------+
+#
+# 	This example shows that the function operates in a recursive function; that is, values
+# 	of members are not limited to scalars, but rather can themselves be JSON documents:
+#
+# 		SELECT JSON_MERGE_PATCH('{"a":{"x":1}}', '{"a":{"y":2}}');
+# 		+-----------------------------------------------------------+
+# 		| JSON_MERGE_PATCH('{"a":{"x":1}}', '{"a":{"y":2}}') 			|
+# 		+-----------------------------------------------------------+
+# 		| {"a": {"x": 1, "y": 2}} 												|
+# 		+-----------------------------------------------------------+
+#
+# 	JSON_MERGE_PATCH() is supported in MySQL 8.0.3 and later
+#
+# JSON_MERGE_PATCH() compared with JSON_MERGE_PRESERVE()
+#
+# The behavior of JSON_MERGE_PATCH() is the same as that of JSON_MERGE_PRESERVE(),
+# with the following two exceptions:
+#
+# 		) JSON_MERGE_PATCH() removes any member in the first object with a matching key
+# 			in the second object, provided that the value associated with the key in the
+# 			second object is not JSON null
+#
+# 		) If the second object has a member with a key matching a member in teh first object,
+# 			JSON_MERGE_PATCH() replaces the value in the firsto bject with the value in
+# 			the second object, whereas JSON_MERGE_PRESERVE() appends the second value to the first.
+#
+# This example compares the results of merging the same 3 JSON objects, each having a matching
+# key "a", with each of these two functions:
+#
+# 		SET @x = '{ "a": 1, "b": 2 }',
+# 			 @y = '{ "a": 3, "c": 4 }',
+# 			 @z = '{ "a": 5, "d": 6 }';
+#
+# 		SELECT JSON_MERGE_PATCH(@x, @y, @z) AS Patch,
+# 				 JSON_MERGE_PRESERVE(@x, @y, @z) AS Preserve\G
+# 		********************** 1. row **********************
+# 			Patch: {"a": 5, "b": 2, "c": 4, "d": 6}
+# 		Preserve: {"a": [1, 3, 5], "b": 2, "c": 4, "d": 6}
+#
+# ) JSON_MERGE_PRESERVE(json doc, json doc[, json doc] ---)
+#
+# 		Merges two or more JSON documents and returns the merged result.
+#
+# 		Returns NULLL if any argument is NULL.
+#
+# 		An error occurs if any argument is not a valid JSON document.
+#
+# 		Merging takes place according to the following rules.
+#
+# 		For additional information, see NORMALIZATION, MERGING, AND AUTOWRAPPING OF JSON VALUES
+#
+# 			) Adjacent arrays are merged to a single array
+#
+# 			) Adjacent objects are merged to a single object
+#
+# 			) A scalar value is autowrapped as an array and merged as an array
+#
+# 			) An adjacent array and object are merged by autowrapping the object as an array and
+# 				merging the two arrays.
+#
+# 				SELECT JSON_MERGE_PRESERVE('[1, 2]', '[true, false]');
+# 				+------------------------------------------------------+
+# 				| JSON_MERGE_PRESERVE('[1, 2]', '[true, false]') 		 |
+# 				+------------------------------------------------------+
+# 				| [1, 2, true, false] 											 |
+# 				+------------------------------------------------------+
+#
+# 				SELECT JSON_MERGE_PRESERVE('{"name": "x"}', '{"id": 47}');
+# 				+-------------------------------------------------------+
+# 				| JSON_MERGE_PRESERVE('{"name": "x"}', '{"id": 47}') 	  |
+# 				+-------------------------------------------------------+
+# 				| {"id": 47, "name": "x"} 										  |
+# 				+-------------------------------------------------------+
+#
+# 				SELECT JSON_MERGE_PRESERVE('1', 'true');
+# 				+--------------------------------------+
+# 				| JSON_MERGE_PRESERVE('1', 'true') 	   |
+# 				+--------------------------------------+
+# 				| [1, true] 									|
+# 				+--------------------------------------+
+#
+# 				SELECT JSON_MERGE_PRESERVE('[1, 2]', '{"id": 47}');
+# 				+----------------------------------------------------+
+# 				| JSON_MERGE_PRESERVE('[1, 2]', '{"id": 47}') 		  |
+# 				+----------------------------------------------------+
+# 				| [1, 2, {"id": 47}] 										  |
+# 				+----------------------------------------------------+
+#
+# 				SELECT JSON_MERGE_PRESERVE('{ "a": 1, "b": 2 }',
+# 						'{ "a": 3, "c": 4 }');
+# 				+--------------------------------------------------------------+
+# 				| JSON_MERGE_PRESERVE('{ "a": 1, "b": 2 }','{ "a": 3, "c":4 }')|
+# 				+--------------------------------------------------------------+
+# 				| {"a": [1, 3], "b": 2, "c": 4} 											|
+# 				+--------------------------------------------------------------+
+#
+# 				SELECT JSON_MERGE_PRESERVE('{ "a": 1, "b": 2 }', '{ "a": 3, "c": 4}',
+# 						'{ "a": 5, "d": 6 }');
+# 				+---------------------------------------------------------------------------------------+
+# 				| JSON_MERGE_PRESERVE('{ "a": 1, "b": 2 }', '{ "a": 3, "c": 4 }', '{ "a": 5, "d": 6 }') |
+# 				+---------------------------------------------------------------------------------------+
+# 				| {"a": [1, 3, 5], "b": 2, "c": 4, "d": 6} 															 |
+# 				+---------------------------------------------------------------------------------------+
+#
+# 		This function was added in MySQL 8.0.3 as a synonym for JSON_MERGE()
+#
+# 		The JSON_MERGE() function is now deprecated, and is subject to removal.
+#
+# 		This function is similar but differs from JSON_MERGE_PATCH() in significant respects;
+# 		see JSON_MERGE_PATCH() COMPARED WITH JSON_MERGE_PRESERVE() for more info
+#
+# 	) JSON_REMOVE(json doc, path[, path] ---)
+#
+# 		Removes data from a JSON document and returns teh result.
+#
+# 		Returns NULL if any argument is NULL.
+#
+# 		An error occurs if the json_doc argument is not a valid JSON document
+# 		or any path argument is not a valid path expression or is $ or contains
+# 		a * or ** wildcard.
+#
+# 		The path arguments are evaluated left to right.
+#
+# 		THe document produced by evaluating one path becomes the new value
+# 		against which the next path is evaluated.
+#
+# 		It is not an error if the element to be removed does not exist
+# 		in the document; in that case, the path does not affect the document.
+#
+# 			SET @j = '["a", ["b", "c"], "d"]';
+# 			SELECT JSON_REMOVE(@j, '$[1]');
+# 			+------------------------------------+
+# 			| JSON_REMOVE(@j, '$[1]') 				 |
+# 			+------------------------------------+
+# 			| ["a", "d"] 								 |
+# 			+------------------------------------+
+#
+# 	) JSON_REPLACE(json_doc, path, val [, path, val] ---)
+#
+# 		Replaces existing values in a JSON document and returns the result.
+#
+# 		Returns NULL if any argument is NULL.
+#
+# 		An error occurs if the json_doc argument is not a valid JSON document
+# 		or any path argument is not a valid path expression or contains a * or ** wildcard.
+#
+# 		The path-value pairs are evaluated left to right.
+#
+# 		The document produced by evaluating one pair becomes the new value against which
+# 		the next pair is evaluated.
+#
+# 		A path-value pair for an existing path in the document overwrites the existing document
+# 		value with the new value.
+#
+# 		A path-value pair for a nonexisting path in the document is ignored and has no effect.
+#
+# 		In MySQL 8.0.4, the optimizer can perform a partial, in-place update of a JSON column instead
+# 		of removing the old document and writing the new document in its entirety to the column.
+#
+# 		This optimization can be performed for an update statement that uses the JSON_REPLACE()
+# 		function and meets the conditions outlined in PARTIAL UPDATES OF JSON VALUES.
+#
+# 		For a comparison of JSON_INSERT(), JSON_REPLACE(), and JSON_SET(), see the discussion of
+# 		JSON_SET()
+#
+# 			SET @j = '{ "a": 1, "b": [2, 3]}';
+# 			SELECT JSON_REPLACE(@j, '$.a', 10, '$.c', '[true, false]');
+# 			+--------------------------------------------------------+
+# 			| JSON_REPLACE(@j, '$.a', 10, '$.c', '[true, false]') 	|
+# 			+--------------------------------------------------------+
+# 			| {"a": 10, "b": [2, 3]} 											|
+# 			+--------------------------------------------------------+
+#
+# 	) JSON_SET(json_doc, path, val[, path, val] ---)
+#
+# 		Inserts or updates data in a JSON document and returns the result.
+#
+# 		Returns NULL if any argument is NULL or path, if given, does not locate
+# 		an object.
+#
+# 		An error occurs if the json_doc argument is not a valid JSON document or
+# 		any path argument is not a valid path expression or contains a * or ** wildcard.
+#
+# 		The path-value pairs are evaluated left to right. THe document provided by evaluating one
+# 		pair becomes teh new value against which the next pair is evaluated.
+#
+# 		A path-value pair for an existing path in the document overwrites the existing document
+# 		value with the new value.
+#
+# 		A path-value pair for a nonexisting path in the document adds the value to the document
+# 		if the path identifies one of these types of values:
+#
+# 			) A member not present in an existing object.
+#
+# 				The member is added to the object and associated with the new value.
+#
+# 			) A position past the end of an existing array.
+#
+# 				The array is extended with the new value.
+#
+# 				IF the existing value is not an array, it is autowrapped as an array,
+# 				then extended with the new value.
+#
+# 		Otherwise, a path-value pair for a nonexisting path in the document is ignored and has no effect.
+#
+# 		In MySQL 8.0.4, the optimizer can perform a partial, in-place update of a JSON column instead of
+# 		removing the old document and writing the new document in its entirety to the column.
+#
+# 		This optimization can be performed for an update statement that uses the JSON_SET() function
+# 		and meets the conditions outlined in PARTIAL UPDATES OF JSON VALUES
+#
+# 		The JSON_SET(), JSON_iNSERT() and JSON_REPLACE() functions are related:
+#
+# 			) JSON_SET() replaces existing values and adds nonexisting values
+#
+# 			) JSON_INSERT() inserts values without replacing existing values
+#
+# 			) JSON_REPLACE() replaces only existing values
+#
+# 		The following examples illustrate these differences, using one path that does exist in the
+# 		document ($.a) and another that does not exist ($.c):
+#
+# 			SET @j = '{ "a": 1, "b": [2, 3]}';
+# 			SELECT JSON_SET(@j, '$.a', 10, '$.c', '[true, false]');
+# 			+------------------------------------------------------+
+# 			| JSON_SET(@j, '$.a', 10, '$.c', '[true, false]') 		 |
+# 			+------------------------------------------------------+
+# 			| {"a": 10, "b": [2, 3], "c": "[true, false]"} 		    |
+# 			+------------------------------------------------------+
+#
+# 			SELECT JSON_INSERT(@j, '$.a', 10, '$.c', '[true, false]');
+# 			+------------------------------------------------------+
+# 			| JSON_INSERT(@j, '$.a', 10, '$.c', '[true, false]') 	 |
+# 			+------------------------------------------------------+
+# 			| {"a": 1, "b": [2, 3], "c": "[true, false]"} 			 |
+# 			+------------------------------------------------------+
+#
+# 			SELECT JSON_REPLACE(@j, '$.a', 10, '$.c', '[true, false]');
+# 			+------------------------------------------------------+
+# 			| JSON_REPLACE(@j, '$.a', 10, '$.c', '[true, false]')  |
+# 			+------------------------------------------------------+
+# 			| {"a": 10, "b": [2, 3]} 										 |
+# 			+------------------------------------------------------+
+#
+# 	) JSON_UNQUOTE(json val)
+#
+# 		Unquotes JSON value and returns the result as a utf8mb4 string.
+#
+# 		Returns NULL if the argument is NULL. An error occurs if the value starts and ends
+# 		with doule quotes but is not a valid JSON string literal.
+#
+# 		Within a string, certain sequences have special meaning unless the NO_BACKSLASH_ESCAPES
+# 		SQL mode is enabled.
+#
+# 		Each of these sequences begin with a backslash (\), known as the escape character.
+#
+# 		MySQL recognizes the escape sequences shown in TABLE 12.22, "JSON_UNQUOTE() SPECIAL CHARACTER ESCAPE SEQUENCES"
+#
+# 		For all other escape sequences, backslash is ignored. 
+# 		That is, the escaped character is interpreted as if it was not escaped.
+#
+# 		For example, \x is just x.
+#
+# 		These sequences are case-sensitive.
+#
+# 		For example, \b is interpreted as a backspace, but \B is interpreted as B
+#
+# 		TABLE 12.22 JSON_UNQUOTE() SPECIAL CHARACTER ESCAPE SEQUENCES
+#
+# 		ESCAPE SEQUENCES 			CHARACTER REPRESENTED BY SEQUENCE
+#
+# 		\" 							A double quote (") character
+#
+# 		\b 							A backspace character
+#
+# 		\f 							A formfeed character
+#
+# 		\n 							A newline (linefeed) character
+#
+# 		\r 							A carriage return character
+#
+# 		\t 							A tab character
+#
+# 		\\ 							A backslash (\) character
+#
+# 		\uXXXX 						UTF-8 bytes for Unicode value XXXX
+#
+# 		Two simple examples of the use of this function are shown here:
+#
+# 			SET @j = '"abc"';
+# 			SELECT @j, JSON_UNQUOTE(@j);
+# 			+-----------+------------------------+
+# 			| @j 			| JSON_UNQUOTE(@j) 		 |
+# 			+-----------+------------------------+
+# 			| "abc" 		| abc 						 |
+# 			+-----------+------------------------+
+#
+# 			SET @j = '[1, 2, 3]';
+# 			SELECT @j, JSON_UNQUOTE(@j);
+# 			+------------------+--------------------------+
+# 			| @j 					 | JSON_UNQUOTE(@j) 			 |
+# 			+------------------+--------------------------+
+# 			| [1,2,3]			 | [1, 2, 3] 					 |
+# 			+------------------+--------------------------+
+#
+# 		The following set of examples shows how JSON_UNQUOTE handles escapes with NO_BACKSLASH_ESCAPES disabled and enabled:
+#
+# 			SELECT @@sql_mode;
+# 			+----------------------+
+# 			| @@sql_mode 			  |
+# 			+----------------------+
+# 			| 							  |
+# 			+----------------------+
+#
+# 			SELECT JSON_UNQUOTE('"\\t\\u0032"');
+# 			+----------------------------------+
+# 			| JSON_UNQUOTE('"\\t\\u0032"') 	  |
+# 			+----------------------------------+
+# 			| 			2 								  |
+# 			+----------------------------------+
+#
+# 			SET @@sql_mode = 'NO_BACKSLASH_ESCAPES';
+# 			SELECT JSON_UNQUOTE('"\\t\\u0032"');
+# 			+--------------------------------+
+# 			| JSON_UNQUOTE('"\\t\\u0032"')   |
+# 			+--------------------------------+
+# 			| \t\u0032 								|
+# 			+--------------------------------+
+#
+# 			SELECT JSON_UNQUOTE('"\t\u0032"');
+# 			+-----------------------------------+
+# 			| JSON_UNQUOTE('"\t\u0032"') 			|
+# 			+-----------------------------------+
+# 			| 				2 							   |
+# 			+-----------------------------------+
+#
+# 12.17.5 FUNCTIONS THAT RETURN JSON VALUE ATTRIBUTES
+#
+# the functions in this section return attributes of JSON values
+#
+# 		) JSON_DEPTH(json_doc)
+#
+# 			Returns the maximum depth of a JSON document.
+#
+# 			Returns NULL if the argument is NULL. An error occurs if the argument is not a valid
+# 			JSON document.
+#
+# 			An empty array, empty object, or scalar value has depth 1.
+#
+# 			A nonempty array containing only elements of depth 1 or nonempty object
+# 			containing only member values of depth 1 has depth 2.
+#
+# 			Otherwise, a JSON document has a depth greater than 2.
+#
+# 			SELECT JSON_DEPTH('{}'), JSON_DEPTH('[]'), JSON_DEPTH('true');
+# 			+---------------------+-----------------------+------------------------+
+# 			| JSON_DEPTH('{}') 	 | JSON_DEPTH('[]') 		 | JSON_DEPTH('true') 	  |
+# 			+---------------------+-----------------------+------------------------+
+# 			|  			1 			 |  				1 			 | 			1 				  |
+# 			+---------------------+-----------------------+------------------------+
+#
+# 			SELECT JSON_DEPTH('[10, 20]'), JSON_DEPTH('[[], {}]');
+# 			+---------------------------+-----------------------------------+
+# 			| JSON_DEPTH('[10, 20]') 	 | JSON_DEPTH('[[], {}]') 				 |
+# 			+---------------------------+-----------------------------------+
+# 			| 				2 					 | 					2 						 |
+# 			+---------------------------+-----------------------------------+
+#
+# 			SELECT JSON_DEPPTH('[10, {"a": 20}]');
+# 			+-----------------------------------+
+# 			| JSON_DEPTH('[10, {"a": 20}]') 		|
+# 			+-----------------------------------+
+# 			| 					3 							|
+# 			+-----------------------------------+
+#
+# 	) JSON_LENGTH(json doc[, path])
+#
+# 		Returns the length of a JSON document, or, if a path argument is given, the length of the value
+# 		within the document identified by the path.
+#
+# 		Returns NULL if any argument is NULL or the path argument does not identify a value in the document.
+#
+# 		An error occurs if the json_doc argument is not a valid JSON document or the path argument is
+# 		not a valid path expression or contains a * or ** wildcard.
+#
+# 		The length of a document is determined as follows:
+#
+# 			) THe length of a scalar is 1
+#
+# 			) THe length of an array is the number of array elements
+#
+# 			) The length of an object is the number of object members
+#
+# 			) THe length does not count the length of nested arrays or objects.
+#
+# 				SELECT JSON_LENGTH('[1, 2, {"a": 3}]');
+# 				+---------------------------------------------+
+# 				| JSON_LENGTH('[1, 2, {"a": 3}]') 				 |
+# 				+---------------------------------------------+
+# 				| 							3 								 |
+# 				+---------------------------------------------+
+#
+# 				SELECT JSON_LENGTH('{"a": 1, "b": {"c": 30}}');
+# 				+---------------------------------------------+
+# 				| JSON_LENGTH('{"a": 1, "b": {"c": 30}}') 	 |
+# 				+---------------------------------------------+
+# 				| 							2 								 |
+# 				+---------------------------------------------+
+#
+# 				SELECT JSON_LENGTH('{"a": 1, "b": {"c": 30}}', '$.b');
+# 				+------------------------------------------------+
+# 				| JSON_lENGTH('{"a": 1, "b": {"c": 30}}', '$.b') |
+#				+------------------------------------------------+
+# 				| 							1 									 |
+# 				+------------------------------------------------+
+#
+# 	) JSON_TYPE(json val)
+#
+# 		Returns a utf8mb4 string indicating the type of a JSON value.
+#
+# 		This can be an object, an array, or a scalar type, as shown here:
+#
+# 			SET @j = '{"a": [10, true]}';
+# 			SELECT JSON_TYPE(@j);
+# 			+---------------------+
+# 			| JSON_TYPE(@j) 		 |
+# 			+---------------------+
+# 			| OBJECT 				 |
+# 			+---------------------+
+#
+# 			SELECT JSON_TYPE(JSON_EXTRACT(@j, '$.a'));
+# 			+------------------------------------------+
+# 			| JSON_TYPE(JSON_EXTRACT(@j, '$.a')) 		 |
+# 			+------------------------------------------+
+# 			| ARRAY 												 |
+# 			+------------------------------------------+
+#
+# 			SELECT JSON_TYPE(JSON_EXTRACT(@j, '$.a[0]'));
+# 			+------------------------------------------+
+# 			| JSON_TYPE(JSON_EXTRACT(@j, '$.a[0]')) 	 |
+# 			+------------------------------------------+
+# 			| INTEGER 											 |
+# 			+------------------------------------------+
+#
+# 			SELECT JSON_TYPE(JSON_EXTRACT(@j, '$.a[1]'));
+# 			+------------------------------------------+
+# 			| JSON_TYPE(JSON_EXTRACT(@j, '$.a[1]')) 	 |
+# 			+------------------------------------------+
+# 			| BOOLEAN 											 |
+# 			+------------------------------------------+
+#
+# 		JSON_TYPE() returns NULL if the argument is NULL:
+#
+# 			SELECT JSON_TYPE(NULL);
+# 			+----------------------+
+# 			| JSON_TYPE(NULL) 	  |
+# 			+----------------------+
+# 			| NULL 					  |
+# 			+----------------------+
+#
+# 		An error occurs if the argument is not a valid JSON value:
+#
+# 			SELECT JSON_TYPE(1);
+# 			ERROR 3146 (22032): Invalid data type for JSON data in argument 1
+# 			to function json_type; a JSON string or JSON type is required
+#
+# 		For a non-NULL, non-error result, the following list describes the possible JSON_TYPE() return values:
+#
+# 			) Purely JSON types:
+#
+# 				) OBJECT: JSON Objects
+#
+# 				) ARRAY: JSON arrays
+#
+# 				) BOOLEAN: The JSON true and false literals
+#
+# 				) NULL: The JSON null literal
+#
+# 			) Numeric types:
+#
+# 				) Integer: MySQL TINYINT, SMALLINT, MEDIUMINT and INT and BIGINT scalars
+#
+# 				) Double: MySQL DOUBLE FLOAT scalars
+#
+# 				) DECIMAL: MySQL DECIMAL and Numeric scalars
+#
+# 			) Temporal types:
+#
+# 				) DATETIME: MySQL DATETIME and TIMESTAMP scalars
+#
+# 				) DATE: MySQL DATE scalars
+#
+# 				) TIME: MySQL TIME scalars
+#
+# 			) String types:
+#
+# 				) STRING: MySQL utf8 character type scalars: CHAR, VARCHAR, TEXT, ENUM and SET
+#
+# 			) Binary types:
+#
+# 				) BLOB: MySQL binary type scalars including BINARY, VARBINARY, BLOB and BIT
+#
+# 			) All other types:
+#
+#  			) OPAQUE (raw bits)
+#
+# 		) JSON_VALID(val):
+#
+# 			Returns 0 or 1 to indicate whether a value is a valid JSON.
+#
+# 			Returns NULL if the argument is NULL
+#
+# 				SELECT JSON_VALID('{"a": 1}');
+# 				+-------------------------------+
+# 				| JSON_VALID('{"a": 1}') 		  |
+# 				+-------------------------------+
+# 				| 1 									  |
+# 				+-------------------------------+
+#
+# 				SELECT JSON_VALID('hello'), JSON_VALID('"hello"');
+# 				+-------------------------+-------------------------+
+# 				| JSON_VALID('hello') 	  | JSON_VALID('"hello"') 	 |
+# 				+-------------------------+-------------------------+
+# 				| 				0 				  | 					1 			 |
+# 				+-------------------------+-------------------------+
+#
+# 12.17.6 JSON TABLE FUNCTIONS
+#
+# This section contains information about JSON functions that convert JSON data to tabular data.
+#
+# In MySQL 8.0.4, and later, one such function - JSON_TABLE() is supported.
+#
+# 		) JSON_TABLE(expr, path COLUMNS (column list) [AS] alias)
+#
+# 			Extracts data from a JSON document and returns it as a relational table having the
+# 			specified columns.
+#
+# 			The complete syntax for this function is shown here:
+#
+# 				JSON_TABLE(
+# 					expr,
+# 					path COLUMNS (column_list)
+# 					[AS] alias
+# 				)
+#
+# 				column_list:
+# 					column[, column][, ---]
+#
+# 				column:
+# 					name FOR ORDINALITY
+# 					| name type PATH string path [on_error] [on_empty]
+# 					| name type EXISTS PATH string path
+# 					| NESTED [PATH] path COLUMNS (column_list)
+# 	
+# 				on_error:
+# 					(NULL | ERROR | DEFAULT json_string) ON ERROR
+#
+# 				on_empty:
+# 					(NULL | ERROR | DEFAULT json_string) ON EMPTY
+#
+# expr: This is an expression that returns JSON data.
+#
+# This can be a constant('{"a":1}'), a column (t1.json_data, given table t1 specified
+# prior to JSON_TABLE() in the FROM clause), or a function call (JSON_EXTRACT(t1, jsn_data, '$.post.comments'))
+#
+# path: A JSON path expression, which is applied to the data source.
+#
+# 		We refer to the JSON value matching the path as the row source;
+# 		this is used to generate a row of relational data.
+#
+# 		The COLUMNS clause evaluates the row source, finds specific JSON values within the row source,
+# 		and returns those JSON values as SQL values in individual columns of a row of relational data.
+#
+# 		The alias is required.
+#
+# 		The usual rules for table aliases apply (see SECTION 9.2, "SCHEMA OBJECT NAMES")
+#
+# 		JSON_TABLE() supports four types of columns, described in the following list:
+#
+# 			) a. name FOR ORDINALITY
+#
+# 				This type enumerates rows in the COLUMNS clause; the column named name
+# 				is a counter whose type is UNSIGNED int, and whose initial value is 1.
+#
+# 				This is equivalent to specifying a column as AUTO_INCREMENT in a CREATE_TABLE
+# 				statement, and can be used to distinguish parent rows with the same
+# 				value for multiple rows generated by a NESTED [PATH] clause
+#
+# 			) name type PATH string_path [on_error] [on_empty]:
+#
+# 				Columns of this type are used to extract values specified by string_path
+#
+# 				type is a MySQL data type.
+#
+# 				JSON_TABLE() extracts data as JSON then coerces it to the column type,
+# 				using the regular automatic type conversion applying to JSON data in MySQL.
+#
+# 				The exact behavior depends on the column type:
+#
+# 					If the column type is an SQL type, then only a scalar value can be saved
+# 					in the column.
+#
+# 				Saving an object or array triggers the on error clause, this also occurs
+# 				when an error takes place during coercion from the values saved as JSON
+# 				to the table column, such as trying to save the string 'asd' to an itneger column.
+#
+# 				A missing value triggers the on_empty clause.
+#
+# 				The optional on_error clause determines what JSON_TABLE() does when saving an object or array:
+#
+# 					) NULL ON ERROR: The column is set to NULL; this is the default behavior.
+#
+# 						If an error occurs during type coercion, a warning is thrown.
+#
+# 					) ERROR ON ERROR: An error is thrown
+#
+# 					) DEFAULT json string ON ERROR: The json_string is parsed as JSON (provided that it is valid)
+# 						and stored instead of the object or array.
+#
+# 					A warning is thrown if the error is caused by type coercion.
+#
+# 					Column type rules also apply to the default value.
+#
+# 				When a value saved to a column is truncated, such as saving 3.14159 in a DECIMAL(10,1) column,
+# 				a warning is issued independently of any ON ERROR option.
+#
+# 				When multiple values are truncated in a single statement, the warning is issued only once.
+#
+# 				The optional on empty clause determines what JSON_TABLE() does in the event that data
+# 				is missing (depending on type)
+#
+# 				This clause is also triggered on a column in a NESTED PATH clause when the letter
+# 				has no match and a NULL complemented row is produced for it.
+#
+# 				on empty takes one of the following values:
+#
+# 					) NULL ON EMPTY: The column is set to NULL; this is the default behavior.
+#
+# 					) ERROR ON EMPTY: An error is thrown
+#
+# 					) DEFAULT json_string ON EMPTY: The provided json_string is parsed as JSON, as long as it
+# 						is valid, and stored instead of the missing value.
+#
+# 						Column type rules also apply to the default value.
+#
+# 				This query demonstrates the use of the ON ERROR and ON EMPTY options.
+#
+# 				The row corresponding to {"b":1} is empty for the path "$.a", and attempting
+# 				to save [1,2] as a scalar produces an error; these rows are highlighted in the output shown.
+#
+# 					SELECT
+# 						FROM
+# 							JSON_TABLE(
+# 								'[{"a":"3"},{"a":2},{"b":1},{"a":0},{"a":[1,2]}]',
+# 								"$[*]"
+# 								COLUMNS(
+# 									rowid FOR ORDINALITY,
+# 									ac VARCHAR(100) PATH "$.a" DEFAULT '999' ON ERROR DEFAULT '111' ON EMPTY,
+# 									aj JSON PATTH "$.a" DEFAULT '{"x": 333}' ON EMPTY,
+# 									bx INT EXISTS PATH "$.b"
+# 								)
+# 							) AS tt;
+#
+# 					+-------+--------+------------+--------+
+# 					| rowid | ac 	  | aj 			| bx 		|
+# 					+-------+--------+------------+--------+
+# 					| 	 1   | 3 	  | "3" 		   | 0 		|
+# 					|   2   | 2 	  | 2 			| 0 		|
+# 					|   3   | 111    | {"x": 333} | 1 		|
+# 					| 	 4   | 0 	  | 0 			| 0 		|
+# 					| 	 5   | 999 	  | [1, 2] 	   | 0 		|
+# 					+-------+--------+------------+--------+
+#
+# 			) c. name type EXISTS PATH path: This column returns 1 if any data is present at the location
+# 				specified by path, and 0 otherwise.
+#
+# 				Type can be any valid MySQL data type, but should normally be specified as some variety of INT
+#
+# 			) d. NESTED [PATH] path COLUMNS (column_list): 
+#
+# 					This flattens nested objects or arrays in JSON data into a single row along with
+# 					the JSON values from the parent object or array.
+#
+# 					Using multiple PATH options allows projection of JSON values from mutliple levels of
+# 					nesting into a single row.
+#
+# 					The path is relative to the parent path row path of JSON_TABLE(), or the path of the parent
+# 					NESTED [PATH] clause in the event of nested paths.
+#
+# 		Column names are subject to the usual rules and limitations governing table column names.
+#
+# 		See SECTION 9.2, "SCHEMA OBJECT NAMES"
+#
+# 		All JSON and JSON path expressions are checked for valditiy; an invalid expression
+# 		of either type causes an error.
+#
+# 		Each match for the path preceding the COLUMNS keyword maps to an individual row in
+# 		the result table.
+#
+# 		For example, the following query gives the result shown here:
+#
+# 			SELECT *
+# 				FROM
+# 					JSON_TABLE(
+# 						'[{"x":2,"y":"8"},{"x":"3","y":"7"},{"x":"4","y":6}]',
+# 						"$[*]" COLUMNS(
+# 							xval VARCHAR(100) PATH "$.x",
+# 							yval VARCHAR(100) PATH "$.y"
+# 						)
+# 					) AS jt1;
+#
+# 			+---------+------------+
+# 			| xval 	 | yval 		  |
+# 			+---------+------------+
+# 			| 2 		 | 8			  |
+# 			| 3 		 | 7 			  |
+# 			| 4 		 | 6 			  |
+# 			+---------+------------+
+#
+# 		The expression "$[*]" matches each element of the array.
+#
+# 		You can filter the rows in the result by modifying the path;
+#
+# 		for example, using "$[1]" limits extraction to the second element of the
+# 		JSON array used as the source, as shown here:
+#
+# 			SELECT *
+# 				FROM
+# 					JSON_TABLE(
+# 						'[{"x":2,"y":"8"},{"x":"3","y":"7"},{"x":"4","y":6}]'
+# 						"$[1]" COLUMNS(
+# 							xval VARCHAR(100) PATH "$.x",
+# 							yval VARCHAR(100) PATH "$.y"
+# 						)
+# 					) AS jt1;
+#
+# 			+-------+---------+
+# 			| xval  | yval 	|
+# 			+-------+---------+
+# 			| 3 	  | 7 		|
+# 			+-------+---------+
+#
+# 		Within a column definition, "$" passes the entire match to the column;
+#
+# 		"$.x" and "$.y" pass only the values corresponding to the keys x and y,
+# 		respectively, within that match.
+#
+# 		For more information, see JSON PATH SYNTAX
+#
+# 		NESTED PATH (or simply NESTED; PATH is optional) produces a set of records
+# 		for each match in the COLUMNS clause to which it belongs.
+#
+# 		If there is no match, all columns of the nested path are set to NULL.
+#
+# 		This implements an outer join between the topmost clause and NESTED [PATH]
+#
+# 		An inner join can be emulated by applying a suitable condition in the
+# 		WHERE clause, as shown here:
+#
+# 			SELECT *
+# 			FROM
+# 				JSON_TABLE(
+# 					'[ {"a": 1, "b": [11,111]}, {"a": 2, "b": [22,222]},
+# 						{"a":3}]',
+# 					'$[*]' COLUMNS(
+# 								a INT PATH '$.a',
+# 								NESTED PATH '$.b[*]' COLUMNS (b INT PATH '$')
+# 								)
+# 					) AS jt
+# 			WHERE b IS NOT NULL;
+#
+# 		+------+---------+
+# 		| a 	 | b 		  |
+# 		+------+---------+
+# 		| 	1 	 | 11 	  |
+# 		|  1 	 | 111 	  |
+# 		|  2 	 | 22 	  |
+# 		|  2 	 | 222 	  |
+# 		+------+---------+
+#
+# 	Sibling nested paths - that is, two or more instances of NESTED [PATH] in the same
+# columns clause - are processed one after another, one at a time.
+#
+# While one nested path is producing records, columns of any sibling nested path expressions
+# are set to NULL.
+#
+# This means that the total number of records for a single match within a single containing
+# COLUMNS clause is the sum and not the product of all records produced by NESTED [PATH]
+# modifiers, as shown here:
+#
+# 		SELECT *
+# 		FROM
+# 			JSON_TABLE(
+# 				'[{"a": 1, "b": [11,111]}, {"a": 2, "b": [22,222]}]',
+# 				'$[*]' COLUMNS(
+# 					a INT PATH '$.a',
+# 					NESTED PATH '$.b[*]' COLUMNS (b1 INT PATH '$'),
+# 					NESTED PATH '$.b[*]' COLUMNS (b2 INT PATH '$')
+# 			)
+# 		) AS jt;
+#
+# +---------+----------+------------+
+# | a 		| b1 		  | 	b2 		|
+# +---------+----------+------------+
+# | 	1 		| 	11 	  | 	NULL 	   |
+# | 	1 		|  111 	  | 	NULL 		|
+# | 	1 		| 	NULL 	  | 	11 		|
+# | 	1 		|  NULL 	  | 	111 	   |
+# | 	2 		| 	22 	  | 	NULL 		|
+# | 	2 		|  222 	  | 	NULL 		|
+# | 	2 		| 	NULL 	  | 	22 		|
+# | 	2 		| 	NULL 	  | 	222 		|
+# +---------+----------+------------+
+#
+# A FOR ORDINALITY column enumerates records produced by the COLUMNS clause, and can be used
+# to distinguish parent records of a nested path, especially if values in parent records
+# are the same, as can be seen here:
+#
+# 		SELECT *
+# 		FROM
+# 			JSON_TABLE(
+# 				'[{"a": "a_val",'
+# 					"b": [{"c": "c_val", "l": [1,2]}]},
+# 				'{"a": "a_val",
+# 					"b": [{"c": "c_val","l": [11]}, {"c": "c_val", "l": [22]}]}]',
+# 				'$[*]' COLUMNS(
+# 					top_ord FOR ORDINALITY,
+# 					apath VARCHAR(10) PATH '$.a',
+# 					NESTED PATH '$.b[*]' COLUMNS (
+# 						bpath VARCHAR(10) PATH '$.c',
+# 						ord FOR ORDINALITY,
+# 						NESTED PATH '$.l[*]' COLUMNS (lpath varchar(10) PATH '$')
+# 						)
+# 				)
+# 		) as jt;
+#
+# +--------------+--------------+-----------------+---------------+-------------+
+# | top_ord 	  | apath 		  | bpath 			  | ord 				| lpath 		  |
+# +--------------+--------------+-----------------+---------------+-------------+
+# | 		1 		  | a_val 		  | c_val 			  | 	1 				| 1 			  |
+# | 		1 		  | a_val 		  | c_val 			  |   1 				| 2 			  |
+# | 		2 		  | a_val 		  | c_val 			  | 	1 				| 11 			  |
+# | 		2 		  | a_val 		  | c_val 			  | 	2 				| 22 			  |
+# +--------------+--------------+-----------------+---------------+-------------+
+#
+# The source document contains an array of two elements; each of these elements produce two rows.
+#
+# The values of apath and bpath are the same over the entire result set;
+#
+# This means that they cannot be used to determine whether lpath values came from the same
+# or different parents.
+#
+# The value of the ord column remains the same as the set of records having top_ord equal
+# to 1, so these two values are from a single object.
+#
+# The remaining two values are from different objects, since they have different
+# values in the ord column.
+#
+# 12.17.7 JSON UTILITY FUNCTIONS
+#
+# This section documents utility functions that act on JSON values, or strings that can
+# be parsed as JSON values.
+#
+# JSON_PRETTY() prints out a JSON value in a format that is easy to read.
+#
+# JSON_STORAGE_SIZE() and JSON_STORAGE_FREE() show, respectively, the amount of storage space used
+# by a given JSON value and the amount of space remaining in a JSON column following a partial update.
+#
+# 		) JSON_PRETTY(json val)
+#
+# 			Provides pretty-printing of JSON values similar to that implemented in PHP and by other
+# 			languages and database systems.
+#
+# 			The value supplied must be a JSON value or a valid string representation of a JSON value.
+#
+# 			Extraneous whitespace and newlines present in this value have no effect on the output.
+#
+# 			For a NULL value, the function returns NULL.
+#
+# 			If the value is not a JSON document, or if it cannot be parsed as one, the function
+# 			fails with an error.
+#
+# 			Formatting of the output from this function adheres to the following rules:
+#
+# 				) https://dev.mysql.com/doc/refman/8.0/en/json-utility-functions.html
+#
