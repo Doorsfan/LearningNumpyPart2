@@ -91681,5 +91681,2012 @@ Need be, i will change this for upcoming repeated cases. */
 #
 # 			Formatting of the output from this function adheres to the following rules:
 #
-# 				) https://dev.mysql.com/doc/refman/8.0/en/json-utility-functions.html
+# 				) Each array element or object member appears on a separate line, indented by one additional level as compared to its parent
 #
+# 				) Each level of indentation adds two leading spaces
+#
+# 				) A comma separating individual array elements or object members is printed before the newline that separates
+# 					the two elements or members.
+#
+# 				) The key and the value of an object member are separated by a colon followed by a space (': ')
+#
+# 				) An empty object or array is printed on a single line. No space is printed between the opening and closing brace.
+#
+# 				) Special characters in string scalars and key names are escaped employing the same rules used by the JSON_QUOTE() function.
+#
+# 					SELECT JSON_PRETTY('123'); # scalar
+# 					+-----------------------------+
+# 					| JSON_PRETTY('123') 			|
+# 					+-----------------------------+
+# 					| 123 								|
+# 					+-----------------------------+
+#
+# 					SELECT JSON_PRETTY("[1,3,5]"); #array
+# 					+-----------------------------+
+# 					| JSON_PRETTY("[1,3,5]") 		|
+# 					+-----------------------------+
+# 					| [ 									|
+# 					| 1, 									|
+# 					| 3, 									|
+# 					| 5  									|
+# 					| ] 									|
+# 					+-----------------------------+
+#
+# 					SELECT JSON_PRETTY('{"a":"10", "b":"15","x":"25"}'); # object
+# 					+-----------------------------------------------+
+# 					| JSON_PRETTY('{"a":"10", "b":"15", "x":"25"}') |
+# 					+-----------------------------------------------+
+# 					| { 															|
+# 					|	"a": "10", 												|
+# 					|  "b": "15", 												|
+# 					|  "x": "25" 												|
+# 					| } 															|
+# 					+-----------------------------------------------+
+#
+# 					SELECT JSON_PRETTY('["a",1,{"key1":"value1"},
+# 						"5", "77", {"key2":["value3","valueX",
+# 						"valueY"]}, "j", "2" ]')\G #nested arrays and objects
+# 					*************************************** 1.row ***********************************
+# 					JSON_PRETTY('["a",1,{"key1":"value1"}, 
+# 								  ("5", "77", {"key2":["value3", "valuex", "valuey"]}, "j", "2" ]'):
+# 									[ "a",
+# 										1,
+# 										{
+# 											"key1": "value1"
+# 										},
+# 										"5",
+# 										"77",
+# 										{
+# 											"key2": [
+# 												"value3",
+# 												"valuex",
+# 												"valuey"
+# 											]
+# 										},
+# 										"j",
+# 										"2"
+# 									]
+#
+# 		) JSON_STORAGE_FREE(json_val)
+#
+# 			For a JSON column value, this funciton shows how much storage spaces was freed
+# 			in its binary representation after it was updated in place using JSON_SET(),
+# 			JSON_REPLACE(), or JSON_REMOVE().
+#
+# 			The argument can also be a valid JSON document or a string which can be parsed as one -
+# 			either as a literal value or as the value of a user variable - in which case the function
+# 			returns 0.
+#
+# 			It returns a positive, nonzero value if the argument is a JSON column value which has been
+# 			updated as described previously, such that its binary representation takes up less space
+# 			than it did prior to the update.
+#
+# 			For a JSON column which has been updated such that its binary representation is the same
+# 			as or larger than before, or if the update was not able to take advantage of a partial update,
+# 			it returns 0; it returns NULL if the argument is NULL.
+#
+# 			If json_val is not NULL, and neither is a valid JSON document nor can be successfully parsed as one,
+# 			an error results.
+#
+# 			In this example, we create a table containing a JSON column, then insert a row containing a JSON
+# 			object:
+#
+# 				CREATE TABLE jtable (jcol JSON);
+# 				Query OK, 0 rows affected (0.38 sec)
+#
+# 				INSERT INTO jtable VALUES
+# 					('{"a": 10, "b": "wxyz", "c": "[true, false]"}');
+# 				Query OK, 1 row affected (0.04 sec)
+#
+# 				SELECT * FROM jtable;
+# 				+--------------------------------------------------+
+# 				| jcol 															|
+# 				+--------------------------------------------------+
+# 				| {"a": 10, "b": "wxyz", "c": "[true, false]"} 		|
+# 				+--------------------------------------------------+
+# 				1 row in set (0.00 sec)
+#
+# 			Now we update the column value using JSON_SET() such that a partial update
+# 			can be performed; in this case, we replace the value pointed to by the
+# 			c key (the array [true, false]) with one that takes up less space (the integer 1):
+#
+# 				UPDATE jtable
+# 					SET jcol = JSON_SET(jcol, "$.a", 10, "$.b","wxyz", "$.c", 1);
+# 				Query OK, 1 row affected (0.03 sec)
+# 				Rows matched: 1 Changed: 1 Warnings: 0
+#
+# 				SELECT * FROM jtable;
+# 				+-------------------------------------+
+# 				| jcol 										  |
+# 				+-------------------------------------+
+# 				| {"a": 10, "b": "wxyz", "c": 1} 	  |
+# 				+-------------------------------------+
+# 				1 row in set (0.00 sec)
+#
+# 				SELECT JSON_STORAGE_FREE(jcol) FROM jtable;
+# 				+----------------------------------+
+# 				| JSON_STORAGE_FREE(jcol) 			  |
+# 				+----------------------------------+
+# 				| 							14 			  |
+# 				+----------------------------------+
+# 				1 row in set (0.00 sec)
+#
+# 			The effects of successive partial updates on this free space are cumulative,
+# 			as shown in this example using JSON_SET() to reduce the space taken up
+# 			by the value having key b (and making no other changes):
+#
+# 				UPDATE jtable
+# 					SET jcol = JSON_SET(jcol, "$.a", 10, "$.b", "wx", "$.c", 1);
+# 				Query OK, 1 row affected (0.03 sec)
+# 				Rows matched: 1 Changed: 1 Warnings: 0
+#
+# 				SELECT JSON_STORAGE_FREE(jcol) FROM jtable;
+# 				+---------------------------------+
+# 				| JSON_STORAGE_FREE(jcol) 			 |
+# 				+---------------------------------+
+# 				| 							16 			 |
+# 				+---------------------------------+
+# 				1 row in set (0.00 sec)
+#
+# 			Updating the column without using JSON_SET(), JSON_REPLACE(), or
+# 			JSON_REMOVE() means that the optimizer cannot perform the update
+# 			in place; in this case, JSON_STORAGE_FREE() returns 0, as shown here:
+#
+# 				UPDATE jtable SET jcol = '{"a": 10, "b": 1}';
+# 				Query OK, 1 row affected (0.05 sec)
+# 				Rows matched: 1 Changed: 1 Warnings: 0
+#
+# 				SELECT JSON_STORAGE_FREE(jcol) FROM jtable;
+# 				+-------------------------------+
+# 				| JSON_STORAGE_FREE(jcol) 		  |
+# 				+-------------------------------+
+# 				| 					0 					  |
+# 				+-------------------------------+
+# 				1 row in set (0.00 sec)
+#
+# 			Partial updates of JSON documents can be performed only on column values.
+#
+# 			For a user variable that stores a JSON value, the value is always
+# 			completely replaced, even when the update is performed using JSON_SET():
+#
+# 				SET @j = '{"a": 10, "b": "wxyz", "c": "[true, false]"}';
+# 				Query OK, 0 rows affected (0.00 sec)
+#
+# 				SET @j = JSON_SET(@j, '$.a', 10, '$.b', 'wxyz', '$.c', '1');
+# 				Query OK, 0 rows affected (0.00 sec)
+#
+# 				SELECT @j, JSON_STORAGE_FREE(@j) AS Free;
+# 				+----------------------------------+----------+
+# 				| @j 										  | Free 	 |
+# 				+----------------------------------+----------+
+# 				| {"a": 10, "b": "wxyz", "c": "1"} | 0 		 |
+# 				+----------------------------------+----------+
+#
+# 			For a JSON literal, this function always returns 0:
+#
+# 				SELECT JSON_STORAGE_FREE('{"a": 10, "b": "wxyz", "c": "1"}') AS Free;
+# 				+---------------+
+# 				| Free 			 |
+# 				+---------------+
+# 				| 		0 			 |
+# 				+---------------+
+# 				1 row in set (0.00 sec)
+#
+# 		) JSON_STORAGE_SIZE(json_val)
+#
+# 			This function returns the number of bytes used to store the binary representation of a JSON
+# 			document.
+#
+# 			When the argument is a JSON column, this is the space used to store the JSON document
+# 			as it was inserted into the column, prior to any partial updates that may have been 
+# 			performed on it afterwards.
+#
+# 			json_val must be a valid JSON document or a string which can be parsed as one.
+#
+# 			In the case where it is string, the function returns the amount of storage space in
+# 			the JSON binary representation that is created by parsing the string as JSON and
+# 			converting it to binary.
+#
+# 			It returns NULL if the argument is NULL
+#
+# 			An error results when json_val is not NULL, and is not - or cannot be successfully
+# 			parsed as - a JSON document.
+#
+# 			To illustrate this function's behavior when used with a JSON column as its argument,
+# 			we create a table named jtable containing a JSON column jcol, insert a JSON value
+# 			into the table, then obtain the storage space used by this column with JSON_STORAGE_SIZE(),
+# 			as shown here:
+#
+# 				CREATE TABLE jtable (jcol JSON);
+# 				Query OK, 0 rows affected (0.42 sec)
+#
+# 				INSERT INTO jtable VALUES
+# 					('{"a": 1000, "b": "wxyz", "c": "[1, 3, 5, 7]"}');
+# 				Query OK, 1 row affected (0.04 sec)
+#
+# 				SELECT
+# 					jcol,
+# 					JSON_STORAGE_SIZE(jcol) AS Size,
+# 					JSON_STORAGE_FREE(jcol) AS Free
+# 				FROM jtable;
+# 				+------------------------------------------------+---------+------------+
+# 				| jcol 														 | Size 	  | Free 		|
+# 				+------------------------------------------------+---------+------------+
+# 				| {"a": 1000, "b": "wxyz", "c": "[1, 3, 5, 7]"}  | 	47   | 0 			|
+# 				+------------------------------------------------+---------+------------+
+# 				1 row in set (0.00 sec)
+#
+# 			According to the output of JSON_STORAGE_SIZE(), the JSON document inserted into
+# 			the column takes up 47 bytes.
+#
+# 			We also checked the amount of space freed by any previous partial updates
+# 			of the column using JSON_STORAGE_FREE(); since no updates have yet been performed,
+# 			this is 0, as expected.
+#
+# 			Next we perform an UPDATE on the table that should result in a partial update of the
+# 			document stored in jcol, and then test the result as shown here:
+#
+# 				UPDATE jtable SET jcol =
+# 						JSON_SET(jcol, "$.b", "a");
+# 				Query OK, 1 row affected (0.04 sec)
+# 				Rows matched: 1 Changed: 1 Warnings: 0
+#
+# 				SELECT
+# 					jcol,
+# 					JSON_STORAGE_SIZE(jcol) AS Size,
+# 					JSON_STORAGE_FREE(jcol) AS Free
+# 				FROM jtable;
+# 				+-------------------------------------------+---------+-------------+
+# 				| jcol 												  | Size 	| Free 		  |
+# 				+-------------------------------------------+---------+-------------+
+# 				| {"a": 1000, "b": "a", "c": "[1, 3, 5, 7]"}| 47 	   | 3 			  |
+# 				+-------------------------------------------+---------+-------------+
+# 				1 row in set (0.00 sec)
+#
+# 			The value returned by JSON_STORAGE_FREE() in the previous query indicates that
+# 			a partial update of the JSON document was performed, and that this freed 3 bytes
+# 			of space used to store it.
+#
+# 			the result returned by JSON_STORAGE_SIZE() is unchanged by the partial update
+#
+# 			Partial updates are supported for updates using JSON_SET(), JSON_REPLACE(), or
+# 			JSON_REMOVE()
+#
+# 			The direct assignment of a value to a JSON column cannot be partially updated;
+# 			following such an update, JSON_STORAGE_SIZE() always shows the storage used for
+# 			the newly-set value:
+#
+# 				UPDATE jtable
+# 					SET jcol = '{"a": 4.55, "b": "wxyz", "c": "[true, false]"}';
+# 				Query OK, 1 row affected (0.04 sec)
+# 				Rows matched: 1 Changed: 1 Warnings: 0
+#
+# 				SELECT
+# 					jcol,
+# 					JSON_STORAGE_SIZE(jcol) AS Size,
+# 					JSON_STORAGE_FREE(jcol) AS Free
+# 				FROM jtable;
+# 				+------------------------------------------------+------------+---------+
+# 				| jcol 												 		 | Size 		  | Free 	|
+# 				+------------------------------------------------+------------+---------+
+# 				| {"a": 4.55, "b": "wxyz", "c": "[true, false]"} | 56 		  | 0 		|
+# 				+------------------------------------------------+------------+---------+
+# 				1 row in set (0.00 sec)
+#
+# 			A JSON user variable cannot be partially updated.
+#
+# 			This means that this function always shows the space currently used to store
+# 			a JSON document in a user variable:
+#
+# 				SET @j = '[100, "sakila", [1, 3, 5], 425.05]';
+# 				Query OK, 0 rows affected (0.00 sec)
+#
+# 				SELECT @j, JSON_STORAGE_SIZE(@j) AS Size;
+# 				+----------------------------------------+------+
+# 				| @j 												  | Size |
+# 				+----------------------------------------+------+
+# 				| [100, "sakila", [1, 3, 5], 425.05] 	  | 45 	|
+# 				+----------------------------------------+------+
+# 				1 row in set (0.00 sec)
+#
+# 				SET @j = JSON_SET(@j, '$[1]', "json");
+# 				Query OK, 0 rows affected (0.00 sec)
+#
+# 				SELECT @j, JSON_STORAGE_SIZE(@j) AS Size;
+# 				+--------------------------------------------+--------+
+# 				| @j 												      | Size   |
+# 				+--------------------------------------------+--------+
+# 				| [100, "json", [[10, 20, 30], 3, 5], 425.05 | 56 		|
+# 				+--------------------------------------------+--------+
+# 				1 row in set (0.00 sec)
+#
+# 			For a JSON literal, this function always returns the current storage space used:
+#
+# 				SELECT
+# 					JSON_STORAGE_SIZE('[100, "sakila", [1, 3, 5], 425.05]') AS A,
+# 					JSON_STORAGE_SIZE('{"a": 1000, "b": "a", "c": "[1, 3, 5, 7]"}') AS B,
+# 					JSON_STORAGE_SIZE('{"a": 1000, "b": "wxyz", "c": "[1, 3, 5, 7]"}') AS C,
+# 					JSON_STORAGE_SIZE('[100, "json", [[10, 20, 30], 3, 5], 425.05]') AS D;
+# 				+-----+-----+-----+----+
+# 				| A 	| B 	| C 	| D  |
+# 				+-----+-----+-----+----+
+# 				| 45  | 44  | 47  | 56 |
+# 				+-----+-----+-----+----+
+# 				1 row in set (0.00 sec)
+#
+# 12.18 FUNCTIONS USED WITH GLOBAL TRANSACTION IDENTIFIERS (GTIDs)
+#
+# The functions described in this section are used with GTID-based replication.
+#
+# It is important to keep in mind that all of these functions take string representation
+# of GTID sets as arguments.
+#
+# As such, the GTID sets must always be quoted when used with them. See GTID SETS for more information.
+#
+# The union of two GTID sets is simply their representations as strings, joined together
+# with an interposed comma.
+#
+# In other words, you can define a very simple function for obtaining the union
+# of two GTID sets, similar to that created here:
+#
+# 		CREATE FUNCTION GTID_UNION(g1 TEXT, g2 TEXT)
+# 			RETURNS TEXT DETERMINISTIC
+# 			RETURN CONCAT(g1, ',', g2);
+#
+# For more information about GTIDs and how these GTID functions are used in practice,
+# see SECTION 17.1.3, "REPLICATION WITH GLOBAL TRANSACTION IDENTIFIERS"
+#
+# TABLE 12.23 GTID FUNCTIONS
+#
+# NAME 									Description
+#
+# GTID_SUBSET() 					Return true if all GTIDs in subset are also in set; otherwise, false.
+#
+# GTID_SUBTRACT() 				Return all GTIDs in set that are not in subset
+#
+# WAIT_FOR_EXECUTED_GTID_SET  Wait until the given GTIDs have executed on slave
+#
+# WAIT_UNTIL_SQL_ 				Wait until the given GTIDs have executed on slave
+# THREAD_AFTER_GTIDS()
+#
+# 		) GTID_SUBSET(set1, set2)
+#
+# 			Given two sets of global transaction identifiers set1 and set2, returns true
+# 			if all GTIDs in set1 are also in set2.
+#
+# 			Returns false otherwise.
+#
+# 			The GTID sets used with this function are represented as strings, as shown
+# 			in the following examples:
+#
+# 				SELECT GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:23',
+# 						'3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57')\G
+# 				**************************** 1. row ***************************
+# 				GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:23',
+# 					'3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57'): 1
+# 				1 row in set (0.00 sec)
+#
+# 				SELECT GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:23-25',
+# 						'3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57')\G
+# 				***************************** 1. row **************************
+# 				GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:23-25',
+# 					'3E11FA47-71CA-11E1-9E33-C80AA949562:21-57'): 1
+# 				1 row in set (0.00 sec)
+#
+# 				SELECT GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:20-25',
+# 						'3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57')\G
+# 				***************************** 1. row ***************************
+# 				GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:20-25',
+# 					'3E11FA47-71CA-11E1-9E33-C80AA94295962:21-57'): 0
+# 				1 row in set (0.00 sec)
+#
+# 		) GTID_SUBTRACT(set1, set2)
+#
+# 			Given two sets of global transaction identifiers set1 and set2, returns only
+# 			those GTIDs from set1 that are not in set2.
+#
+# 			All GTID sets used with this function are represented as strings and must be quoted,
+# 			as shown in these examples:
+#
+# 				SELECT GTID_SUBTRACT('3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57',
+# 					'3E11FA47-71CA-11E1-9E33-C80AA9429562:21')\G
+# 				******************************* 1. row *****************************
+# 				GTID_SUBTRACT('3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57',
+# 					'3E11FA47-71CA-11E1-9E33-C80AA9429562:21'): 3e11fa47-71ca-11e1-9e33-c80aa9429562:22-57
+# 				1 row in set (0.00 sec)
+#
+# 				SELECT GTID_SUBTRACT('3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57',
+# 					'3E11FA47-71CA-11E1-9E33-C80AA9429562:20-25')\G
+# 				****************************** 1. row *******************************
+# 				GTID_SUBTRACT('3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57',
+# 					'3E11FA47-71CA-11E1-9E33-C80AA9429562:20-25'): 3e11fa47-71ca-11e1-9e33-c80aa9429562:26-57
+# 				1 row in set (0.00 sec)
+#
+# 				SELECT GTID_SUBTRACT('3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57',
+# 					'3E11FA47-71CA-11E1-9E33-C80AA9429562:23-24')\G
+# 				***************************** 1. row ********************************
+# 				GTID_SUBTRACT('3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57',
+# 					'3E11FA47-71CA-11E1-9E33-C80AA9429562:23-24'): 3e11fa47-71ca-11e1-9e33-c80aa9429562:21-22:25-57
+# 				1 row in set (0.01 sec)
+#
+# 		) WAIT_FOR_EXECUTED_GTID_SET(gtid_set[, timeout])
+#
+# 			Wait until the server has applied all of the transactions whose global transaction identifier
+# 			are contained in gtid_set; that is, until the condition GTID_SUBSET(gtid_subset, @@GLOBAL.gtid_executed) holds.
+#
+# 			See SECTION 17.1.3.1, "GTID FORMAT AND STORAGE" for a definition of GTID sets.
+#
+# 			If a timeout is specified, and timeout seconds elapse before all of the transactions in the
+# 			GTID set have been applied, the function stops waiting.
+#
+# 			timeout is optional, and the default timeout is 0 seconds, in which case the funciton always
+# 			waits until all of the transactions in the GTID set have been applied.
+#
+# 			WAIT_FOR_EXECUTED_GTID_SET() monitors all the GTIDs that are applied on the server,
+# 			including transactions that arrive from all replication channels and user clients.
+#
+# 			it does not take into account whether replication channels have been started or stopped.
+#
+# 			For more information, SEE SECTION 17.1.3, "REPLICATION WITH GLOBAL TRANSACTION IDENTIFIERS"
+#
+# 			GTID sets used with this function are represented as strings and so must be quoted as shown
+# 			in the following example:
+#
+# 				SELECT WAIT_FOR_EXECUTED_GTID_SET('3E11FA47-71CA-9E33-C80AA9429562:1-5');
+# 					-> 0
+#
+# 			For a syntax description for GTID sets, see SECTION 17.1.3.1, "GTID FORMAT AND STORAGE"
+#
+# 			For WAIT_FOR_EXECUTED_GTID_SET(), the return value is the state of the query, where 0
+# 			represents success and 1 represents timeout.
+#
+# 			Any other failures generate an error.
+#
+# 			gtid_mode cannot be changed to OFF while any client is using this function to wait for
+# 			GTIDs to be applied.
+#
+# 		) WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS(gtid set[, timeout][, channel])
+#
+# 			WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS() is similar to WAIT_FOR_EXECUTED_GTID_SET() in that it
+# 			waits until all of the transactions whose global transaction identifiers are contained
+# 			in gtid_set have been applied, or until timeout seconds have elapsed, whichever comes
+# 			first.
+#
+# 			However, WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS() applies to a specific replication channel,
+# 			and stops only after the transactions have been applied on the specified channel,
+# 			for which the applier must be running.
+#
+# 			In contrast, WAIT_FOR_EXECUTED_GTID_SET() stops after the transactions have been applied,
+# 			regardless of where they were applied (on any replication channel or any user client),
+# 			and whether or not any replication channels are running.
+#
+# 			The channel option names which replication channel the function applies to.
+#
+# 			If no channel is named and no channels other than the default replication channel
+# 			exist, the function applies to the default replication channel.
+#
+# 			If multiple replication channels exist, you must specify a channel as otherwise
+# 			it is not known which replication channel the function applies to.
+#
+# 			See SECTION 17.2.3, "REPLICATION CHANNELS" for more information on replication channels.
+#
+# 				NOTE:
+#
+# 					Because WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS() applies to a specific replication channel,
+# 					if an expected transaction arrives on a different replication channel or from a 
+# 					user client, for example in a failover or manual recovery situation, the function
+# 					can hang indefinetly if no timeout is set.
+#
+# 					Use WAIT_FOR_EXECUTED_GTID_SET() instead to ensure correct handling of transactions
+# 					in these situations.
+#
+# 			GTID sets used with WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS() are represented as strings and must be
+# 			quoted in the same way as for WAIT_FOR_EXECUTED_GTID_SET()
+#
+# 			For WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS(), the return value for the function is an arbitrary
+# 			positive number.
+#
+# 			If GTID-based replication is not active (that is, if the value of the gtid_mode variable
+# 			is OFF), then this value is undefined and WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS() returns NULL.
+#
+# 			If the slave is not running then the function also returns NULL.
+#
+# 			gtid_mode cannot be changed to OFF while any client is using this function to wait for
+# 			GTIDs to be applied.
+#
+# 12.19 MYSQL ENTERPRISE ENCRYPTION FUNCTIONS
+#
+# 12.19.1 MySQL ENTERPRISE ENCRYPTION INSTALLATION
+# 12.19.2 MySQL ENTERPRISE ENCRYPTION USAGE AND EXAMPLES
+# 12.19.3 MYSQL ENTERPRISE ENCRYPTION FUNCTION REFERENCE
+# 12.19.4 MYSQL ENTERPRISE ENCRYPTION FUNCTION DESCRIPTIONS
+#
+# NOTE:
+# 		MySQL Enterprise Encryption is an extension included in MySQL Enterprise Edition,
+# 		a commercial product.
+#
+# MySQL Enterprise Edition includes a set of encryption functions based on the OpenSSL
+# library that exposes OpenSSL capabilities at the SQL level.
+#
+# These functions enable Enterprise applications to perform the following operations:
+#
+# 		) Implement added data protection using public-key asymmetric cryptography
+#
+# 		) Create public and private keys and digital signatures
+#
+# 		) Perform asymmetric encryption and decryption
+#
+# 		) Use cryptographic hashing for digital signing and data verification and validation
+#
+# MySQL Enterprise Encryption supports the RSA, DSA and DH cryptographic algorithms.
+#
+# MySQL Enterprise Encryption is supplied as a user-defined function (UDF) library, from which
+# individual functions can be installed individually.
+#
+# 12.19.1 MYSQL ENTERPPRISE ENCRYPTION INSTALLATION
+#
+# MySQL Enterprise Encryption functions are located in a user-defined function
+# (UDF) library file installed in the plugin directory (the directory named by the
+# plugin_dir system variable)
+#
+# The UDF library base name is openssl_udf and the suffix is platform dependent.
+#
+# For example, the file name on Linux or Windows is openssl_udf.so or openssl_udf.dll,
+# respectively.
+#
+# To install functions from the library file, use the CREATE_FUNCTION statement.
+#
+# To load all functions from the library, use this set of statements (adjust the file
+# name suffix as necessary):
+#
+# 		CREATE FUNCTION asymmetric_decrypt RETURNS STRING
+# 			SONAME 'openssl_udf.so';
+# 		CREATE FUNCTION asymmetric_derive RETURNS STRING
+# 			SONAME 'openssl_udf.so';
+#
+# 		CREATE FUNCTION asymmetric_encrypt RETURNS STRING
+# 			SONAME 'openssl_udf.so';
+# 		CREATE FUNCTION asymmetric_sign RETURNS STRING
+# 			SONAME 'openssl_udf.so';
+#
+# 		CREATE FUNCTION asymmetric_verify RETURNS INTEGER
+# 			SONAME 'openssl_udf.so';
+# 		CREATE FUNCTION create_asymmetric_priv_key RETURNS STRING
+# 			SONAME 'openssl_udf.so';
+#
+# 		CREATE FUNCTION create_asymmetric_pub_key RETURNS STRING
+# 			SONAME 'openssl_udf.so';
+# 		CREATE FUNCTION create_dh_parameters RETURNS STRING
+# 			SONAME 'openssl_udf.so';
+# 
+# 		CREATE FUNCTION create_digest RETURNS STRING
+# 			SONAME 'openssl_udf.so';
+#
+# Once installed, UDFs remain installed across server restarts.
+#
+# To unload UDFs, use the DROP_FUNCTION statement.
+#
+# For example, to unload the key-generation functions, do
+# this:
+#
+# 		DROP FUNCTION create_asymmetric_priv_key;
+# 		DROP FUNCTION create_asymmetric_pub_key;
+#
+# In the CREATE_FUNCTION and DROP_FUNCTION statements, the function names must be
+# specified in lowercase.
+#
+# This differs from their use at function invocation time, for which you
+# can use any lettercase.
+#
+# The CREATE_FUNCTION and DROP_FUNCTION statements require the INSERT and
+# DROP privilege, respectively, for the mysql database.
+#
+# 12.19.2 MySQL ENTERPRISE ENCRYPTION USAGE AND EXAMPLES
+#
+# To use MySQL Enterprise Encryption in applications, invoke the functions that
+# are appropriate for the operations you wish to perform.
+#
+# This section demonstrates how to carry out some representative tasks:
+#
+# 		) Create a private/public key pair using RSA encryption
+#
+# 		) Use the private key to encrypt data and the public key to decrypt it
+#
+# 		) Generate a digest from a string
+#
+# 		) Use the digest with a key pair
+#
+# 		) Create a symmetric key
+#
+# 		) Limit CPU usage by key-generation operations
+#
+# CREATE A PRIVATE/PUBLIC KEY PAIR USING RSA ENCRYPTION
+#
+# 		-- Encryption algorithm; can be 'DSA' or 'DH' instead
+# 		SET @algo = 'RSA';
+# 		-- Key length in bits; make larger for strong keys
+# 		SET @key_len = 1024;
+#
+# 		-- Create private key
+# 		SET @priv = CREATE_ASYMMETRIC_PRIV_KEY(@algo, @key_len);
+# 		-- Derive corresponding public key from private key, using same algorithm
+# 		SET @pub = CREATE_ASYMMETRIC_PUB_KEY(@algo, @priv);
+#
+# Now you can use the key pair to encrypt and decrypt data, sign and verify data,
+# or generate symmetric keys.
+#
+# USE THE PRIVATE KEY TO ENCRYPT DATA AND THE PUBLIC KEY TO DECRYPT IT
+#
+# This requires that the members of the key pair be RSA keys.
+#
+# 		SET @ciphertext = ASYMMETRIC_ENCRYPT(@algo, 'My secret text', @priv);
+# 		SET @cleartext = ASYMMETRIC_DECRYPT(@algo, @ciphertext, @pub);
+#
+# Conversely, you can encrypt using the public key and decrypt using the private key.
+#
+# 		SET @ciphertext = ASYMMETRIC_ENCRYPT(@algo, 'My secret text', @pub);
+# 		SET @cleartext = ASYMMETRIC_DECRYPT(@algo, @ciphertext, @priv);
+#
+# In either case, the algorithm specified for the encryption and decryption
+# functions must match that used to generate the keys.
+#
+# GENERATE A DIGEST FROM A STRING
+#
+# 		-- Digest type; can be 'SHA256', 'SHA384', or 'SHA512' instead
+# 		SET @dig_type = 'SHA224';
+#
+# 		-- Generate digest string
+# 		SET @dig = CREATE_DIGEST(@dig_type, 'My text to digest');
+#
+# USE THE DIGEST WITH A KEY PAIR
+#
+# The key pair can be used to sign data, then verify that the signature
+# matches the digest.
+#
+# 		-- Encryption algorithm; could be 'DSA' instead; keys must
+# 		-- have been created using same algorithm
+# 		SET @algo = 'RSA';
+#
+# 		-- Generate signature for digest and verify signature against digest
+# 		SET @sig = ASYMMETRIC_SIGN(@algo, @dig, @priv, @dig_type);
+# 		-- verify signature against digest
+# 		SET @verf = ASYMMETRIC_VERIFY(@algo, @dig, @sig, @pub, @dig_type);
+#
+# CREATE A SYMMETRIC KEY
+#
+# This requires DH private/public keys as inputs, created using a shared symmetric secret.
+#
+# Create the secret by passing the key length to CREATE_DH_PARAMETERS(), then pass
+# the secret as the "key length" to CREATE_ASYMMETRIC_PRIV_KEY()
+#
+# 		-- Generate DH shared symmetric secret
+# 		SET @dhp = CREATE_DH_PARAMETERS(1024);
+#
+# 		-- Generate DH key pairs
+# 		SET @algo = 'DH';
+# 		SET @priv1 = CREATE_ASYMMETRIC_PRIV_KEY(@algo, @dhp);
+# 		SET @pub1 = CREATE_ASYMMETRIC_PUB_KEY(@algo, @priv1);
+#
+# 		SET @priv2 = CREATE_ASYMMETRIC_PRIV_KEY(@algo, @dhp);
+# 		SET @pub2 = CREATE_ASYMMETRIC_PUB_KEY(@algo, @priv2);
+#
+# 		-- Generate symmetric key using public key of first party,
+# 		-- private key of second party
+# 		SET @sym1 = ASYMMETRIC_DERIVE(@pub1, @priv2);
+#
+# 		-- Or use public key of second party, private key of first party
+# 		SET @sym2 = ASYMMETRIC_DERIVE(@pub2, @priv1);
+#
+# Key string values can be created at runtime and stored into a variable
+# or table using SET, SELECT, or INSERT:
+#
+# 		SET @priv1 = CREATE_ASYMMETRIC_PRIV_KEY('RSA', 1024);
+# 		SELECT CREATE_ASYMMETRIC_PRIV_KEY('RSA', 1024) INTO @priv2;
+# 		INSERT INTO t (key_col) VALUES(CREATE_ASYMMETRIC_PRIV_KEY('RSA', 1024));
+#
+# Key string values stored in files can be read using the LOAD_FILE() function by users
+# who have the FILE privilege.
+#
+# Digest and signature strings can be handled similarly
+#
+# LIMIT CPU USAGE BY KEY-GENERATION OPERATIONS
+#
+# The CREATE_ASYMMETRIC_PRIV_KEY() and CREATE_DH_PARAMETERS() encryption functions
+# take a key-length parameter, and the amount of CPU resources required by these functions
+# increases as the key length increases.
+#
+# For some installations, this might result in unacceptable CPU usage if applications
+# frequently generate excessively long keys.
+#
+# OpenSSL imposes a minimum key length of 1,024 bits for all keys.
+#
+# OpenSSL also imposes a maximum key length of 10,000 bits and 16,384 bits
+# for DSA and RSA keys, respetively, for CREATE_ASYMMETRIC_PRIV_KEY(), and
+# a maximum key length of 10,000 bits for CREATE_DH_PARAMETERS()
+#
+# If those maximum values are too high, three environment variables are available
+# to enable MySQL server administrators to set lower maximum lengths for key generation,
+# and thereby to limit CPU usage:
+#
+# 		) MySQL_OPENSSL_UDF_DSA_BITS_THRESHOLD: Maximum DSA key length in bits for 
+# 			CREATE_ASYMMETRIC_PRIV_KEY() 
+#
+# 			The minimum and maximum values for this variable are 1,024 and 10,000
+#
+# 		) MySQL_OPENSSL_UDF_RSA_BITS_THRESHOLD: Maximum RSA key length in bits for
+# 			CREATE_ASYMMETRIC_PRIV_KEY()
+#
+# 			The minimum and maximum values for this variable are 1,024 and 16,384
+#
+# 		) MySQL_OPENSSL_UDF_DH_BITS_THRESHOLD: Maximum key length in bits for 
+# 			CREATE_DH_PARAMETERS()
+#
+# 			The minimum and maximum values for this variable are 1,024 and 10,100
+#
+# To use any of these environment variables, set them in the environment of the process
+# that starts the server.
+#
+# If set, their values take precedence over the maximum key lengths imposed by OpenSSL.
+#
+# For example, to set a maximum key length of 4,096 bits for DSA and RSA keys for
+# CREATE_ASYMMETRIC_PRIV_KEY(), set these variables:
+#
+# 		export MySQL_OPENSSL_UDF_DSA_BITS_THRESHOLD=4096
+# 		export MySQL_OPENSSL_UDF_RSA_BITS_THRESHOLD=4096
+#
+# The example uses Bourne shell syntax. The syntax for other shells may difer.
+#
+# 12.19.3 MySQL ENTERPRISE ENCRYPTION FUNCTION REFERENCE
+#
+# TABLE 12.24 MySQL ENTERPRISE ENCRYPTION FUNCTIONS
+#
+# 		NAME 							Description
+#
+# ASYMMETRIC_DECRYPT() 			Decrypt ciphertext using private or public key
+#
+# ASYMMETRIC_DERIVE() 			Derive symmetric key from asymmetric keys
+#
+# ASYMMETRIC_ENCRYPT() 			Encrypt cleartext using private or public key
+#
+# ASYMMETRIC_SIGN() 				Generate signature from digest
+#
+# ASYMMETRIC_VERIFY() 			Verify that signature matches digest
+#
+# CREATE_ASYMMETRIC_PRIV_KEY() Create private key
+#
+# CREATE_ASYMMETRIC_PUB_KEY() Create public key
+#
+# CREATE_DH_PARAMETERS() 		Generate shared DH secret
+#
+# CREATE_DIGEST() 				Generate digest from string
+#
+# 12.19.4 MYSQL ENTERPRISE ENCRYPTION FUNCTION DESCRIPTIONS
+#
+# MySQL Enterprise Encryption functions have these general characteristics:
+#
+# 		) For arguments of the wrong type or an incorrect number of arguments, each function returns an error
+#
+# 		) If the arguments are not suitable to permit a function to perform the requested operation, it returns
+# 			NULL or 0 as appropriate.
+#
+# 			This occurs, for example, if a function does not support a specific algorithm, a key length
+# 			is too short or too long, or a string expected to be a key string in PEM format is not a valid
+# 			key.
+#
+# 			(OpenSSL imposes its own key-length limits, and server administrators can impose additional limits
+# 			on maximum key length by setting environment variables.
+#
+# 			See SECTION 12.19.2, "MYSQL ENTERPRISE ENCRYPTION USAGE AND EXAMPLES"
+#
+# 		) The underlying SSL library takes care of randomness initialization
+#
+# Several of the functions take an encryption algorithm argument.
+#
+# The following table summarizes the supported algorithms by function.
+#
+# TABLE 12.25 SUPPORTED ALGORITHMS BY FUNCTION
+#
+# 		FUNCTION 					SUPPORTED ALGORITHMS
+#
+# ASYMMETRIC_DECRYPT() 				RSA
+#
+# ASYMMETRIC_DERIVE() 				DH
+#
+# ASYMMETRIC_ENCRYPT() 				RSA
+#
+# ASYMMETRIC_SIGN() 					RSA, DSA
+#
+# ASYMMETRIC_VERIFY() 				RSA, DSA
+#
+# CREATE_ASYMMETRIC_PRIV_KEY() 	RSA, DSA, DH
+#
+# CREATE_ASYMMETRIC_PUB_KEY() 	RSA, DSA, DH
+#
+# CREATE_DH_PARAMETERS() 			DH
+#
+# NOTE:
+#
+# 		Although you can create keys using any of the RSA, DSA or DH encryption
+# 		algorithms, other functions that take key arguments might accept only
+# 		certain types of keys.
+#
+# 		For example, ASYMMETRIC_ENCRYPT() and ASYMMETRIC_DECRYPT() accept only RSA keys
+#
+# The following descriptions describe the calling sequences for MySQL Enterprise Encryption
+# functions.
+#
+# For additional examples and discussion, see SECTION 12.19.2, "MySQL ENTERPRISE ENCRYPTION USAGE AND EXAMPLES"
+#
+# 		) ASYMMETRIC_DECRYPT(algorithm, crypt_str, key_str)
+#
+# 			Decrypts an encrypted string using the given algorithm and key string, and returns the resulting
+# 			cleartext as a binary string. If decryption fails, the result is NULL.
+#
+# 			key_str must be a valid key string in PEM format.
+#
+# 			For successful decryption, it must be the public or private key string
+# 			corresponding to the private or public key string used with the
+# 			ASYMMETRIC_ENCRYPT() to produce the encrypted string.
+#
+# 			algorithm indicates the encryption algorithm used to create the key.
+#
+# 			Supported algorithm values: 'RSA'
+#
+# 			For a usage example, see the description of ASYMMETRIC_ENCRYPT()
+#
+# 		) ASYMMETRIC_DERIVE(pub key str, priv key str)
+#
+# 			Derives a symmetric key using the private key of one party and the public
+# 			key of another, and returns the resulting key as a binary string.
+#
+# 			If key derivation fails, the result is NULL
+#
+# 			pub_key_str and priv_key_str must be valid key strings in PEM format.
+#
+# 			They must be created using the DH algorithm.
+#
+# 			Suppose that you have  two pairs of public and private keys:
+#
+# 				SET @dhp = CREATE_DH_PARAMETERS(1024);
+# 				SET @priv1 = CREATE_ASYMMETRIC_PRIV_KEY('DH', @dhp);
+#
+# 				SET @pub1 = CREATE_ASYMMETRIC_PUB_KEY('DH', @priv1);
+# 				SET @priv2 = CREATE_ASYMMETRIC_PRIV_KEY('DH', @dhp);
+#
+# 				SET @pub2 = CREATE_ASYMMETRIC_PUB_KEY('DH', @priv2);
+#
+# 			Suppose further that you use the private key from one pair and the public key
+# 			from the other pair to create a symmetric key string.
+#
+# 			Then this symmetric key identity relationship holds:
+#
+# 				ASYMMETRIC_DERIVE(@pub1, @priv2) = ASYMMETRIC_DERIVE(@pub2, @priv1)
+#
+# 		) ASYMMETRIC_ENCRYPT(algorithm, str, key_str)
+#
+# 			Encrypts a string using the given algorithm and key string, and returns
+# 			the resulting ciphertext as a binary string.
+#
+# 			If encryption fails, the result is NULL
+#
+# 			The str length cannot be greater than the key_str length - 11, in bytes
+#
+# 			key_str must be a valid key string in PEM format. algorithm indicates
+# 			the encryption algorithm used to create the key.
+#
+# 			Supported algorithm values: 'RSA'
+#
+# 			To encrypt a string, pass a private or public key string to ASYMMETRIC_ENCRYPT()
+#
+# 			To recover the original unencrypted string, pass the encrypted string to
+# 			ASYMMETRIC_DECRYPT(), along with the public or private key string corresponding
+# 			to the private or public key string used for encryption.
+#
+# 				-- Generate private/public key pair
+# 				SET @priv = CREATE_ASYMMETRIC_PRIV_KEY('RSA', 1024);
+# 				SET @pub = CREATE_ASYMMETRIC_PUB_KEY('RSA', @priv);
+#
+# 				-- Encrypt using private key, decrypt using public key
+# 				SET @ciphertext = ASYMMETRIC_ENCRYPT('RSA', 'The quick brown fox', @priv);
+# 				SET @cleartext = ASYMMETRIC_DECRYPT('RSA', @ciphertext, @pub);
+#
+# 				-- Encrypt using public key, decrypt using private key
+# 				SET @ciphertext = ASYMMETRIC_ENCRYPT('RSA', 'The quick brown fox', @pub);
+# 				SET @cleartext = ASYMMETRIC_DECRYPT('RSA', @ciphertext, @priv);
+#
+# 			Suppose that:
+#
+# 				SET @s = a string to be encrypted
+# 				SET @priv = a valid private RSA key string in PEM format
+# 				SET @pub = the corresponding public RSA key string in PEM format
+#
+# 			Then these identity relationships hold:
+#
+# 				ASYMMETRIC_DECRYPT('RSA', ASYMMETRIC_ENCRYPT('RSA', @s, @priv), @pub) = @s
+# 				ASYMMETRIC_DECRYPT('RSA', ASYMMETRIC_ENCRYPT('RSA', @s, @pub), @priv) = @s
+#
+# 		) ASYMMETRIC_SIGN(algorithm, digest str, priv key str, digest type)
+#
+# 			Signs a digest string using a private key string, and returns the signature
+# 			as a binary string.
+#
+# 			If signing fails, the result is NULL
+#
+# 			digest_str is the digest string. It can be generated by calling CREATE_DIGEST().
+#
+# 			digest_type indicates the digest algorithm used to generate the digest string
+#
+# 			priv_key_str is the private key string to use for signing the digest string.
+# 			It must be a valid key string in PEM format.
+#
+# 			algorithm indicates the encryption algorithm used to create the key.
+#
+# 			Supported algorithm values: 'RSA', 'DSA'
+#
+# 			Supported digest_type values: 'SHA224', 'SHA384', 'SHA512'
+#
+# 			For a usage example, see the description of ASYMMETRIC_VERIFY()
+#
+# 		) ASYMMETRIC_VERIFY(algorithm, digest_str, sig_str, pub_key_str, digest_type)
+#
+# 			Verifies whether the signature string matches the digest string, and returns
+# 			1 or 0 to indicate whether verification succeeded or failed.
+#
+# 			digest_str is the digest string. It can be generated by calling CREATE_DIGEST()
+#
+# 			digest_type indicates the digest algorithm used to generate the digest string.
+#
+# 			sig_str is the signature string. It can be generated by calling ASYMMETRIC_SIGN()
+#
+# 			pub_key_str is the public key string of the signer.
+#
+# 			It corresponds to the private key passed to ASYMMETRIC_SIGN() to generate the signature
+# 			string and must be a valid key string in PEM format
+#
+# 			algorithm indicates the encryption algorithm used to create the key
+#
+# 			Supported algorithm values: 'RSA', 'DSA'
+#
+# 			Supported digest_type values: 'SHA224', 'SHA256', 'SHA384', 'SHA512'
+#
+# 				-- Set the encryption algorithm and digest type
+# 				SET @algo = 'RSA';
+# 				SET @dig_type = 'SHA224';
+#
+# 				-- Create private/public key pair
+# 				SET @priv = CREATE_ASYMMETRIC_PRIV_KEY(@algo, 1024);
+# 				SET @pub = CREATE_ASYMMETRIC_PUB_KEY(@algo, @priv);
+#
+# 				--- Generate digest from string
+# 				SET @dig = CREATE_DIGEST(@dig_type, 'The quick bornw fox');
+#
+# 				-- generate signature for digest and verify signature against digest
+# 				SET @sig = ASYMMETRIC_SIGN(@algo, @dig, @priv, @dig_type);
+# 				SET @verf = ASYMMETRIC_VERIFY(@algo, @dig, @sig, @pub, @dig_type);
+#
+# 		) CREATE_ASYMMETRIC_PRIV_KEY(algorithm, {key len|dh secret})
+#
+# 			Creates a private key using the given algorithm and key length or DH secret,
+# 			and returns the key as a binary string in PEM format.
+#
+# 			If key generation fails, the result is NULL
+#
+# 			Supported algorithm values: 'RSA', 'DSA', 'DH'
+#
+# 			Supported key_len values: The minimum key length in bits is 1,024
+#
+# 			THe maximum key length depends on the algorithm: 16,384 for RSA and
+# 			10,000 for DSA.
+#
+# 			These key-length limits are constraints imposed by OpenSSL.
+#
+# 			Server administrators can impose additional limits on maximum key length
+# 			by setting environment variables.
+#
+# 			see SECTION 12.19.2, "MYSQL ENTERPRISE USAGE AND EXAMPLES"
+#
+# 			For DH keys, pass a shared DH secret instead of a key length.
+#
+# 			To create the secret, pass the key length to CREATE_DH_PARAMETERS()
+#
+# 			This example creates a 2,048-bit DSA private key, then derives a public key
+# 			from the private key:
+#
+# 				SET @priv = CREATE_ASYMMETRIC_PRIV_KEY('DSA', 2048);
+# 				SET @pub = CREATE_ASYMMETRIC_PUB_KEY('DSA', @priv);
+#
+# 			For an example showing DH key generation, see the description of ASYMMETRIC_DERIVE()
+#
+# 			Some general considerations in choosing key lengths and encryption algorithms:
+#
+# 				) The strength of encryption for private and public keys increases with the key size,
+# 					but the time for key generation increases as well
+#
+# 				) Generation of DH keys takes much longer than RSA or RSA keys
+#
+# 				) Asymmetric encryption functions are slower than symmetric functions.
+#
+# 					If performance is an important factor and the functions are to be used
+# 					very frequently, you are better off using symmetric encryption.
+#
+# 					For example, consider using AES_ENCRYPT() and AES_DECRYPT()
+#
+# 		) CREATE_ASYMMETRIC_PUB_KEY(algorithm, priv_key_str)
+#
+# 			Derives a public key from the given private key using the given algorithm,
+# 			and returns the key as a binary string in PEM format.
+#
+# 			If key derivation fails, teh result is NULL
+#
+# 			priv_key_str must be a valid key string in PEM format.
+# 			algorithm indicates the encryption algorithm used to create the key.
+#
+# 			Supported algorithm values: 'RSA', 'DSA', 'DH'
+#
+# 			For a usage example, see the description of CREATE_ASYMMETRIC_PRIV_KEY()
+#
+# 		) CREATE_DH_PARAMETERS(key_len)
+#
+# 			Creates a shared secret for generating a DH private/public key pair and returns
+# 			a binary string that can be passed to CREATE_ASYMMETRIC_PRIV_KEY()
+#
+# 			If secret generation fails, the result is null
+#
+# 			Supported key_len values: The minimum and maximum key lengths in bits are
+# 			1,024 and 10,000
+#
+# 			These key-length limits are constraints imposed by OpenSSL.
+#
+# 			Server administrators can impose additional limits on maximum key length
+# 			by setting environment variables.
+#
+# 			See SECTION 12.19.2, "MySQL ENTERPRISE ENCRYPTION USAGE AND EXAMPLES"
+#
+# 			For an example showing how to use the return value for generating symmetric keys,
+# 			see the description of ASYMMETRIC_DERIVE()
+#
+# 				SET @dhp = CREATE_DH_PARAMETERS(1024);
+#
+# 		) CREATE_DIGEST(digest type, str)
+#
+# 			Creates a digest from the given string using the given digest type, and returns the
+# 			digest as a binary string.
+#
+# 			If digest generation fails, the result is NULL 
+#
+# 			Supported digest_type values: 'SHA224', 'SHA256', 'SHA384', 'SHA512'
+#
+# 				SET @dig = CREATE_DIGEST('SHA512', The quick brown fox');
+# 	
+# 			The resulting digest string is suitable for use with ASYMMETRIC_SIGN()
+# 			and ASYMMETRIC_VERIFY()
+#
+# 12.20 AGGREGATE (GROUP BY) FUNCTIONS
+#
+# 12.20.1 AGGREGATE (GROUP BY) FUNCTION DESCRIPTIONS
+# 12.20.2 GROUP BY MODIFIERS
+# 12.20.3 MySQL HANDLING OF GROUP BY
+# 12.20.4 DETECTION OF FUNCTIONAL DEPENDENCE
+#
+# 12.20.1 AGGREGATE (GROUP BY) FUNCTION DESCRIPTIONS
+#
+# This section describes group (aggregate) functions that operate on sets of values.
+#
+# TABLE 12.26 AGGREGATE (GROUP BY) FUNCTIONS
+#
+# Name 				Desc
+#
+# AVG() 				Return the average value of the argument
+#
+# BIT_AND() 		Return bitwise AND
+#
+# BIT_OR() 			Return bitwise OR
+#
+# BIT_XOR() 		Return bitwise XOR
+#
+# COUNT() 			Return a count of the number of rows returned
+#
+# COUNT(DISTINCT) Return the count of a number of different values
+#
+# GROUP_CONCAT() 	Return a concatenated string
+#
+# JSON_ARRAYAGG() Return result set as a single JSON array
+#
+# JSON_OBJECTAGG() Return result set as a single JSON object
+#
+# MAX() 				Return the maximum value
+#
+# MIN() 				Return the minimum value
+#
+# STD() 				Return the pop standard deviation
+#
+# STDDEV() 			Return the pop standard deviation
+#
+# STDDEV_POP() 	Return the pop standard deviation
+#
+# STDDEV_SAMP() 	Return the sample standard deviation
+#
+# SUM() 				Return the sum
+#
+# VAR_POP() 		Return the population standard variance
+#
+# VAR_SAMP() 		Return the sample variance
+#
+# VARIANCE() 		Return the population standard variance
+#
+# Unless otherwise stated, group functions ignore NULL values.
+#
+# If you use a group function in a statement containing no GROUP BY clause,
+# it is equivalent to grouping on all rows.
+#
+# For more information, see SECTION 12.20.3, "MYSQL HANDLING OF GROUP BY"
+#
+# Most aggregate functions can be used as window functions.
+#
+# Those that can be used this way are signified in their syntax description
+# by [over_clause], representing an optional OVER clause.
+#
+# over_clause is described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX",
+# which also includes other information about window function usage.
+#
+# For numeric arguments, the variance and standard deviation functions return a 
+# DOUBLE value.
+#
+# The SUM() and AVG() functions return a DECIMAL value for exact-value arguments
+# (integer or DECIMAL), and a DOUBLE value for approximate-value arguments
+# (FLOAT or DOUBLE)
+#
+# The SUM() and AVG() aggregate functions do not work with temporal values.
+#
+# (They convert the values to numbers, losing everything after the first nonnumeric
+# character)
+#
+# To work around this, convert to numeric units, perform the aggregate operation,
+# and convert back to a temporal value.
+#
+# Examples:
+#
+# 		SELECT SEC_TO_TIME(SUM(TIME_TO_SEC(time_col))) FROM tbl_name;
+# 		SELECT FROM_DAYS(SUM(TO_DAYS(date_col))) FROM tbl_name;
+#
+# Functions such as SUM() or AVG() that expect a numeric argument cast the argument
+# to a number if necessary.
+#
+# For SET or ENUM values, the cast operation causes the underlying numeric value
+# to be used.
+#
+# The BIT_AND(), BIT_OR() and BIT_XOR() aggregate functions perform bit operations.
+#
+# Prior to MySQL 8.0, bit functions and operators required BIGINT(64-bit integer)
+# arguments and returned BIGINT values, so they had a maximum range of 64 bits.
+#
+# Non-BIGINT arguments were converted to BIGINT prior to performing the operation
+# and truncation could occur.
+#
+# In MySQL 8.0, bit functions and operators permit binary string type arguments
+# (BINARY, VARBINARY, and the BLOB types) and return a value of like type, which
+# enables them to take arguments and produce return values larger than 64 bits.
+#
+# For discussion about argument evaluation and result types for bit operations,
+# see the introductory discussion in SECTION 12.12, "BIT FUNCTIONS AND OPERATORS"
+#
+# 		) AVG([DISTINCT] expr) [over clause]
+#
+# 			Returns the average value of expr. The DISTINCT option can be used to return
+# 			the average of the distinct values of expr.
+#
+# 			If there are no matching rows, AVG() returns NULL
+#
+# 			This function executes as a window function if over_clause is present.
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX";
+# 			it cannot be used with DISTINCT.
+#
+# 				SELECT student_name, AVG(test_score)
+# 				FROM student
+# 				GROUP BY student_name;
+#
+# 		) BIT_AND(expr) [over_clause]
+#
+# 			Returns the bitwise AND of all bits in expr
+#
+# 			The result type depends on whether the function argument values are evaluated
+# 			as binary strings or numbers:
+#
+# 				) Binary-string evaluation occurs when the argument values have a binary string type,
+# 					and the argument is not a hexadecimal literal, bit literal, or NULL literal.
+#
+# 					Numeric evaluation occurs otherwise, with argument value conversion to unsigned
+# 					64-bit integers as necessary
+#
+# 				) Binary-string evaluation produces a binary string of the same length as the argument values.
+#
+# 					If argument values have unequal lengths, an ER_INVALID_BITWISE_OPERANDS_SIZE error occurs.
+#
+# 					If the argument size exceeds 511 bytes, an ER_INVALID_BITWISE_AGGREGATE_OPERANDS_SIZE error occurs.
+#
+# 					Numeric evaluation produces an unsigned 64-bit integer
+#
+# 			If there are no matching rows, BIT_AND() returns a neutral value (all bits set to 1) having the same length
+# 			as the argument values.
+#
+# 			NULL values do not affect the result unless all values are NULL.
+#
+# 			In that case, the result is a neutral value having the same length as the argument values.
+#
+# 			For more information discussion about argument evaluation and result types, see the intro
+# 			discussion in SECTION 12.12, "BIT FUNCTIONS AND OPERATORS"
+#
+# 			As of MySQL 8.0.12, this function executes as a window function if over_clause is present.
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX"
+#
+# 		) BIT_OR(expr) [over clause]
+#
+# 			Returns the bitwise OR of all bits in expr.
+#
+# 			The result type depends on whether the function argument values are evaluated
+# 			as binary strings or numbers:
+#
+# 				) Binary-string evaluation occurs when the argument values have a binary string type,
+# 					and the argument is not a hexadecimal literal, bit literal or NULL literal.
+#
+# 					Numeric evaluation occurs otherwise, with argument value conversion to unsigned
+# 					64-bit integers as necessary
+#
+# 				) Binary-string evaluation produces a binary string of the same length as the argument values.
+#
+# 					If argument values have unequal lengths, an ER_INVALID_BITWISE_OPERANDS_SIZE error occurs.
+#
+# 					If the argument size exceeds 511 bytes, an ER_INVALID_BITWISE_AGGREGATE_OPERANDS_SIZE
+# 					error occurs.
+#
+# 					Numeric evaluation produces an unsigned 64-bit integer
+#
+# 			If there are no matching rows, BIT_OR() returns a neutral value (all bits set to 0) having
+# 			the same length as the argument values.
+#
+# 			NULL values do not affect the result unless all values are NULL.
+#
+# 			In that case, the result is a neutral value having the same length as the argument values.
+#
+# 			For more information discussions about argument evaluation and result types, see the intro
+# 			discussion in SECTION 12.12, "BIT FUNCTIONS AND OPERATORS"
+#
+# 			As of MySQL 8.0.12, this function executes as a window function if over_clause is present.
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX"
+#
+# 		) BIT_XOR(expr)_[over_clause]
+#
+# 			Returns the bitwise XOR of all bits in expr
+#
+# 			The result type depends on whether the function argument values are evaluated
+# 			as binary strings or numbers:
+#
+# 				) Binary-string evaluation occurs when the argument values have a binary string type,
+# 					and the argument is not a hexadecimal literal, bit literal or NULL literal
+#
+# 					Numeric evaluation occurs otherwise, with argument value conversion to unsigned
+# 					64-bit integers as necessary.
+#
+# 				) Binary-string evaluation produces a binary string of the same length as the
+# 					argument values.
+#
+# 					If argument values have unequal lengths, an ER_INVALID_BITWISE_OPERANDS_SIZE
+# 					error occurs.
+#
+# 					If the argument size exceeds 511 bytes, an ER_INVALID_BITWISE_AGGREGATE_OPERANDS_SIZE
+# 					error occurs.
+#
+# 					Numeric evaluation produces an unsigned 64-bit integer
+#
+# 			If there are no matching rows, BIT_XOR() returns a neutral value (all bits set to 0) having the same
+# 			length as the argument values.
+#
+# 			NULL values do not affect the result unless all values are NULL.
+#
+# 			In that case, the result is a neutral value having the same length as the argument values.
+#
+# 			For more information discussion about argument evaluation and result types, see the intro discussion
+# 			in SECTION 12.12, "BIT FUNCTIONS AND OPERATORS"
+#
+# 			As of MySQL 8.0.12, this function executes as a window function if over_clause is present.
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX"
+#
+# 		) COUNT(expr)_[over_clause]
+#
+# 			Returns a count of the number of non-NULL values of expr in the rows retrieved by a
+# 			SELECT statement.
+#
+# 			The result is a BIGINT value.
+#
+# 			If there are no matching rows, COUNT() returns 0
+#
+# 			This function executes as a window function if over_clause is present.
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX"
+#
+# 				SELECT student.student_name,COUNT(*)
+# 				FROM student, course
+# 				WHERE student.student_id=course.student_id
+# 				GROUP BY student_name;
+#
+# 			COUNT(*) is somewhat different in that it returns a count of the number of rows
+# 			retrieved, whether or not they contain NULL values.
+#
+# 			For transactional storage engines suchh as InnoDB, storing an exact row count
+# 			is problematic.
+#
+# 			Multiple transactions may be occurring at the same time, each of which
+# 			may affect the count.
+#
+# 			InnoDB does not keep an internal count of rows in a table because concurrent
+# 			transactions might "see" differnet number of rows at the same time.
+#
+# 			Consequently, SELECT  COUNT(*) statements only count rows visible to the current transaction.
+#
+# 			As of MySQL 8.0.13, SELECT COUNT(*) FROM tbl_name query performance for InnoDB
+# 			tables is optimized for single-threaded workloads if there are no extra
+# 			clauses such as WHERE or GROUP BY
+#
+# 			InnoDB processes SELECT COUNT(*) statements by traversing the smallest available
+# 			secondary index unless an index or optimizer hint directs the optimizer to use a
+# 			different index.
+#
+# 			If a secondary index is not present, InnoDB processes SELECT COUNT(*) statements
+# 			by scanning the clustered index.
+#
+# 			As of MySQL 8.0.14, InnoDB supports parallel index reads, which improves performance
+# 			of non-locking SELECT COUNT(*) FROM tbl_name queries.
+#
+# 			The innodb_parallel_read_threads session variable must be set to a value greater than
+# 			1 for parallel index reads to occur.
+#
+# 			The default value is 4.
+#
+# 			The actual number of threads used to perform a parallel index read is determined by the
+# 			innodb_parallel_read_threads setting or the number of index subtrees to scan,
+# 			whichever is smaller.
+#
+# 			The pages read into the buffer pool during the scan are kept at the tail of the buffer
+# 			pool LRU list so that they can be discarded quickly when free buffer pool pages
+# 			are required.
+#
+# 			Processing SELECT COUNT(*) statements takes some time if index records are not entirely
+# 			in the buffer pool.
+#
+# 			For a faster count, create a counter table and let your application update it according
+# 			to the inserts and deletes it does.
+#
+# 			However, this method may not scale well in situations where thousands of concurrent transactions
+# 			are initiating updates to the same counter table.
+#
+# 			If an approximate row count is sufficient, use SHOW_TABLE_STATUS.
+#
+# 			InnoDB handles SELECT COUNT(*) and SELECT COUNT(1) operations in the same way.
+#
+# 			There is no performance difference.
+#
+# 			For MyISAM tables, COUNT(*) is optimized to return very quickly if the SELECT retrieves
+# 			from one table, no other columns are retrieved - and there is no WHERE clause.
+#
+# 			For example:
+#
+# 				SELECT COUNT(*) FROM student;
+#
+# 			This optimization only applies to MyISAM tables, because an exact row count is stored
+# 			for this storage engine and can be accessed very quickly.
+#
+# 			COUNT(1) is only subject to the same optimization if hte first column is defined
+# 			as NOT NULL.
+#
+# 		) COUNT(DISTINCT expr, [expr ---])
+#
+# 			Returns a count of the number of rows with different non-NULL expr values.
+#
+# 			If there are no matching rows, COUNT(DISTINCT) returns 0
+#
+# 				SELECT COUNT(DISTINCT results) FROM student;
+#
+# 			In MySQL, you can obtain the number of distinct expression combinations that do not contain
+# 			NULL by giving a list of expressions.
+#
+# 			In standard SQL, you would have to do a concatenation of all expressions
+# 			inside COUNT(DISTINCT ---)
+#
+# 		) GROUP_CONCAT(expr)
+#
+# 			This function returns a string result with the concatenated non-NULL values from a group.
+#
+# 			It returns NULL if there are no non-NULL values. The full syntax is as follows:
+#
+# 				GROUP_CONCAT([DISTINCT] expr [, expr ---]
+# 								[ORDER BY {unsigned_integer | col_name | expr}
+# 									[ASC |DESC] [,col_name ---]]
+# 								[SEPARATOR str_val])
+#
+# 				SELECT student_name,
+# 					GROUP_CONCAT(test_score),
+# 				FROM student
+# 				GROUP BY student_name;
+#
+# 				OR
+#
+# 				SELECT student_name,
+# 					GROUP_CONCAT(DISTINCT test_score,
+# 									ORDER BY test_score DESC SEPARATOR ' ')
+# 				FROM student
+# 				GROUP BY student_name;
+#
+# 			In MySQL, you can get the concatenated values of expression combinations.
+#
+# 			To eliminate duplicate values, use the DISTINCT clause.
+#
+# 			To sort values in the result, use the ORDER BY clause. To sort in reversed order,
+# 			add the DESC (descending) keyword to the name of the column you are sorting by in
+# 			the ORDER BY clause.
+#
+# 			The default is ascending order; this may be specified explicitly using the ASC keyword.
+#
+# 			The default separator between values in a group is comma (,)
+#
+# 			To specify a separator explicitly, use SEPARATOR followed by the string literal value
+# 			that should be inserted between group values.
+#
+# 			TO eliminate the separator altogether, specify SEPARATOR ''
+#
+# 			The result is truncated to the maximum length that is given by the
+# 			group_concat_max_len system variable, which has a default value of 1024.
+#
+# 			THe value can be set higher, although the effective maximum length
+# 			is constraned by the value of max_allowed_packet.
+#
+# 			The syntax to change the value of group_concat_max_len at runtime is as
+# 			follows, where val is an unsigned integer:
+#
+# 				SET [GLOBAL | SESSION] group_concat_max_len = val;
+#
+# 			The return value is a nonbinary or binary string, depending on whether the
+# 			arguments are nonbinary or binary strings.
+#
+# 			The result type is TEXT or BLOB unless group_concat_max_len is less
+# 			than or equal to 512, in which case the result type is VARCHAR or
+# 			VARBINARY.
+#
+# 			See also CONCAT() and CONCAT_WS(): SECTION 12.5, "STRING FUNCTIONS"
+#
+# 		) JSON_ARRAYAGG(col or expr) [over clause]
+#
+# 			Aggregates a result set as a single JSON array whose elements consists of the rows.
+#
+# 			The order of elements in this array is undefuned.
+#
+# 			The function acts on a column or an expression that evaluates
+# 			to a single value. Returns NULL if the result contains no rows,
+# 			or in the event of an error.
+#
+# 			As of MySQL 8.0.14, this function executes as a window function if over_clause
+# 			is present
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTIONS CONCEPTS AND SYNTAX"
+#
+# 				SELECT o_id, attribute, value FROM t3;
+# 				+-------+---------------+---------+
+# 				| o_id  | attribute 	   | value   |
+# 				+-------+---------------+---------+
+# 				| 2 	  | color 			| red 	 |
+# 				| 2 	  | fabric 			| silk 	 |
+# 				| 3 	  | color 			| green 	 |
+# 				| 3 	  | shape 			| square  |
+# 				+-------+---------------+---------+
+# 				4 rows in set (0.00 sec)
+#
+# 				SELECT o_id, JSON_ARRAYAGG(attribute) AS attributes
+# 				FROM t3 GROUP BY o_id;
+# 				+---------+-----------------------+
+# 				| o_id 	 | attributes 				 |
+# 				+---------+-----------------------+
+# 				| 2 		 | ["color", "fabric"] 	 |
+# 				| 3 		 | ["color", "shape"] 	 |
+# 				+---------+-----------------------+
+# 				2 rows in set (0.00 sec)
+#
+# 		) JSON_OBJECTAGG(key, value) [over_clause]
+#
+# 			Takes two column names or expressions as arguments, the first of these being used
+# 			as a key and the second as a value, and returns a JSON object containing key-value
+# 			pairs.
+#
+# 			Returns NULL if the result contains no rows, or in the event of an error.
+#
+# 			An error occurs if any key name is NULL or the number of arguments is not equal to
+# 			2.
+#
+# 			As of MySQL 8.0.14, this function executes as a window function if over_clause is
+# 			present.
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX"
+#
+# 			When used as a window function, if there are duplicate keys within a frame, only the 
+# 			last value for the key is present in the result.
+#
+# 			This is in keeping with the MySQL JSON data type specificaiton that does not permit
+# 			duplicate keys.
+#
+# 			When parsing text values as JSON, the value for the last occurring key is retained,
+# 			and any earlier values are discarded.
+#
+# 			The value for the key from last row in the frame is deterministic if the ORDER BY
+# 			specification guarantees that the values have a specific order.
+#
+# 			If not, the resulting value of the key is nondeterministic:
+#
+# 				SELECT o_id, attribute, value FROM t3;
+# 				+--------+--------------+----------+
+# 				| o_id 	| attribute 	| value 	  |
+# 				+--------+--------------+----------+
+# 				| 2 		| color 			| red 	  |
+# 				| 2 		| fabric 		| silk 	  |
+# 				| 3 		| color 			| green 	  |
+# 				| 3 		| shape 			| square   |
+# 				+--------+--------------+----------+
+# 				4 rows in set (0.00 sec)
+#
+# 				SELECT o_id, JSON_OBJECTAGG(attribute, value) FROM t3 GROUP BY o_id;
+# 				+--------+-----------------------------------------+
+# 				| o_id 	| JSON_OBJECTAGG(attribute, name) 			|
+# 				+--------+-----------------------------------------+
+# 				| 2 		| {"color": "red", "fabric": "silk"} 	   |
+# 				| 3 		| {"color": "green", "shape": "square"}   |
+# 				+--------+-----------------------------------------+
+# 				1 row in set (0.00 sec)
+#
+# 			DUPLICATE KEY HANDLING:
+#
+# 				When the result of this function is normalized, values having duplicate keys
+# 				are discarded, and only the last value encountered is used with that key
+# 				in the returned object ("last duplicate key wins")
+#
+# 				This means that the result of using this function on columns from a SELECT
+# 				can depend on the order in which in the rows are returned, which is not guaranteed.
+#
+# 				Consider the following:
+#
+# 			CREATE TABLE t(c VARCHAR(10), i INT);
+# 			Query OK, 0 rows affected (0.33 sec)
+#
+# 			INSERT INTO t VALUES ('key', 3), ('key', 4), ('key', 5);
+# 			Query OK, 3 rows affected (0.10 sec)
+# 			Records: 3 Duplicates: 0 Warnings: 0
+#
+# 			SELECT c, i FROM t;
+# 			+--------+------------+
+# 			| c 		| i 			 |
+# 			+--------+------------+
+# 			| key 	| 3 			 |
+# 			| key 	| 4 			 |
+# 			| key 	| 5 			 |
+# 			+--------+------------+
+# 			3 rows in set (0.00 sec)
+#
+# 			SELECT JSON_OBJECTAGG(c, i) FROM t;
+# 			+-----------------------------------+
+# 			| JSON_OBJECTAGG(c, i) 					|
+# 			+-----------------------------------+
+# 			| {"key": 5}  								|
+# 			+-----------------------------------+
+# 			1 row in set (0.00 sec)
+#
+# 			DELETE FROM t;
+# 			Query OK, 3 rows affected (0.08 sec)
+#
+# 			INSERT INTO t VALUES ('key', 3), ('key', 5), ('key', 4);
+# 			Query OK, 3 rows affected (0.06 sec)
+# 			Records: 3 Duplicates: 0 Warnings: 0
+#
+# 			SELECT c, i FROM t;
+# 			+---------+---------+
+# 			| c 		 | i 		  |
+# 			+---------+---------+
+# 			| key 	 | 3 		  |
+# 			| key 	 | 5 		  |
+# 			| key 	 | 4 		  |
+# 			+---------+---------+
+# 			3 rows in set (0.00 sec)
+#
+# 			SELECT JSON_OBJECTAGG(c, i) FROM t;
+# 			+----------------------+
+# 			| JSON_OBJECTAGG(c, i) |
+# 			+----------------------+
+# 			| {"key": 4}			  |
+# 			+----------------------+
+# 			1 row in set (0.00 sec)
+#
+# 			See NORMALIZATION, MERGING, AND AUTOWRAPPING OF JSON VALUES for additional information
+# 			and examples.
+#
+# 		) MAX([DISTINCT] expr) [over_clause]
+# 
+# 			Returns the maximum value of expr
+#
+# 			MAX() may take a string argument; in such cases, it returns the maximum string value.
+# 			See SECTION 8.3.1, "HOW MYSQL USES INDEXES"
+#
+# 			The DISTINCT keyword can be used to find the maximum of the distinct values of expr,
+# 			however, this produces the same result as omitting DISTINCT.
+#
+# 			If there are no matching rows, MAX() returns NULL
+#
+# 			This function executes as a window function if over_clause is present.
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX",
+# 			it cannot be used with DISTINCT.
+#
+# 				SELECT student_name, MIN(test_score), MAX(test_score)
+# 				FROM student
+# 				GROUP BY student_name;
+#
+# 			For MAX(), MySQL currently compares ENUM and SET columns by their string values rather
+# 			than by the string's relative position in the set.
+#
+# 			This differs from how ORDER BY compares them.
+#
+# 		) MIN([DISTINCT] expr) [over_clause]
+#
+# 			Returns the minimum value of expr
+#
+# 			MIN() may take a string argument; in such cases, it returns the minimum
+# 			string value.
+#
+# 			See SECTION 8.3.1, "HOW MYSQL USES INDEXES"
+#
+# 			The DISTINCT keyword can be used to find the minimum of the distinct values of
+# 			expr, however, this produces the same result as omitting DISTINCT.
+#
+# 			If there are no matching rows, MIN() returns NULL
+#
+# 			This function executes as a window function if over_clause is present
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX";
+# 			it cannot be used with DISTINCT
+#
+# 				SELECT student_name, MIN(test_score), MAX(test_score)
+# 				FROM student
+# 				GROUP BY student_name;
+#
+# 			For MIN(), MySQL currently compares ENUM and SET columns by their string value rather than
+# 			by the string's relative position in the set.
+#
+# 			This differs from how ORDER BY compares them.
+#
+# 		) STD(expr) [over clause]
+#
+# 			Returns the population standard deviation of expr.
+#
+# 			STD() is a synonym for the standard SQL function STDDEV_POP(),
+# 			provided as a MySQL extension.
+#
+# 			If there are no matching rows, STD() returns NULL
+#
+# 			This function executes as a window function if over_clause is present.
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX"
+#
+# 		) STDDEV(expr) [over clause]
+#
+# 			Returns the population standard deviation of expr.
+#
+# 			STDDEV() is a synonym for the standard SQL function STDDEV_POP(),
+# 			provided for compatibility with Oracle.
+#
+# 			If there are no matching rows, STDDEV() returns NULL
+#
+# 			This function executes as a window function if over_clause is present.
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX"
+#
+# 		) STDDEV_POP(expr) [over clause]
+#
+# 			Returns the population standard deviation of expr (the square root of VAR_POP))
+#
+# 			You can also use STD() or STDDEV(), which are equivalent but not standard SQL
+# 			
+# 			If there are no matching rows, STDDEV_POP() returns NULL
+#
+# 			This function executes as a window function if over_clause is present.
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX"
+#
+# 		) STDDEV_SAMP(expr) [over clause]
+#
+# 			Returns the sample standard deviation of expr (the square root of VAR_SAMP())
+#
+# 			If there are no matching rows, STDDEV_SAMP() returns NULL
+#
+# 			This function executes as a window function if over_clause is present.
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX"
+#
+# 		) SUM([DISTINCT] expr) [over clause]
+#
+# 			Returns the sum of expr. If the return set has no rows, SUM() returns NULL.
+#
+# 			The DISTINCT keyword can be used to sum only the distinct values of expr.
+#
+# 			If there are no matching rows, SUM() returns NULL
+#
+# 			This function executes as a window function if over_clause is present.
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX",
+# 			it cannot be used with DISTINCT.
+#
+# 		) VAR_POP(expr) [over_clause]
+#
+# 			Returns the population standard variance of expr.
+#
+# 			It considers rows as the whole population,, not as as maple, so it has the
+# 			number of rows as the denominator.
+#
+# 			You can also use VARIANCE(), which is equivalent but is not standard SQL.
+#
+# 			if there are no matching rows, VAR_POP() returns NULL
+#
+# 			This function executes as a window function if over_clause is present.
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX"
+#
+# 		) VAR_SAMP(expr) [over clause]
+#
+# 			Returns the sample variance of expr. That is, the denominator is the number of rows
+# 			minus one.
+#
+# 			If there are no matching rows, VAR_SAMP() returns NULL
+#
+# 			This function executes as a window function if over_clause is present.
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX"
+#
+# 		) VARIANCE(expr) [over_clause]
+#
+# 			Returns the population standard variance of expr.
+#
+# 			VARIANCE() is a synonym for the standard SQL function VAR_POP(), provided as
+# 			a MySQL extension.
+#
+# 			If there are no matching rows, VARIANCE() returns NULL
+#
+# 			This function executes as a window function if over_clause is present
+#
+# 			over_clause is as described in SECTION 12.21.2, "WINDOW FUNCTION CONCEPTS AND SYNTAX"
+#
+# 12.20.2 GROUP BY MODIFIERS
+#
+# The GROUP BY clause permits a WITH ROLLUP modifier that causes summary output to include
+# extra rows that represent higher-level (That is, super-aggregate) summary operations.
+#
+# ROLLUP thus enables you to answer questions at multiple levels of analysis with a single query.
+#
+# For example, ROLLUP can be used to provide support for OLAP (Online Analytical Processing) operations.
+#
+# Suppose that a sales table has year, country, product and profit columns for recording
+# sales profitability:
+#
+# 		CREATE TABLE sales
+# 		(
+# 			year INT,
+# 			country VARCHAR(20),
+# 			product VARCHAR(32),
+# 			profit INT
+# 		);
+#
+# TO summarize table contents per year, use a simple GROUP BY like this:
+#
+# 		SELECT year, SUM(profit) AS profit
+# 		FROM sales
+# 		GROUP BY year;
+# +-------+-----------+
+# | year  | profit 	 |
+# +-------+-----------+
+# | 2000  | 4525 		 |
+# | 2001  | 3010 		 |
+# +-------+-----------+
+#
+# The output shows the total (aggregate) profit fore ach year.
+#
+# To also determine the total profit summed over all years, you must add up the individual
+# values yourself or run an additional query.
+#
+# Or, you can use ROLLUP - which provides both levels of analysis with a single query.
+#
+# Adding a WITH ROLLUP modifier to the GROUP BY clause causes the query to produce
+# another (super-aggregate) row that shows the grant total over all year values:
+#
+# 		SELECT year, SUM(profit) AS profit
+# 		FROM sales
+# 		GROUP BY year WITH ROLLUP;
+# 		+--------+---------------+
+# 		| year 	| profit 		 |
+# 		+--------+---------------+
+# 		| 2000 	| 4525 			 |
+# 		| 2001 	| 3010 			 |
+# 		| NULL 	| 7535 			 |
+# 		+--------+---------------+
+#
+# The NULL value in the year column identifies the grant total super-aggregate line.
+#
+# ROLLUP has a more complex effect when there are multiple GROUP by columns.
+#
+# In this case, each time there is a change in value in any but the last grouping
+# column, the query produces an extra super-aggregate summary row.
+#
+# For example, without ROLLUP, a summary of the sales table based on year, country,
+# and product might look like this, where the output indicates summary values only
+# at the year/country/product level of analysis:
+#
+# 		SELECT year, country, product, SUM(profit) AS profit
+# 		FROM sales
+# 		GROUP BY year, country, product;
+# 		+------+-----------------+-----------------+-------------+
+# 		| year | country 			 | product 			 | profit 		|
+# 		+------+-----------------+-----------------+-------------+
+# 		| 2000 | Finland 			 | Computer 		 | 1500 			|
+# 		| 2000 | Finland 			 | Phone 			 | 100 			|
+# 		| 2000 | India 			 | Calculator 		 | 150 		   |
+# 		| 2000 | India 			 | Computer 		 | 1200 			|
+# 		| 2000 | USA 				 | Calculator 		 | 75 			|
+# 		| 2000 | USA 				 | Computer 		 | 1500 			|
+# 		| 2001 | Finland 			 | Phone 			 | 10 			|
+# 		| 2001 | USA 				 | Calculator 		 | 50 			|
+# 		| 2001 | USA 				 | Computer 		 | 2700 			|
+# 		| 2001 | USA 				 | TV 				 | 250 			|
+# 		+------+-----------------+-----------------+-------------+
+#
+# With ROLLUP added, the query produces several extra rows:
+#
+# 		SELECT year, country, product, SUM(profit) AS profit
+# 		FROM sales
+# 		GROUP BY year, country, product WITH ROLLUP;
+# 		+------+-----------------+------------+-------------+
+# 		| year | country 			 | product 	  | profit 		 |
+# 		+------+-----------------+------------+-------------+
+# 		| 2000 | Finland 			 | Computer   | 1500 		 |
+# 		| 2000 | Finland 			 | Phone 	  | 100 			 |
+# 		| 2000 | Finland 			 | NULL 		  | 1600 		 |
+# 		| 2000 | India 			 | Calculator | 150 			 |
+# 		| 2000 | India 			 | Computer   | 1200 		 |
+# 		| 2000 | India 			 | NULL 		  | 1350 		 |
+# 		| 2000 | USA 				 | Calculator | 75 			 |
+# 		| 2000 | USA 				 | Computer   | 1500 		 |
+# 		| 2000 | USA 				 | NULL 		  | 1575 		 |
+# 		| 2000 | NULL 				 | NULL 		  | 4525 		 |
+# 		| 2001 | Finland 			 | Phone 	  | 10 			 |
+# 		| 2001 | Finland 			 | NULL 		  | 10 			 |
+# 		| 2001 | USA 				 | Calculator | 50 			 |
+# 		| 2001 | USA 				 | Computer   | 2700 		 |
+# 		| 2001 | USA 				 | TV 		  | 250 			 |
+# 		| 2001 | USA 				 | NULL 		  | 3000 		 |
+# 		| 2001 | NULL 				 | NULL 		  | 3010 		 |
+# 		| NULL | NULL 				 | NULL 		  | 7535 		 |
+# 		+------+-----------------+------------+-------------+
+#
+# Now the output includes summary information at four levels of analysis, not just one:
+#
+# 		) Following each set of product rows for a given year and country, an extra super-aggregate summary row
+# 			appears showing the total for all products.
+#
+# 			These rows have the product column set to NULL
+#
+# 		) Following each set of rows for a given year, an extra super-aggregate summary row appears showing
+# 			the total for all countries and products.
+#
+# 			These rows have the country and products columns set to NULL
+#
+# 		) Finally, following all other rows, an extra super-aggregate summary row appears showing the grand total
+# 			for all years, countries, and products.
+#
+# 			This row has the year, country and products set to NULL
+#
+# Previously, MySQL did not allow the use of DISTINCT or ORDER BY in a query having a WITH ROLLUP option.
+#
+# This restriction is lifted in MySQL 8.0.12, and later.
+#
+# (Bug #87450, Bug #86311, Bug#26640100, Bug#26073513)
+#
+# For GROUP BY --- WITH ROLLUP queries, to test whether NULL values in the result represent
+# super-aggregate values, the GROUPING() function is available for use in theh select list,
+# HAVING clause and (as of MySQL 8.0.12) ORDER BY clause.
+#
+# For example, GROUPING(year) returns 1 when NULL in the year column occurs in a super-aggregate
+# row, and 0 otherwise.
+#
+# SImilarly, GROUPING(country) and GROUPING(product) return 1 for super-aggregate NULL values
+# in the country and product columns, respectively:
+#
+# 		SELECT
+# 			year, country, product, SUM(profit) AS profit,
+# 			GROUPING(year) AS grp_year,
+# 			GROUPING(country) AS grp_country,
+# 			GROUPING(product) AS grp_product
+# 		FROM sales
+# 		GROUP BY year, country, product WITH ROLLUP;
+# 		+------+------------------+----------------+---------------+-----------------+------------------+----------------+
+# 		| year | country 			  | product 		 | profit 	     | grp_year   	  | grp_country 		| grp_product 	  |
+# 		+------+------------------+----------------+---------------+-----------------+------------------+----------------+
+# 		| 2000 | Finland 			  | Computer 		 | 1500 			  | 0 				  | 0 					| 0 				  |
+# 		| 2000 | Finland 			  | Phone 			 | 100 			  | 0 				  | 0 		 			| 0 				  |
+# 		| 2000 | Finland 			  | NULL 			 | 1600 			  | 0 				  | 0 					| 1 				  |
+# 		| 2000 | India 			  | Calculator 	 | 150 			  | 0 				  | 0 				   | 0				  |
+# 		| 2000 | India 			  | Computer 		 | 1200 			  | 0 				  | 0 					| 0 				  |
+# 		| 2000 | India 			  | NULL 			 | 1350 			  | 0 				  | 0 					| 1 				  |
+# 		| 2000 | USA 				  | Calculator 	 | 75 			  | 0 				  | 0 				   | 0 				  |
+# 		| 2000 | USA 				  | Computer 		 | 1500 			  | 0 				  | 0 					| 0 				  |
+# 		| 2000 | USA 				  | NULL 			 | 1575 			  | 0 				  | 0 					| 1 				  |
+# 		| 2000 | NULL 				  | NULL 			 | 4525 			  | 0 				  | 1 					| 1 				  |
+# 		| 2001 | Finland 			  | Phone 			 | 10 			  | 0 				  | 0 					| 0 				  |
+# 		| 2001 | Finland 			  | NULL 			 | 10 			  | 0 				  | 0 					| 1 				  |
+# 		| 2001 | USA 				  | Calculator 	 | 50 			  | 0 				  | 0 					| 0 				  |
+# 		| 2001 | USA 				  | Computer 		 | 2700 			  | 0 				  | 0 					| 0 				  |
+# 		| 2001 | USA 				  | TV 				 | 250 			  | 0 				  | 0 					| 0 				  |
+# 		| 2001 | USA 				  | NULL 			 | 3000 			  | 0 				  | 0 					| 1 				  |
+# 		| 2001 | NULL 				  | NULL 			 | 3010 			  | 0 				  | 1 					| 1 				  |
+# 		| NULL | NULL 				  | NULL 			 | 7535 			  | 1 				  | 1 					| 1 				  |
+# 		+------+------------------+----------------+---------------+-----------------+------------------+----------------+
+#
+# Instead of displaying the GROUPING()  result directly, you can use GROUPING() to substitute labels for super-aggregate
+# NULL values:
+#
+# 		SELECT
+# 			IF(GROUPING(year), 'All years', year) AS year,
+# 			IF(GROUPING(country), 'All countries', country) AS country,
+# 			IF(GROUPING(product), 'ALl products', product) AS product,
+# 			SUM(profit) AS profit
+# 		FROM sales
+# 		GROUP BY year, country, product WITH ROLLUP;
+# +------------+---------------------+-------------------+--------------+
+# | year 		| country 				 | product 				| profit 		|
+# +------------+---------------------+-------------------+--------------+
+# | 2000 		| Finland 				 | Computer 			| 1500 			|
+# | 2000 		| Finland 				 | Phone 				| 100 			|
+# | 2000 		| Finland 				 | All products 		| 1600 			|
+# | 2000 		| India 					 | Calculator 			| 150 			|
+# | 2000 		| India 					 | Computer 			| 1200 			|
+# | 2000 		| India 					 | All products 		| 1350 		   |
+# | 2000 		| USA 					 | Calculator 			| 75 				|
+# | 2000 		| USA 					 | Computer 			| 1500 		   |
+# | 2000 		| USA 					 | All products 		| 1575 			|
+# | 2000 		| All countries 		 | All products 		| 4525 			|
+# | 2001 		| Finland 				 | Phone 				| 10 				|
+# | 2001 		| Finland 				 | All products 		| 10 				|
+# | 2001 		| USA 					 | Calculator 			| 50 				|
+# | 2001 		| USA 					 | Computer 			| 2700 			|
+# | 2001 		| USA 					 | TV 					| 250 			|
+# | 2001 		| USA 					 | All Products 		| 3000 			|
+# | 2001 		| All countries 		 | ALl products 		| 3010 			|
+# | All years  | All countries 		 | All products 		| 7535 			|
+# +------------+---------------------+-------------------+--------------+
+#
+# With multiple expression arguments, GROUPING() returns a result representing a bitmask
+# that combines the results for each expression, with the lowest-order bit corresponding
+# ot the result for the rightmost expression.
+#
+# For example, GROUPING(year, country, product) is evaluated like this:
+#
+# 		result FOR GROUPING(product)
+# 	 + result FOR GROUPING(country) << 1
+#   + result FOR GROUPING(year) << 2
+#
+# The result of such a GROUPING() is nonzero if any of the expressions represents a super-aggregate NULL,
+# so you can return only the super-aggregate rows and filter out the regular grouped rows like this:
+#
+# 	SELECT year, country, product, SUM(profit) AS profit
+# 	FROM sales
+# 	GROUP BY year, country, product WITH ROLLUP
+# 	HAVING GROUPING(year, country, product) <> 0;
+# +--------+------------+--------+------------+
+# | year   | country 	| product| profit 	 |
+# +--------+------------+---------------------+
+# |
+#
+# https://dev.mysql.com/doc/refman/8.0/en/group-by-modifiers.html 						
+#			
