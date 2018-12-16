@@ -2208,5 +2208,2028 @@
 #
 # 		) BIN_TO_UUID(binary uuid), BIN_TO_UUID(binary uuid, swap flag)
 #
-# 			https://dev.mysql.com/doc/refman/8.0/en/miscellaneous-functions.html
-# 		 	
+# 			BIN_TO_UUID() is the inverse of UUID_TO_BIN()
+#
+# 			It converts a binary UUID to a string UUID and returns the result.
+#
+# 			The binary value should be a UUID as a VARBINARY(16) value
+#
+# 			The return value is a utf8 string of five hexadecimal numbers separated
+# 			by dashes.
+#
+# 			(For details about this format, see the UUID() function description)
+#
+# 			If the UUID argument is NULL, the return value is NULL.
+#
+# 			If any argument is invalid, an error occurs.
+#
+# 			BIN_TO_UUID() takes one orw two arguments:
+#
+# 				) The one-argument form takes a binary UUID value.
+#
+# 					the UUID value is assumed not to have its time-low and time-high
+# 					parts swapped.
+#
+# 					The string result is in the same order as the binary argument.
+#
+# 				) The two argument form takes a binary UUID value and a swap-flag value:
+#
+# 					) If swap_flag is 0, the two-argument form is equivalent to the one-argument form.
+#
+# 						The string result is in the same order as the binary argument.
+#
+# 					) If swap_flag is 1, the UUID value is assumed to have its time-low and time-high parts
+# 						swapped.
+#
+# 						These parts are swapped back to their original position in the result value.
+#
+# 				For usage examples and information about time-part swapping, see the UUID_TO_BIN() function description.
+#
+# 		) DEFAULT(col name)
+#
+# 			Returns the default value for a table column. An error results if the column has no default value.
+#
+# 			The use of DEFAULT(col name) to specify the default value for a named column is permitted
+# 			only for columns that have a literal default value, not for columns that have an expression
+# 			default value.
+#
+# 				UPDATE t SET i = DEFAULT(i)+1 WHERE id < 100;
+#
+# 		) FORMAT(X,D)
+#
+# 			Formats the number X to a format like '#,###,###.##', rounded to D decimal places,
+# 			and returns the result as a string.
+#
+# 			For details, see SECTION 12.5, "STRING FUNCTIONS"
+#
+# 		) GROUPING(expr [, expr] ---)
+#
+# 			For GROUP BY queries that include a WITH ROLLUP modifier, the ROLLUP operation
+# 			produces super-aggregate output rows where NULL represents the set of all values.
+#
+# 			The GROUPING() function enables you to distinguish NULL values for super-aggregate rows
+# 			from NULL values in regular grouped rows.
+#
+# 			GROUPING() is permitted only in the select list or HAVING clause.
+#
+# 			Each argument to GROUPING() must be an expression that exactly matches an expression
+# 			in the GROUP BY clause.
+#
+# 			The expression cannot be a positional specifier.
+#
+# 			For each expression, GROUPING() produces 1 if the expression value in the
+# 			current row is a NULL representing a super-aggregate value.
+#
+# 			Otherwise, GROUPING() produces 0, indicating that the expression value
+# 			is a NULL for a regular result row or is not NULL.
+#
+# 			Suppose that table t1 contains these rows, where NULL indicates something
+# 			like "other" or "unknown"
+#
+# 				SELECT * FROM t1;
+# 				+--------+------------+-----------------+
+# 				| name   | size 		 | quantity 		 |
+# 				+--------+------------+-----------------+
+# 				| ball   | small 		 | 10 				 |
+# 				| ball   | large 		 | 20 				 |
+# 				| ball   | NULL 		 | 5 					 |
+# 				| hoop   | small 		 | 15 				 |
+# 				| hoop   | large 		 | 5 					 |
+# 				| hoop   | NULL 		 | 3 					 |
+# 				+--------+------------+-----------------+
+#
+# 			A summary of the table without WITH ROLLUP looks like this:
+#
+# 				SELECT name, size, SUM(quantity) AS quantity
+# 				FROM t1
+# 				GROUP BY name, size;
+# 				+--------+---------+-----------+
+# 				| name   | size 	 | quantity  |
+# 				+--------+---------+-----------+
+# 				| ball   | small   | 10 		 |
+# 				| ball   | large   | 20 		 |
+# 				| ball   | NULL    | 5 			 |
+# 				| hoop   | small   | 15 		 |
+# 				| hoop   | large   | 5 			 |
+# 				| hoop   | NULL 	 | 3 			 |
+# 				+--------+---------+-----------+
+#
+# 			The result contains NULL values, but those do not represent super-aggregate rows because the
+# 			query does not include WITH ROLLUP.
+#
+# 			adding WITH ROLLUP produces super-aggregate summary rows containing additional NULL values.
+#
+# 			However, without comparing this result to the previous one, it is not easy to see
+# 			which NULL values occur in super-aggregate rows and which occur in regular grouped rows:
+#
+# 				SELECT name, size, SUM(quantity) AS quantity
+# 				FROM t1
+# 				GROUP BY name, size WITH ROLLUP;
+# 				+--------+--------+----------------+
+# 				| name   | size 	| quantity 		  |
+# 				+--------+--------+----------------+
+# 				| ball   | NULL   | 	5 				  |
+# 				| ball   | large  |  20 			  |
+# 				| ball   | small  |  10 			  |
+# 				| ball   | NULL   | 	35 			  |
+# 				| hoop   | NULL 	| 	3 				  |
+# 				| hoop   | large  |  5 				  |
+# 				| hoop   | small  |  15 			  |
+# 				| hoop   | NULL   | 	23 			  |
+# 				| NULL   | NULL   | 	58 			  |
+# 				+--------+--------+----------------+
+#
+# 			To distinguish NULL values in super-aggregate rows from those in regular grouped rows,
+# 			use GROUPING(), which returns 1 only for super-aggregate NULL values:
+#
+# 				SELECT
+# 					name, size, SUM(quantity) AS quantity,
+# 					GROUPING(name) AS grp_name,
+# 					GROUPING(size) AS grp_size
+# 				FROM t1
+# 				GROUP BY name, size WITH ROLLUP;
+# 				+-------+--------+------------------+-----------------+--------------------+
+# 				| name  | size   | quantity 			| grp_name 			| grp_size 				|
+# 				+-------+--------+------------------+-----------------+--------------------+
+# 				| ball  | NULL   | 		5 				| 			0 			| 		0 					|
+# 				| ball  | large  | 		20 			| 			0 			| 		0 					|
+# 				| ball  | small  | 		10 			| 			0 			| 		0 					|
+# 				| ball  | NULL   | 		35 			| 			0 			| 		1 					|
+# 				| hoop  | NULL   | 		3 				| 			0 			| 		0 					|
+# 				| hoop  | large  | 		5 				| 			0 			| 		0 					|
+# 				| hoop  | small  | 		15 			| 			0 			| 		0 					|
+# 				| hoop  | NULL   | 		23 			| 			0 			| 		1 					|
+# 				| NULL  | NULL   | 		58 			| 			1 			| 		1 					|
+# 				+-------+--------+------------------+-----------------+--------------------+
+#
+# 			Common uses for GROUPING():
+#
+# 				) Substitute a label for super-aggregate NULL values:
+#
+# 					SELECT
+# 						IF(GROUPING(name) = 1, 'All items', name) AS name,
+# 						IF(GROUPING(size) = 1, 'All sizes', size) AS size,
+# 						SUM(quantity) AS quantity
+# 					FROM t1
+# 					GROUP BY name, size WITH ROLLUP;
+# 					+-----------------+-------------------+---------------+
+# 					| name 				| size 				  | quantity 		|
+# 					+-----------------+-------------------+---------------+
+# 					| ball 				| NULL 				  | 5 				|
+# 					| ball 				| large 				  | 20 				|
+# 					| ball 				| small 				  | 10 			   |
+# 					| ball 				| All sizes 		  | 35 				|
+# 					| hoop 				| NULL 				  | 3 				|
+# 					| hoop 				| large 				  | 5 				|
+# 					| hoop 				| small 				  | 15 			 	|
+# 					| hoop 				| All sizes 		  | 23 				|
+# 					| All items 		| All sizes 		  | 58 				|
+# 					+-----------------+-------------------+---------------+
+#
+# 				) Return only super-aggregate lines by filtering out the regular grouped lines:
+#
+# 					SELECT name, size, SUM(quantity) AS quantity
+# 					FROM t1
+# 					GROUP BY name, size WITH ROLLUP
+# 					HAVING GROUPING(name) = 1 OR GROUPING(size) = 1;
+# 					+-----------+-----------+-----------------+
+# 					| name 		| size 		| quantity 			|
+# 					+-----------+-----------+-----------------+
+# 					| ball 		| NULL 		| 35 					|
+# 					| hoop      | NULL 		| 23 					|
+# 					| NULL 		| NULL 		| 58 					|
+# 					+-----------+-----------+-----------------+
+#
+# 			GROUPING() permits multiple expression arguments. In this case, the GROUPING()
+# 			return value represents a bitmask combined from the results for each expression,
+# 			where the lowest-order bit corresponds to the result for the rightmost expression.
+#
+# 			For example, with three expression arguments, GROUPING(expr1, expr2, expr3) is evaluated
+# 			like this:
+#
+# 				result for GROUPING(expr3)
+# 			 + result for GROUPING(expr2) << 1
+# 			 + result for GROUPING(expr1) << 2
+#
+# 			The following query shows how GROUPING() results for single arguments combine for 
+# 			a multiple-argument call to produce a bitmask value:
+#
+# 				SELECT 
+# 					name, size, SUM(quantity) AS quantity,
+# 					GROUPING(name) AS grp_name,
+# 					GROUPING(size) AS grp_size,
+# 				GROUPING(name, size) AS grp_all
+# 				FROM t1
+# 				GROUP BY name, size WITH ROLLUP;
+# 				+--------+------------+------------------+-------------+----------+--------------+
+# 				| name   | size 		 | quantity 		  | grp_name    | grp_size | grp_all 		|
+# 				+--------+------------+------------------+-------------+----------+--------------+
+# 				| ball   | NULL 		 | 5 					  | 0 			 | 	0 		| 	0 			   |
+# 				| ball   | large 		 | 20 				  | 0 			 | 	0 		|  0 				|
+# 				| ball   | small 		 | 10 				  | 0 			 | 	0 		|  0 			   |
+# 				| ball   | NULL 		 | 35 				  | 0 			 | 	1 		| 	1 				|
+# 				| hoop   | NULL 		 | 3 					  | 0 			 | 	0 		|  0 				|
+# 				| hoop   | large 		 | 5 					  | 0 			 | 	0 		| 	0 				|
+# 				| hoop 	| small 		 | 15 				  | 0 			 | 	0 		|  0 				|
+# 				| hoop   | NULL 		 | 23 				  | 0 			 | 	1 		| 	1 				|
+# 				| NULL 	| NULL 		 | 58 				  | 1 			 | 	1 		|  3 				|
+# 				+--------+------------+------------------+-------------+----------+--------------+
+#
+# 			With multiple expression arguments, the GROUPING() return value is nonzero if any expression
+# 			represents a super-aggregate value.
+#
+# 			Multiple-argument GROUPING() syntax thus provides a simpler way to write the earlier query
+# 			that returned only super-aggregate rows, by using a single multiple-argument GROUPING()
+# 			call rather than multiple single-argument calls:
+#
+# 				SELECT name, size, SUM(quantity) AS quantity
+# 				FROM t1
+# 				GROUP BY name, size WITH ROLLUP
+# 				HAVING GROUPING(name, size) <> 0;
+# 				+--------+--------+--------------+
+# 				| name   | size   | quantity 		|
+# 				+--------+--------+--------------+
+# 				| ball   | NULL   | 35 				|
+# 				| hoop   | NULL   | 23 				|
+# 				| NULL   | NULL   | 58 				|
+# 				+--------+--------+--------------+
+#
+# 			Use of GROUPING() is subject to these limitations:
+#
+# 				) Do not use subquery GROUP BY expressions as GROUPING() arguments because
+# 					matching might fail.
+#
+# 					For example, matching fails for this query:
+#
+# 						SELECT GROUPING((SELECT MAX(name) FROM t1))
+# 						FROM t1
+# 						GROUP BY (SELECT MAX(name) FROM t1) WITH ROLLUP;
+# 						ERROR 3580 (HY000): Argument #1 of GROUPING function is not in GROUP BY
+#
+# 				) GROUP BY literal expressions should not be used within a HAVING clause as
+# 					GROUPING() arguments.
+#
+# 					Due to differences between when the optimizer evaluates GROUP BY and HAVING,
+# 					matching may succeed but GROUPING() evaluation does not produce the expected
+# 					result.
+#
+# 					Consider this query:
+#
+# 						SELECT a AS f1, 'w' AS f2
+# 						FROM t
+# 						GROUP BY f1, f2 WITH ROLLUP
+# 						HAVING GROUPING(f2) = 1;
+#
+# 					GROUPING() is evaluated earlier for the literal constant expression than for the
+# 					HAVING clause as a whole and returns 0.
+#
+# 					To check whether a query such as this is affected, use EXPLAIN and look for
+# 					Impossible having in the Extra column.
+#
+# 					For more information about WITH ROLLUP and GROUPING(), see SECTION 12.20.2, "GROUP BY MODIFIERS"
+#
+# 		) INET_ATON(expr)
+#
+# 			Given the dotted-quad representation of an IPv4 network address as a string, returns an integer that
+# 			represents the numeric value of the address in network byte order (big endian) 
+#
+# 			INET_ATON() returns NULL if it does not understand its argument.
+#
+# 				SELECT INET_ATON('10.0.5.9');
+# 					-> 167773449
+#
+# 			For this example, the return value is calculated as 10x256^3 + 0x256^2+5x256+9
+#
+# 			INET_ATON() may or may not return a non-NULL result for short-form IP addresses (such as '127.1'
+# 			as a representation of '127.0.0.1')
+#
+# 			Because of this, INET_ATON() a should not be used for such addresses.
+#
+# 				NOTE:
+#
+# 					To store values generated by INET_ATON(), use an INT UNSIGNED column rather than
+# 					INT, which is signed.
+#
+# 					If you use a signed column, values corresponding to IP addresses for which the
+# 					first octet is greater than 127 cannot be stored correctly.
+#
+# 					See SECTION 11.2.6, "OUT-OF-RANGE AND OVERFLOW HANDLING"
+#
+# 		) INET_NTOA(expr)
+#
+# 			Given a numeric IPv4 network address in network byte order, returns the dotted-quad string
+# 			representation of the address as a string in the connection character set.
+#
+# 			INET_NTOA() returns NULL if it does not understand its argument.
+#
+# 				SELECT INET_NTOA(16777349);
+# 					-> '10.0.5.9'
+#
+# 		) INET6_ATON(expr)
+#
+# 			Given an IPv6 or IPv4 network address as a string, returns a binary string
+# 			that represents the numeric value of the address in network byte order
+# 			(big endian)
+#
+# 			Because numeric-format IPv6 addresses require more bytes than the largest
+# 			integer type, the representation returned by this function has the VARBINARY
+# 			data type:
+#
+# 				VARBINARY(16) for IPv6 addresses and VARBINARY(4) for IPv4 addresses.
+#
+# 			If the argument is not a valid address, INET6_ATON() returns NULL
+#
+# 			The following examples use HEX() to display the INET6_ATON() result in
+# 			printable form:
+#
+# 				SELECT HEX(INET6_ATON('fde::5a55:caff:fefa:9089'));
+# 					-> 'FDFE000000000000005A55CAFFFEFA9089'
+# 				SELECT HEX(INET6_ATON('10.0.5.9'));
+# 					-> '0A000509'
+#
+# 			INET6_ATON() observes several constraints on valid arguments.
+#
+# 			These are given in the following list along with examples.
+#
+# 				) A trailing zone ID is not permitted, as in fe80::3%1 or fe80::3%eth0
+#
+# 				) A trailing network mask is not permitted, as in 2001:45f:3:ba::/64 or 198.51.100.0/24
+#
+# 				) For values representing IPv4 addresses, only classless addresses are supported.
+#
+# 					Classful addresses such as 198.51.1 are rejected
+#
+# 					A trailing port number is not permitted, as in 198.51.100.2:8080
+#
+# 					Hexadecimal numbers in address components are not permitted, as in 198.0xa0.1.2
+#
+# 					Octal numbers are not supported:
+#
+# 						198.51.010.1 is treated as 198.51.10.1, not 198.51.8.1
+#
+# 					These IPv4 constraints also apply to IPv6 addresses that have IPv4 address
+# 					parts, such as IPv4-compatible or IPv4-mapped addresses.
+#
+# 			To convert an IPv4 address expr represented in numeric form as an INT value to an
+# 			IPv6 address represented in numeric form as a VARBINARY value, use this expression:
+#
+# 				INET6_ATON(INET_NTOA(expr))
+#
+# 			For example:
+#
+# 				SELECT HEX(INET6_ATON(INET_NTOA(167773449)));
+# 					-> '0A000509'
+#
+# 		) INET6_NTOA(expr)
+#
+# 			Given an IPv6 or IPv4 network address represented in numeric form as a binary string,
+# 			returns the string representation of the address as a string in the connection char set.
+#
+# 			If the argument is not a valid address, INET6_NTOA() returns NULL
+#
+# 			INET6_NTOA() has these properties:
+#
+# 				) It does not use operating system functions to perform conversions, thus the output string is platform independent.
+#
+# 				) The return string has a maximum length of 39(4x8 + 7)
+#
+# 					Given this statement:
+#
+# 						CREATE TABLE t AS SELECT INET6_NTOA(expr) AS c1;
+#
+# 					The resulting table would have this definition:
+#
+# 						CREATE TABLE t (c1 VARCHAR(39) CHARACTER SET utf8 DEFAULT NULL);
+#
+# 				) The return string uses lowercase letters for IPv6 addresses.
+#
+# 					SELECT INET6_NTOA(INET6_ATON('fdfe::5a55:caff:fefa:9089'));
+# 						-> 'fdfe::5a55:caff:fefa:9089'
+#
+# 					SELECT INET6_NTOA(INET6_ATON('10.0.5.9'));
+# 						-> '10.0.5.9'
+#
+# 					SELECT INET6_NTOA(UNHEX('FDFE0000000000000000000005A55CAFFFEFA9089'));
+# 						-> 'fdfe::5a55:caff:fefa:9089'
+#
+# 					SELECT INET6_NTOA(UNHEX('0A000509'));
+# 						-> '10.0.5.9'
+#
+# 			) IS_IPV4(expr)
+#
+# 				Returns 1 if the argument is a valid IPv4 address specified as a string. Otherwise 0
+#
+# 					SELECT IS_IPV4('10.0.5.9'), IS_IPV4('10.0.5.256');
+# 						-> 1, 0
+#
+# 				For a given argument, if IS_IPV4() returns 1, INET_ATON() (and INET6_ATON()) will return
+# 				non-NULL
+#
+# 				THe converse statement is not true: In some cases, INET_ATON() returns non-NULL
+# 				when IS_IPV4() returns 0
+#
+# 				As implied by the preceding remarks, IS_IPV4() is more strict than INET_ATON() about what
+# 				constitutes a valid IPV4 address, so it may be useful for applications that need to
+# 				perform strong checks against invalid values.
+#
+# 				Alternatively, use INET6_ATON() to convert IPv4 addresses to internal form and check for
+# 				a NULL result (which indicates an invalid address)
+#
+# 				INET6_ATON() is equally strong as IS_IPV4() about checking IPv4 addresses.
+#
+# 			) IS_IPV4_COMPAT(expr)
+#
+# 				This function takes an IPv6 address represented in numeric form as a binary string,
+# 				as returned by INET6_ATON()
+#
+# 				It returns 1 if the argument is a valid IPv4-compatible IPv6 address, 0 otherwise.
+#
+# 				IPv4-compatible addresses have the form ::ipv4_address
+#
+# 					SELECT IS_IPV4_COMPAT(INET6_ATON('::10.0.5.9'));
+# 						-> 1
+# 					SELECT IS_IPV4_COMPAT(INET6_ATON('::ffff:10.0.5.9'));
+# 						-> 0
+#
+# 				The IPv4 part of an IPv4-compatible address can also be represented using hexadecimal notation.
+#
+# 				For example, 198.51.100.1, has this raw hexadecimal value:
+#
+# 					SELECT HEX(INET6_ATON('198.51.100.1'));
+# 						-> 'C6336401'
+#
+# 				Expressed in IPv4-compatible form, ::198.51.100.1 is equivalent to
+# 				::c0a8:0001 or (without leading zeros) ::c0a8:1
+#
+# 					SELECT
+# 						IS_IPV4_COMPAT(INET6_ATON('::198.51.100.1')),
+# 						IS_IPV4_COMPAT(INET6_ATON('::c0a8:0001')),
+# 						IS_IPV4_COMPAT(INET6_ATON('::c0a8:1'));
+# 							-> 1, 1, 1
+#
+# 			) IS_IPV4_MAPPED(expr)
+#
+# 				This function takes an IPv6 address represented in numeric form as a binary string,
+# 				as returned by INET6_ATON()
+#
+# 				It returns 1 if the argument is a valid IPV4-mapped IPV6 address, 0 otherwise.
+#
+# 				IPv4-mapped addresses have the form ::ffff:ipv4_address
+#
+# 					SELECT IS_IPV4_MAPPED(INET6_ATON('::10.0.5.9'));
+# 						-> 0
+# 					SELECT IS_IPV4_MAPPED(INET6_ATON('::ffff:10.0.5.9'));
+# 						-> 1
+#
+# 				As with IS_IPV4_COMPAT() the IPv4 part of an IPv4-mapped address can
+# 				also be represented using hexadecimal notation:
+#
+# 					SELECT
+# 						IS_IPV4_MAPPED(INET6_ATON('::ffff:198.51.100.1')),
+# 						IS_IPV4_MAPPED(INET6_ATON('::ffff:c0a8:0001')),
+# 						IS_IPV4_MAPPED(INET6_ATON('::ffff:c0a8:1'));
+# 							-> 1, 1, 1
+#
+# 			) IS_IPV6(expr)
+#
+# 				Returns 1 if the argument is a valid IPv6 address specified as a string, 0 otherwise.
+#
+# 				This function does not consider IPv4 addresses to be valid IPv6 addresses.
+#
+# 					SELECT IS_IPV6('10.0.5.9'), IS_IPV6('::1');
+# 						-> 0, 1
+#
+# 				For a given argument, if IS_IPV6() returns 1, INET6_ATON() will return non-NULL
+#
+# 			) IS_UUID(string uuid)
+#
+# 				Returns 1 if the argument is a valid string-format UUID, 0 if the argument is not a valid
+# 				UUID, and NULL if the argument is NULL
+#
+# 				"Valid" means that the value is in a format that can be parsed.
+#
+# 				That is, has the correct length and contains only the permitted characters
+# 				(hexadecimal digits in any lettercase and optionally, dashes and curly braces)
+#
+# 				This format is most common:
+#
+# 					aaaaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee
+#
+# 				These other formats are also permitted:
+#
+# 					aaaaaaaabbbbccccddddeeeeeeeeee
+# 					{aaaaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee}
+#
+# 				For the meanings of fields within the value, see the UUID() function description.
+#
+# 					SELECT IS_UUID('6ccd780c-baba-1026-9564-5b8c656024db');
+# 					+-------------------------------------------------------+
+# 					| IS_UUID('6ccd780c-baba-1026-9564-5b8c656024db') 		  |
+# 					+-------------------------------------------------------+
+# 					| 									1 									  |
+# 					+-------------------------------------------------------+
+#
+# 					SELECT IS_UUID('6CCD780C-BABA-1026-9564-5B8C656024DB');
+# 					+-------------------------------------------------------+
+# 					| IS_UUID('6ccd780cbaba102695645b8c656024db') 			  |
+# 					+-------------------------------------------------------+
+# 					| 									1 									  |
+# 					+-------------------------------------------------------+
+#
+# 					SELECT IS_UUID('6ccd780cbaba102695645b8c656024db');
+# 					+-------------------------------------------------------+
+# 					| IS_UUID('6ccd780cbaba102695645b8c656024db') 			  |
+# 					+-------------------------------------------------------+
+# 					| 									1 									  |
+# 					+-------------------------------------------------------+
+#
+# 					SELECT IS_UUID('{6ccd780c-baba-1026-9564-5b8c656024db}');
+# 					+----------------------------------------------------+
+# 					| IS_UUID('{6ccd780c-baba-1026-9564-5b8c656024db}')  |
+# 					+----------------------------------------------------+
+# 					| 							1 										  |
+# 					+----------------------------------------------------+
+#
+# 					SELECT IS_UUID('6ccd780c-baba-1026-9564-5b8c6560');
+# 					+------------------------------------------------+
+# 					| IS_UUID('6ccd780c-baba-1026-9564-5b8c6560') 	 |
+# 					+------------------------------------------------+
+# 					| 							0 									 |
+# 					+------------------------------------------------+
+#
+# 					SELECT IS_UUID(RAND());
+# 					+----------------------+
+# 					| IS_UUID(RAND()) 	  |
+# 					+----------------------+
+# 					| 				0 			  |
+# 					+----------------------+
+#
+# 		) MASTER_POS_WAIT(log name, log pos [, timeout][, channel])
+#
+# 			This function is useful for control of master/slave synchronization.
+#
+# 			It blocks until the slave has read and applied all updates up to the specified
+# 			position in the master log.
+#
+# 			The return value is the number of log events the slave had to wait for advance
+# 			to the specified position.
+#
+# 			The function returns NULL if the slave SQL thread is not started, the slave's
+# 			master information is not initialized, the arguments are incorrect, or an error
+# 			occurs.
+#
+# 			It returns -1 if the timeout has been exceeded.
+#
+# 			If the slave SQL thread stops while MASTER_POS_WAIT() is waiting, the function
+# 			returns NULL.
+#
+# 			If the slave is past the specified position, the function returns immediately.
+#
+# 			On a multithreaded slave, the function waits until expiry of the limit set by the
+# 			slave_checkpoint_group or slave_checkpoint_period system variable, when the checkpoint
+# 			operation is called to update the status of the slave.
+#
+# 			Depending on the setting for the system variables, the function might therefore
+# 			return some time after the specified position was reached.
+#
+# 			If a timeout value is specified, MASTER_POS_WAIT() stops waiting when timeout
+# 			seconds have elapsed.
+#
+# 			timeout must be greater than 0; a zero or negative timeout means no timeout.
+#
+# 			The optional channel value enables you to name which replication channel the function
+# 			applies to.
+#
+# 			See SECTION 17.2.3, "REPLICATION CHANNELS" for more information.
+#
+# 			This function is unsafe for statement-based replication. A warning is logged if you
+# 			use this function when binlog_format is set to STATEMENT.
+#
+# 		) NAME_CONST(name, value)
+#
+# 			Returns the given value. When used to produce a result set column, NAME_CONST() causes
+# 			the column to have the given name.
+#
+# 			The arguments should be constants.
+#
+# 				SELECT NAME_CONST('myname', 14);
+# 				+----------+
+# 				| myname   |
+# 				+----------+
+# 				| 14 		  |
+# 				+----------+
+#
+# 			This function is for internal use only.
+#
+# 			THe server uses it when writing statements from stored programs that contain
+# 			references to local program variables, as described in SECTION 24.7, "BINARY LOGGING OF STORED PROGRAMS"
+#
+# 			You might see this function in the output from mysqlbinlog
+#
+# 			For your applications, you can obtain exactly the same result as in the example just shown
+# 			by using simple aliasing, like this:
+#
+# 				SELECT 14 AS myname;
+# 				+-------------------+
+# 				| myname 			  |
+# 				+-------------------+
+# 				| 		14 			  |
+# 				+-------------------+
+# 				1 row in set (0.00 sec)
+#
+# 			See SECTION 13.2.10, "SELECT SYNTAX" for more information about column aliases.
+#
+# 		) SLEEP(duration)
+#
+# 			SLeeps (pauses) for the number of seconds given by the duration argument, then returns 0.
+#
+# 			The duration may have a fractional part.
+#
+# 			If the argument is NULL or negative, SLEEP() produces a warning, or an error
+# 			in strict SQL mode.
+#
+# 			When sleep returns normally (without interupption), it returns 0:
+#
+# 				SELECT SLEEP(1000);
+# 				+-----------------------+
+# 				| SLEEP(1000) 				|
+# 				+-----------------------+
+# 				| 			0 					|
+# 				+-----------------------+
+#
+# 			When SLEEP() is the only thing invoked by a query that is interuppted, it returns
+# 			1 and the query itself returns no error.
+#
+# 			This is true whether the query is killed or times out:
+#
+# 				) This statement is interrupted using KILL_QUERY from another session:
+#
+# 					SELECT SLEEP(1000);
+# 					+------------------+
+# 					| SLEEP(1000) 		 |
+# 					+------------------+
+# 					| 			1 			 |
+# 					+------------------+
+#
+# 				) This statement is interrupted by timing out:
+#
+# 					SELECT /*+ MAX_EXECUTION_TIME(1) */ SLEEP(1000);
+# 					+-------------------+
+# 					| SLEEP(1000) 		  |
+# 					+-------------------+
+# 					| 			1 			  |
+# 					+-------------------+
+#
+# 			When SLEEP() is only part of a query that is interrupted, the query returns an error:
+#
+# 				) This statement is interrupted using KILL_QUERY from another session:
+#
+# 					SELECT 1 FROM t1 WHERE SLEEP(1000);
+# 					ERROR 1317 (70100): Query execution was interrupted
+#
+# 				) This statement is interrupted by timing out:
+#
+# 					SELECT /*+ MAX_EXECUTION_TIME(1000) */ 1 FROM t1 WHERE SLEEP(1000);
+# 					ERROR 3024 (HY000): Query execution was interrupted, maximum statement
+# 					execution time exceeded
+#
+# 			This function is unsafe for statement-based replication.
+#
+# 			A warning is logged if you use this function when binlog_format is set
+# 			to STATEMENT.
+#
+# 		) UUID()
+#
+# 			Returns a Universal Unique Identifier (UUID) generated according to RFC 4122,
+# 			"A Universally Unique Identifier (UUID) URN Namespace" (<link>)
+#
+# 			A UUID is designed as a number that is globally unique in space and time.
+#
+# 			Two calls to UUID() are expected to generate two different values, even if these
+# 			calls are performed on two separate devices not connected to each other.
+#
+# 				WARNING
+#
+# 					Although UUID() values are intended to be unique, they are not necessarily unguessable
+# 					or unpredictable.
+#
+# 					If unpreidctability is required, UUID() values should be generated some other way.
+#
+# 			UUID() returns a value that conforms to UUID version 1 as described in RFC 4122.
+#
+# 			The value is a 128-bit number represented as a utf8 string of five hexadecimal numbers in
+# 			aaaaaaaa-bbbb-cccc-dddd-eeeeeeee format:
+#
+# 				) The first three numbers are generated from the low, middle and high parts of a timestamp.
+#
+# 					The high part also includes the UUID version number.
+#
+# 				) The fourth number preserves temporal uniqueness in case the timestamp value loses monotonicity
+# 					(for example, due to daylight saving time)
+#
+# 				) The fifth number is an IEEE 802 node number that provides spatial uniqueness.
+#
+# 				A random number is substituted if the latter is not available (for example, because the host device
+# 				has no Ethernet card, or it is unknown how to find the hardware address of an interface on the host
+# 				operating system)
+#
+# 				In this case, spatial uniqueness cannot be guaranteed.
+#
+# 				Nevertheless, a collision should have very low probability.
+#
+# 				The MAC address of an interface is taken into account only on FreeBSD and Linux
+#
+# 				On other operating systems, MySQL uses a randomly generated 48-bit number.
+#
+# 					SELECT UUID();
+# 						-> '6ccd780c-baba-1026-9564-5b8c656024db'
+#
+# 			To convert between string and binary UUID values, use the UUID_TO_BIN() and
+# 			BIN_TO_UUID() functions.
+#
+# 			TO check whether a string is a valid UUID value, use the IS_UUID() function.
+#
+# 			NOTE:
+#
+# 				UUID() does not work with statement-based replication
+#
+# 		) UUID_SHORT()
+#
+# 			Returns a "short" universal identifier as a 64-bit unsigned integer.
+#
+# 			Values returned by UUID_SHORT() differ from the string-format 128-bit
+# 			identifiers returned by the UUID() function and have different uniqueness
+# 			properties.
+#
+# 			The value of UUID_SHORT() is guaranteed to be unique if the following conditions hold:
+#
+# 				) The server_id value of the current server is between 0 and 255 and is unique among your
+# 					set of master and slave servers
+#
+# 				) You do not set back the system time for your server host between mysqld restarts
+#
+# 				) You invoke UUID_SHORT() on average fewer than 16 million times per second between mysqld restarts
+#
+# 			The UUID_SHORT() return value is constructed this way:
+#
+# 				(server_id & 255) << 56
+# 			 + (server_startup_time_in_seconds << 24)
+# 			 + incremented_variable++;
+#
+# 				SELECT UUID_SHORT();
+# 					-> 92395783831158784
+#
+# 			NOTE:
+#
+# 				UUID_SHORT() does not work with statement-based replication
+#
+# 		) UUID_TO_BIN(string uuid), UUID_TO_BIN(string uuid, swap flag)
+#
+# 			Converts a string UUID to a binary UUID and returns the result.
+#
+# 			(The IS_UUID() function description lists the permitted string UUID formats)
+#
+# 			THe return binary UUID is a VARBINARY(16) value
+#
+# 			If the UUID argument is NULL, the return value is NULL.
+#
+# 			If any argument is invalid, an error occurs.
+#
+# 			UUID_TO_BIN() takes one or two arguments:
+#
+# 				) The one-argument form takes a string UUID value. The binary result is in the same
+# 					order as the string argument.
+#
+# 				) The two-argument form takes a string UUID value and a flag value:
+#
+# 					) If swap_flag is 0, the two-argument form is equivalent to the one-argument form.
+#
+# 						The binary result is in the same order as the string argument.
+#
+# 					) If swap_flag is 1, the format of the return value differs:
+#
+# 						The time-low and time-high parts (the first and third groups of hexadecimal digits,
+# 						respectively) are swapped.
+#
+# 						This moves the more rapidly varying part to the right and can improve indexing efficiency
+# 						if the result is stored in an indexed column.
+#
+# 			Time-part swapping assumes the use of UUID version 1 values, such as are generated by the UUID()
+# 			function.
+#
+# 			For UUID values produced by other means that do not follow version 1 format, time-part swapping
+# 			provides no benefit.
+#
+# 			For details about version 1 format, see the UUID() function description.
+#
+# 			Suppose that you have the following string UUID value:
+#
+# 				SET @uuid = '6ccd780c-baba-1026-9564-5b8c656024db';
+#
+# 			To convert the string UUID to binary with or without time-part swapping,
+# 			use UUID_TO_BIN():
+#
+# 				SELECT HEX(UUID_TO_BIN(@uuid));
+# 				+-------------------------------------+
+# 				| HEX(UUID_TO_BIN(@uuid)) 				  |
+# 				+-------------------------------------+
+# 				| 6CCD780CBABA102695645B8C656024DB 	  |
+# 				+-------------------------------------+
+#
+# 				SELECT HEX(UUID_TO_BIN(@uuid, 0));
+# 				+-------------------------------------+
+# 				| HEX(UUID_TO_BIN(@uuid, 0)) 			  |
+# 				+-------------------------------------+
+# 				| 6CCD780CBABA102695-> ETC 			  |
+# 				+-------------------------------------+
+#
+# 				SELECT HEX(UUID_TO_BIN(@uuid, 1));
+# 				+-------------------------------------+
+# 				| HEX(UUID_TO_BIN(@uuid, 1)) 			  |
+# 				+-------------------------------------+
+# 				| 1026BABA6CCD780C95645B8C656024DB 	  |
+# 				+-------------------------------------+
+#
+# 			To convert a binary UUID returned by UUID_TO_BIN() to a string UUID,
+# 			use BIN_TO_UUID() 
+#
+# 			If you produce a binary UUID by calling UUID_TO_BIN() with a second
+# 			argument of 1 to swap time parts, you should also pass a second argument
+# 			of 1 to BIN_TO_UUID() to unswap the time parts when converting the binary
+# 			UUID back to a string UUID:
+#
+# 				SELECT BIN_TO_UUID(UUID_TO_BIN(@uuid));
+# 				+---------------------------------------+
+# 				| BIN_TO_UUID(UUID_TO_BIN(@uuid)) 		 |
+# 				+---------------------------------------+
+# 				| 6ccd780c-baba-1026-9564-5b8c656024db  |
+# 				+---------------------------------------+
+#
+# 				SELECT BIN_TO_UUID(UUID_TO_BIN(@uuid,0),0);
+# 				+---------------------------------------+
+# 				| BIN_TO_UUID(UUID_TO_BIN(@uuid,0),0) 	 |
+# 				+---------------------------------------+
+# 				| 6ccd780c-baba-1026-9564-5b8c656024db  |
+# 				+---------------------------------------+
+#
+# 				SELECT BIN_TO_UUID(UUID_TO_BIN(@uuid,1),1);
+# 				+---------------------------------------+
+# 				| BIN_TO_UUID(UUID_TO_BIN(@uuid,1),1) 	 |
+# 				+---------------------------------------+
+# 				| 6ccd780c-baba-1026-9564-5b8c656024db  |
+# 				+---------------------------------------+
+#
+# 			If the use of time-part swapping is not the same for the conversion
+# 			in both directions, the original UUID will not be recovered properly:
+#
+# 				SELECT BIN_TO_UUID(UUID_TO_BIN(@uuid,0),1);
+# 				+---------------------------------------+
+# 				| BIN_TO_UUID(UUID_TO_BIN(@uuid,0),1)   |
+# 				+---------------------------------------+
+# 				| baba1026-780c-6ccd-9564-5b8c656024db  |
+# 				+---------------------------------------+
+#
+# 				SELECT BIN_TO_UUID(UUID_TO_BIN(@uuid,1),0);
+# 				+---------------------------------------+
+# 				| BIN_TO_UUID(UUID_TO_BIN(@uuid,1),0)   |
+# 				+---------------------------------------+
+# 				| 1026baba-6ccd-780c-9564-5b8c656024db  |
+# 				+---------------------------------------+
+#
+# 		) VALUES(col name)
+#
+# 			In an INSERT_---_ON_DUPLICATE_KEY_UPDATE statement, you can use the VALUES(col_name)
+# 			function in the UPDATE clause to refer to column values from the INSERT portion of the
+# 			statement.
+#
+# 			In other words, VALUES(col_name) in the UPDATE clause refers to the value of col_name
+# 			that would be inserted, had no duplicate-key conflict occurred.
+#
+# 			This function is especially useful in multiple-row inserts
+#
+# 			The VALUES() function is meaningful only in the ON DUPLICATE KEY UPDATE clause of
+# 			INSERT statements and returns NULL otherwise.
+#
+# 			See SECTION 13.2.6.2, "INSERT --- ON DUPLICATE KEY UPDATE SYNTAX"
+#
+# 				INSERT INTO table (a,b,c) VALUES (1,2,3),(4,5,6)
+# 					-> ON DUPLICATE KEY UPDATE c=VALUES(a)+VALUES(b);
+#
+# 12.24 PRECISION MATH
+#
+# 12.24.1 TYPES OF NUMERIC VALUES
+# 12.24.2 DECIMAL DATA TYPE CHARACTERISTICS
+# 12.24.3 EXPRESSION HANDLING
+# 12.24.4 ROUNDING BEHAVIOR
+# 12.24.5 PRECISION MATH EXAMPLES
+#
+# MySQL provides support for precision math: numeric value handling that results in extremely
+# accurate results and a high degree control over invalid values.
+#
+# Precision math is based on these two features:
+#
+# 		) SQL modes that control how strict the server is about accepting or rejecting invalid data.
+#
+# 		) The MySQL library for fixed-point arithmetic
+#
+# These features have several implications for numeric operations and provide a high degree of
+# compliance with standard SQL:
+#
+# 		) Precise calculations: For exact-value numbers, calculations do not introduce floating-point errors.
+#
+# 			Instead, exact precision is used.
+#
+# 			For example, MySQL treats a number such as .0001 as an exact value rather than as an approximation,
+# 			and summing it 10,000 times produces a result of exactly 1, not a value that is merely "close" to 1.
+#
+# 		) Well-defined rounding behavior. For exact-value numbers, the result of ROUND() depends on its argument,
+# 			not on environmental factors such as how the underlying C library works.
+#
+# 		) Platform independence: Operations on exact numeric values are the same across different platforms such as Windows and Unix.
+#
+# 		) Control over handling of invalid values: Overflow and division by zero are detectable and can be treated as errors.
+#
+# 			For example, you can treat a value that is too large for a column as an error rather than having the value
+# 			truncated to lie within the range of the columns data type.
+#
+# 			SImilarly, you can treat division by zero as an error rather than as an operation that produces a result
+# 			of NULL.
+#
+# 			The choice of which approach to take is determined by the setting of the server SQL mode.
+#
+# The following discussion covers several aspects of how precision math works, including possible incomatibilities
+# with older applications.
+#
+# At the end, some examples are given that demonstrate how MySQL handles numeric operations precisely.
+#
+# For information about controlling the SQL mode, see SECTION 5.1.11, "SERVER SQL MODES"
+#
+# 12.24.1 TYPES OF NUMERIC VALUES
+#
+# The scope of precision math for exact-value operations includes the exact-value data types
+# (integer and DECIMAL types) and exact-value numeric literals.
+#
+# Approximate-value data types and numeric literals are handled as floating-point numbers.
+#
+# Exact-value numeric literals have an integer part or fractional part, or both.
+#
+# They may be signed. Examples: 1, .2, 3.4, -5, -6.78, +9.10
+#
+# Approximate-value numeric literals are represented in scientific notation with a mantissa
+# and exponent.
+#
+# Either or both parts may be signed. Examples: 1.2E3, 1.2E-3, -1.2E3, -1.2E-3
+#
+# Two numbers that look similar may be treated differently.
+#
+# For example, 2.34 is an exact-value (fixed-point) number, whereas 2.34E0 is an
+# approximate value (floating-point) number
+#
+# The DECIMAL data type is a fixed-point type and calculations are exact.
+#
+# In MySQL, the DECIMAL type has several synonyms: NUMERIC, DEC, FIXED.
+#
+# The integer types also are exact-value types.
+#
+# The FLOAT and DOUBLE data types are floating-point types and calculations
+# are approximate.
+#
+# In MySQL, types that are synonymous with FLOAT or DOUBLE are DOUBLE_PRECISION
+# and REAL.
+#
+# 12.24.2 DECIMAL DATA TYPE CHARACTERISTICS
+#
+# This section discusses the characteristics of the DECIMAL data type (and its synonyms),
+# with particular regard to the following topics:
+#
+# 		) Maximum number of digits
+#
+# 		) Storage format
+#
+# 		) Storage requirements
+#
+# 		) The nonstandard MySQL extension to the upper range of DECIMAL columns
+#
+# The declaration syntax for a DECIMAL column is DECIMAL(M,D)
+#
+# The ranges of values for the arguments are as follows:
+#
+# 		) M is the maximum number of digits (the precision). Has a range of 1 to 65
+#
+# 		) D is the number of digits to the right of the decimal point (the scale). Range of 0 to 30, must be no larger than M.
+#
+# If D is omitted, the default is 0. If M is omitted, the default is 10.
+#
+# The maximum value of 65 for M means that calculations on DECIMAL values are accurate up to
+# 65 digits.
+#
+# This limit of 65 digits of precision also applies to exact-value numeric literals,
+# so the maximum range of such literals differs from before.
+#
+# Values for DECIMAL columns are stored using a binary format that packs nine decimal
+# digits into 4 bytes.
+#
+# The storage requirements for the integer and fractional parts of each value are determined
+# separately.
+#
+# Each multiple of nine digits requires 4 bytes, and any remaining digits left over require some
+# fraction of 4 bytes.
+#
+# The storage required for remaining digits is given by the following table.
+#
+# LEFTOVER DIGITS 				NUMBER OF BYTES
+#
+# 0 									0
+#
+# 1-2 								1
+#
+# 3-4 								2
+#
+# 5-6 								3
+#
+# 7-9 								4
+#
+# For example, a DECIMAL (18,9) column has nine digits on either side of the decimal point,
+# so the integer part and the fractional part each require 4 bytes.
+#
+# A DECIMAL(20,6) column has fourteen integer digits and six fractional digits.
+#
+# The integer digits require four bytes for nine of the digits and 3 bytes for the remaining
+# five digits.
+#
+# THe six fractional digits require 3 bytes.
+#
+# DECIMAL columns do not store a leading + character or - character or leading 0 digits.
+#
+# If you insert +0003.1 into a DECIMAL(5,1) column, it is stored as 3.1
+#
+# For negative numbers, a literal - character is not stored.
+#
+# DECIMAL columns do not permit values larger than the range implied by the column definition.
+#
+# For example, a DECIMAL(3,0) column supports a range of -999 to 999
+#
+# A DECIMAL(M,D) column permits up to M - D digits to the left of the decimal point.
+#
+# The SQL standard requires that the precision of NUMERIC(M,D) be exactly M digits.
+#
+# For DECIMAL(M,D), the standard requires a precision of at least M digits but permits
+# more.
+#
+# In MySQL, DECIMAL(M,D) and NUMERIC(M,D) are the same, and both have a precision
+# of exactly M digits.
+#
+# For a full explanation of the internal format of DECIMAL values, see the file
+# strings/decimal.c in a MySQL source distrib.
+#
+# The format is explained (with an example) in the decimal2bin() function.
+#
+# 12.24.3 EXPRESSION HANDLING
+#
+# With precision math, exact-value numbers are used as given whenever possible.
+#
+# For example, numbers in comparisons are used exactly as given without a change in
+# value.
+#
+# In strict SQL mode, for INSERT into a column with an exact data type (DECIMAL or integer),
+# a number is inserted with its exact value if it is within the column range.
+#
+# When retrieved, the value should be the same as what was inserted.
+#
+# (If strict SQL mode is not enabled, truncation for INSERT is permissible)
+#
+# Handling of a numeric expression depends on what kind of values the expression contains:
+#
+# 		) If any approximate values are present, the expression is approximate and is evaluated using floating-point arithmetic
+#
+# 		) If no approximate value are present, the expression contains only exact values.
+#
+# 			If any exact value contains a fractional part (a value following the decimal point),
+# 			the expression is evaluated using DECIMAL exact arithmetic and has a precision of 65 digits.
+#
+# 			The term "exact" is subject to the limits of what can be represented in binary.
+#
+# 			For example, 1.0/3.0 can be approximated in decimal notation as .333---, but not written
+# 			as an exact number, so (1.0/3.0)*3.0 does not evaluate to exactly 1.0
+#
+# 		) Otherwise, the expression contains only integer values.
+#
+# 			The expression is exact and is evaluated using integer arithmetic and has a precision
+# 			the same as BIGINT(64 bits)
+#
+# If a numeric expression contains any strings, they are converted to double-precision floating-point
+# values and the expression is approximate.
+#
+# Inserts into numeric columns are affected by the SQL mode, which is controlled by the sql_mode system
+# variable.
+#
+# (See SECTION 5.1.11, "SERVER SQL MODES")
+#
+# The following discussion mentions strict mode (selected by the STRICT_ALL_TABLES or STRICT_TRANS_TABLES
+# mode values) and ERROR_FOR_DIVISION_BY_ZERO
+#
+# To turn on all restrictions, you can simply use TRADITIONAL mode, which includes both strict mode values
+# and ERROR_FOR_DIVISION_BY_ZERO:
+#
+# 		SET sql_mode='TRADITIONAL';
+#
+# If a number is inserted inot an exact type column (DECIMAL or integer), it is inserted with its exact
+# value if it is within the column range and precision.
+#
+# If the value has too many digits in the fractional part, rounding occurs and a note is generated.
+#
+# Rounding is done as described in SECTION 12.24.4, "ROUNDING BEHAVIOR"
+#
+# Truncation due to rounding of the fractional part is not an error, even in strict mode.
+#
+# If te value has too many digits in the integer part, it is too large (out of range) and is
+# handled as follows:
+#
+# 		) If strict mode is not enabled, the value is truncated to the nearest legal value and a warning is generated.
+#
+# 		) If strict mode is enabled, an overflow error occurs.
+#
+# Underflow is not detected, so underflow handling is undefined.
+#
+# For inserts of strings into numeric columns, conversion from string to number is handled as follows
+# if the string has nonnumeric contents:
+#
+# 		) A string that does not begin with a number cannot be used as a number and pproduces an error in strict mode,
+# 			or a warning otherwise.
+#
+# 			This includes the empty string.
+#
+# 		) A string that begins with a number can be converted, but the trailing nonnumeric portion is truncated.
+#
+# 		If the truncated portion contains anything other than spaces, this produces an error in strict mode,
+# 		or a warning otherwise.
+#
+# By default, division by zero produces a result of NULL and no warning.
+#
+# By setting the SQL mode appropriately, division by zero can be restricted.
+#
+# With the ERROR_FOR_DIVISION_BY_ZERO SQL mode enabled, MySQL handles division by zero differently:
+#
+# 		) if strict mode is not enabled, a warning occurs
+#
+# 		) If strict mode is enabled, inserts and updates involving division by zero are prohibited, and an error occurs.
+#
+# In other words, inserts and updates involving expressions that perform division by zero can be treated as errors,
+# but this requires ERROR_FOR_DIVISION_BY_ZERO in addition to strict mode.
+#
+# Suppose that we have this statement:
+#
+# 		INSERT INTO t SET i = 1/0;
+#
+# This is what happens for combinations of strict and ERROR_FOR_DIVISION_BY_ZERO modes.
+#
+# 		sql_mode VALUE 				RESULT
+#
+# ''(Default) 							No warning, no error; i is set to NULL
+#
+# strict 								No warning, no error; i is set to NULL
+#
+# ERROR_FOR_DIVISION_BY_ZERO 		Warning, no error; i is set to NULL
+#
+# strict, ERROR_FOR_DIVISION_BY_ZERO Error condition; no row is inserted.
+#
+# 12.24.4 ROUNDING BEHAVIOR
+#
+# This section discusses precision math rounding for the ROUND() function and for
+# inserts into columns with exact-value types (DECIMAL and integer)
+#
+# The ROUND() function rounds differently depending on whether its argument is exact
+# or approximate:
+#
+# 		) For exact-value numbers, ROUND() uses the "round half up" rule:
+#
+# 			A value with a fractional part of .5 or greater is rounded up to the next
+# 			integer if positive or down to the next integer if negative.
+#
+# 			(IN other words, it is rounded away from zero)
+#
+# 			A value with a fractional part less than .5 is rounded down to the next
+# 			integer if positive or up to the next integer if negative.
+#
+# 			(In other words, it is rounded toward zero)
+#
+# 		) For approximate-value numbers, the result depends on the C library.
+#
+# 			On many systems, this means that ROUND() uses the "round to nearest even" rule:
+#
+# 				A value with a fractional part exactly half way between two integers is rounded
+# 				to the nearest even integer.
+#
+# The following example shows how rounding differs for exact and approximate values:
+#
+# 		SELECT ROUND(2.5), ROUND(25E-1);
+# 		+------------+------------------+
+# 		| ROUND(2.5) | ROUND(25E-1) 	  |
+# 		+------------+------------------+
+# 		| 3 			 | 	2 				  |
+# 		+------------+------------------+
+#
+# For inserts into a DECIMAL or integer column, the target is an exact data type, so rounding
+# uses "round half away from zero", regardless of whether the value to be inserted is exact
+# or approximate:
+#
+# 		CREATE TABLE t (d DECIMAL(10,0));
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		INSERT INTO t VALUES(2.5),(2.5E0);
+# 		Query OK, 2 rows affected, 2 warnings (0.00 sec)
+# 		Records: 2 Duplicates: 0 Warnings: 2
+#
+# 		SHOW WARNINGS;
+# 		+---------+----------+------------------------------------------------+
+# 		| Level   | Code     | Message 													 |
+# 		+---------+----------+------------------------------------------------+
+# 		| Note 	 | 1265 		| Data truncated for column 'd' at row 1 			 |
+# 		| Note 	 | 1265 		| Data truncated for column 'd' at row 2 			 |
+# 		+---------+----------+------------------------------------------------+
+# 		2 rows in set (0.00 sec)
+#
+# 		SELECT d FROM t;
+# 		+-----------+
+# 		| d 			|
+# 		+-----------+
+# 		| 3 			|
+# 		| 3 			|
+# 		+-----------+
+# 		2 rows in set (0.00 sec)
+#
+# The SHOW_WARNINGS statement displays the notes that are generated by truncation due to rounding
+# of the fractional part.
+#
+# Such truncation is not an error, even in strict SQL mode (see SECTION 12.24.3, "EXPRESSION HANDLING")
+#
+# 12.24.5 PRECISION MATH EXAMPLES
+#
+# This section provides some examples that show precision math query results in MySQL.
+#
+# These examples demonstrates the principles described in SECTION 12.24.3, "EXPRESSION HANDLING",
+# and SECTION 12.24.4, "ROUNDING BEHAVIOR"
+#
+# EXAMPLE 1.
+#
+# Numbers are used with their exact values as given when possible:
+#
+# 		SELECT (.1 + .2) = 3;
+# 		+---------------------+
+# 		| (.1 + .2) = .3      |
+# 		+---------------------+
+# 		| 				1 			 |
+# 		+---------------------+
+#
+# For floating-point values, results are inexact:
+#
+# 		SELECT (.1E0 + .2E0) = .3E0;
+# 		+-----------------------------+
+# 		| (.1E0 + .2E0) = .3E0 			|
+# 		+-----------------------------+
+# 		| 					0 					|
+# 		+-----------------------------+
+#
+# ANother way to see the difference in exact and approximate value handling is to add
+# a small number to a sum many times.
+#
+# Consider the following stored procedure, which adds .0001 to a variable 1.000 times
+#
+# CREATE PROCEDURE p ()
+# BEGIN
+# 		DECLARE i INT DEFAULT 0;
+# 		DECLARE d DECIMAL(10,4) DEFAULT 0;
+# 		DECLARE f FLOAT DEFAULT 0;
+# 		WHILE i < 10000 DO
+# 			SET d = d + .0001;
+# 			SET f = f + .0001E0;
+# 			SET i = i + 1;
+# 		END WHILE;
+# 		SELECT d, f;
+# END;
+#
+# The sum for both d and f logically should be 1, but that is true only for decimal calculation.
+#
+# The floating-point calculation introduces small errors:
+#
+# 		+-------------+-------------------------------+
+# 		| d 			  | 	f 									 |
+# 		+-------------+-------------------------------+
+# 		| 1.0000      | 0.99999999999991 				 |
+# 		+-------------+-------------------------------+
+#
+# Example 2
+#
+# Multiplication is performed with the scale required by standard SQL.
+#
+# That is, for two numbers X1 and X2 that have scale S1 and S2, the scale
+# of the result is S1 + S2:
+#
+# 		SELECT .01 * .01;
+# 		+---------------+
+# 		| .01 * .01 	 |
+# 		+---------------+
+# 		| 0.0001 		 |
+# 		+---------------+
+#
+# Example 3
+#
+# Rounding behavior for exact-value numbers is well-defined:
+#
+# 		Rounding behavior (for example, with the ROUND() function) is independent of the implementation
+# 		of the underlying C library, which means that results are consistent from platform to platform.
+#
+# 			) Rounding for exact-value columns (DECIMAL and integer) and exact-valued numbers uses the "round half away from zero" rule.
+#
+# 				A value with a fractional part of .5 or greater is rounded away from zero to the nearest
+# 				integer, as shown here:
+#
+# 					SELECT ROUND(2.5), ROUND(-2.5);
+# 					+---------------+------------------+
+# 					| ROUND(2.5)    | ROUND(-2.5) 	  |
+# 					+---------------+------------------+
+# 					| 3 				 | -3 				  |
+# 					+---------------+------------------+
+#
+# 			) Rounding for floating-point values uses the C library, which on many systems uses the
+# 				"round to nearest even" rule.
+#
+# 				A value with a fractional part exactly half way between two integers is rounded to
+# 				the nearest even integer:
+#
+# 					SELECT ROUND(2.5E0), ROUND(-2.5E0);
+# 					+-------------+-------------------+
+# 					| ROUND(2.5E0)| ROUND(-2.5E0) 	 |
+# 					+-------------+-------------------+
+# 					| 		2 		  | 		-2 			 |
+# 					+-------------+-------------------+
+#
+# Example 4
+#
+# In strict mode, inserting a value that is out of range for a column causes an error,
+# rather than truncation to a legal value.
+#
+# When MySQL is not running in strict mode, truncation to a legal value occurs:
+#
+# 		SET sql_mode='';
+# 		Query OK,, 0 rows affected (0.00 sec)
+#
+# 		CREATE TABLE t (i TINYINT);
+# 		Query OK, 0 rows affected (0.01 sec)
+#
+# 		INSERT INTO t SET i = 128;
+# 		Query OK, 1 row affected, 1 warning (0.00 sec)
+#
+# 		SELECT i FROM t;
+# 		+----------+
+# 		| 	i 		  |
+# 		+----------+
+# 		| 127 	  |
+# 		+----------+
+#
+# However, an error occurs if strict mode is in effect:
+#
+# 		SET sql_mode='STRICT_ALL_TABLES';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		CREATE TABLE t (i TINYINT);
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		INSERT INTO t SET i = 128;
+# 		ERROR 1264 (22003): Out of range value adjusted for column 'i' at row 1
+#
+# 		SELECT i FROM t;
+# 		Empty set (0.00 sec)
+#
+# Example 5
+#
+# In strict mode and with ERROR_FOR_DIVISION_BY_ZERO set, division by zero causes
+# an error, not a result of NULL.
+#
+# In nonstrict mode, division by zero has a result of NULL:
+#
+# 		SET sql_mode='';
+# 		Query OK, 0 rows affected (0.01 sec)
+#
+# 		CREATE TABLE t (i TINYINT);
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		INSERT INTO t SET i = 1 / 0;
+# 		Query OK, 1 row affected (0.00 sec)
+#
+# 		SELECT i FROM t;
+# 		+-----------+
+# 		| i 			|
+# 		+-----------+
+# 		| NULL 		|
+# 		+-----------+
+# 		1 row in set (0.03 sec)
+#
+# However, division by zero is an error if the proper SQL modes are in effect:
+#
+# 		SET sql_mode='STRICT_ALL_TABLES, ERROR_FOR_DIVISION_BY_ZERO';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		CREATE TABLE t (i TINYINT);
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		INSERT INTO t SET = 1 / 0;
+# 		ERROR 1365 (22012): Division by 0
+#
+# 		SELECT i FROM t;
+# 		Empty set (0.01 sec)
+#
+# Example 6
+#
+# Exact-value literals are evaluted as exact values.
+#
+# Approximate-value literals are evaluated using floating-point, but exact-value
+# literals are handled as DECIMAL:
+#
+# 		CREATE TABLE t SELECT 2.5 AS a, 25E-1 AS b;
+# 		Query OK, 1 row affected (0.01 sec)
+# 		Records: 1 Duplicates: 0 Warnings: 0
+#
+# 		DESCRIBE t;
+# 		+---------+--------------------------------------+----------+----------+-----------------------+-----------+
+# 		| Field 	 | Type 											 | Null 		| Key 	  | Default 				  | Extra 	  |
+# 		+---------+--------------------------------------+----------+----------+-----------------------+-----------+
+# 		| a 		 | decimal(2,1) unsigned 					 | NO       | 			  | 0.0 						  | 			  |
+# 		| b 		 | double 										 | NO 		| 			  | 0 						  | 			  |
+# 		+---------+--------------------------------------+----------+----------+-----------------------+-----------+
+#
+# Example 7
+#
+# If the argument to an aggregate function is an exact numeric type, the result is also an exact numeric type,
+# with a scale at least that of the argument.
+#
+# Consider these statements:
+#
+# 		CREATE TABLE t (i INT, d DECIMAL, f FLOAT);
+# 		INSERT INTO t VALUES(1,1,1);
+# 		CREATE TABLE y SELECT AVG(i), AVG(d), AVG(f) FROM t;
+#
+# THe result is a double only for the floating-point argument.
+#
+# For exact type arguments, the result is also an exact type:
+#
+# 		DESCRIBE y;
+# 		+----------+---------------------------+-------+---------+---------------+--------------+
+# 		| Field 	  | Type 							| Null  | Key 	   | Default 		 | Extra 		 |
+# 		+----------+---------------------------+-------+---------+---------------+--------------+
+# 		| AVG(i)   | decimal(14,4) 				| YES   | 			| NULL 			 | 				 |
+# 		| AVG(d)   | decimal(14,4) 				| YES   | 		   | NULL 			 | 				 |
+# 		| AVG(f)   | double 							| YES   | 			| NULL 			 | 				 |
+# 		+----------+---------------------------+-------+---------+---------------+--------------+
+#
+# The result is a double only for the floating-point argument.
+#
+# for exact type arguments, the result is also an exact type.
+#
+# CHAPTER 13 SQL STATEMENT SYNTAX
+#
+# TABLE OF CONTENTS
+#
+# 13.1 DATA DEFINITION STATEMENTS
+# 13.2 DATA MANIPULATION STATEMENTS
+# 13.3 TRANSACTIONAL AND LOCKING STATEMENTS
+# 13.4 REPLICATION STATEMENTS
+# 13.5 PREPARED SQL STATEMENT SYNTAX
+# 13.6 COMPOUND-STATEMENT SYNTAX
+# 13.7 DATABASE ADMINISTRATION STATEMENTS
+# 13.8 UTILITY STATEMENTS
+#
+# This chapter describes the syntax for the SQL statements supported by MySQL.
+#
+# 13.1 DATA DEFINITION STATEMENTS
+#
+# 13.1.1 ATOMIC DATA DEFINITION STATEMENT SUPPORT
+# 13.1.2 ALTER DATABASE SYNTAX
+# 13.1.3 ALTER EVENT SYNTAX
+# 13.1.4 ALTER FUNCTION SYNTAX
+# 
+# 13.1.5 ALTER INSTANCE SYNTAX
+# 13.1.6 ALTER LOGFILE GROUP SYNTAX
+# 13.1.7 ALTER PROCEDURE SYNTAX
+# 13.1.8 ALTER SERVER SYNTAX
+#
+# 13.1.9 ALTER TABLE SYNTAX
+# 13.1.10 ALTER TABLESPACE SYNTAX
+# 13.1.11 ALTER VIEW SYNTAX
+# 13.1.12 CREATE DATABASE SYNTAX
+#
+# 13.1.13 CREATE EVENT SYNTAX
+# 13.1.14 CREATE FUNCTION SYNTAX
+# 13.1.15 CREATE INDEX SYNTAX
+# 13.1.16 CREATE LOGFILE GROUP SYNTAX
+#
+# 13.1.17 CREATE PROCEDURE AND CREATE FUNCTION SYNTAX
+# 13.1.18 CREATE SERVER SYNTAX
+# 13.1.19 CREATE SPATIAL REFERENCE SYSTEM SYNTAX
+# 13.1.20 CREATE TABLE SYNTAX
+#
+# 13.1.21 CREATE TABLESPACE SYNTAX
+# 13.1.22 CREATE TRIGGER SYNTAX
+# 13.1.23 CREATE VIEW SYNTAX
+# 13.1.24 DROP DATABASE SYNTAX
+#
+# 13.1.25 DROP EVENT SYNTAX
+# 13.1.26 DROP FUNCTION SYNTAX
+# 13.1.27 DROP INDEX SYNTAX
+# 13.1.28 DROP LOGFILE GROUP SYNTAX
+#
+# 13.1.29 DROP PROCEDURE AND DROP FUNCTION SYNTAX
+# 13.1.30 DROP SERVER SYNTAX
+# 13.1.31 DROP SPATIAL REFERENCE SYSTEM SYNTAX
+# 13.1.32 DROP TABLE SYNTAX
+#
+# 13.1.33 DROP TABLESPACE SYNTAX
+# 13.1.34 DROP TRIGGER SYNTAX
+# 13.1.35 DROP VIEW SYNTAX
+# 13.1.36 RENAME TABLE SYNTAX
+#
+# 13.1.37 TRUNCATE TABLE SYNTAX
+#
+# 13.1.1 ATOMIC DATA DEFINITION STATEMENT SUPPORT
+#
+# MySQL 8.0 supports atomic Data Definition Language (DDL) statements.
+#
+# This feature is referred to as atomic DDL.
+#
+# AN atomic DDL statement combines the data dictionary updates, storage engine operations,
+# and binary log writes associated with a DDL operation into a single, atomic transaction.
+#
+# The transaction is either committed, with applicable changes persisted to the data dictionary,
+# storage engine and binary log, or is rolled back, even if the server halts during the operation.
+#
+# Atomic DDL is made possible by the introduction of the MySQL data dictionary in MySQL 8.0
+#
+# In earlier MySQL versions, metadata was stored in metadata files, nontransactional tables
+# and storage engine-specific dictionaries, which necessitated intermediate commits.
+#
+# Centralized, transactional metadata storage provided by the MySQL data dictionary
+# removed this barrier, making it possible to restructure DDL statement operations into
+# atomic transactions.
+#
+# The atomic DDL feature is described under the following topics in this section:
+#
+# 		) Supported DDL statements
+#
+# 		) Atomic DDL characteristics
+#
+# 		) Changes in DDL Statement Behavior
+#
+# 		) Storage Engine Support
+#
+# 		) Viewing DDL Logs
+#
+# SUPPORTED DDL STATEMENTS
+#
+# The atomic DDL feature supports both table and non-table DDL statements.
+#
+# Table-related DDL operations require storage engine support, whereas non-table
+# DDL operations do not.
+#
+# Currently, only the InnoDB storage engine supports atomic DDL.
+#
+# 		) Supported table DDL statements include CREATE ALTER, and DROP statements for databases,
+# 			tablespaces, tables and indexes, and the TRUNCATE_TABLE statement.
+#
+# 		) Supported non-table DDL statements include:
+#
+# 			) CREATE and DROP statements, and, if applicable, ALTER statements for stored programs,
+# 				triggers, views and user-defined functions (UDFs)
+#
+# 			) Account management statements: CREATE, ALTER, DROP and if applicable, RENAME
+# 				statements for users and roles, as well as GRANT and REVOKE statements.
+#
+# The following statements are not supported by the atomic DDL feature:
+#
+# 		) Table-related DDL statements that involve a storage engine other than InnoDB
+#
+# 		) INSTALL_PLUGIN and UNINSTALL_PLUGIN statements
+#
+# 		) INSTALL_COMPONENT and UNINSTALL_COMPONENT statements
+#
+# 		) CREATE_SERVER, ALTER_SERVER and DROP_SERVER statements
+#
+# ATOMIC DDL CHARACTERISTICS
+#
+# The characteristics of atomic DDL statements include the following:
+#
+# 		) Metadata updates, binary log writes, and storage engine operations, where applicable, are combined into a single transaction.
+#
+# 		) There are no intermediate commits at the SQL layer during the DDL operation
+#
+# 		) Where applicable:
+#
+# 			) The state of data dictionary, routine, event and UDF caches is consistent with the status
+# 				of the DDL operation, meaning that caches are updated to reflect whether or not the
+# 				DDL operation was completed successfully or rolled back.
+#
+# 			) The storage engine method involved in a DDL operation do not perform intermediate commits,
+# 				and the storage engine registers itself as part of the DDL transaction.
+#
+# 			) The storage engine supports redo and rollback of DDL operations, which is performed in the
+# 				Post-DDL phase of the DDL operation.
+#
+# 		) The visible behavior of DDL operations is atomic, which changes the behavior of some DDL statements.
+#
+# 			See CHANGES IN DDL STATEMENT BEHAVIOR
+#
+# NOTE:
+#
+# 		DDL statements, atomic or otherwise, implicitly end any transaction that is active in the current session,
+# 		as if you had done a COMMIT before executing the statement.
+#
+# 		This means that DDL statements cannot be performed within another transaction, within transaction control
+# 		statements such as START TRANSACTION --- COMMIT, or combined with other statements within the same transaction.
+#
+# CHANGES IN DDL STATEMENT BEHAVIOR
+#
+# This section describes changes in DDL statement behavior due to the introduction of atomic DDL support.
+#
+# 		) DROP TABLE operations are fully atomic if all named tables use an atomic DDL-supported storage engine.
+#
+# 			The statement either drops all tables successfully or is rolled back.
+#
+# 			DROP TABLE fails with an error if a named table does not exist, and no changes are made, regardless
+# 			of the storage engine.
+#
+# 			This change in behavior is demonstrated in the following example, where the DROP TABLE statement
+# 			fails because a named table does not exist:
+#
+# 				CREATE TABLE t1 (c1 INT);
+# 				DROP TABLE t1, t2;
+# 				ERROR 1051 (42S02): Unknown table 'test.2'
+# 				SHOW TABLES;
+# 				+--------------------+
+# 				| Tables_in_test 		|
+# 				+--------------------+
+# 				| t1 					   |
+# 				+--------------------+
+#
+# 			Prior to the introduction of atomic DDL, DROP TABLE reports an error for the named table
+# 			that does not exist but succeeds for the named table that does exist:
+#
+# 				CREATE TABLE t1 (c1 INT);
+# 				DROP TABLE t1, t2;
+# 				ERROR 1051 (42S02): Unknown table 'test.t2'
+# 				SHOW TABLES;
+# 				Empty set (0.00 sec)
+#
+# 			NOTE:
+#
+# 				Due to this change in behavior, a partially completed DROP TABLE statement on a MySQL 5.7
+# 				master fails when replicated on a MySQL 8.0 slave
+#
+# 				To avoid this failure scenario, use IF EXISTS syntax in DROP TABLE statements to prevent errors
+# 				from occurring for tables that do not exist.
+#
+# 		) DROP_DATABASE is atomic if all tables use an atomic DDL-supported storage engine.
+#
+# 			The statement either drops all objects successfully or is rolled back.
+#
+# 			However, removal of the database directory from the file system occurs last
+# 			and is not part of the atomic transaction.
+#
+# 			If removal of the database directory fails due to a file system error
+# 			or server halt, the DROP DATABASE transaction is not rolled back.
+#
+# 		) For tables that do not use an atomic DDL-supported storage engine, table deletion
+# 			occur outside of the atomic DROP_TABLE or DROP_DATABASE transaction.
+#
+# 			Such table deletions are written to the binary log individually, which limits the
+# 			discrepancy between the storage engine, data dictionary, and binary log to one table
+# 			at most in the case of an interrupted DROP_TABLE or DROP_DATABASE operation.
+#
+# 			For operations that drop multiple tables, the tables that do not use an atomic
+# 			DDL-supported storage engine are dropped before tables that do.
+#
+# 		) CREATE_TABLE, ALTER_TABLE, RENAME_TABLE, TRUNCATE_TABLE, CREATE_TABLESPACE,
+# 			and DROP_TABLESPACE operations for tables that use an atomic DDL-supported
+# 			storage engine are either fully committed or rolled back if the server halts
+# 			during their operation.
+#
+# 			In earlier MySQL releases, interruption of these operations could cause discrepancies
+# 			between the storage engine, data dictionary and binary log, or leave behind
+# 			orphan files.
+#
+# 			RENAME_TABLE operations are only atomic if all named tables use an atomic
+# 			DDL-supported storage engine.
+#
+# 		) DROP_VIEW fails if a named view does not exist, and no changes are made.
+#
+# 			The change in behavior is demonstrated in this example, where the
+# 			DROP_VIEW statement fails because a named view does not exist:
+#
+# 				CREATE VIEW test.viewA AS SELECT * FROM t;
+# 				DROP VIEW test.viewA, test.viewB;
+# 				ERROR 1051 (42S02): Unknown table 'test.viewB'
+# 				SHOW FULL TABLES IN test WHERE TABLE_TYPE LIKE 'VIEW';
+# 				+-----------------+-------------------+
+# 				| Tables_in_test  | Table_type 		  |
+# 				+-----------------+-------------------+
+# 				| viewA 				| VIEW 				  |
+# 				+-----------------+-------------------+
+#
+# 			Prior to the introduction of atomic DDL, DROP_VIEW returns an error for
+# 			the named view that does not exist but succeeds for the named view that
+# 			does exist:
+#
+# 				CREATE VIEW test.viewA AS SELECT * FROM t;
+# 				DROP VIEW test.viewA, test.viewB;
+# 				ERROR 1051 (42S02): Unknown table 'test.viewB'
+# 				SHOW FULL TABLES IN test WHERE TABLE_TYPE LIKE 'VIEW';
+# 				Empty set (0.00 sec)
+#
+# 			NOTE:
+#
+# 				Due to this change in behavior, a partially completed DROP_VIEW
+# 				on a MySQL 5.7 master fails when replicated on a MySQL 8.0 slave.
+#
+# 				To avoid this failure scenario, use IF EXISTS syntax in DROP_VIEW
+# 				statements to prevent an error from occurring for views that do not
+# 				exist.
+#
+# 		) Partial execution of account management statements is no longer permitted.
+#
+# 			Account management statements either succeed for all named users or roll back
+# 			and have no effect if an error occurs.
+#
+# 			In earlier MySQL versions, account management statements that name multiple
+# 			users could succeed for some users and fail for others.
+#
+# 			The change in behavior is demonstrated in this example, where the second
+# 			CREATE_USER statement returns an error but fails because it cannot succeed
+# 			for all named users:
+#
+# 				CREATE USER userA;
+# 				CREATE USER userA, userB;
+# 				ERROR 1396 (HY000): Operation CREATE USER failed for 'userA'@'%'
+# 				SELECT User FROM mysql.user WHERE User LIKE 'user%';
+# 				+-------------+
+# 				| User 		  |
+# 				+-------------+
+# 				| userA 		  |
+# 				+-------------+
+#
+# 			Prior to the introduction of atomic DDL, the second CREATE USER statement
+# 			returns an error for the named user that does not exist but succeeds
+# 			for the named user that does exist:
+#
+# 				CREATE USER userA;
+# 				CREATE USER userA, userB;
+# 				ERROR 1396 (HY000): Operation CREATE USER failed for 'userA'@'%'
+# 				SELECT User FROM mysql.user WHERE User LIKE 'user%';
+# 				+----------+
+# 				| User 	  |
+# 				+----------+
+# 				| userA 	  |
+# 				| userB    |
+# 				+----------+
+#
+# 			NOTE:
+#
+# 				Due to this change in behavior, partially completed account management
+# 				statements on a MySQL 5.7 master fail when replicated on a MySQL 8.0 Slave.
+#
+# 				To avoid this failure scenario, use IF EXISTS or IF NOT EXISTS syntax,
+# 				as appropriate, in account management statements to prevent errors related
+# 				to named users.
+#
+# STORAGE ENGINE SUPPORT
+#
+# Currently, only the InnoDB storage engine supports atomic DDL.
+#
+# Storage engines that do not support atomic DDL are exempted from DDL
+# atomicity.
+#
+# DDL operations involving exempted storage engines remain capable
+# of introducing inconsistencies that can occur when operations are interuppted
+# or only partially completed.
+#
+# To support redo and rollback of DDL operations, InnoDB writes DDL logs to
+# the mysql.innodb_ddl_log table, which is a hidden data dictionary table that
+# resides in the mysql.ibd data dictionary tablespace.
+#
+# To view DDL logs that are written to the mysql.innodb_ddl_log table during
+# a DDL operation, enable the innodb_print_ddl_logs configuration option.
+#
+# For more information, see VIEWING DDL LOGS.
+#
+# NOTE:
+#
+# 		THe redo logs for changes to the mysql.innodb_ddl_log table are flushes to disk
+# 		immediately regardless of the innodb_flush_log_at_trx_commit setting.
+#
+# 		Flushing the redo logs immediately avoids situations where data files are modified
+# 		by DDL operations but the redo logs for changes to the mysql.innodb_ddl_log
+# 		table resulting from those operations are not persisted to disk.
+#
+# 		SUch a situation could cause errors during rollback or recovery.
+#
+# The InnoDB storage engine executes DDL operations in phases.
+#
+# DDL operations such as ALTER_TABLE may perform the Prepare and Perform
+# phases multiple times prior to the Commit phase.
+#
+# 		1. Prepare: Create hte required objects and write the DDL logs to the
+# 			mysql.innodb_ddl_log table
+#
+# 			The DDL logs define how to roll forward and roll back the DDL
+# 			operation
+#
+# 		2. Perform: Perform the DDL operation. For example, perform a create routine for a CREATE TABLE operation.
+#
+# 		3. Commit: Update the data dictionary and commit the data dictionary transaction
+#
+# 		4. Post-DDL: Replay and remove DDL logs from the mysql.innodb_ddl_log table.
+#
+# 			To ensure that rollback can be performed safely without introducing inconsistencies,
+# 			file operations such as renaming or removing data files are performed in
+# 			this final phase.
+#
+# 			This phase also removes dynamic metadata from the mysql.innodb_dynamic_metadata
+# 			data dictionary table for DROP_TABLE, TRUNCATE_TABLE and other DDL operations
+# 			that rebuild the table.
+#
+# DDL logs are replayed and removed from the mysql.innodb_ddl_log table during the
+# Post-DDL phase, regardless of whether the transaction is committed or rolled back.
+#
+# DDL logs should only remain in the mysql.innodb_ddl_log table if the server is halted
+# during a DDL operation.
+#
+# In this case, the DDL logs are replayed and removed after recovery.
+#
+# In a recovery situation, a DDL transaction may be committed or rolled back when
+# the server is restarted.
+#
+# If the data dictionary transaction that was performed during the Commit phase of a
+# DDL operation is present in the redo log and binary log, the operation is considered
+# successful and is rolled forward.
+#
+# Otherwise, the incomplete data dictionary transaction is rolled back when InnoDB
+# replays data dictionary redo logs, and the DDL transaction is rolled back.
+#
+# VIEWING DDL LOGS
+#
+# To view DDL logs that are written to the mysql.innodb_ddl_log data dictionary
+# table during atomic DDL operations that involve the InnoDB storage engine, enable
+# innodb_print_ddl_logs to have MySQL write the DDL logs to stderr.
+#
+# Depending on the host operating system and MySQL configuration, stderr may be the
+# error log, terminal or console window.
+#
+# See SECTION 5.4.2.2, "DEFAULT ERROR LOG DESTINATION CONFIGURATION"
+#
+# InnoDB writes DDL logs to the mysql.innodb_ddl_log table to support redo and
+# rollback of DDL operations.
+#
+# The mysql.innodb_ddl_log table is a hidden data dictionary table that resides
+# in the mysql.ibd data dictionary tablespace.
+#
+# Like other hidden data dictionary tables, the mysql.innodb_ddl_log table cannot
+# be accessed directly in non-debug versions of MySQL.
+#
+# (See SECTION 14.1, "DATA DICTIONARY SCHEMA")
+#
+# The structure of the mysql.innodb_ddl_log table corresponds to this definition:
+#
+# 		CREATE TABLE mysql.innodb_ddl_log (
+# 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+# 			thread_id BIGINT UNSIGNED NOT NULL,
+# 			type INT UNSIGNED NOT NULL,
+# 			space_id INT UNSIGNED,
+# 			page_no INT UNSIGNED,
+# 			index_id BIGINT UNSIGNED,
+# 			table_id BIGINT UNSIGNED,
+# 			old_file_path VARCHAR(512) COLLATE UTF8_BIN,
+# 			new_file_path VARCHAR(512) COLLATE UTF8_BIN,
+# 			KEY(thread_id)
+# 		);
+#
+# 		) id: A unique identifier for a DDL log record
+#
+# 		) thread_id: Each DDL log record is assigned a thread_id which is used to replay and remove
+# 			DDL logs that belong to a particular DDL transaction.
+#
+# 			DDL transactions that involve multiple data file operations generate multiple DDL log records.
+#
+# 		) type: The DDL operation type. Types include FREE (drop an index tree), DELETE (delete a file),
+# 			RENAME (rename a file), or DROP (drop metadata from the mysql.innodb_dynamic_metadata data dictionary
+# 			table)
+#
+# 		) space_id: The tablespace ID
+#
+# 		) page_no: A page that contains allocation information; an index tree root page, for example.
+#
+# 		) index_id: The index ID
+#
+# 		) table_id: The table ID
+#
+# 		) old_file_path: The old tablespace file path. Used by DDL operations that create or drop tablespace
+# 			files; also used by DDL operations that rename a tablespace.
+#
+# 		) new_file_path: The new tablespace file path. Used by DDL operations that rename tablespace files.
+#
+# THis example demonstrates enabling innodb_print_ddl_logs to view DDL logs written to stderr for
+# a CREATE TABLE operation.
+#
+# 		SET GLOBAL innodb_print_ddl_logs=1;
+# 		CREATE TABLE t1 (c1 INT) ENGINE = InnoDB;
+#
+# 		[Note] [000000] InnoDB: DDL log insert : [DDL record: DELETE SPACE, id=18, thread_id=7,
+# 		space_id=5, old_file_path=./test/t1.ibd]
+# 		[Note] [000000] InnoDB: DDL log delete : by id 18
+#
+# 		[Note] [000000] InnoDB: DDL log insert : [DDL record: REMOVE CACHE, id=19, thread_id=7,
+# 		table_id=1058, new_file_path=test/t1]
+# 		[Note] [000000] InnoDB: DDL log delete : by id 19
+#
+# 		[Note] [000000] InnoDB: DDL log insert : [DDL record: FREE, id=20, thread_id=7,
+# 		space_id=5, index_id=132, page_no=4]
+# 		[Note] [000000] InnoDB: DDL log delete : by id 20
+#
+# 		[Note] [000000] InnoDB: DDL log post ddl : begin for thread id : 7
+# 		[Note] [000000] InnoDB: DDL log post ddl : end for thread id : 7
+#
+# 13.1.2 ALTER DATABASE SYNTAX
+#
+# ALTER {DATABASE | SCHEMA} [db_name]
+# 		alter_specification ---
+#
+# alter_specification:
+# 		[DEFAULT] CHARACTER SET [=] charset_name
+# 	 | [DEFAULT] COLLATE [=] collation_name
+#
+# ALTER_DATABASE enables you to change the overall characteristics of a database.
+#
+# These characteristics are stored in the data dictionary.
+#
+# To use ALTER_DATABASE, you need the ALTER privilege on the database.
+#
+# ALTER_SCHEMA is a synonym for ALTER_DATABASE
+#
+# The database name can be omitted from the first syntax, in which case the statement
+# applies to the default database.
+#
+# NATIONAL LANGUAGE CHARACTERISTICS
+#
+# The CHARACTER SET clause changes the default database character set.
+#
+# The COLLATE clause changes the default database collation. CHAPTER 10, CHARACTER SETS,
+# COLLATIONS,, UNICODE discusses char sets and collation names.
+#
+# You can see what character sets and collations are available using, respectively,
+# the SHOW_CHARACTER_SET and SHOW_COLLATION statements.
+#
+# See SECTION 13.7.6.3, "SHOW CHARACTER SET SYNTAX", and SECTION 13.7.6.4, "SHOW COLLATION SYNTAX"
+# for more information
+#
+# If you change the default character set or collation for a database, stored routines that use the
+# database defaults must be dropped and recreated so that they use the new defaults.
+#
+# (in a stored routine, variables with character data types use the database defaults if
+# the character set or collation are not specified explicitly.
+#
+# See SECTION 13.1.17, "CREATE PROCEDURE AND CREATE FUNCTION SYNTAX")
+#
+# 13.1.3 ALTER EVENT SYNTAX
+#
+# ALTER
+# 		[DEFINER = { user | CURRENT_USER }]
+# 		EVENT event_name
+# 		[ON SCHEDULE schedule]
+# 		[ON COMPLETION [NOT] PRESERVE]
+# 		[RENAME TO new_event_name]
+# 		[ENABLE | DISABLE | DISABLE ON SLAVE]
+# 		[COMMENT 'string']
+# 		[DO event_body]
+#
+# The ALTER_EVENT statement changes one or more of the characteristics of an existing event
+# without the need to drop and recreate it.
+#
+# THe syntax for each of the DEFINER, ON SCHEDULE, ON COMPLETION, ENABLE / DISABLE and DO clauses
+# is exactly the same as when used with CREATE_EVENT
+#
+# (See SECTION 13.1.13, "CREATE EVENT SYNTAX")
+#
+# Any user can alter an event defined on a database for which that user has the EVENT privilege.
+#
+# When a user executes a successful ALTER_EVENT statement, that user becomes the definer
+# for the affected event.
+#
+# ALTER_EVENT works only with an existing event:
+#
+# 		ALTER EVENT no_such_event
+# 			ON SCHEDULE
+# 				EVERY '2:3' DAY_HOUR;
+# 		ERROR 1517 (HY000): Unknown event 'no_such_event'
+#
+# In each of the following examples, assume that hte event named myevent is defined
+# as shown here:
+#
+# 		CRAETE EVENT myevent
+#
+# https://dev.mysql.com/doc/refman/8.0/en/alter-event.html
