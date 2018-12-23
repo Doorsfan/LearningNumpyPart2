@@ -6240,4 +6240,2016 @@
 #
 # The only values for engine_name compatible with NDB tablespaces are NDB and NDBCLUSTER.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/alter-tablespace.html
+# RENAME TO operations are implicitly performed in autocommit mode, regardless of the autocommit setting.
+#
+# A RENAME TO operation cannot be performed while LOCK_TABLES or FLUSH_TABLES_WITH_READ_LOCK is in effect
+# for tables that reside in the tablespace.
+#
+# Exclusive metadata locks are taken on tables that reside in a general tablespace while the tablespace
+# is renamed, which prevents concurrent DDL.
+#
+# Concurrent DML is supported.
+#
+# The CREATE_TABLESPACE privilege is required to rename an InnoDB general tablespace.
+#
+# The ENCRYPTION option is used to enable or disable page-level data encryption for an
+# InnoDB general tablespace.
+#
+# Option values are not case-sensitive.
+#
+# Encryption support for general tablespaces was introduced in MySQL 8.0.13.
+#
+# A keyring plugin must be installed and configured to encrypt a tablespace using
+# the ENCRYPTION option.
+#
+# When a general tablespace is encrypted, all tables residing in the tablespace are encrypted.
+# Likewise, a table created in an encrypted general tablespace is encrypted.
+#
+# The INPLACE algorithm is used when altering the ENCRYPTION attribute of a general
+# tablespace.
+#
+# The INPLACE algorithm permits concurrent DML on tables that reside in the general
+# tablespace.
+#
+# Concurrent DDL is blocked.
+#
+# For more information, see SECTION 15.6.3.9, "TABLESPACE ENCRYPTION"
+#
+# 13.1.11 ALTER VIEW SYNTAX
+#
+# ALTER
+# 		[ALGORITHM = {UNDEFINED | MERGE | TEMPTABLE}]
+# 		[DEFINER = { user | CURRENT_USER }]
+# 		[SQL SECURITY { DEFINER | INVOKER }]
+# 		VIEW view_name [(column_list)]
+# 		AS select_statement
+# 		[WITH [CASCADED | LOCAL] CHECK OPTION]
+#
+# This statement changes the definition of a view, which must exist.
+#
+# The syntax is similar to that for CREATE_VIEW (see SECTION 13.1.23, "CREATE VIEW SYNTAX")
+#
+# This statement requires the CREATE_VIEW and DROP privileges for the view, and some
+# privilege for each column referred to in the SELECT statement.
+#
+# ALTER_VIEW is permitted only to the definer or users with the SET_USER_ID or SUPER privilege.
+#
+# 13.1.12 CREATE DATABASE SYNTAX
+#
+# CREATE {DATABASE | SCHEMA} [IF NOT EXISTS] db_name
+# 		[create_specification] ---
+#
+# create_specification:
+# 		[DEFAULT] CHARACTER SET [=] charset_name
+# 	 | [DEFAULT] COLLATE [=] collation_name
+#
+# CREATE_DATABASE creates a database with the given name. 
+#
+# To use this statement, you need the CREATE privilege for the database.
+#
+# CREATE_SCHEMA is a synonym for CREATE_DATABASE
+#
+# An error occurs if the database exists and you did not specify IF NOT EXISTS
+#
+# CREATE_DATABASE is not permitted within a session that has an active LOCK_TABLES statement
+#
+# create_specification options specify database characteristics. Database characteristics
+# are stored in the data dictionary.
+#
+# The CHARACTER SET clause specifies the default database character set. The COLLATE
+# clause specifies the default database collation.
+#
+# CHAPTER 10, CHARACTER SETS, COLLATIONS, UNICODE, discusses character set and collation
+# names.
+#
+# A database in MySQL is implemented as a directory containing files that correspond to tables
+# in the database.
+#
+# Because there are no tables in a database when it is initially created, the CREATE_DATABASE
+# statement creates only a directory under the MySQL data directory.
+#
+# Rules for permissible database names are given in SECTION 9.2, "SCHEMA OBJECT NAMES"
+#
+# If a database name contains special characters, the name for the database directory
+# contains encoded versions of those characters as described in SECTION 9.2.3, "MAPPING OF IDENTIFIERS TO FILE NAMES"
+#
+# Creating a database directory by manually creating a directory under the data directory
+# (for example, with mkdir) is temporarily unsupported in MySQL 8.0.0
+#
+# You can also use the mysqladmin program to create databases.
+#
+# See SECTION 4.5.2, "MYSQLADMIN -- CLIENT FOR ADMINISTERING A MYSQL SERVER"
+#
+# 13.1.13 CREATE EVENT SYNTAX
+#
+# CREATE
+# 		[DEFINER = { user | CURRENT_USER }]
+# 		EVENT
+# 		[IF NOT EXISTS]
+# 		event_name
+# 		ON SCHEDULE schedule
+# 		[ON COMPLETION [NOT] PRESERVE]
+# 		[ENABLE | DISABLE | DISABLE ON SLAVE]
+# 		[COMMENT 'string']
+# 		DO event_body;
+#
+# schedule:
+# 		AT timestamp [+ INTERVAL interval] ---
+#   | EVERY interval
+# 		[STARTS timestamp [+ INTERVAL interval] ---]
+# 		[ENDS timestamp [+ INTERVAL interval] ---]
+#
+# interval:
+# 		quantity {YEAR | QUARTER | MONTH | DAY | HOUR | MINUTE |
+# 					 WEEK | SECOND  | YEAR_MONTH | DAY_HOUR | DAY_MINUTE |
+# 					 DAY_SECOND | HOUR_MINUTE | HOUR_SECOND | MINUTE_SECOND}
+#
+# This statement creates and schedules a new event.
+#
+# The event will not run unless the Event Scheduler is enabled.
+#
+# For information about checking Event Scheduler status and enabling it if
+# necessary, see SECTION 24.4.2, "EVENT SCHEDULER CONFIGURATION"
+#
+# CREATE_EVENT requires the EVENT privilege for the schema in which the event
+# is to be created.
+#
+# It might also require the SET_USER_ID or SUPER privilege, depending on the
+# DEFINER value, as described later in this section.
+#
+# The minimum requirements for a valid CREATE_EVENT statement are as follows:
+#
+# 		) The keywords CREATE_EVENT plus an event name, which uniquely identifies the event in a database schema.
+#
+# 		) An ON SCHEDULE clause, which determines when and how often the event executes
+#
+# 		) A DO clause, which contains the SQL statement to be executed by an event
+#
+# This is an example of a minimal CREATE_EVENT statement:
+#
+# 		CREATE EVENT myevent
+# 			ON SCHEDULE AT CURRENT_TIMESTAMP + INTERVAL 1 HOUR
+# 			DO
+# 				UPDATE myschema.mytable SET mycol = mycol + 1;
+#
+# The previous statement creates an event named myevent.
+#
+# This event executes once - one hour following its creation - by running an 
+# SQL statement that increments the value of the myschema.mytable table's
+# mycol column by 1.
+#
+# The event_name must be a valid MySQL identifier with a maximum length of 64 characters.
+#
+# Event names are not case-sensitive, so you cannot have two events named myevent
+# and MyEvent in the same schema.
+#
+# In general, the rules governing event names are the same as those for names
+# of stored routines.
+#
+# See SECTION 9.2, "SCHEMA OBJECT NAMES"
+#
+# An event is associated with a schema. If no schema is indicated as part of event_name,
+# the default (current) schema is assumed.
+#
+# To create an event in a specific schema, qualify the event name with a schema using
+# schema_name.event_name syntax
+#
+# The DEFINER clause specifies the MySQL account to be used when checking access privileges
+# at event execution time.
+#
+# If a user value is given, it should be a MySQL account specified as 'user_name'@'host_name',
+# CURRENT_USER or CURRENT_USER()
+#
+# The default DEFINER value is the user who executes the CREATE_EVENT statement.
+#
+# This is the same as specifying DEFINER = CURRENT_USER explicitly
+#
+# If you specify the DEFINER clause, these rules determine the valid DEFINER user values:
+#
+# 		) If you do not have the SET_USER_ID or SUPER privilege, the only permitted user value is
+# 			your own account, either specified literally or by using CURRENT_USER
+#
+# 			You cannot set the definer to some other account
+#
+# 		) If you have the SET_USER_ID or SUPER privilege, you can specify any syntactically valid account name.
+#
+# 			If the account does not exist, a warning is generated.
+#
+# 		) Although it is possible to create an event with a nonexistent DEFINER account, an error occurs
+# 			at event execution time if the account does not exist.
+#
+# For more information about event security, see SECTION 24.6, "ACCESS CONTROL FOR STORED PROGRAMS AND VIEWS"
+#
+# Within an event, the CURRENT_USER() function returns the account used to check privileges at event
+# execution time, which is the DEFINER user.
+#
+# For information about user auditing within events, see SECTION 6.3.13, "SQL-BASED MYSQL ACCOUNT ACTIVITY AUDITING"
+#
+# IF NOT EXISTS has the same meaning for CREATE_EVENT as for CREATE_TABLE:
+#
+# 		If an event named event_name already exists in the same schema, no action is taken,
+# 		and no error results.
+#
+# 		(However, a warning is generated in such cases)
+#
+# The ON SCHEDULE clause determines when, how often, and for how long the event_body
+# defined for the event repeats.
+#
+# This clause takes one of two forms:
+#
+# 		) AT timestamp is used for a one-time event.
+#
+# 		It specifies that the event executes one time only at the date and time given by
+# 		timestamp, which must include both the date and time, or must be an expression that
+# 		resolves to a datetime value.
+#
+# 		You may use a value of either the DATETIME or TIMESTAMP type for this purpose.
+#
+# 		If the date is in the past, a warning occurs, as shown here:
+#
+# 			SELECT NOW();
+# 			+--------------------------------+
+# 			| NOW() 								   |
+# 			+--------------------------------+
+# 			| 2006-02-10 23:59:01 			   |
+# 			+--------------------------------+
+# 			1 row in set (0.04 sec) 	
+#
+# 			CREATE EVENT e_totals
+# 				ON SCHEDULE AT '2006-02-10 23:59:00'
+# 				DO INSERT INTO test.totals VALUES (NOW());
+# 			Query OK, 0 rows affected, 1 warning (0.00 sec)
+#
+# 			SHOW WARNINGS\G
+# 			********************** 1. row *******************************
+# 				Level: Note
+# 				 Code: 1588
+# 			 Message: Event execution time is in the past and ON COMPLETION NOT
+# 						 PRESERVE is set.
+#
+# 						 The event was dropped immediately after creation.
+#
+# CREATE_EVENT statements which are themselves invalid - for whatever reason - fail with an error.
+#
+# You may use CURRENT_TIMESTAMP to specify the current date and time. 
+#
+# In such a case, the event acts as soon as it is created.
+#
+# To create an event which occurs at some point in the future relative to the current date
+# and time - such as the expressed by the phrase "three weeks from now" - you can use
+# the optional clause + INTERVAL interval.
+#
+# The interval portion consists of two parts, a quantity and a unit of time, and follows
+# the syntax rules described in Temporal Intervals, except that you cannot use any units
+# keywords that involve microseconds when defining an event.
+#
+# With some interval types, complex time units may be used.
+#
+# For example, "two minutes and ten seconds" can be expressed as + INTERVAL '2:10' MINUTE_SECOND
+#
+# You can also combine intervals.
+#
+# For example, AT CURRENT_TIMESTAMP + INTERVAL 3 WEEK + INTERVAL 2 DAY is equivalent
+# to "three weeks and two days from now"
+#
+# Each portion of such a clause must begin with + INTERVAL.
+#
+# ) 	To repeat actions at a regular interval, use an EVERY clause.
+#
+	# 	The EVERY keyword is followed by an interval as described in the previous discussion
+	# of the AT keyword.
+	# (+ INTERVAL is not used with EVERY)
+	#
+	# For example, EVERY 6 WEEK means "every six weeks"
+	#
+	# Although + INTERVAL clauses are not permitted in an EVERY clause, you can use
+	# the same complex time units permitted in a + INTERVAL
+	#
+	# An EVERY clause may contain an optional STARTS clause.
+	#
+	# STARTS is followed by a timestamp value that indicates when the action should
+	# begin repeating, and may also use + INTERVAL interval to specify an amount of time
+	# "from now"
+	#
+	# For example, EVERY 3 MONTH STARTS CURRENT_TIMESTAMP + INTERVAL 1 WEEK means
+	# "every three months, beginning one week from now"
+	#
+	# Similarly, you can express "every two weeks, beginning six hours and fiften
+	# minutes from now" as EVERY 2 WEEK STARTS CURRENT_TIMESTAMP + INTERVAL '6:15' HOUR_MINUTE
+	#
+	# Not specifying STARTS is the same as using STARTS CURRENT_TIMESTAMP - that is, the action
+	# specified for the event begins repeating immediately upon creation of the event.
+	#
+	# An EVERY clause may contain an optional ENDS clause.
+	#
+	# The ENDS keyword is followed by a timestamp value that tells MySQL when the event
+	# should stop repeating.
+	#
+	# You may also use + INTERVAL interval with ENDS; for instance, EVERY 12 HOUR
+	# STARTS CURRENT_TIMESTAMP + INTERVAL 30 MINUTE ENDS CURRENT_TIMESTAMP + INTERVAL 4 WEEK
+	# is equivalent to "every twelve hours, beginning thirty minutes from now, and ending
+	# four weeks from now".
+	#
+	# Not using ENDS means that the event continues executing indefinitly.
+	#
+	# ENDS supports the same syntax for complex time units as STARTS does.
+	#
+	# You may use STARTS, ENDS, both or neither in an EVERY clause.
+	#
+	# If a repeating event does not terminate within its scheduling interval,
+	# the result may be multiple instances of the event executing simultaneously.
+	#
+	# If this is undesirable, you should institute a mechanism to prevent simultaneous
+	# instances.
+	#
+	# For example, you could use the GET_LOCK() function, or row or table locking.
+#
+# The ON SCHEDULE clause may use expressions involving built-in MySQL functions
+# and user variables to obtain any of the timestamp or interval values which it contains.
+#
+# You may not use stored functions or user-defined functions in such expressions, nor
+# may you use any table references; however, you may use SELECT FROM DUAL.
+#
+# This is true for both CREATE_EVENT and ALTER_EVENT statements.
+#
+# References to stored functions, user-defined functions, and tables in such cases
+# are specifically not permitted, and fail with an error (see Bug #22830)
+#
+# Times in the ON SCHEDULE clause are interpreted using the current session time_zone
+# value.
+#
+# This becomes the event time zone; that is, the time zone that is used for event scheduling
+# and is in effect within the event as it executes.
+#
+# These times are converted to UTC and stored along with the event time zone in the
+# mysql.event table.
+#
+# This enables event execution to proceed as defined regardless of any subsequent
+# changes to the server time zone or daylight saving time effects.
+#
+# For additional information about representation of event times, see SECTION 24.4.4, "EVENT METADATA"
+#
+# See also SECTION 13.7.6.18, "SHOW EVENTS SYNTAX", and SECTION 25.9, "THE INFORMATION_SCHEMA EVENTS TABLE"
+#
+# Normally, once an event has expired, it is immediately dropped.
+#
+# You can override this behavior by specifying ON COMPLETION PRESERVE.
+#
+# Using ON COMPLETION NOT PRESERVE merely makes the default nonpersistent behavior explicit.
+#
+# You can create an event but prevent it from being active using the DISABLE keyword.
+#
+# Alternatively, you can use ENABLE to make explicit the default status, which is active.
+#
+# This is most useful in conjunction with ALTER_EVENT (see SECTION 13.1.3, "ALTER EVENT SYNTAX")
+#
+# A third value may also appear in place of ENABLE or DISABLE; DISABLE ON SLAVE is set for
+# the status of an event on a replication slave to indicate that the event was created on
+# the master and replicated to the slave, but is not executed on the slave.
+#
+# See SECTION 17.4.1.16, "REPLICATION OF INVOKED FEATURES"
+#
+# You may supply a comment for an event using a COMMENT clause. Comment may be any string
+# of up to 64 chars that you wish to use for describing the event.
+#
+# The comment text, being a string literal, must be surrounded by quotation marks.
+#
+# The DO clause specifies an action carried by the event, and consists of an SQL
+# statement.
+#
+# Nearly any valid MySQL statement that can be used in a stored routine can also
+# be used as the action statement for a scheduled event.
+#
+# (See SECTION C.1, "RESTRICTIONS ON STORED PROGRAMS")
+#
+# For example, the following event e_hourly deletes all rows from the
+# sessions table once per hour, where this table is part of the site_activity schema:
+#
+# 		CREATE EVENT e_hourly
+# 			ON SCHEDULE
+# 				EVERY 1 HOUR
+# 			COMMENT 'Clears out sessions table each hour.'
+# 			DO
+# 				DELETE FROM site_activity.sessions;
+#
+# MySQL stores the sql_mode system variable setting in effect when an event is created
+# or altered, and always executes the event with this setting in force, regardless of the
+# current server SQL mode when the event begins executing.
+#
+# A CREATE_EVENT statement that contains an ALTER_EVENT statement in its DO clause appears
+# to succeed; however, when the server attempts to execute the resulting scheduled event,
+# the execution fails with an error.
+#
+# 		NOTE:
+#
+# 			Statements such as SELECT or SHOW that merely return a result set have no effect
+# 			when used in an event; the output from these is not sent to the MySQL Monitor,
+# 			nor is it stored anywhere.
+#
+# 			However, you can use statements such as SELECT_---_INTO and INSERT_INTO_---_SELECT
+# 			that store a result.
+#
+# 			(See the next example in this section for an instance of the latter)
+#
+# The schema to which an event belongs is the default schema for table references in the DO clause.
+#
+# Any references to tables in other schemas must be qualified with the proper schema name.
+#
+# As with stored routines, you can use compound-statement syntax in the DO clause by using the
+# BEGIN and END keywords, as shown here:
+#
+# 		delimiter |
+#
+# 		CREATE EVENT e_daily
+# 			ON SCHEDULE
+# 				EVERY 1 DAY
+# 			COMMENT 'Saves total number of sessions then clears the table each day'
+# 			DO
+# 				BEGIN
+# 					INSERT INTO site_activity.totals (time, total)
+# 						SELECT CURRENT_TIMESTAMP, COUNT(*)
+# 							FROM site_activity.sessions;
+# 					DELETE FROM site_activity.sessions;
+# 				END |
+#
+# 		delimiter ;
+#
+# This example uses the delimiter command to change the statement delimiter.
+#
+# See SECTION 24.1, "DEFINING STORED PROGRAMS"
+#
+# More complex compound statements, such as those used in stored routines, are possible
+# in an event.
+#
+# This example uses local variables, an error handler, and a flow control construct:
+#
+# 		delimiter |
+#
+# 		CREATE EVENT e
+# 			ON SCHEDULE
+# 				EVERY 5 SECOND
+# 			DO
+# 				BEGIN
+# 					DECLARE v INTEGER;
+# 					DECLARE CONTINUE HANDLER FOR SQLEXCEPTION BEGIN END;
+#
+# 					SET v = 0;
+#
+# 					WHILE v < 5 DO
+# 						INSERT INTO t1 VALUES (0);
+# 						UPDATE t2 SET s1 = s1 + 1;
+# 						SET v = v + 1;
+# 					END WHILE;
+# 			END |
+#
+# 		delimiter ;
+#
+# There is no way to pass parameters directly to or from events; however, it is
+# possible to invoke a stored routine with parameters within an event:
+#
+# 		CREATE EVENT e_call_myproc
+# 			ON SCHEDULE
+# 				AT CURRENT_TIMESTAMP + INTERVAL 1 DAY
+# 			DO CALL myproc(5, 27);
+#
+# If an event's definer has privileges sufficient to set global system variables
+# (see SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"), the event can read and write
+# global variables.
+#
+# As granting such privileges entails a potential for abuse, extreme care must be
+# taken in doing so.
+#
+# Generally, any statements that are valid in stored routines may be used for action
+# statements executed by events.
+#
+# For more information about statements permissible within stored routines, see 
+# SECTION 24.2.1, "STORED ROUTINE SYNTAX"
+#
+# You can create an event as part of a stored routine, but an event cannot be 
+# created by another event.
+#
+# 13.1.14 CREATE FUNCTION SYNTAX
+#
+# The CREATE_FUNCTION statement is used to create stored functions and user-defined
+# functions (UDFs):
+#
+# 		) For information about creating stored functions, see SECTION 13.1.17, "CREATE PROCEDURE AND CREATE FUNCTION SYNTAX"
+#
+# 		) For information about creating user-defined functions, see SECTION 13.7.4.1, "CREATE FUNCTION SYNTAX FOR USER-DEFINED FUNCTIONS"
+#
+# 13.1.15 CREATE INDEX SYNTAX
+#
+# CREATE [UNIQUE | FULLTEXT | SPATIAL] INDEX index_name
+# 		[index_type]
+# 		ON tbl_name (key_part, ---)
+# 		[index_option]
+# 		[algorithm_option | lock_option] ---
+#
+# key_part: {col_name [(length)] | (expr)} [ASC | DESC]
+#
+# index_option:
+# 		KEY_BLOCK_SIZE [=] value
+# 	 | index_type
+# 	 | WITH PARSER parser_name
+#   | COMMENT 'string'
+#   | {VISIBILE | INVISIBILE}
+#
+# index_type:
+# 		USING {BTREE | HASH}
+#
+# algorithm_option:
+# 		ALGORITHM [=] {DEFAULT | INPLACE | COPY}
+#
+# lock_option:
+# 		LOCK [=] {DEFAULT | NONE | SHARED | EXCLUSIVE}
+#
+# Normally, you create all indexes on a table at the time the table itself is created
+# with CREATE_TABLE.
+#
+# See SECTION 13.1.20, "CREATE TABLE SYNTAX"
+#
+# This guideline is especially important for InnoDB tables, where the primary key
+# determines the physical layout of rows in the data file.
+#
+# CREATE_INDEX enables you to add indexes to existing tables.
+#
+# CREATE_INDEX is mapped to an ALTER_TABLE statement to create indexes.
+#
+# See SECTION 13.1.9, "ALTER TABLE SYNTAX". CREATE_INDEX cannot be used to
+# create a PRIMARY KEY; use ALTER_TABLE instead.
+#
+# For more information about indexes, see SECTION 8.3.1, "HOW MYSQL USES INDEXES"
+#
+# InnoDB supports secondary indexes on virtual columns. For more information,
+# see SECTION 13.1.20.9, "SECONDARY INDEXES AND GENERATED COLUMNS"
+#
+# When the innodb_stats_persistent setting is enabled, run the ANALYZE_TABLE
+# statement for an InnoDB table after creating an index on that table.
+#
+# An index specification of the form (key_part1, key_part2, ---) creates an index
+# with multiple key parts.
+#
+# Index key values are formed by concatenating the values of the
+# given key parts.
+#
+# For example (col1, col2, col3) specifies a multiple-column index with index
+# keys consisting of values from col1, col2 and col3.
+#
+# A key_part specificaiton can end with ASC or DESC to specify whether index values 
+# are stored in ascending or descending order.
+#
+# The default is ascending if no order specifier is given.
+#
+# ASC and DESC are not permitted for HASH indexes.
+#
+# As of MySQL 8.0.12, ASC and DESC are not permitted for SPATIAL indexes.
+#
+# The following sections describe different aspects of the CREATE_INDEX statement:
+#
+# 		) Column Prefix Key Parts
+#
+# 		) Functional Key parts
+#
+# 		) Unique Indexes
+#
+# 		) Full-Text Indexes
+#
+# 		) Spatial indexes
+#
+# 		) Index Options
+#
+# 		) Table Copying and Locking Options
+#
+# COLUMN PREFIX KEY PARTS
+#
+# For string columns, indexes can be created that use only the leading part of column values,
+# using col_name(length) syntax to specify an index prefix length:
+#
+# 		) Prefixes can be specified for CHAR, VARCHAR, BINARY, and VARBINARY key parts
+#
+# 		) Prefixes must be specified for BLOB and TEXT key parts. Additionally, BLOB and TEXT columns
+# 			can be indexed only for InnoDB, MyISAM, and BLACKHOLE tables.
+#
+# 		) Prefix limits are measured in bytes. However, prefix lengths for index specifications
+# 			in CREATE_TABLE, ALTER_TABLE and CREATE_INDEX statements are interpreted as number
+# 			of characters for nonbinary string types (CHAR, VARCHAR, TEXT) and number of bytes
+# 			for binary string types (BINARY, VARBINARY, BLOB)
+#
+# 			Take this into account when specifying a prefix length for a nonbinary string column
+# 			that uses a multibyte character set.
+#
+# 			Prefix support and lengths of prefixes (where supported) are storage engine dependent.
+#
+# 			For example, a prefix can be up to 767 bytes long for InnoDB tables that use the
+# 			REDUNDANT or COMPACT row format.
+#
+# 			The prefix length limit is 3072 bytes for InnoDB tables that use the DYNAMIC
+# 			or COMPRESSED row format.
+#
+# 			For MyISAM tables, the prefix length is 1000 bytes.
+#
+# 			The NDB storage engine does not support prefixes (see SECTION 22.1.7.6, "UNSUPPORTED OR MISSING FEATURES IN NDB CLUSTER")
+#
+# If a specified index prefix exceeds the maximum column data type size, CREATE_INDEX handles
+# the index as follows:
+#
+# 		) For a nonunique index, either an error occurs (if strict SQL mode is enabled), or the index length is
+# 			reduced to lie within the maximum column data type size and a warning is produced
+# 			(if strict SQL mode is not enabled)
+#
+# 		) For a unique index, an error occurs regardless of SQL mode because reducing the index length
+# 			might enable insertion of nonunique entries that do not meet the specified uniqueness requirement.
+#
+# The statement shown here creates an index using the first 10 characters of the name column
+# (assuming that name has a nonbinary string type):
+#
+# 		CREATE INDEX part_of_name ON customer (name(10));
+#
+# If names in the column usually differ in the first 10 characters, lookups performed using
+# this index should not be much slower than using an index created from the entire
+# name column.
+#
+# Also, using column prefixes for indexes can make the index file much smaller, which could
+# save a lot of disk space and might also speed up INSERT operations.
+#
+# FUNCTIONAL KEY PARTS
+#
+# A "normal" index indexes column values or prefixes of column values.
+#
+# For example, in teh following table, the index entry for a given t1 row includes
+# the full col1 value and a prefix of the col2 value consisting of its first 10 bytes:
+#
+# 		CREATE TABLE t1 (
+# 			col1 VARCHAR(10),
+# 			col2 VARCHAR(20),
+# 			INDEX (col1, col2(10))
+# 		);
+#
+# MySQL 8.0.13 and higher supports functional key parts that index expression
+# values rather than column or column prefix values.
+#
+# Use of functional key parts enables indexing of values not stored directly
+# in the table. 
+#
+# Examples:
+#
+# 		CREATE TABLE t1 (col1 INT, col2 INT, INDEX func_index ((ABS(col1))));
+# 		CREATE INDEX idx1 ON t1 ((col1 + col2));
+# 		CREATE INDEX idx2 ON t1 ((col1 + col2), (col1 - col2), col1);
+# 		ALTER TABLE t1 ADD INDEX ((col1 * 40) DESC);
+#
+# An index with multiple key parts can mix nonfunctional and functional key parts.
+#
+# ASC and DESC are supported for functional key parts.
+#
+# Functional key parts must adhere to the following rules. An error occurs if a key
+# part definition contains disallowed constructs.
+#
+# 		) In index definitions, enclose expressions within parentheses to distinguish them from 
+# 			columns or column prefixes.
+#
+# 			For example, this is permitted; the expressions are enclosed within parentheses:
+#
+# 				INDEX ((col1 + col2), (col3 - col4))
+#
+# 			This produces an error, the expressions are not enclosed within parentheses:
+#
+# 				INDEX (col1 + col2, col3 - col4)
+#
+# 		) A functional key part cannot consist solely of a column name. 
+#
+# 			For example, this is not permitted:
+#
+# 				INDEX ((col1), (col2))
+#
+# 			Instead, write the key parts as nonfunctional key parts, without parentheses:
+#
+# 				INDEX (col1, col2)
+#
+# 		) A functional key part expression cannot refer to column prefixes.
+#
+# 			For a workaround, see the discussion of SUBSTRING() and CAST() later in this section.
+#
+# 		) Functional key parts are not permitted in foreign key specifications.
+#
+# For CREATE_TABLE_---_LIKE, the destination table preserves functional key parts from the 
+# original table.
+#
+# Functional indexes are implemented as hidden virtual generated columns, which has these implications:
+#
+# 		) Each functional key part counts against the limit on total number of table columns; See SECTION C.10.4, "LIMITS ON TABLE COLUMN COUNT AND ROW SIZE"
+#
+# 		) Functional key parts inherit all restrictions that apply to generated columns. Examples:
+#
+# 			) Only functions permitted for generated columns are permitted for functional key parts
+#
+# 			) Subqueries, parameters, variables, stored functions, and user-defined functions are not permitted.
+#
+# 			For more information about applicable restrictions, see SECTION 13.1.20.8, "CREATE TABLE AND GENERATED COLUMNS"
+# 			and SECTION 13.1.9.2, "ALTER TABLE AND GENERATED COLUMNS"
+#
+# 		) The virtual generated column itself requires no storage.
+#
+# 			The index itself takes up storage space as any other index.
+#
+# UNIQUE is supported for indexes that include functional key parts. However, primary keys cannot
+# include functional key parts.
+#
+# A primary key requires the generated column to be stored, but functional key parts are implemented
+# as virtual generated columns, not stored generated columns.
+#
+# SPATIAL and FULLTEXT indexes cannot have functional key parts.
+#
+# If a table contains no primary key, InnoDB automatically promotes the first UNIQUE NOT FULL
+# index to the primary key.
+#
+# This is not supported for UNIQUE NOT NULL indexes that have functional key parts.
+#
+# Nonfunctional indexes raise a warning if there are duplicate indexes.
+#
+# Indexes that contain functional key parts do not have this feature.
+#
+# To remove a column that is referenced by a functional key part, the index
+# must be removed first.
+#
+# Otherwise, an error occurs.
+#
+# Although nonfunctional key parts support a prefix length specification, this
+# is not possible for functional key parts.
+#
+# The solution is to use SUBSTRING() (or CAST(), as described later in this section)
+#
+# For a functional key part containing the SUBSTRING() function to be used in a query,
+# the WHERE clause must contain SUBSTRING() with the same arguments.
+#
+# In the following example, only the second SELECT is able to use the index because
+# that is the only query in which the arguments to SUBSTRING() match the index
+# specification:
+#
+# 		CREATE TABLE tbl (
+# 			col1 LONGTEXT,
+# 			INDEX idx1 ((SUBSTRING(col1, 1, 10)))
+# 		);
+# 		SELECT * FROM tbl WHERE SUBSTRING(col1, 1, 9) = '123456789';
+# 		SELECT * FROM tbl WHERE SUBSTRING(col1, 1, 10) = '1234567890';
+#
+# Functional key parts enable indexing of values that cannot be indexed otherwise,
+# such as JSON values.
+#
+# However, this must be done correctly to achieve the desired effect.
+#
+# For example, this syntax does not work:
+#
+# 		CREATE TABLE employees (
+# 			data JSON,
+# 			INDEX ((data->>'$.name'))
+# 		);
+#
+# This syntax fails because:
+#
+# 		) The ->> operator translates into JSON_UNQUOTE(JSON_EXTRACT(---))
+#
+# 		) JSON_UNQUOTE() returns a value with a data type of LONGTEXT, and the hidden generated
+# 			column thus is assigned the same data type.
+#
+# 		) MySQL cannot index LONGTEXT columns specified without a prefix length on the key part,
+# 			and prefix lengths are not permitted in functional key parts.
+#
+# To index the JSON column, you could try using the CAST() function as follows:
+#
+# 		CREATE TABLE employees (
+# 			data JSON,
+# 			INDEX ((CAST(data->>'$.name' AS CHAR(30))))
+# 		);
+#
+# The hidden generated column is assigned the VARCHAR(30) data type, which can be indexed.
+#
+# But this approach produces a new issue when trying to use theh index:
+#
+# 		) CAST() returns a string with the collation utf8mb4_0900_ai_ci (the server default collation)
+#
+# 		) JSON_UNQUOTE() returns a string with the collation utf8mb4_bin (hard coded)
+#
+# As a result, there is a collation mismatch between the indexed expression in the preceding
+# table definition and the WHERE clause expression in the following query:
+#
+# 		SELECT * FROM employees WHERE data->>'$.name' = 'James';
+#
+# The index is not used because the expression in the query and the index differ.
+#
+# To support this kind of scenario for functional key parts, the optimizer automatically
+# strips CAST() when looking for an index to use, but only if the collation of the indexed
+# expression matches that of the query expression.
+#
+# For an index with a functional key part to be used, either of the following two solutions
+# work (although they differ somewhat in effect):
+#
+# 		) Solution 1.  Assign the indexed expression the same collation as JSON_UNQUOTE():
+#
+	# 			CREATE TABLE employees (
+	# 				data JSON,
+	# 				INDEX idx ((CAST(data->>"$.name" AS CHAR(30)) COLLATE utf8mb4_bin))
+	# 			);
+	# 			INSERT INTO employees VALUES
+	# 				('{ "name": "james", "salary": 9000 }'),
+	# 				('{ "name": "James", "salary": 10000 }'),
+	# 				('{ "name": "Mary", "salary": 12000 }'),
+	# 				('{ "name": "Peter", "salary": 8000 }');
+	# 			SELECT * FROM employees WHERE data->>'$.name' = 'James';
+#
+# 			The ->> operator is the same as JSON_UNQUOTE(JSON_EXTRACT(---)), and JSON_UNQUOTE()
+# 			returns a string with collation utf8mb4_bin
+#
+# 			The comparison is thus case sensitive, and only one row matches:
+#
+# 				+--------------------------------------------+
+# 				| data 													|
+# 				+--------------------------------------------+
+# 				| {"name": "James", "salary": 10000} 		   |
+# 				+--------------------------------------------+
+#
+# 		) Solution 2. Specify the full expression in the query:
+#
+	# 			CREATE TABLE employees (
+	# 				data JSON,
+	# 				INDEX idx ((CAST(data->>"$.name" AS CHAR(30))))
+	# 			);
+	# 			INSERT INTO employees VALUES
+	# 				('{ "name": "james", "salary": 9000 }'),
+	# 				('{ "name": "James", "salary": 10000 }'),
+	# 				('{ "name": "Mary", "salary": 12000 }'),
+	# 				('{ "name": "Peter", "salary": 8000 }');
+	# 			SELECT * FROM employees WHERE CAST(data->>'$.name' AS CHAR(30)) = 'James';
+#
+# 		
+# 			CAST() returns a string with collation utf8mb4_0900_ai_ci, so the comparison case
+# 			insensitive and two rows match:
+#
+# 				+----------------------------------------------+
+# 				| data 													  |
+# 				+----------------------------------------------+
+# 				| {"name": "james", "salary": 9000} 			  |
+# 				| {"name": "James", "salary": 10000} 			  |
+# 				+----------------------------------------------+
+#
+# 			Be aware that although the optimizer supports automatically stripping CAST() with indexed
+# 			generated columns, the following approach does not work because it produces a different
+# 			result with and without an index (Bug#27337092):
+#
+# 				CREATE TABLE employees (
+# 					data JSON,
+# 					generated_col VARCHAR(30) AS (CAST(data->>'$.name' AS CHAR(30)))
+# 				);
+# 				Query OK, 0 rows affected, 1 warning (0.03 sec)
+#
+# 				INSERT INTO employees (data)
+# 				VALUES ('{"name": "james"}'), ('{"name": "James"}');
+# 				Query OK, 2 rows affected, 1 warning (0.01 sec)
+# 				Records: 2 Duplicates: 0 Warnings: 1
+#
+# 				SELECT * FROM employees WHERE data->>'$.name' = 'James';
+# 				+------------------------------+----------------------+
+# 				| data 								 | generated_col 			|
+# 				+------------------------------+----------------------+
+# 				| {"name": "James"} 				 | James 					|
+# 				+------------------------------+----------------------+
+# 				1 row in set (0.00 sec)
+#
+# 				ALTER TABLE employees ADD INDEX idx (generated_col);
+# 				Query OK, 0 rows affected, 1 warning (0.03 sec)
+# 				Records: 0 Duplicates: 0 Warnings: 1
+#
+# 				SELECT * FROM employees WHERE data->>'$.name' = 'James';
+# 				+------------------------------+----------------------+
+# 				| data 								 | generated_col 		   |
+# 				+------------------------------+----------------------+
+# 				| {"name": "james"} 				 | james 					|
+# 				| {"name": "James"} 				 | James 					|
+# 				+------------------------------+----------------------+
+# 				2 rows in set (0.01 sec)
+#
+# UNIQUE INDEXES
+#
+# A UNIQUE index creates a constraint such that all values in the index must be
+# distinct.
+#
+# An error occurs if you try to add a new row with a key value that matches an
+# existing row.
+#
+# If you specify a prefix value for a column in a UNIQUE index, the column values
+# must be unique within the prefix length.
+#
+# A UNIQUE index permits multiple NULL values for columns that can contain NULL
+#
+# If a table has a PRIMARY KEY or UNIQUE NOT NULL index that consists of a single
+# column that has an integer type, you can use _rowid to refer to the indexed
+# column in SELECT statements, as follows:
+#
+# 		) _rowid refers to the PRIMARY KEY column if there is a PRIMARY KEY consisting
+# 			of a single integer column.
+#
+# 			If there is a PRIMARY KEY but it does not consist of a single integer column,
+# 			_rowid cannot be used.
+#
+# 		) Otherwise, _rowid refers to the column in the first UNIQUE NOT NULL index if that
+# 			index consists of a single integer column.
+#
+# 			If the first UNIQUE NOT NULL index does not consist of a single integer column,
+# 			_rowid cannot be used.
+#
+# FULL-TEXT INDEXES
+#
+# FULLTEXT indexes are supported only for InnoDB and MyISAM tables and can include only
+# CHAR, VARCHAR and TEXT columns.
+#
+# Indexing always happens over the entire column; column prefix indexing is not
+# supported and any prefix length is ignored if specified.
+#
+# See SECTION 12.9, "FULL-TEXT SEARCH FUNCTIONS", for details of operation.
+#
+# SPATIAL INDEXES
+#
+# The MyISAM, InnoDB, NDB and ARCHIVE storage engines support spatial columns such as
+# POINT and GEOMETRY.
+#
+# (SECTION 11.5, "SPATIAL DATA TYPES", describes the spatial data types)
+#
+# However, support for spatial column indexing varies among engines.
+#
+# Spatial and nonspatial indexes on spatial columns are available according to
+# the following rules.
+#
+# Spatial indexes on spatial columns have these characteristics:
+#
+# 		) Available only for InnoDB and MyISAM tables. Specifying SPATIAL INDEX for other storage engines results in an error.
+#
+# 		) As of MySQL 8.0.12, an index on a spatial column MUST be a SPATIAL index.
+#
+# 			The SPATIAL keyword is thus optional but implicit for creating an index on a spatial column.
+#
+# 		) Available for single spatial columns only. A spatial index cannot be created over multiple spatial columns.
+#
+# 		) Indexed columns must be NOT NULL
+#
+# 		) Column prefix lengths are prohibited. The full width of each column is indexed.
+#
+# 		) Not permitted for a primary key or unique index
+#
+# Nonspatial indexes on spatial columns (created with INDEX, UNIQUE, or PRIMARY KEY) have these
+# characteristics:
+#
+# 		) Permitted for any storage engine that supports spatial columns except ARCHIVE
+#
+# 		) Columns can be NULL unless the index is a primary key
+#
+# 		) The index type for a non-SPATIAL index depends on the storage engine. Currently, B-tree is used.
+#
+# 		) Permitted for a column that can have NULL values only for InnoDB, MyISAM, and MEMORY tables
+#
+# INDEX OPTIONS
+#
+# Following the key part list, index options can be given.
+#
+# An index_option value can be any of the following:
+#
+# 		) KEY_BLOCK_SIZE [=] value
+#
+# 			For MyISAM tables, KEY_BLOCK_SIZE optionally specifies the size in bytes to use
+# 			for index key blocks.
+#
+# 			The value is treated as a hint; a different size could be used if necessary.
+#
+# 			A KEY_BLOCK_SIZE value specified for an individual index definition overrides
+# 			a table-level KEY_BLOCK_SIZE value.
+#
+# 			KEY_BLOCK_SIZE is not supported at the index level for InnoDB tables.
+#
+# 			See SECTION 13.1.20, "CREATE TABLE SYNTAX"
+#
+# 		) index_type
+#
+# 			Some storage engines permit you to specify an index type when creating an index.
+#
+# 			For example:
+#
+# 				CREATE TABLE lookup (id INT) ENGINE = MEMORY;
+# 				CREATE INDEX id_index ON lookup (id) USING BTREE;
+#
+# 			TABLE 13.1, "INDEX TYPES PER STORAGE ENGINE" shows the permissible index type values
+# 			supported by different storage engines.
+#
+# 			Where multiple index types are listed, the first one is the default when no
+# 			index type specifier is given.
+#
+# 			Storage engines not listed in the table do not support an index_type clause
+# 			in index definitions.
+#
+	# 			TABLE 13.1 INDEX TYPES PER STORAGE ENGINE
+	#
+	# 			STORAGE ENGINE 			PERMISSIBILE INDEX TYPES
+	#
+	# 			InnoDB 						BTREE
+	#
+	# 			MyISAM 						BTREE
+	#
+	# 			MEMORY/HEAP 				HASH, BTREE
+	#
+	# 			NDB 							HASH, BTREE (see note in text)
+#
+# 			The index_type clause cannot be used for FULLTEXT INDEX or (prior to MySQL 8.0.12)
+# 			SPATIAL INDEX specifications.
+#
+# 			Full-text index implementation is storage engine dependent.
+#
+# 			Spatial indexes are implemented as R-tree indexes.
+#
+# 			If you specify an index type that is not valid for a given storage engine,
+# 			but another index type is available that the engine can use without affecting
+# 			query results, the engine uses the available type.
+#
+# 			The parser recognizes RTREE as a type name. AS of MySQL 8.0.12, this is permitted
+# 			only for SPATIAL indexes.
+#
+# 			Prior to 8.0.12, RTREE cannot be specified for any storage engine.
+#
+# 			BTREE indexes are implemented by the NDB storage engine as T-tree indexes.
+#
+# 				NOTE:
+#
+# 					For indexes on NDB table columns, the USING option can be specified only
+# 					for a unique index or primary key.
+#
+# 					USING HASH prevents the creation of an ordered index; otherwise,
+# 					creating a unique index or primary key on an NDB table automatically
+# 					results in the creation of both an ordered index and a hash index,
+# 					each of which indexes the same set of columns.
+#
+# 					For unique indexes that include one or more NULL columns of an NDB
+# 					table, the hash index can be used only to look up literal values,
+# 					which means that IS [NOT] NULL conditions require a full scan of the table.
+#
+# 					One workaround is to make sure that a unique index using one or more NULL
+# 					columns on such a table is always created in such a way that it includes
+# 					the ordered index; that is, avoid employing USING HASH when creating the
+# 					index.
+#
+# 			If you specify an index type that is not valid for a given storage engine, but another
+# 			index type is available that the engine can use without affecting query results,
+# 			the engine uses the available type.
+#
+# 			The parser recognizes RTREE as a type name, but currently this cannot be specified
+# 			for any storage engine.
+#
+# 				NOTE:
+#
+# 					Use of the index_type option before the ON tbl_name clause is deprecated;
+# 					support for use of the option in this position will be removed in a 
+# 					future MySQL release.
+#
+# 					If an index_type option is given in both the earlier and later positions,
+# 					the final option applies.
+#
+# 			TYPE type_name is recognized as a synonym for USING type_name.
+#
+# 			However, USING is the preferred form.
+#
+# 			The following tables show index characteristics for the storage engines that
+# 			support the index_type option.
+#
+# 				TABLE 13.2 InnoDB STORAGE ENGINE INDEX CHARACTERISTICS
+#
+# 					INDEX CLASS 		INDEX TYPE 		STORES NULL VALUES 		PERMITS MULTIPLE NULL VALUES 	IS NULL SCAN TYPE 		IS NOT NULL SCAN TYPE
+#
+# 					Primary key 		BTREE 			No 							No 									N/A 							N/A
+# 					Unique 				BTREE 			Yes 							Yes 									Index 						Index
+# 					Key 					BTREE 			Yes 							Yes 									Index 						Index
+# 					FULLTEXT 			N/A 				Yes 							Yes 									Table 						Table
+# 					SPATIAL 				N/A 				No 							No 									N/A 							N/A
+#
+# 				Table 13.3 MyISAM Storage Engine Index Characteristics
+#
+# 					INDEX CLASS 		INDEX TYPE 		STORES NULL VALUES 		PERMITS MULTIPLE NULL VALUES 	IS NULL SCAN TYPE 		IS NOT NULL SCAN TYPE
+#
+# 					Primary key 		BTREE 			No 							No 									N/A 							N/A
+# 					Unique 				BTREE 			Yes 							Yes 									Index 						Index
+# 					Key 					BTREE 			Yes 							Yes 									Index 						Index
+# 					FULLTEXT 			N/A 				Yes 							Yes 									Table 						Table
+# 					SPATIAL 				N/A 				No 							No 									N/A 							N/A
+#
+# 				Table 13.4 MEMORY Storage Engine Index Characteristics
+#
+# 					INDEX CLASS 		INDEX TYPE 		STORES NULL VALUES 		PERMITS MULTIPLE NULL VALUES 	IS NULL SCAN TYPE 		IS NOT NULL SCAN TYPE
+#
+# 					Primary key 		BTREE 			No 							No 									N/A 							N/A
+# 					Unique 				BTREE 			Yes 							Yes 									Index 						Index
+# 					Key 					BTREE 			Yes 							Yes 									Index 						Index
+# 					Primary key 		HASH 				No 							No 									N/A 							N/A
+# 					Unique 				HASH 				Yes 							Yes 									Index 						Index
+# 					Key 					HASH 				Yes 							Yes 									Index 						Index
+#
+# 				Table 13.5 NDB Storage Engine Index Characteristics
+#
+# 					INDEX CLASS 		INDEX TYPE 		STORES NULL VALUES 		PERMITS MULTIPLE NULL VALUES 	IS NULL SCAN TYPE 		IS NOT NULL SCAN TYPE
+#
+# 					Primary key 		BTREE 			No 							No 									Index 						Index
+# 					Unique 				BTREE 			Yes 							Yes 									Index 						Index
+# 					Key 					BTREE 			Yes 							Yes 									Index 						Index
+# 					Primary key 		HASH 				No 							No 									Table (see note 1) 		Table (see note 1)
+# 					Unique 				HASH 				Yes 							Yes 									Table (see note 1) 		Table (see note 1)
+# 					Key 					HASH 				Yes 							Yes 									Table (see note 1) 		Table (see note 1)
+#
+# 			Table note:
+#
+# 				1. USING HASH prevents creation of an implicit ordered index
+#
+# 		) WITH PARSER parser_name
+#
+# 			This option can be used only with FULLTEXT indexes.
+#
+# 			It associates a parser plugin with the index if full-text indexing and searching
+# 			operations need special handling.
+#
+# 			InnoDB and MyISAM support full-text parser plugins
+#
+# 			See FULL-TEXT PARSER PLUGINS and SECTION 29.2.4.4, "WRITING FULL-TEXT PARSER PLUGINS"
+# 			for more information.
+#
+# 		) COMMENT 'string'
+#
+# 			Index definitions can include an optional comment of up to 1024 characters
+#
+# 			The MERGE_THRESHOLD for index pages can be configured for individual indexes using the
+# 			index_option COMMENT clause of the CREATE_INDEX statement.
+#
+# 			For example:
+#
+# 				CREATE TABLE t1 (id INT);
+# 				CREATE INDEX id_index ON t1 (id) COMMENT 'MERGE_THRESHOLD=40';
+#
+# 			If the page-full percentage for an index page falls below the MERGE_THRESOLD value
+# 			when a row is deleted or when a row is shortened by an update operation, InnoDB
+# 			attempts to merge the index page with a neighboring index page.
+#
+# 			The default MERGE_THRESHOLD value is 50, which is the previously hardcoded value.
+#
+# 			MERGE_THRESHOLD can also be defined at the index level using CREATE_TABLE and ALTER_TABLE statements.
+#
+# 			For more information, see SECTION 15.8.11, "CONFIGURING THE MERGE THRESHOLD FOR INDEX PAGES"
+#
+# 		) VISIBLE, INVISIBLE
+#
+# 			Specify index visibility.
+#
+# 			Indexes are visible by default. An invisible index is not used by the optimizer.
+#
+# 			Specification of index visibility applies to indexes other than primary keys
+# 			(either explicit or implicit)
+#
+# 			For more information, see SECTION 8.3.12, "INVISIBLE INDEXES"
+#
+# TABLE COPYING AND LOCKING OPTIONS
+#
+# ALGORITHM and LOCK clauses may be given to influence the table copying method and
+# level of concurrency for reading and writing the table while its indexes are being modified.
+#
+# They have the same meanings as for the ALTER_TABLE statement.
+#
+# For more information, see SECTION 13.1.9, "ALTER TABLE SYNTAX"
+#
+# NDB Cluster supports online operations using the same ALGORITHM=INPLACE syntax used
+# with the standard MySQL server.
+#
+# See SECTION 22.5.14, "ONLINE OPERATIONS WITH ALTER TABLE IN NDB CLUSTER", for more information.
+#
+# 13.1.16 CREATE LOGFILE GROUP SYNTAX
+#
+# CREATE LOGFILE GROUP logfile_group
+# 		ADD UNDOFILE 'undo_file'
+# 		[INITIAL_SIZE [=] initial_size]
+# 		[UNDO_BUFFER_SIZE [=] undo_buffer_size]
+# 		[REDO_BUFFER_SIZE [=] redo_buffer_size]
+# 		[NODEGROUP [=] nodegroup_id]
+# 		[WAIT]
+# 		[COMMENT [=] 'string']
+# 		ENGINE [=] engine_name
+#
+# This statement creates a new log file group named logfile_group having a single
+# UNDO file named 'undo_file'
+#
+# A CREATE_LOGFILE_GROUP statement has one and only one ADD UNDOFILE clause
+#
+# For rules covering the naming of log file groups, see SECTION 9.2, "SCHEMA OBJECT NAMES"
+#
+# NOTE:
+#
+# 		All NDB Cluster Disk Data objects share the same namespace.
+#
+# 		This means that each Disk Data Object must be uniquely named
+# 		(and not merely each Disk Data object of a given type)
+#
+# 		For example, you cannot have a tablespace and a log file group
+# 		with the same name, or a tablespace and a data file with the same name.
+#
+# There can be only one log file group per NDB Cluster instance at any given time.
+#
+# The optional INITIAL_SIZE parameter sets the UNDO file's initial size; if not specified,
+# it defaults to 128M (128 megabytes)
+#
+# The optional UNDO_BUFFER_SIZE parameter sets the size used by the UNDO buffer
+# for the log file group; The default value for UNDO_BUFFER_SIZE is 8M (eight MB);
+# This value cannot exceed the amount of system memory available.
+#
+# Both of these parameters are specified in bytes.
+#
+# You may optionally follow either or both of these with a one-letter
+# abbreviation for an order of magnitude, similar to those used in my.cnf
+#
+# Generally, this is one of the letters M (for megabytes) or G (for gigabytes)
+#
+# Memory used for UNDO_BUFFER_SIZE comes from the global pool whose size is
+# determined by the value of the SharedGlobalMemory data node configuration
+# parameter.
+#
+# This includes any default value implied for this option by the setting
+# of the InitialLogFileGroup data node configuration parameter.
+#
+# The maximum permitted for UNDO_BUFFER_SIZE is 629145600 (600 MB)
+#
+# On 32-bit systems, the maximum supported value for INITIAL_SIZE 
+# is 4294967296 (4 GB) (Bug #29186)
+#
+# The minimum allowed value for INITIAL_SIZE is 1048576 (1 MB)
+#
+# The ENGINE option determines the storage engine to be used by this log file group,
+# with engine_name being the name of the storage engine.
+#
+# In MySQL 8.0, this must be NDB (or NDBCLUSTER)
+#
+# If ENGINE is not set, MySQL tries to use the engine specified by the default_storage_engine
+# server system variable (formerly storage engine)
+#
+# In any case, if the engine is not specified as NDB or NDBCLUSTER, the CREATE LOGFILE GROUP
+# statement appears to succeed but actually fails to create the log file group, as shown
+# here:
+#
+# 		CREATE LOGFILE GROUP lg1
+# 			ADD UNDOFILE 'undo.dat' INITIAL_SIZE = 10M;
+# 		Query OK, 0 rows affected, 1 warning (0.00 sec)
+#
+# 		SHOW WARNINGS;
+# 		+-----------+-----------+------------------------------------------------------------------------------------------------+
+# 		| Level 		| Code 		| Message 																								 					 |
+# 		+-----------+-----------+------------------------------------------------------------------------------------------------+
+# 		| Error 		| 1478 	   | Table storage engine 'InnoDB' does not support the create option 'TABLESPACE or LOGFILE GROUP' |
+# 		+-----------+-----------+------------------------------------------------------------------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		DROP LOGFILE GROUP lg1 ENGINE = NDB;
+# 		ERROR 1529 (HY000): Failed to drop LOGFILE GROUP
+#
+# 		CREATE LOGFILE GROUP lg1
+# 			ADD UNDOFILE 'undo.dat' INITIAL_SIZE = 10M
+# 			ENGINE = NDB;
+# 		Query OK, 0 rows affected (2.97 sec)
+#
+# The fact that the CREATE LOGFILE GROUP statement does not actually return an error when a non-NDB storage
+# engine is named, but rather appears to succeed, is a known issue which we hope to address in a future
+# release of NDB Cluster.
+#
+# REDO_BUFFER_SIZE, NODEGROUP, WAIT and COMMENT are parsed but ignored, and so have no effect in MySQL 8.0
+#
+# These options are intended for future expansion
+#
+# When used with ENGINE [=] NDB, a log file group and associated UNDO log file are created on each Cluster
+# data node.
+#
+# You can verify that the UNDO files were created and obtain information about them by querying the
+# INFORMATION_SCHEMA.FILES table.
+#
+# For example:
+#
+# 		SELECT LOGFILE_GROUP_NAME, LOGFILE_GROUP_NUMBER, EXTRA
+# 			FROM INFORMATION_SCHEMA.FILES
+# 			WHERE FILE_NAME = 'undo_10.dat';
+# 		+-------------------------+------------------------------+--------------------+
+# 		| LOGFILE_GROUP_NAME 	  | LOGFILE_GROUP_NUMBER 		   | EXTRA 					|
+# 		+-------------------------+------------------------------+--------------------+
+# 		| lg_3 						  | 11 								   | CLUSTER_NODE=3 	   |
+# 		| lg_3 						  | 11 									| CLUSTER_NODE=4 		|
+# 		+-------------------------+------------------------------+--------------------+
+#
+# CREATE_LOGFILE_GROUP is useful only with Disk Data storage for NDB Cluster.
+#
+# See SECTION 22.5.13, "NDB CLUSTER DISK DATA TABLES"
+#
+# 13.1.17 CREATE PROCEDURE AND CREATE FUNCTION SYNTAX
+#
+# 		CREATE
+# 			[DEFINER = { user | CURRENT_USER }]
+# 			PROCEDURE sp_name ([proc_parameter[,---]])
+# 			[characteristic ---] routine_body
+#
+# 		CREATE
+# 			[DEFINER = { user | CURRENT_USER }]
+# 			FUNCTION sp_name ([func_parameter[,---]])
+# 			RETURNS type
+# 			[characteristic ---] routine_body
+#
+# 		proc_parameter:
+# 			[ IN | OUT | INOUT ] param_name type
+#
+# 		func_parameter:
+# 			param_name type
+#
+# 		type:
+# 			Any valid MySQL data type
+#
+# 		characteristic:
+# 			COMMENT 'string'
+# 		 | LANGUAGE SQL
+# 		 | [NOT] DETERMINISTIC
+# 		 | { CONTAINS SQL | NO SQL | READS SQL DATA | MODIFIES SQL DATA }
+# 		 | SQL SECURITY { DEFINER | INVOKER }
+#
+# 		routine_body:
+# 			Valid SQL routine statement
+#
+# These statements create stored routines.
+#
+# By default, a routine is associated with the default database.
+#
+# To associate the routine explicitly with a given database, specify the
+# name as db_name.sp_name when you create it.
+#
+# The CREATE_FUNCTION statement is also used in MySQL to support UDFs (user-defined functions)
+#
+# See SECTION 29.4, "ADDING NEW FUNCTIONS TO MYSQL"
+#
+# A UDF can be regarded as an external stored function. Stored functions share their namespace with
+# UDFs.
+#
+# See SECTION 9.2.4, "FUNCTION NAME PARSING AND RESOLUTION", for the rules describing how the server
+# interprets references to different kinds of functions.
+#
+# To invoke a stored procedure, use the CALL statement (see SECTION 13.2.1, "CALL SYNTAX")
+#
+# To invoke a stored function, refer to it in an expression. The function returns a
+# value during expression evaluation.
+#
+# CREATE_PROCEDURE and CREATE_FUNCTION require the CREATE_ROUTINE privilege.
+#
+# They might also require the SET_USER_ID or SUPER privilege, depending on the
+# DEFINER value, as described later in this section.
+#
+# If binary logging is enabled, CREATE_FUNCTION might require the SUPER privilege,
+# as described in SECTION 24.7, "BINARY LOGGING OF STORED PROGRAMS"
+#
+# By default, MySQL automatically grants the ALTER_ROUTINE and EXECUTE privileges
+# to the routine creator.
+#
+# This behavior can be changed by disabling the automatic_sp_privileges system variable.
+#
+# See SECTION 24.2.2, "STORED ROUTINES AND MYSQL PRIVILEGES"
+#
+# The DEFINER and SQL SECURITY clauses specify the security context to be used when
+# checking access privileges at routine execution time, as described later in this section.
+#
+# If the routine name is the same as the name of a built-in SQL function, a syntax error occurs
+# unless you use a space between the name and the following parenthesis when defining
+# the routine or invoking it later.
+#
+# For this reason, avoid using the names of existing SQL functions for your own stored routines.
+#
+# The IGNORE_SPACE SQL mode applies to built in functions, not to stored routines.
+#
+# IT is always permissibile to have spaces after a stored routine name, regardless
+# of whether IGNORE_SPACE is enabled.
+#
+# The parameter list enclosed within parentheses must always be present.
+#
+# If there are no parameters, an empty parameter list of () should be used.
+#
+# Parameter names are not case sensitive.
+#
+# Each parameter is an IN parameter by default. To specify otherwise for a parameter,
+# use the keyword OUT or INOUT before the parameter name.
+#
+# NOTE:
+#
+# 		Specifying a parameter as IN, OUT, or INOUT is valid only for a PROCEDURE.
+#
+# 		For a FUNCTION, parameters are always regarded as IN parameters.
+#
+# An IN parameter passes a value into a procedure.
+#
+# The procedure might modify the value, but the modification is not visible
+# to the caller when the procedure returns.
+#
+# An OUT parameter passes a value from the procedure back to the caller.
+#
+# Its initial value is NULL within the procedure, and its value is visible
+# to the caller when the procedure returns.
+#
+# An INOUT parameter is initialized by the caller, can be modified by the
+# procedure, and any change made by the procedure is visible to the caller
+# when the procedure returns.
+#
+# For each OUT or INOUT parameter, pass a user-defined variable in the CALL
+# statement that invokes the procedure so that you can obtain its value
+# when the procedure returns.
+#
+# If you are calling the procedure from within another stored procedure or
+# function, you can also pass a routine parameter or local routine variable
+# as an OUT or INOUT parameter.
+#
+# If you are calling the procedure from within a trigger, you can also pass
+# NEW.col_name as an OUT or INOUT parameter.
+#
+# For information about the effect of unhandled conditions on procedure params,
+# see SECTION 13.6.7.8, "CONDITION HANDLING AND OUT OR INOUT PARAMETERS"
+#
+# Routine parameters cannot be referenced in statements prepared within the
+# routine; see SECTION C.1, "RESTRICTIONS ON STORED PROGRAMS"
+#
+# The following example shows a simple stored procedure that uses an OUT parameter:
+#
+# 		delimiter //
+#
+# 		CREATE PROCEDURE simpleproc (OUT param1 INT)
+# 		BEGIN
+# 			SELECT COUNT(*) INTO param1 FROM t;
+# 		END//
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		delimiter ;
+#
+# 		CALL simpleproc(@a);
+# 		Query OK, 0 rows affected (0.00 sec)
+# 
+# 		SELECT @a;
+# 		+---------+
+# 		| @a 		 |
+# 		+---------+
+# 		| 3 		 |
+# 		+---------+
+# 		1 row in set (0.00 sec)
+#
+# The example uses the mysql client delimiter command to change the statement
+# delimiter from ; to // while the procedure is being defined.
+#
+# This enables the ; delimiter used in the procedure body to be passed through
+# to the server rather than being interpreted by mysql itself.
+#
+# See SECTION 24.1, "DEFINING STORED PROGRAMS"
+#
+# The RETURNS clause may be specified only for a FUNCTION, for which it is mandatory.
+#
+# It indicates the return type of the function, and the function body must contain
+# a RETURN value statement.
+#
+# If the RETURN statement returns a value of a different type, the value is coerced
+# to the proper type.
+#
+# For example, if a function specifies an ENUM or SET value in the RETURNS clause,
+# but the RETURN statement returns an integer, the value returned from the function
+# is the string for the corresponding ENUM member of set of SET members.
+#
+# The following example function takes a parameter, performs an operation using an
+# SQL function, and returns the result.
+#
+# In this case, it is unnecessary to use delimiter because the function definition
+# contains no internal ; statement delimiters:
+#
+# 			CREATE FUNCTION hello (s CHAR(20))
+# 			RETURNS CHAR(50) DETERMINISTIC
+# 			RETURN CONCAT('Hello, ',s,'!');
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		SELECT hello('world');
+# 		+--------------------+
+# 		| hello('world') 		|
+# 		+--------------------+
+# 		| Hello, world! 		|
+# 		+--------------------+
+# 		1 row in set (0.00 sec)
+#
+# Parameter types and function return types can be declared to use any valid data type.
+#
+# The COLLATE attribute can be used if preceded by a CHARACTER SET specification.
+#
+# The routine_body consists of a valid SQL routine statement.
+#
+# This can be a simple statement such as SELECT or INSERT, or a compound statement
+# written using BEGIN and END.
+#
+# Compound statements can contain declarations, loops, and other control structure
+# statements.
+#
+# The syntax for these statements is described in SECTION 13.6, "COMPOUND-STATEMENT SYNTAX"
+#
+# MySQL permits routines to contain DDL statements, such as CREATE and DROP.
+#
+# MySQL also permits stored procedures (but not stored functions) to contain
+# SQL transaction statements such as COMMIT.
+#
+# Stored functions may not contain statements that perform explicit or implicit
+# commit or rollback.
+#
+# Support for these statements is not required by the SQL standard, which states
+# that  each DBMS vendor may decide whether to permit them.
+#
+# Statements that return a result can be used within a stored procedure but not
+# within a stored function.
+#
+# This prohibition includes SELECT statements that do not have an INTO var_list clause
+# and other statements such as SHOW, EXPLAIN and CHECK_TABLE
+#
+# FOr statements that cna be determined at function definition time to return a result
+# set, a Not allowed to return a result set from a function error occurs (ER_SP_NO_RETSET)
+#
+# For statements that can be determined only at runtime to return a result set, a 
+# PROCEDURE %s can't return a result set in the given context error occurs (ER_SP_BADSELECT)
+#
+# USE statements within stored routines are not permitted.
+#
+# When a routine is invoked, an implicit USE db_name is performed (and undone when the
+# routine terminates)
+#
+# The causes the routine to have the given default database while it executes.
+#
+# References to objects in databases other than the routine default database
+# should be qualified with the appropriate database name.
+#
+# For additional information about statements that are not permitted in stored routines,
+# see SECTION C.1, "RESTRICTIONS ON STORED PROGRAMS"
+#
+# For information about invoking stored procedures from within programs written in a language
+# that has a MySQL interface, see SECTION 13.2.1, "CALL SYNTAX"
+#
+# MySQL stores the sql_mode system variable setting in effect when a routine is created or
+# altered, and always executes the routine with this setting in force, regardless of the
+# current server SQL mode when the routine begins executing.
+#
+# The switch from the SQL mode of the invoker to that of the routine occurs after evaluation
+# of arguments and assignment of the resulting values to routine parameters.
+#
+# If you define a routine in strict SQL mode but invoke it in nonstrict mode, assignment
+# of arguments to routine parameters does not take place in strict mode.
+#
+# If you require that expressions passed to a routine be assigned in strict SQL mode, you
+# should invoke the routine with strict mode in effect.
+#
+# The COMMENT characteristic is a MySQL extension, and may be used to describe the stored
+# routine.
+#
+# This information is displayed by the SHOW_CREATE_PROCEDURE and SHOW_CREATE_FUNCTION statements.
+#
+# The LANGUAGE characteristic indicates the language in which the routine is written.
+#
+# The server ignores the characteristic; only SQL routines are supported.
+#
+# A routine is considered "determinsitic" if it always produces the same result for the
+# same input params, and "not deterministic" otherwise.
+#
+# If neither DETERMINISTIC nor NOT DETERMINISTIC is given in the routine definition, the default
+# is NOT DETERMINSITIC.
+#
+# To declare that a function is deterministic, you must specify DETERMINISTIC explicitly.
+#
+# ASsessment of the nature of a routine is based on the "honesty" of the creator:
+#
+# MySQL does not  check that a routien declared DETERMINSITIC is free of statements that produce
+# RNG results.
+#
+# However, misdeclaring a routine might affect results or affect performance.
+#
+# Declaring a nondeterministic routine as DETERMINISTIC might lead to unexpected
+# results by causing the optimizer to make incorrect execution plan choices.
+#
+# Declaring a deterministic routine as NONDETERMINISTIC might diminish performance
+# by causing available optimizations not ot be used.
+#
+# If binary logging is enabled, the DETERMINISTIC characteristic affects which routine
+# definitions MySQL accepts.
+#
+# See SECTION 24.7, "BINARY LOGGING OF STORED PROGRAMS"
+#
+# A routine that contains the NOW() function (or its synonyms) or RAND()
+# is RNG, but it might still be replication-safe.
+#
+# For NOW(), the binary log includes the timestamp and replicates correctly.
+#
+# RAND() also replicates correctly as long as it is called only a single
+# time during the execution of a routine.
+#
+# (You can consider the routine execution timestamp and random number seed as implicit
+# inputs that are identical on the master and slave)
+#
+# Several characteristics provide information about the nature of data use by the routine.
+#
+# In MySQL, these characteristics are advisory only.
+#
+# THe server does not use them to constrain what kinds of statements a routine will be
+# permitted to execute.
+#
+# 		) CONTAINS SQL indicates that the routine does not contain statements that read or write data.
+#
+# 			This is the default if none of these characteristics is given explicitly.
+#
+# 			Examples of such statements are SET @x = 1 or DO RELEASE_LOCK('abc'), which execute
+# 			but neither read nor write data.
+#
+# 		) NO SQL indicates that the routine contains no SQL statements.
+#
+# 		) READS SQL DATA indicates that the routine contains statements that read data (for example, SELECT),
+# 			but not statements that write data.
+#
+# 		) MODIFIES SQL DATA indicates that the routine contains statements that may write data (for example, INSERT or DELETE)
+#
+# The SQL SECURITY characteristic can be DEFINER or INVOKER to specify the security context; that is, whether the
+# routine executes using the privileges of the account named in the routine DEFINER clause or the user who
+# invokes it.
+#
+# This account must have permission to access the database with which the routine is associated.
+#
+# The default value is DEFINER.
+#
+# The user who invokes the routine must have the EXECUTE privilege for it, as must the DEFINER account
+# if the routine executes in definer security context.
+#
+# The DEFINER clause specifies the MySQL account to be used when checking access privileges at routine
+# execution time for routines that have the SQL SECURITY DEFINER characteristic.
+#
+# If a user value is given for the DEFINER clause, it should be a MySQL account specified as 
+# 'user_name'@'host_name', CURRENT_USER or CURRENT_USER()
+#
+# THe default DEFINER value is the user who executes the CREATE_PROCEDURE or CREATE_FUNCTION
+# statement.
+#
+# This is the same as specifying DEFINER = CURRENT_USER explicitly.
+#
+# If you specify the DEFINER clause, these rules determine the valid DEFINER user values:
+#
+# 		) If you do not have the SET_USER_ID or SUPER privilege, the only permitted user value is
+# 			your own account, either specified literally or by using CURRENT_USER.
+#
+# 			You cannot set the definer to some other account.
+#
+# 		) If you have the SET_USER_ID or SUPER privilege, you can specify any syntactically
+# 		valid account name.
+#
+# 		If the account does not exist, a warning is generated.
+#
+# 		) ALthough it is possible to create a routine with a nonexistent DEFINER account,
+# 			an error occurs at routine execution time if the SQL SECURITY value is DEFINER
+# 			but the definer account does not exist.
+#
+# For more information about stored routine security, see SECTION 24.6, "ACCESS CONTROL FOR STORED PROGRAMS AND VIEWS"
+#
+# Within a stored routine that is defined with the SQL SECURITY DEFINER characteristic, CURRENT_USER
+# returns the routine's DEFINER value.
+#
+# For information about user auditing within stored routines, see SECTION 6.3.13, "SQL-BASED MYSQL ACCOUNT ACTIVITY AUDITING"
+#
+# Consider the following procedure, which displays a count of the number of MySQL accounts listed in
+# the mysql.user system table:
+#
+# 		CREATE DEFINER = 'admin'@'localhost' PROCEDURE account_count()
+# 		BEGIN
+# 			SELECT 'Number of accounts:', COUNT(*) FROM mysql.user;
+# 		END;
+#
+# The procedure is assigned a DEFINER account of 'admin'@'localhost' no matter which user defines it.
+#
+# It executes with the privileges of that account no matter which user invokes it
+# (because the default security characteristic is DEFINER)
+#
+# THe procedure succeeds or fails depending on whether invoker has the EXECUTE
+# privilege for it and 'admin'@'localhost' has the SELECT privilege for the mysql.user table
+#
+# Now suppose that the procedure is defined with the SQL SECURITY INVOKER characteristic:
+#
+# 		CREATE DEFINER = 'admin'@'localhost' PROCEDURE account_count()
+# 		SQL SECURITY INVOKER
+# 		BEGIN
+# 			SELECT 'Number of accounts:', COUNT(*) FROM mysql.user;
+# 		END;
+#
+# The procedure still has a DEFINER of 'admin'@'localhost', but in this case, it executes
+# with the privileges of the invoking user.
+#
+# Thus, the procedure succeeds or fails depending on whether the invoker has the EXECUTE
+# privilege for it and the SELECT privilege for the mysql.user table
+#
+# THe server handles the data type of a routine parameter, local routine variable created
+# with DECLARE, or function return value as follows:
+#
+# 		) Assignments are checked for data type mismatches and overflow.
+#
+# 			Conversion and overflow problems result in warnings, or errors in strict SQL mode.
+#
+# 		) Only scalar values can be assigned. For example, a statement such as SET x = (SELECT 1, 2) is invalid
+#
+# 		) For character data types, if CHARACTER SET is included in the declaration, the specified character set
+# 			and its default collation is used.
+#
+# 			IF the COLLATE attribute is also present, that collation is used rather than the default collation.
+#
+# 			If CHARACTER SET and COLLATE are not present, the database character set and collation in effect
+# 			at routine creation time are used.
+#
+# 			To avoid having the server use the database character set and collation, provide an explicit
+# 			CHARACTER SET and a COLLATE attribute for character data parameters.
+#
+# 			If you change the database default character set or collation, stored routines that use
+# 			the database defaults must be dropped and recreated so that they use the new defaults.
+#
+# 			The database character set and collation are given by the value of the character_set_database
+# 			and collation_database system variables.
+#
+# 			For more information, see SECTION 10.3.3, "DATABASE CHARACTER SET AND COLLATION"
+#
+# 13.1.18 CREATE SERVER SYNTAX
+#
+# CREATE SERVER server_name
+# 		FOREIGN DATA WRAPPER wrapper_name
+# 		OPTIONS (option [, option] ---)
+#
+# option:
+# 		{ HOST character-literal
+# 		| DATABASE character-literal
+#		| USER character-literal
+# 		| PASSWORD character-literal
+# 		| SOCKET character-literal
+# 		| OWNER character-literal
+# 		| PORT numeric-literal }
+#
+# This statement creates the definition of a server for use with the FEDERATED storage engine.
+#
+# The CREATE SERVER statement creates a new row in the servers table in the mysql database.
+#
+# This statement requires the SUPER privilege.
+#
+# The server_name should be a unique reference to the server. Server definitions are global
+# within the scope of the server, it is not possible to qualify the server definition to
+# a specific database.
+#
+# server_name has a maximum length of 64 characters (names longer than 64 chars are silently
+# truncated), and is case insensitive.
+#
+# You may specify the name as a quoted string.
+#
+# The wrapper_name is an identifier and may be quoted with single quotation marks.
+#
+# For each option you must specify either a character literal or numeric literal
+#
+# Character literals are UTF-8, support a max length of 64 chars and default to a
+# blank (empty) string.
+#
+# String literals are silently truncated to 64 chars.
+#
+# Numeric literals must be a number between 0 and 9999, default value is 0.
+#
+# NOTE:
+#
+# 		The OWNER option is currently not applied, and has no effect on the ownership or operation
+# 		of the server connection that is created.
+#
+# The CREATE SERVER statement creates an entry in the mysql.servers table that can later
+# be used with the CREATE_TABLE statement when creating a FEDERATED table.
+#
+# The options that you specify will be used to populate the columns in the mysql.servers table.
+#
+# The table columns are Server_name, Host, Db, Username, Password, Port and Socket.
+#
+# For example:
+#
+# 		CREATE SERVER s
+# 		FOREIGN DATA WRAPPER mysql
+# 		OPTIONS (USER 'Remote', HOST '198.51.100.106', DATABASE 'test');
+#
+# Be sure to specify all options necessary to establish a connection to the server.
+#
+# The user name, host name, and DB name are mandatory.
+#
+# oTher options might be required as well, such as Password.
+#
+# The data stored in teh table can be used when creating a connection to a FEDERATED table:
+#
+# 		CREATE TABLE t (s1 INT) ENGINE=FEDERATED CONNECTION='s';
+#
+# For more information, see SECTION 16.8, "THE FEDERATED STORAGE ENGINE"
+#
+# CREATE SERVER causes an implicit commit. See SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT"
+#
+# CREATE SERVER is not written to the binary log, regardless of the logging format that is in use.
+#
+# 13.1.19 CREATE SPATIAL REFERENCE SYSTEM SYNTAX
+#
+# CREATE OR REPLACE SPATIAL REFERENCE SYSTEM
+# 		srid srs_attribute
+#
+# CREATE SPATIAL REFERENCE SYSTEM
+# 		[IF NOT EXISTS]
+# 		srid srs_attribute ---
+#
+# srs_attribute: {
+# 		NAME 'srs_name'
+# 	 | DEFINITION 'definition'
+# 	 | ORGANIZATION 'org_name' IDENTIFIED BY org_id
+# 	 | DESCRIPTION 'description'
+# }
+#
+# srid, org_id: 32-bit unsigned integer
+#
+# This statement creates a spatial reference system (SRS) definition and stores it in the data dictionary.
+#
+# THe definition can be inspected using the INFORMATION_SCHEMA ST_SPATIAL_REFERENCE_SYSTEMS table.
+#
+# This statement requires the SUPER privilege.
+#
+# If neither OR REPLACE nor IF NOT EXISTS is specified, an error occurs if an SRS definition with the 
+# SRID value already exists.
+#
+# With CREATE OR REPLACE syntax, any existing SRS Definition with the same SRID value is replaced,
+# unless the SRID value is used by some column in an existing table.
+#
+# In taht case, an error occurs.
+#
+# For example:
+#
+# 		CREATE OR REPLACE SPATIAL REFERENCE SYSTEM 4326 ---;
+# 		ERROR 3716 (SR005): Can't modify SRID 4326.
+#
+# 		There is at least one column depending on it.
+#
+# To identify which column or columns use the SRID, use this query:
+#
+# 		SELECT * FROM INFORMATION_SCHEMA.ST_GEOMETRY_COLUMNS WHERE SRS_ID=4326;
+#
+# With CREATE_---_IF NOT EXISTS syntax, any existing SRS definition with the same SRID value
+# causes the new definition to be ignored and a warning occurs.
+#
+# SRID values must be in the range of 32-bit unsigned integers, with these restrictions:
+#
+# 		) SRID 0 is a valid SRID but cannot be used with CREATE_SPATIAL_REFERENCE_SYSTEM
+#
+# 		) If the value is in a reserved SRID range, a warning occurs.
+#
+# 			Reserved ranges are [0, 32767] (reserved by EPSG), [60,000,000,69,999,999,999] (reserved by EPSG),
+# 			and [2,000,000,000, 2,147,483,647] (reserved by MySQL)
+#
+# 		) Uses should not create SRSs with SRIDs in the reserved ranges.
+#
+# 			Doing so runs the risk that the SRIDs will conflict with future SRS
+# 			definitions distributed with MySQL, with the reuslt that hte new system-provided
+# 			SRS are not installed for MySQL upgrades or that hte user-defined SRSs are overwritten.
+#
+# Attributes for the statement must satisfy these conditions:
+#
+# 		) Attributes can be given in any order, but not attribute can be given more than once
+#
+# 		) The NAME and DEFINITION attributes are mandatory
+#
+# 		) The NAME srs_name attribute value must be unique. The combination of the ORGANIZATION
+# 			org_name and org_id attribute values must be unique.
+#
+# 		) The NAME srs_name attribute value and ORGANIZATION org_name attribute value cannot be
+# 			empty or begin or end with whitespace.
+#
+# 		) String values in attribute specifications cannot contain control chars, including newline
+#
+# 		) The following table shows hte max lengths for string attrib values
+#
+# 			TABLE 13.6 CREATE SPATIAL REFERENCE SYSTEM ATTRIBUTE LENGTHS
+#
+# 			Attribute 			Max length (chars)
+#
+# 			NAME 					80
+#
+# 			DEFINITION 			4096
+#
+# 			ORGANIZATION 		256
+#
+# 			DESCRIPTION 		2048
+#
+# Here is an example CREATE_SPATIAL_REFERENCE_SYSTEM statement.
+#
+# The DEFINITION value is reformatted across multiple lines for readability.
+#
+# (For the statement to be legal, the value actually must be given on a single line)
+#
+# 		CREATE SPATIAL REFERENCE SYSTEM 4120
+# 		NAME 'Greek'
+# 		ORGANIZATION 'EPSG' IDENTIFIED BY 4120
+# 		DEFINITION
+# 			'GEOGCS["Greek",DATUM["Greek",SPHEROID["Bessel 1841",
+# 			<numbers>, etc.';
+#
+# The grammar for SRS definition is based on teh grammar defined in OpenGIS Implementation Spec: Coordinate tarnsformation services.
+#
+# Revision 1.00, OGC 01-009, January 12, 2001, Section 7.2
+#
+# This specification exists at <link>
+#
+# MySQL incorporates these changes to the spec:
+#
+# 		) Only the <horz cs> production rule is implemented (that is, geographic and projected SRSs)
+#
+# 		) There is an optional, nonstandard <authority> clause for <parameter>
+#
+# 			This makes it possible to recognize projection parameters by authority instead of name
+#
+# 		) SRS definitions may not contain newlines
+#
+# 13.1.20 CREATE TABLE SYNTAX
+#
+# 13.1.20.1 CREATE TABLE STATEMENT RETENTION
+# 13.1.20.2 FILES CREATED BY CREATE TABLE
+# 13.1.20.3 CREATE TEMPORARY TABLE SYNTAX
+# 13.1.20.4 CREATE TABLE --- LIKE SYNTAX
+# 13.1.20.5 CREATE TABLE --- SELECT SYNTAX
+#
+# 13.1.20.6 USING FOREIGN KEY CONSTRAINTS
+# 13.1.20.7 SILENT COLUMN SPECIFICATION CHANGES
+# 13.1.20.8 CREATE TABLE AND GENERATED COLUMNS
+# 13.1.20.9 SECONDARY INDEXES AND GENERATED COLUMNS
+# 
+# 13.1.20.10 SETTING NDB_TABLE OPTIONS
+#
+# CREATE [TEMPORARY] TABLE [IF NOT EXISTS] tbl_name
+# 		(create_definition, ---)
+# 		[table_options]
+# 		[partition_options]
+#
+# CREATE [TEMPORARY] TABLE [IF NOT EXISTS] tbl_name
+# 		[(create_definition,---)]
+# 		[table_options]
+# 		[partition_options]
+# 		[IGNORE | REPLACE]
+# 		[AS] query_expression
+#
+# CREATE [TEMPORARY] TABLE [IF NOT EXISTS] tbl_name
+# 		{ LIKE old_tbl_name | (LIKE old_tbl_name) }
+#
+# create_definition:
+# 		col_name column_definition
+# 	 | [CONSTRAINT [symbol]] PRIMARY KEY [index_type] (key_part,---)
+# 		[index_option] ---
+# 	 | {INDEX|KEY} [index_name] [index_type] (key_part,---)
+# 		[index_option] ---
+#
+# 	 | [CONSTRAINT [symbol]] UNIQUE [INDEX|KEY]
+# 			[index_name] [index_type] (key_part,---)
+# 			[index_option] ---
+# 	 | {FULLTEXT|SPATIAL} [INDEX|KEY] [index_name] (key_part,---)
+# 			[index_option] ---
+# 	 | [CONSTRAINT [symbol]] FOREIGN KEY
+# 			[index_name] (col_name, ---) reference_definition
+#   | CHECK (expr)
+#
+# column_definition:
+# 		data_type [NOT NULL | NULL] [DEFAULT {literal | (expr)} ]
+# 			[AUTO_INCREMENT] [UNIQUE [KEY]] [[PRIMARY] KEY]
+# 			[COMMENT 'string']
+# 			[COLLATE collation_name]
+# 			[COLUMN_FORMAT {FIXED|DYNAMIC|DEFAULT}]
+# 			[STORAGE {DISK|MEMORY|DEFAULT}]
+# 			[reference_definition]
+# 		| data_type
+# 			[GENERATED ALWAYS] AS (expression)
+# 			[VIRTUAL | STORED] [NOT NULL | NULL]
+# 			[UNIQUE [KEY]] [[PRIMARY] KEY]
+# 			[COMMENT 'string']
+#
+# data_Type:
+# 		(see Chapter 11, Data types)
+#
+# key_part: {col_name [(length)] | (expr)} [ASC | DESC]
+#
+# index_type:
+# 		USING {BTREE | HASH}
+#
+# index_option:
+# 		KEY_BLOCK_SIZE [=] value
+# 	 | index_type
+# 	 | WITH PARSER parser_name
+#   | COMMENT 'string'
+# 	 | {VISIBLE | INVISIBLE}
+#
+# reference_definition:
+# 		REFERENCES tbl_name (key_part, ---)
+# 			[MATCH FULL | MATCH PARTIAL | MATCH SIMPLE]
+# 			[ON DELETE reference_option]
+# 			[ON UPDATE reference_option]
+#
+# reference_option:
+# 		->  
+#  
+#
+# 		
+#
+# 				
+#	
+#
+# https://dev.mysql.com/doc/refman/8.0/en/create-table.html
