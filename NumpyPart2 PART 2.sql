@@ -10255,5 +10255,2014 @@
 # 		+--------+-------+
 # 		1 row in set (0.00 sec)
 #
-# -> https://dev.mysql.com/doc/refman/8.0/en/create-table-select.html
+# For each row in table foo, a row is inserted in bar with the value from foo
+# and default values for the new columns.
 #
+# In a table resulting from CREATE_TABLE_---_SELECT, columns named only in the
+# CREATE_TABLE part come first.
+#
+# Columns named in both parts or only in the SELECT part come after that.
+#
+# The data type of SELECT columns can be overridden by also specifying
+# the column in the CREATE_TABLE part
+#
+# If any errors occur while copying the data to the table, it is automatically
+# dropped and not created.
+#
+# You can precede the SELECT by IGNORE or REPLACE to indicate how to handle rows
+# that duplicate unique key values.
+#
+# With IGNORE, rows that duplicate an existing row on a unqiue key value are discarded.
+#
+# With REPLACE, new rows replace rows that have the same unique key value.
+#
+# If neither IGNORE nor REPLACE is specified, duplicate unique key values result
+# in an error.
+#
+# For more information, see COMPARISON OF THE IGNORE KEYWORD AND STRICT SQL MODE.
+#
+# Because the ordering of the rows in the underlying SELECT statements cannot always
+# be determined, CREATE TABLE --- IGNORE SELECT and CREATE TABLE --- REPLACE SELECT
+# statements are flagged as unsafe for statement-based replication.
+#
+# Such statements produce a warning in the error log when using statement-based mode
+# and are written to the binary log using the row-based format when using MIXED mode.
+#
+# See also SECTION 17.2.1.1, "ADVANTAGES AND DISADAVANTAGES OF STATEMENT-BASED AND ROW-BASED REPLICATION"
+#
+# CREATE_TABLE_---_SELECT does not automatically create any indexes for you.
+#
+# This is done intentionally to make the statement as flexible as possible.
+#
+# If you want to have indexes in the created table, you should specify these before
+# the SELECT statement:
+#
+# 		CREATE TABLE bar (UNIQUE (n)) SELECT n FROM foo;
+#
+# For CREATE TABLE --- SELECT, the destination table does not preserve information about
+# whether columns in the selected-from table are generated columns.
+#
+# The SELECT part of the statement cannot assign values to generated columns in the destination table.
+#
+# For CREATE TABLE --- SELECT, the destination table does preserve expression default values
+# from the original table.
+#
+# Some conversion of data types might occur. For example, the AUTO_INCREMENT attribute is not
+# preserved, and VARCHAR columns can become CHAR columns.
+#
+# Retrained attributes are NULL (or NOT NULL) and, for those columns that have them,
+# CHARACTER SET, COLLATION, COMMENT, and the DEFAULT clause.
+#
+# When creating a table with CREATE_TABLE_---_SELECT, make sure to alias any function
+# calls or expressions in the query.
+#
+# If you do not, the CREATE statement might fail or result in undesirable column names.
+#
+# CREATE TABLE artists_and_works
+# 		SELECT artist.name, COUNT(work.artist_id) AS number_of_works
+# 		FROM artist LEFT JOIN work ON artist.id = work.artist_id
+# 		GROUP BY artist.id;
+#
+# You can also explicitly specify the data type for a column in the created table:
+#
+# 		CREATE TABLE foo (a TINYINT NOT NULL) SELECT b+1 AS a FROM bar;
+#
+# For CREATE_TABLE_---_SELECT, if IF NOT EXISTS is given and the target table exists,
+# nothing is inserted into the destination table, and the statement is not logged.
+#
+# To ensure that the binary log can be used to re-create the original tables, MySQL
+# does not permit concurrent inserts during CREATE_TABLE_---_SELECT
+#
+# You cannot use FOR UPDATE as part of the SELECT in a statement such as 
+# CREATE_TABLE_new_table_SELECT_---_FROM_old_table_---
+#
+# Attempting to do so, causes the statement to fail.
+#
+# 13.1.20.6 USING FOREIGN KEY CONSTRAINTS
+#
+# MySQL supports foreign keys, which let you cross-reference related data across
+# tables, and foreign key constraints, which help keep this spread-out data consistent.
+#
+# The essential syntax for a foreign key constraint definition in a CREATE_TABLE or
+# ALTER_TABLE statement looks like this:
+#
+# 		[CONSTRAINT [symbol]] FOREIGN KEY
+# 			[index_name] (col_name, ---)
+# 			REFERENCES tbl_name (col_name, ---)
+# 			[ON DELETE reference_option]
+# 			[ON UPDATE reference_option]
+# 		
+# 		reference_option:
+# 			RESTRICT | CASCADE | SET NULL | NO ACTION | SET DEFAULT
+#
+# index_name represents a foreign key ID.
+#
+# The index_name value is ignored if there is already an explicitly defined index
+# on the child table that  can support the foreign key.
+#
+# Otherwise, MySQL implicitly creates a foreign key index that is named according
+# to the following rules:
+#
+# 		) If defined, the CONSTRAINT symbol value is used. Otherwise, the FOREIGN KEY index_name value is used
+#
+# 		) If neither a CONSTRAINT symbol or FOREIGN KEY index_name is defined, the foreign key index name is generated
+# 			using the name of the referencing foreign key column.
+#
+# The FOREIGN KEY index_name value must be unique in the database.
+#
+# Foreign keys definitions are subject to the following conditions:
+#
+# 		) Foreign key relationships involve a parent table that holds the central data values,
+# 			and a child table with identical values pointing back to its parent.
+#
+# 			The FOREIGN KEY clause is specified in the child table.
+#
+# 			The parent and child tables must use the same storage engine.
+#
+# 			They must not be TEMPORARY tables.
+#
+# 			In MySQL 8.0, creation of a foreign key constraint requires the REFERENCES privilege
+# 			for the parent table
+#
+# 		) Corresponding columns in the foreign key and the referenced key must have similar data types.
+#
+# 			The size and sign of integer types must be the same. The length of string types need
+# 			not be the same.
+#
+# 			For nonbinary (character) string columns, the character set and collation must be the same.
+#
+# 		) When foreign_key_checks is enabled, which is the default setting, character set conversion is not
+# 			permitted on tables that include a character string column used in a foreign key constraint.
+#
+# 			The workaround is described in SECTION 13.1.9, "ALTER TABLE SYNTAX"
+#
+# 		) MySQL requires indexes on foreign keys and referenced keys so that foreign key checks can be fast
+#  		and not require a table scan.
+#
+# 			In the referencing table, there must be an index where the foreign key columns are listed as
+# 			the first columns in the same order.
+#
+# 			Such an index is created on the referencing table automatically if it does not exist.
+#
+# 			This index might be silently dropped later, if you create another index that can be used to enforce
+# 			the foreign key constraint.
+#
+# 			index_name, if given, is used as described previously.
+#
+# 		) InnoDB permits a foreign key to reference any column or group of columns.
+#
+# 			However, in the reference table, there must be an index where the referenced
+# 			columns are listed as the first columns in the same order.
+#
+# 			NDB requires an explicit unique key (or primary key) on any column referenced as a foreign key.
+#
+# 		) Index prefixes on foreign key columns are not supported.
+#
+# 			One consequence of this is that BLOB and TEXT columns cannot be included in a foreign key because
+# 			indexes on those columns must always include a prefix length.
+#
+# 		) If the CONSTRAINT symbol clause is given, the symbol value, if used, must be unique in the database.
+#
+# 			A duplicate symbol will result in an error similar to: 
+#
+# 				ERROR 1022 (2300): Can't write; duplicate key in table '#sql- 464_1'
+#
+# 			If the clause is not given, or a symbol is not included following the CONSTRAINT keyword,
+# 			a name for the constraint is created automatically.
+#
+# 		) InnoDB does not currently support foreign keys for tables with user-defined partitioning.
+#
+# 			This includes both parent and child tables.
+#
+# 			This restriction does not apply for NDB tables that are partitioned by KEY or LINEAR KEY
+# 			(the only user partitioning types supported by the NDB storage engine);
+#
+# 			these may have foreign key references or be the targets of such references.
+#
+# 		) For NDB tables, ON UPDATE CASCADE is not supported where the reference is to be the parent
+# 			table's primary key.
+#
+# Additional aspects of FOREIGN KEY constraint usage are described under the following topics in this section:
+#
+# 		) REFERENTIAL ACTIONS
+#
+# 		) EXAMPLES OF FOREIGN KEY CLAUSES
+#
+# 		) ADDING FOREIGN KEYS
+#
+# 		) DROPPING FOREIGN KEYS
+#
+# 		) FOREIGN KEYS AND OTHER MYSQL STATEMENTS
+#
+# 		) FOREIGN KEYS AND THE ANSI/ISO SQL STANDARD
+#
+# 		) FOREIGN KEY METADATA 
+#
+# 		) FOREIGN KEY ERRORS
+#
+# REFERENTIAL ACTIONS
+#
+# This section describes how foreign keys help guarantee referential integrity.
+#
+# For storage engines supporting foreign keys, MySQL rejects any INSERT or UPDATE operation that
+# attempts to create a foreign key value in a child  table if there is not a matching candidate
+# key value in the parent table.
+#
+# When an UPDATE or DELETE operation affects a key value in the parent table that has matching
+# rows in the child table, the result depends on the referential action specified using
+# ON UPDATE and ON DELETE subclauses of the FOREIGN KEY clause.
+#
+# MySQL supports five options regarding the action to be taken, listed here:
+#
+# 		) CASCADE: Delete or update the row from the parent table, and automatically delete or update
+# 			the matching rows in the child table.
+#
+# 			Both ON DELETE CASCADE and ON UPDATE CASCADE are supported.
+#
+# 			Between two tables, do not define several ON UPDATE CASCADE clauses that act
+# 			on the same column in the parent table or in the child table.
+#
+# 			If a FOREIGN KEY clause is defined on both tables in a foreign key relationship,
+# 			making both tables a parent and child, an ON UPDATE CASCADE or ON DELETE CASCADE
+# 			subclause defined for one FOREIGN KEY clause must be defined for the other in order
+# 			for cascading operations to succeed.
+#
+# 			If an ON UPDATE CASCADE or ON DELETE CASCADE subclause is only defined for one 
+# 			FOREIGN KEY clause, cascading operations fail with an error.
+#
+# 			NOTE:
+#
+# 				Cascaded foreign key actions do not active triggers
+#
+# 		) SET NULL:
+#
+# 			Delete or update the row from the parent table, and set the foreign key column
+# 			or columns in the child table to NULL.
+#
+# 			Both ON DELETE SET NULL and ON UPDATE SET NULL clauses are supported.
+#
+# 			If you specify a SET NULL action, make sure that you have not declared the columns
+# 			in the child table as NOT NULL
+#
+# 		) RESTRICT:
+#
+# 			Rejects the delete or update operation for the parent table.
+#
+# 			Specifying RESTRICT (or NO ACTION) is the same as omitting the ON DELETE
+# 			or ON UPDATE clause.
+#
+# 		) NO ACTION:
+#
+# 			A keyword from standard SQL. In MySQL, equivalent to RESTRICT.
+#
+# 			The MySQL Server rejects the delete or update operation for the
+# 			parent table if there is a related foreign key value in the referenced table.
+#
+# 			Some database systems have deferred checks, and NO ACTION is a deferred check.
+#
+# 			In MySQL, foreign key constraints are checked immediately, so NO ACTION is the same
+# 			as RESTRICT.
+#
+# 		) SET DEFAULT:
+#
+# 			This action is recognized by the MySQL parser, but both InnoDB and NDB reject table
+# 			defintions containing ON DELETE SET DEFAULT or ON UPDATE SET DEFAULT clauses.
+#
+# For an ON DELETE or ON UPDATE that is not specified, the default action is always RESTRICT.
+#
+# MySQL supports foreign key references between one column and another within a table.
+#
+# (A column cannot have a foreign key reference to itself)
+#
+# In these cases, "child table records" really refers to dependent records within the
+# same table.
+#
+# A foreign key constraint on a stored generated column cannot use ON UPDATE CASCADE,
+# ON DELETE SET NULL, ON UPDATE SET NULL, ON DELETE SET DEFAULT or ON UPDATE SET DEFAULT.
+#
+# A foreign key constraint cannot reference a virtual generated column.
+#
+# For InnoDB restrictions related to foreign keys and generated columns, see
+# SECTION 15.6.1.5, "InnoDB AND FOREIGN KEY CONSTRAINTS"
+#
+# EXAMPLES OF FOREIGN KEY CLAUSES
+#
+# Here is a simple example that relates parent and child tables through a single-column
+# foreign key:
+#
+# 		CREATE TABLE parent (
+# 			id INT NOT NULL,
+# 			PRIMARY KEY (id)
+# 		) ENGINE=INNODB;
+#
+# 		CREATE TABLE child (
+# 			id INT,
+# 			parent_id INT,
+# 			INDEX par_ind (parent_id),
+# 			FOREIGN KEY (parent_id)
+# 				REFERENCES parent(id)
+# 				ON DELETE CASCADE
+# 		) ENGINE=INNODB;
+#
+# A more complex example in which a product_order table has foreign keys for two other tables.
+#
+# One foreign key references a two-column index in the product table.
+#
+# The other references a single-column index in the customer table:
+#
+# 		CREATE TABLE product (
+# 			category INT NOT NULL, id INT NOT NULL,
+# 			price DECIMAL,
+# 			PRIMARY KEY(category, id)
+# 		) ENGINE=INNODB;
+#
+# 		CREATE TABLE customer (
+# 			id INT NOT NULL,
+# 			PRIMARY KEY (id)
+# 		) ENGINE=INNODB;
+#
+# 		CREATE TABLE product_order (
+# 			no INT NOT NULL AUTO_INCREMENT,
+# 			product_category INT NOT NULL,
+# 			product_id INT NOT NULL,
+# 			customer_id INT NOT NULL,
+#
+# 			PRIMARY KEY(no),
+# 			INDEX (product_category, product_id),
+# 			INDEX (customer_id),
+#
+# 			FOREIGN KEY (product_category, product_id)
+# 				REFERENCES product(category, id)
+# 				ON UPDATE CASCADE ON DELETE RESTRICT,
+#
+# 			FOREIGN KEY (customer_id)
+# 				REFERENCES customer(id)
+# 		) 	ENGINE=INNODB;
+#
+# ADDING FOREIGN KEYS
+#
+# You can add a new foreign key constraint to an existing table by using
+# ALTER_TABLE
+#
+# The syntax relating to foreign keys for this statement is shown here:
+#
+# 		ALTER TABLE tbl_name
+# 			ADD [CONSTRAINT [symbol]] FOREIGN KEY
+# 			[index_name] (col_name, ---)
+# 			REFERENCES tbl_name (col_name,---)
+# 			[ON DELETE reference_option]
+# 			[ON UPDATE reference_option]
+#
+# The foreign key can be self referential (referring to the same table)
+#
+# When you add a foreign key constraint to a table using ALTER_TABLE,
+# remember to create the required indexes first.
+#
+# DROPPING FOREIGN KEYS
+#
+# You can also use ALTER_TABLE to drop foreign keys, using the syntax shown here:
+#
+# 		ALTER TABLE tbl_name DROP FOREIGN KEY fk_symbol;
+#
+# If the FOREIGN KEY clause included a CONSTRAINT name when you created the foreign key,
+# you can refer to that name to drop the foreign key.
+#
+# Otherwise, the fk_symbol value is generated internally when the foreign key is created.
+#
+# To find out the symbol value when you want to drop a foreign key, use a SHOW_CREATE_TABLE
+# statement, as shown here:
+#
+# 		SHOW CREATE TABLE ibtest11c\G
+# 		************************** 1. row ******************************
+# 						Table: ibtest11c
+# 			Create Table  : CREATE TABLE `ibtest11c` (
+# 				`A` int(11) NOT NULL auto_increment,
+# 				`D` int(11) NOT NULL default '0',
+# 				`B` varchar(200) NOT NULL default '',
+# 				`C` varchar(175) default NULL,
+# 				PRIMARY KEY (`A`, `D`, `B`),
+# 				KEY `B` (`B`,`C`),
+# 				KEY `C` (`C`),
+# 				CONSTRAINT `0_38775` FOREIGN KEY (`A`, `D`)
+# 			REFERENCES `ibtest11a` (`A`, `D`)
+# 			ON DELETE CASCADE ON UPDATE CASCADE,
+# 				CONSTRAINT `0_38776` FOREIGN KEY (`B`, `C`)
+# 			REFERENCES `ibtest11a` (`B`, `C`)
+# 			ON DELETE CASCADE ON UPDATE CASCADE
+# 			) ENGINE=INNODB CHARSET=utf8mb4
+# 			1 row in set (0.01 sec)
+#
+# 			ALTER TABLE ibtest11c DROP FOREIGN KEY `0_38775`;
+#
+# Adding and dropping a foreign key in the same ALTER_TABLE statement is supported for
+# ALTER_TABLE_---_ALGORITHM=INPLACE but is unsupported for ALTER_TABLE_---_ALGORITHM=COPY
+#
+# In MySQL 8.0, the server prohibits changes to foreign key columns with the potential
+# to cause loss of referential integrity.
+#
+# A workaround is to use ALTER_TABLE_---_DROP_FOREIGN_KEY before changing the column
+# defintion and ALTER_TABLE_---_ADD_FOREIGN_KEY afteward
+#
+# FOREIGN KEYS AND OTHER MYSQL STATEMENTS
+#
+# Table and column identifiers in a FOREIGN KEY --- REFERENCES --- clause can be quoted
+# within backticks (`)
+#
+# Alternatively, double quotation marks (") can be used if the ANSI_QUOTES SQL mode is enabled.
+#
+# The setting of the lower_case_table_names system variable is also taken into account.
+#
+# You can view a child table's foreign key definitions as part of the output of the
+# SHOW_CREATE_TABLE statement:
+#
+# 		SHOW CREATE TABLE tbl_name;
+#
+# You can also obtain information about foreign keys by querying the INFORMATION_SCHEMA.KEY_COLUMN_USAGE table
+#
+# You can find information about foreign keys used by InnoDB tables in the INNODB_FOREIGN and
+# INNODB_FOREIGN_COLS tables, also in the INFORMATION_SCHEMA database.
+#
+# mysqldump produces correct defintiions of tables in the dump file, including the foreign keys for child tables.
+#
+# TO make it easier to reload dump files that have foreign key relationships, mysqldump automatically
+# includes a statement in the dump output to set foreign_key_checks to 0
+#
+# This avoids problems with tables having to be reloaded in a particular order when the dump is
+# reloaded.
+#
+# It is also possible to set this variable manually:
+#
+# 		SET foreign_key_checks = 0;
+# 		SOURCE dump_file_name;
+# 		SET foreign_key_checks = 1;
+#
+# This enables you to import the tables in any order if the dump file contains tables
+# that are not correctly ordered for foreign keys.
+#
+# It also speeds up the import operation.
+#
+# Setting foreign_key_checks to 0 can also be useful for ignoring foreign key constraints
+# during LOAD_DATA and ALTER_TABLE operations.
+#
+# However, even if foreign_key_checks = 0, MySQL does not permit the creation of a foreign key
+# constraint where a column references a nonmatching column type.
+#
+# ALso, if a table has foreign key constraints, ALTER_TABLE cannot be used to alter the table
+# to use another storage engine.
+#
+# To change the storage engine, you must drop any foreign key constarints first.
+#
+# You cannot issue DROP_TABLE for a table that is referenced by a FOREIGN KEY constraint,
+# unless you do SET foreign_key_checks = 0
+#
+# When you drop a table, any constraints that were defined in the statement used to create
+# that table are also dropped.
+#
+# If you re-create a table that was dropped, it must have a definition that conforms to
+# the foreign key constraints referencing it.
+#
+# It must have the correct column names and types, and it must have indexes on the referenced
+# keys, as stated earlier.
+#
+# If these are not satisfied, MySQL returns Error 1005 and refers to Error 150 in the error message,
+# which means that a foreign key constraint was not correctly formed.
+#
+# SImilarly, if an ALTER_TABLE fails due to Error 150, this means that a foreign key definition
+# would be incorrectly formed for the altered table
+#
+# For InnoDB tables, you can obtain a detailed explanation of the most recent InnoDB foreign key
+# error in the MySQL Server, by checking the output of SHOW_ENGINE_INNODB_STATUS
+#
+# MySQL extends metadata locks, as necessary, to tables that are related by a foreign key constraint.
+#
+# Extending metadata locks prevents conflicting DML and DDL operations from executing concurrently
+# on related tables.
+#
+# This feature also enables updates to foreign key metadata when a parent table is modified.
+#
+# In earlier MysQl releases, foreign key metadata, which is owned by the child table, could not
+# be updated safely.
+#
+# If a table is locked explicitly with LOCK_TABLES, any tables related by a foreign key constraint
+# are opened and locked implicitly.
+#
+# For foreign key checks, a shared read-only lock (LOCK_TABLES_READ) is taken on related tables.
+#
+# For cascading updates, a shared-nothing write lock (LOCK_TABLES_WRITE) is taken on related
+# tables that are involved in the operation
+#
+# FOREIGN KEYS AND THE ANSI/ISO SQL STANDARD
+#
+# For users familiar with the ANSI/ISO SQL Standard, please note htat no storage engine, including
+# innoDB, recognizes or enforces the MATCH clause used in referential-integrity constraint defintiions.
+#
+# Use of an explicit MATCH clause will not have the specified effect, and also causes ON DELETE
+# and ON UPDATE clauses to be ignored.
+#
+# For these reasons, specifying MATCH should be avoided
+#
+# The MATCH clause in the SQL standard controls how NULL values in a composite (multiple-column)
+# foreign key are handled when comparing to a primary key
+#
+# MySQL essentialy implements the semantics defined by MATCH SIMPLE, which permit a foreign key
+# to be all or partially NULL
+#
+# In that case, the (child table) row containing such a foreign key is permitted to be inserted,
+# and does not match any row in the referenced (parent) table
+#
+# It is possible to implement other semantics using triggers.
+#
+# Additionally, MySQL requires that the referenced columns be indexed for performance reasons.
+#
+# However, the system does not enforce a requirement that the referenced columns be UNIQUE
+# or be declared NOT NULL
+#
+# The handling of foreign key references to nonunique keys or keys that contain NULL values
+# is not well defined for operations such as UPDATE or DELETE CASCADE
+#
+# You are advised to use foreign keys that reference only UNIQUE (including PRIMARY)
+# and NOT NULL keys.
+#
+# Furthermore, MySQL parses but ignores "inline REFERENCES specifications" (as defined in the
+# SQL standard) where the references are defined as part of the column specification.
+#
+# MySQL accepts REFERENCES clauses only when specified as part of a separate FOREIGN KEY
+# specification.
+#
+# For storage engines that do not support foreign keys (such as MyISAM), MySQL Server
+# parses and ignores foreign key specifications.
+#
+# FOREIGN KEY METADATA
+#
+# The INFORMATION_SCHEMA.KEY_COLUMN_USAGE table identifies the key columns that have constraints.
+#
+# Metadata specific to InnoDB foreign keys is found in the INNODB_SYS_FOREIGN and INNODB_SYS_FOREIGN_COLS
+# tables
+#
+# FOREIGN KEY ERRORS
+#
+# In the event of a foreign key error involving InnoDB tables (usually Error 150 in the MySQL Server),
+# information about the most recent InnoDB foreign key error can be obtained by checking
+# SHOW_ENGINE_INNODB_STATUS output.
+#
+# 	WARNING:
+#
+# 		If a user has table-level privileges for all parent tables, ER_NO_REFERENCED_ROW_2 and
+# 		ER_ROW_IS_REFERENCED_2 error messages for foreign key operations expose information
+# 		about parent tables.
+#
+# 		If a user does not have table-level privileges for all parent tables, more generic
+# 		eror messages are displayed instead (ER_NO_REFERENCED_ROW and ER_ROW_IS_REFERENCED)
+#
+# 		An exception is that, for stored programs defiend to execute with DEFINER privileges,
+# 		the user against which privileges are assessed is the user in the program DEFINER clause,
+# 		not the invoking user.
+#
+# 		If that user has table-level parent table privileges, parent table informaiton is
+# 		still displayed.
+#
+# 		In this case, it is the responsibility of the stored program creator to hide
+# 		information by including appropriate condition handlers.
+#
+# 13.1.20.7 SILENT COLUMN SPECIFICATION CHANGES
+#
+# In some cases, MySQL silently changes column specifications from those given in a 
+# CREATE_TABLE or ALTER_TABLE statement.
+#
+# These might be changes to a data type, to attributes associated with a data type,
+# or to an index specification.
+#
+# ALl changes are subject to the internal row-size limit of 65,535 bytes, which may
+# cause some attempts at data type changes to fail.
+#
+# See SECTION C.10.4, "LIMITS ON TABLE COLUMN COUNT AND ROW SIZE"
+#
+# 		) Columns that are part of a PRIMARY KEY are made NOT NULL even if not declared that way
+#
+# 		) Trailing spaces are automatically deleted from ENUM and SET member values when the table is created.
+#
+# 		) MySQL maps certain data types used by other SQL database vendors to MySQL types.
+#
+# 			See SECTION 11.10, "USING DATA TYPES FROM OTHER DATABASE ENGINES"
+#
+# 		) If you include a USING clause to specify an index type that is not permitted for a given storage
+# 			engine, but there is another index type available that the engine can use without affecting
+# 			query results, the engine uses the available type.
+#
+# 		) If strict SQL mode is not enabled, a VARCHAR column with a length specification greater than
+# 			65535 is converted to TEXT, and a VARBINARY column with a length specification greater than
+# 			65535 is converted to BLOB.
+#
+# 			Otherwise, an error occurs in either of these cases
+#
+# 		) Specifying the CHARACTER SET binary attribute for a character data type causes the column to be
+# 			created as the corresponding binary data type:
+#
+# 				CHAR becomes BINARY, VARCHAR becomes VARBINARY, and TEXT becomes BLOB
+#
+# 			For the ENUM and SET data types, this does not occur; they are created as declared.
+#
+# 			Suppose that you specify a table using this definition:
+#
+# 				CREATE TABLE t
+# 				(
+# 					c1 VARCHAR(10) CHARACTER SET binary,
+# 					c2 TEXT CHARACTER SET binary,
+# 					c3 ENUM('a', 'b', 'c') CHARACTER SET binary
+# 				);
+#
+# 			The resulting table has this definition:
+#
+# 				CREATE TABLE t
+# 				(
+# 					c1 VARBINARY(10),
+# 					c2 BLOB,
+# 					c3 ENUM('a', 'b', 'c') CHARACTER SET binary
+# 				);
+#
+# 			To see whether MySQL uses a data type other than the one you specified, issue a DESCRIBE
+# 			or SHOW_CREATE_TABLE statement after creating or altering the table.
+#
+# 			Certain other data type changes can occur if you compress a table using myisampack.
+#
+# 			See SECTION 16.2.3.3, "COMPRESSED TABLE CHARACTERISTICS"
+#
+# 13.1.20.8 CREATE TABLE AND GENERATED COLUMNS
+#
+# CREATE_TABLE supports the specification of generated columns.
+#
+# Values of a generated column are computed from an expression included in the column definition.
+#
+# Generated columns are also supported by the NDB storage engine.
+#
+# The following simple example shows a table that stores the lengths of the sides of right triangles
+# in the sidea and sideb columns, and computes hte length of the hypotenuse in sidec
+# (the square root of the sums of the squares of the other sides):
+#
+# 		CREATE TABLE triangle (
+# 			sidea DOUBLE,
+# 			sideb DOUBLE,
+# 			sidec DOUBLE AS (SQRT(sidea * sidea + sideb * sideb))
+# 		);
+# 		INSERT INTO triangle (sidea, sideb) VALUES(1,1), (3,4), (6,8);
+#
+# Selecting from the table yields this result:
+#
+# 		SELECT * FROM triangle;
+# 		+-----------+-------------+-----------------------------+
+# 		| sidea     | sideb 		  | sidec 							  |
+# 		+-----------+-------------+-----------------------------+
+# 		| 1 			| 1 			  | 1.4142135623730951 			  |
+# 		| 3 		  	| 4 			  | 5 								  |
+# 		| 6 			| 8 			  | 10 								  |
+# 		+-----------+-------------+-----------------------------+
+#
+# ANy application that uses the triangle table has access to the hypotenuse values without
+# having to specify the expression that calculates them.
+#
+# Generated column definitions have this syntax:
+#
+# 		col_name data_type [GENERATED ALWAYS] AS (expression)
+# 			[VIRTUAL | STORED] [NOT NULL | NULL]
+# 			[UNIQUE [KEY]] [[PRIMARY] KEY]
+# 			[COMMENT 'string']
+#
+# AS (expression) indicates that the column is genrated and defines the expression
+# used to compute column values.
+#
+# AS may be preceded by GENERATED ALWAYS to make the generated nature of the column
+# more explicit.
+#
+# Constructs that are permitted or prohibited in the expression are discussed later.
+#
+# The VIRTUAL or STORED keyword indicates how column values are stored, which has implications
+# for column use:
+#
+# 		) VIRTUAL: Column values are not stored, but are evaluated when rows are read, immediately
+# 			after any BEFORE triggers.
+#
+# 			A virtual column takes no storage
+#
+# 			InnoDB supports secondary indexes on virtual columns.
+#
+# 			See SECTION 13.1.20.9, "SECONDARY INDEXES AND GENERATED COLUMNS"
+#
+# 		) STORED: Column values are evaluated and stored when rows are inserted or updated.
+#
+# 			A stored column does require storage space and can be indexed.
+#
+# The default is VIRTUAL if neither keyword is specified.
+#
+# It is permitted to mix VIRTUAL and STORED columns within a table.
+#
+# Other attributes may be given to indicate whether the column is indexed or can be
+# NULL or provide a comment.
+#
+# Genrated column expressions must adhere to hte following rules.
+#
+# An error occurs if an expression contains disallowed constructs.
+#
+# 		) Literals, determinsitic built-in functions, and operators are permitted.
+#
+# 			A function is determinsitic, if given the same data in tables, multiple
+# 			invocations produce the same result, independently of the connected user.
+#
+# 			Examples of functions that fail this definition:
+#
+# 				CONNECTION_ID(), CURRENT_USER(), NOW()
+#
+# 		) Subqueries, parameters, variables, stored functions, and user-defined functions are not permitted.
+#
+# 		) A generated column definition can refer to other generated columns, but only those occurring
+# 			earlier in the table definition.
+#
+# 			A generated column definition can refer to any base (nongenerated) column in the table
+# 			whether its definition occurs earlier or later.
+#
+# 		) The AUTO_INCREMENT attribute cannot be used in a generated column definition
+#
+# 		) An AUTO_INCREMENT column cannot be used as a base column in a generated column definition
+#
+# 		) If expression evaluation causes truncation or provides incorrect input to a function,
+# 			the CREATE_TABLE statement terminates with an error and the DDL operation is rejected.
+#
+# If the expression evaluates to a data type that differs from the declared column type,
+# Implicit coercion to the declared type occurs according to the usual MySQL type-conversion
+# rules.
+#
+# See SECTION 12.2, "TYPE CONVERSION IN EXPRESSION EVALUATION"
+#
+# NOTE:
+#
+# 		If any component of the expression depends on the SQL mode, different results may
+# 		occur for different uses of the table unless the SQL mode is the same during
+# 		all uses.
+#
+# For CREATE_TABLE_---_LIKE, the destination table preserves generated column information from the original table
+#
+# For CREATE_TABLE_---_SELECT, the destination table does not preserve information about whether columns
+# in the selected-from table are generated columns.
+#
+# The SELECT part of the statement cannot assign values to generated columns in teh destination table
+#
+# Partitioning by generated columns is permitted. See CREATING PARTITIONED TABLES
+#
+# A foreign key constraint on a stored generated column cannot use:
+#
+# 		) ON UPDATE CASCADE
+#
+# 		) ON DELETE SET NULL
+#
+# 		) ON UPDATE SET NULL
+#
+# 		) ON DELETE SET DEFAULT
+#
+# 		) ON UPDATE SET DEFAULT
+#
+# A foreign key constraint cannot reference a virtual generated column
+#
+# For InnoDB restrictions related to foreign keys and generated columns, see SECTION 15.6.1.5, "InnoDB AND FOREIGN KEY CONSTRAINTS"
+#
+# Triggers cannot use NEW.col_name or use OLD.col_name to refer to generated columns
+#
+# For INSERT, REPLACE, and UPDATE,, if a generated column is inserted into, replaced, or updated explicitly,
+# the only permitted value is DEFAULT
+#
+# A generated column in a view is considered updatable because it is possible to assign to it
+#
+# However, if such a column is updated explicitly, the only permitted value is DEFAULT
+#
+# Generated columns have several use cases, such as these:
+#
+# 		) Virtual generated columns can be used as a way to simplify and unify queries.
+#
+# 			A complicated condition can be defined as a generated column and referred 
+# 			to from multiple queries on the table to ensure that all of them use exactly
+# 			the same condition.
+#
+# 		) Stored generated columns can be used as a materialized cache for complicated conditions that
+# 			are costly to calculate on the fly.
+#
+# 		) Generated columns can simulate functional indexes; Use a generated column to define a functional
+# 			expression and index it.
+#
+# 			This can be useful for working with columns of types that cannot be indexed directly,
+# 			such as JSON columns;
+#
+# 			See INDEXING A GENERATED COLUMN TO PROVIDE A JSON COLUMN INDEX, for a detailed example 
+# 
+# 			For stored generated columns, the disadvantage of htis approach is that values are stored twice,
+# 			once as the value of the generated column and once in the index.
+#
+# 		) If a generated column is indexed, the optimizer recognizes query expressions that match the column
+# 			definition and uses indexes from the column as appropriate during query execution, even if a query
+# 			does not refer to the column directly by  name.
+#
+# 			For details, see SECTION 8.3.11, "OPTIMIZER USE OF GENERATED COLUMN INDEXES"
+#
+# Example:
+#
+# 		Suppose that a table t1 contains first_name and last_name columns and that applications
+# 		frequently construct the full name using an expression like this:
+#
+# 			SELECT CONCAT(first_name, ' ',last_name) AS full_name FROM t1;
+#
+# 		One way to avoid writing out the expression is to create a view v1 on t1, which simplifies
+# 		applications by enabling them to select full_name directly without using an expression:
+#
+# 			CREATE VIEW v1 AS
+# 			SELECT *, CONCAT(first_name,' ',last_name) AS full_name FROM t1;
+#
+# 			SELECT full_name FROM v1;
+#
+# 		A generated column also enables applications to select full_name directly
+# 		without the need to define a view:
+#
+# 			CREATE TABLE t1 (
+# 				first_name VARCHAR(10),
+# 				last_name VARCHAR(10),
+# 				full_name VARCHAR(255) AS (CONCAT(first_name,' ',last_name))
+# 			);
+#
+# 			SELECT full_name FROM t1;
+#
+# 13.1.20.9 SECONDARY INDEXES AND GENERATED COLUMNS
+#
+# InnoDB supports secondary indexes on virtual generated columns.
+#
+# Other index types are not supported. A secondary index defined on a virtual column
+# is sometimes referred to as a "virtual index"
+#
+# A secondary index may be created on one or more virtual columns or on a combination
+# of virtual columns and regular columns or stored generated columns.
+#
+# Secondary indexes that include virtual columns may be defined as UNIQUE
+#
+# When a secondary index is created on a virtual generated column, generated column values
+# are materialized in the records of the index.
+#
+# If the index is a covering index (one that includes all the columns retrieved by a query),
+# generated column values are retrieved from materialized values in the index structure
+# instead of computed "on the fly"
+#
+# There are additional write costs to consider when using a secondary index on a virtual column
+# due to computation performed when materializing virtual column values in secondary
+# secondary index records during INSERT and UPDATE operations.
+#
+# Even with additional write costs, secondary indexes on virtual columns may be preferable
+# to generated stored columns, which are materialized in the clustered index, resulting
+# in larger tables that require more disk space and memory.
+#
+# If a secondary index is not defined on a virtual column, there are additional costs for
+# reads, as virtual column values must be computed each time the column's row is examined.
+#
+# Values of an indexed virtual column are MVCC-logged to avoid unnecessary recomputation of
+# generated column values during rollback or during a purge operation.
+#
+# The data length of logged values is limited by the index key limit of 767 bytes for
+# COMPACT and REDUNDANT row formats, and 3072 bytes for DYNAMIC and COMPRESSED row formats.
+#
+# Adding or dropping a secondary index on a virtual column is an in-place operation
+#
+# INDEXING A GENERATED COLUMN TO PROVIDE A JSON COLUMN INDEX
+#
+# As noted elsewhere, JSON columns cannot be indexed directly
+#
+# To create an index that references such a column directly, you can define a generated
+# column that extracts the information that hsould be indexed, then create an index
+# on the generated column, as shown in this example:
+#
+# 		CREATE TABLE jemp (
+# 			c JSON,
+# 			g INT GENERATED ALWAYS AS (c->"$.id")),
+# 			INDEX i (g)
+# 		);
+# 		Query OK, 0 rows affected (0.28 sec)
+#
+# 		INSERT INTO jemp (c) VALUES
+# 			('{"id": "1", "name": "Fred"}'), ('{"id": "2", "name": "Wilma"}'),
+# 			('{"id": "3", "name": "Barney"}'), ('{"id": "4", "name": "Betty"}');
+# 		Query OK, 4 rows affected (0.04 sec)
+# 		Records: 4 Duplicates: 0 Warnings: 0
+#
+# 		SELECT c->>"$.name" AS name
+# 			FROM jemp WHERE g > 2;
+# 		+-----------+
+# 		| name 		|
+# 		+-----------+
+# 		| Barney 	|
+# 		| Betty 	   |
+# 		+-----------+
+# 		2 rows in set (0.00 sec)
+#
+# 		EXPLAIN SELECT c->>"$.name" AS name
+# 			FROM jemp WHERE g > 2\G
+# 		************************ 1. row *******************************
+# 						id: 1
+# 				select_type: SIMPLE
+# 				table  : jemp
+# 			partitions: NULL
+# 				type   : range
+# 		possible_keys: i
+# 				key    : i
+# 			key_len   : 5
+#
+# 				ref    : NULL
+# 				rows   : 2
+# 			filtered  : 100.00
+# 			Extra     : Using where
+# 	1 row in set, 1 warning (0.00 sec)
+#
+# SHOW WARNINGS\G
+# ************************ 1. row *******************************
+# 		Level: Note
+# 	Code    : 1003
+#  Message : /* select#1 */ select json_unquote(json_extract(`test`.`jemp`.`c`, '$.name'))
+# 	AS `name` from `test`.`jemp` where (`test`.`jemp`.`g` > 2)
+#  1 row in set (0.00 sec)
+#
+# (We have wrapped the output from the last statement in this example to fit the viewing area)
+#
+# When you use EXPLAIN on a SELECT or other SQL statement containing one or more expressions that use
+# the -> or ->> operator, these expressions are translated into their equivalents using JSON_EXTRACT()
+# and (if needed) JSON_UNQUOTE() instead, as shown here in the output from SHOW_WARNINGS immediately
+# following this EXPLAIN statement:
+#
+# 		EXPLAIN SELECT c->>"$.name"
+# 		FROM jemp WHERE g > 2 ORDER BY c->"$.name"\G
+# 		*************************** 1. row ***************************
+# 					id: 1
+# 		select_type: SIMPLE
+# 		table      : jemp
+# 		partitions : NULL
+# 		type       : range
+# 		possible_keys: i
+# 		key 		  : i
+#
+# 		key_len    : 5
+# 		ref        : NULL
+# 		rows       : 2
+# 		filtered   : 100.00
+# 		Extra      : Using where; Using filesort
+# 		1 row in set, 1 warning (0.00 sec)
+#
+# 		SHOW WARNINGS\G
+# 		************************* 1. row *******************************
+# 		Level: Note
+# 		Code : 1003
+# 	  Message: /* select#1 */ select json_unquote(json_extract(`test`.`jemp`.`c`, '$.name'))
+# 		AS `c->>"$.name"` from `test`.`jemp` where (`test`.`jemp`.`g` > 2) order by 
+# 		json_extract(`test`.`jemp`.`c`,'$.name')
+# 		1 row in set (0.00 sec)
+#
+# See the descriptions of the -> and ->> operators, as well as those of the JSON_EXTRACT() and
+# JSON_UNQUOTE() functions, for additional information and examples.
+#
+# This technique also can be used to provide indexes that indirectly reference columns of other
+# types that cannot be indexed directly, such as GEOMETRY columns.
+#
+# JSON COLUMNS AND INDIRECT INDEXING IN NDB CLUSTER
+#
+# It is also possible to use indirect indexing of JSON columns in MySQL NDB cluster, subject to the
+# following conditions:
+#
+# 		1. NDB handles a JSON column value internally as a BLOB.
+#
+# 			This means that any NDB table having one or more JSON columns must have a primary key,
+# 			else it cannot be recorded in the binary log.
+#
+# 		2. The NDB storage engine does not support indexing of virtual columns.
+#
+# 			Since the default for generated columns is VIRTUAL, you must specify explicitly
+# 			the generated column to which to apply the indirect index as STORED.
+#
+# The CREATE TABLE statement used to create the table jempn shown here is a version of the
+# jemp table shown previously, with modifications making it compatible with NDB:
+#
+# 		CREATE TABLE jempn (
+# 			a BIGINT(20) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+# 			c JSON DEFAULT NULL,
+# 			g INT GENERATED ALWAYS AS (c->"$.name") STORED,
+# 			INDEX i (g)
+# 		) ENGINE=NDB;
+#
+# We can populate this table using the following INSERT statement:
+#
+# 		INSERT INTO jempn (a, c) VALUES
+# 			(NULL, '{"id": "1", "name": "Fred"}'),
+# 			(NULL, '{"id": "2", "name": "Wilma"}'),
+# 			(NULL, '{"id": "3", "name": "Barney"}'),
+# 			(NULL, '{"id": "4", "name": "Betty"}');
+#
+# Now NDB can use index i, as shown here:
+#
+# 		EXPLAIN SELECT c->>"$.name" AS name
+# 			FROM jempn WHERE g > 2\G
+# 		******************** 1. row *********************************
+# 						id: 1
+# 				select_type: SIMPLE
+# 					table: jempn
+# 			partitions : p0,p1
+# 					type : range
+# 		possible_keys : i
+# 					key  : i
+# 				key_len : 5
+# 					ref  : NULL
+# 				   rows : 3
+# 			filtered   : 100.00
+# 				Extra   : Using where with pushed condition (`test`.`jempn`.`g` > 2)
+# 			1 row in set, 1 warning (0.00 sec)
+#
+# 		SHOW WARNINGS\G
+# 		*********************** 1. row ****************************
+# 		 	Level: Note
+# 			Code : 1003
+# 		Message : /* select#1 */ select
+# 		json_unquote(json_extract(`test`.`jempn`.`c`,'$.name')) AS `name` from
+# 		`test`.`jempn` where (`test`.`jempn`.`g` > 2)
+# 		1 row in set (0.00 sec)
+#
+# You should keep in mind that a stored generated column uses DataMemory,
+# and that an index on such a column uses IndexMemory
+#
+# 13.1.20.10 SETTING NDB_TABLE OPTIONS
+#
+# In MySQL NDB Cluster, the table comment in a CREATE TABLE or ALTER_TABLE statement
+# can also be used to specify an NDB_TABLE option, which consists of one or more name-value
+# pairs, separated by commas if need be, following the string NDB_TABLE= 
+#
+# Complete syntax for names and values syntax is shown here:
+#
+# 		COMMENT="NDB_TABLE=ndb_table_option[,ndb_table_option[,---]]"
+#
+# 		ndb_table_option:
+# 			NOLOGGING={1|0}
+# 		 | READ_BACKUP={1|0}
+# 		 | PARTITION_BALANCE={FOR_RP_BY_NODE|FOR_RA_BY_NODE|FOR_RP_BY_LDM
+# 									|FOR_RA_BY_LDM|FOR_RA_BY_LDM_X_2
+# 									|FOR_RA_BY_LDM_X_3|FOR_RA_BY_LDM_X_4}
+# 		 | FULLY_REPLICATED={1|0}
+#
+# Spaces are not permitted within the quoted string. The string is case-insensitive.
+#
+# The four NDB table options that can be set as part of a comment in this way are described
+# in more detail in the next few paragraphs.
+#
+# NOLOGGING: Using 1 corresponds to having ndb_table_no_logging enabled, but has no actual effect.
+#
+# Provided as a placeholder, mostly for completeness of ALTER_TABLE statements
+#
+# READ_BACKUP: Setting this option to 1 has the same effect as though ndb_read_backup were enabled;
+# enables reading from any replica.
+#
+# You can set READ_BACKUP for an existing table online, using an ALTER TABLE statement similar to
+# one of those shown here:
+#
+# 		ALTER TABLE --- ALGORITHM=INPLACE, COMMENT="NDB_TABLE=READ_BACKUP=1";
+#
+# 		ALTER TABLE --- ALGORITHM=INPLACE, COMMENT="NDB_TABLE=READ_BACKUP=0";
+#
+# For more information about the ALGORITHM option for ALTER TABLE, see
+# SECTION 22.5.14, "ONLINE OPERATIONS WITH ALTER TABLE IN NDB CLUSTER"
+#
+# PARTITION_BALANCE: Provides additional control over assignment and placement of partitions.
+#
+# The following four schemes are supported:
+#
+# 		1. FOR_RP_BY_NODE: One partition per node
+#
+# 			Only one LDM on each node stores a primary partition. Each partition is stored
+# 			in the same LDM (same ID) on all nodes
+#
+# 		2. FOR_RA_BY_NODE: One partition per node group
+#
+# 			Each node stores a single partition, which can be either a primary replica
+# 			or a backup replica.
+#
+# 			Each partition is stored in the same LDM on all nodes.
+#
+# 		3. FOR_RP_BY_LDM: One partition for each LDM on each node; the default
+#
+# 			This is the same behavior as prior to MySQL NDB Cluster 7.5.2, except for a slightly
+# 			different mapping of partitions to LDMs, starting with LDM 0 and placing one
+# 			partition per node group, then moving on to the next LDM.
+#
+# 			This is the setting used if READ_BACKUP is set to 1
+#
+# 		4. FOR_RA_BY_LDM: One partition per LDM in each node group
+#
+# 			These partitions can be primary or backup partitions
+#
+# 		5. FOR_RA_BY_LDM_X_2: Two partitions per LDM in each node group.
+#
+# 			These partitions can be primary or backup partitions.
+#
+# 		6. FOR_RA_BY_LDM_X_3: Three partitions per LDM in each node group.
+#
+# 			These partitions can be primary or backup partitions
+#
+# 		7. FOR_RA_BY_LDM_X_4: Four partitions per LDM in each node group.
+#
+# 			These partitions can be primary or backup partitions
+#
+# PARTITION_BALANCE is the preferred interface for setting the number of partitions per table.
+#
+# Using MAX_ROWS to force the number of partitions is deprecated but continues to be supported
+# for backwards compatibility; it is subject to removal in a future release of MySQL NDB Cluster.
+# (Bug #81759, Bug #23544301)
+#
+# FULLY_REPLICATED controls whether the table is fully replicated, that is, whether each data node
+# has a complete code of the table.
+#
+# To enable full replication of the table, use FULLY_REPLICATED=1
+#
+# This setting can also be controlled using the ndb_fully_replicated system variable.
+#
+# Setting it to ON enables the option by default for all new NDB tables;
+# the default is OFF.
+#
+# The ndb_data_node_neighbour system variable is also used for fully replicated tables,
+# to ensure that when a fully replicated table is accessed, we access the data node
+# which is local to this MySQL server.
+#
+# An example of a CREATE TABLE statement using such a comment when creating an NDB table
+# is shown here:
+#
+# 		CREATE TABLE t1 (
+# 			c1 INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+# 			c2 VARCHAR(100),
+# 			c3 VARCHAR(100) )
+# 		ENGINE=NDB
+#
+# 		COMMENT="NDB_TABLE=READ_BACKUP=0,PARTITION_BALANCE=FOR_RP_BY_NODE";
+#
+# The comment is displayed as part of the output of SHOW_CREATE_TABLE 
+#
+# The text of the comment is also available from querying the MySQL Information Schema
+# TABLES table, as in this example:
+#
+# 		SELECT TABLE_NAME, TABLE_SCHEMA, TABLE_COMMENT
+# 		FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME="t1";
+# 		+--------------+------------------+-----------------------------------------------------------+
+# 		| TABLE_NAME   | TABLE_SCHEMA     | TABLE_COMMENT 															 |
+# 		+--------------+------------------+-----------------------------------------------------------+
+# 		| t1 			   | c 					 | NDB_TABLE=READ_BACKUP=0,PARTITION_BALANCE=FOR_RP_BY_NODE  |
+# 		| t1 			   | d 					 | 																			 |
+# 		+--------------+------------------+-----------------------------------------------------------+
+# 		2 rows in set (0.00 sec)
+#
+# This comment syntax is also supported with ALTER_TABLE statements for NDB tables.
+#
+# Keep in mind that a table comment used with ALTER TABLE replaces any existing comment which
+# the table might have.
+#
+# 		ALTER TABLE t1 COMMENT="NDB_TABLE=PARTTION_BALANCE=FOR_RA_BY_NODE";
+# 		Query OK, 0 rows affected (0.40 sec)
+# 		Records: 0 Duplicates: 0 Warnings: 0
+#
+# 		SELECT TABLE_NAME, TABLE_SCHEMA, TABLE_COMMENT
+# 		FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME="t1";
+# 		+--------------+-------------------------+------------------------------------------------------+
+# 		| TABLE_NAME   | TABLE_SCHEMA 			  | TABLE_COMMENT 													|
+# 		+--------------+-------------------------+------------------------------------------------------+
+# 		| t1 				| c 							  | NDB_TABLE=PARTITION_BALANCE=FOR_RA_BY_NODE 			   |
+# 		| t1 				| d 							  | 																		|
+# 		+--------------+-------------------------+------------------------------------------------------+
+# 		2 rows in set (0.01 sec)
+#
+# You can also see the value of the PARTITION_BALANCE option in the output of ndb_desc.ndb_desc also
+# shows whether the READ_BACKUP and FULLY_REPLICATED options are set for the table.
+#
+# See the description of this program for more information.
+#
+# Because the READ_BACKUP value was not carried over to the new comment set by the ALTER TABLE statement,
+# there is no longer a way using SQL to retrieve the value previously set for it.
+#
+# To keep this from happening, it is suggested that you preserve any such values from the existing comment
+# string, like this:
+#
+# 		SELECT TABLE_NAME, TABLE_SCHEMA, TABLE_COMMENT
+# 		FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME="t1";
+# 		+---------------+-----------------------+----------------------------------------------------------+
+# 		| TABLE_NAME 	 | TABLE_SCHEMA 			 | TABLE_COMMENT 														   |
+# 		+---------------+-----------------------+----------------------------------------------------------+
+# 		| t1 				 | c 							 | NDB_TABLE=READ_BACKUP=0,PARTITION_BALANCE=FOR_RP_BY_NODE |
+# 		| t1 				 | d 							 | 																			|
+# 		+---------------+-----------------------+----------------------------------------------------------+
+# 		2 rows in set (0.00 sec)
+#
+# 		ALTER TABLE t1 COMMENT="NDB_TABLE=READ_BACKUP=0,PARTITION_BALANCE=FOR_RA_BY_NODE";
+# 		Query OK, 0 rows affected (1.56 sec)
+# 		Records: 0 Duplicates: 0 Warnings: 0
+#
+# 		SELECT TABLE_NAME, TABLE_SCHEMA, TABLE_COMMENT
+# 		FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME="t1";
+# 		+----------------+---------------------------+----------------------------------------------------------+
+# 		| TABLE_NAME 	  | TABLE_SCHEMA 					| TABLE_COMMENT 														  |
+# 		+----------------+---------------------------+----------------------------------------------------------+
+# 		| t1 				  | c 								| NDB_TABLE=READ_BACKUP=0,PARTITION_BALANCE=FOR_RA_BY_NODE |
+# 		| t1 				  | d 								| 																			  |
+# 		+----------------+---------------------------+----------------------------------------------------------+
+# 		2 rows in set (0.01 sec)
+#
+# 13.1.21 CREATE TABLESPACE SYNTAX
+#
+# 		CREATE [UNDO] TABLESPACE tablespace_name
+#
+# 		InnoDB and NDB:
+# 			[ADD DATAFILE 'file_name']
+#
+# 		InnoDB only:
+# 			[FILE_BLOCK_SIZE = value]
+# 			[ENCRYPTION [=] {'Y' | 'N'}]
+#
+# 		NDB only:
+# 			USE LOGFILE GROUP logfile_group
+# 			[EXTENT_SIZE [=] extent_size]
+# 			[INITIAL_SIZE [=] initial_size]
+# 			[AUTOEXTEND_SIZE [=] autoextend_size]
+# 			[MAX_SIZE [=] max_size]
+# 			[NODEGROUP [=] nodegroup_id]
+# 			[WAIT]
+# 			[COMMENT [=] 'string']
+#
+# 		InnoDB and NDB:
+# 			[ENGINE [=] engine_name]
+#
+# This statement is used to create a tablespace.
+#
+# The precise syntax and semantics depend on the storage engine used.
+#
+# In standard MySQL releases, this is always an InnoDB tablespace.
+#
+# MySQL NDB Cluster also supports tablespaces using the NDB storage engine.
+#
+# 		) Considerations for InnoDB
+#
+# 		) Considerations for NDB Cluster
+#
+# 		) Options
+#
+# 		) Notes
+#
+# 		) InnoDB Examples
+#
+# 		) NDB Example
+#
+# CONSIDERATIONS FOR INNODB
+#
+# CREATE_TABLESPACE syntax is used to create general tablespaces or undo tablespaces.
+#
+# The UNDO keyword, introduced in MySQL 8.0.14, must be specified to create an undo tablespace.
+#
+# A general tablespace is a shared tablespace.
+#
+# It can hold multiple tables, and supports all table row formats.
+#
+# General tablespaces can be created in a location relative to or independent
+# of the data directory.
+#
+# After creating an InnoDB general tablespace, use CREATE_TABLE_tbl_name_---_TABLESPACE_[=]_tablespace_name
+# or ALTER_TABLE_tbl_name_TABLESPACE_[=]_tablespace_name to add tables to the tablespace.
+#
+# For more information, see SECTION 15.6.3.3, "GENERAL TABLESPACES"
+#
+# Undo tablespaces contain undo logs.
+#
+# Undo tablespaces can be created in a chosen location by specifying a fully qualified data file path.
+#
+# For more information, see SECTION 15.6.3.4, "UNDO TABLESPACES"
+#
+# CONSIDERATIONS FOR NDB CLUSTER
+#
+# This statement is used to create a tablespace, which can contain one or more data files, providing
+# storage space for NDB Cluster Disk Data tables (see SECTION 22.5.13, "NDB CLUSTER DISK TABLES")
+#
+# One data file is created and added to the tablespace using this statement.
+#
+# Additional data files may be added to the tablespace by using the ALTER_TABLESPACE statement
+# (see SECTION 13.1.10, "ALTER TABLESPACE SYNTAX")
+#
+# NOTE:
+#
+# 		All NDB Cluster Disk Data objects share the same namespace.
+#
+# 		This means that each Disk Data object must be uniquely named (and not merely each
+# 		Disk Data object of a given type)
+#
+# 		For example, you cannot have a tablespace and a log file group with the same name,
+# 		or a tablespace and a data file with the same name.
+#
+# A log file group of one or more UNDO log files must be assigned to the tablespace to be created
+# with the USE LOGFILE GROUP clause.
+#
+# logfile_group must be an existing log file group created with CREATE_LOGFILE_GROUP
+# (see SECTION 13.1.16, "CREATE LOGFILE GROUP SYNTAX")
+#
+# Multiple tablespaces may use the same log file group for UNDO logging.
+#
+# When setting EXTENT_SIZE or INITIAL_SIZE, you may optionally follow the number with a 
+# one-letter abbreviation for an order of magnitude, similar to those used in my.cnf
+#
+# Generally, this is one of the letters M (for megabytes) or G (for gigabytes)
+#
+# INITIAL_SIZE and EXTENT_SIZE qre subject to rounding as follows:
+#
+# 		) EXTENT_SIZE is rounded up to the nearest whole multiple of 32K
+#
+# 		) INITIAL_SIZE is rounded down to the nearest whole multiple of 32K; this result is rounded up
+# 			to the nearest whole multiple of EXTENT_SIZE (after any rounding)
+#
+# The rounding just described is done explicitly, and a warning is issued by the MySQL Server
+# when any such rounding is performed.
+#
+# The rounded values are also used by the NDB kernel for calculating INFORMATION_SCHEMA.FILES
+# column values and other purposes.
+#
+# However, to avoid an unexpected result, we suggest that you always use whole multiples of
+# 32K in specifying these options.
+#
+# When CREATE_TABLESPACE is used with ENGINE [=] NDB, a tablespace and associated data file
+# are created on each Cluster data node.
+#
+# You can verify the data files were created and obtain information about them by querying
+# the INFORMATION_SCHEMA.FILES table
+#
+# (See the example later in this section)
+#
+# (See SECTION 25.10, "THE INFORMATION_SCHEMA FILES TABLE")
+#
+# OPTIONS
+#
+# 		) ADD DATAFILE:
+#
+# 			Defines the name of a tablespace data file.
+#
+# 			The ADD DATAFILE clause is required when creating undo tablespaces.
+# 			Otherwise, it is optional as of MySQL 8.0.14
+#
+# 			An InnoDB tablespace supports only a single data file, whose name must include
+# 			a .ibd extension
+#
+# 			An NDB Cluster tablespace supports multiple data files which can have any
+# 			legal file names; More data files can be added to an NDB Cluster tablespace
+# 			following its creation by using an ALTER_TABLESPACE statement.
+#
+# 			To place a general tablespace data file in a location outside of the data directory,
+# 			include a fully qualified path or a path relative to the data directory.
+#
+# 			Only a fully qualified path is permitted for undo tablespaces.
+#
+# 			If you do not specify a path, a general tablespace is created in the
+# 			data directory.
+#
+# 			An undo tablespace created without specifying a path is created in the directory
+# 			defined by the innodb_undo_directory variable.
+#
+# 			If the innodb_undo_directory variable is undefined, undo tablespaces are created
+# 			in the data directory.
+#
+# 			Creating a general tablespace in a subdirectory under the data directory is not supported
+# 			to avoid conflict with implicitly created file-per-table tablespaces.
+#
+# 			When creating a general tablespace or undo tablespace outside of the data directory,
+# 			the directory must exist and must be known to InnoDB prior to creating the tablespace.
+#
+# 			To make a directory known to InnoDB, add it to the innodb_directories value or to one
+# 			of the variables whose values are appended to the innodb_directories value.
+#
+# 			innodb_directories is a read-only variable. Configuring it requires restarting the server.
+#
+# 			The file_name, including any specified path, must be quoted with single or double quotation marks.
+#
+# 			File names (not counting the file extensions) and directory names must be at least one byte
+# 			in length.
+#
+# 			Zero length file names and dir names are not supported.
+#
+# 			If the ADD DATAFILE clause is not specified when creating a tablespace, a tablespace data file
+# 			with a unique file name is created implicitly.
+#
+# 			The unique file name is a 128 bit UUID formatted into five groups of hexadecimal numbers
+# 			separated by dashes (aaaaaaaa-bbbb-cccc-dddd-eeeeeeee)
+#
+# 			A file extension is added if required by the storage engine.
+#
+# 			An .ibd file extension is added for InnoDB general tablespace data files.
+#
+# 			In a replication environment, the data file name created on the master is not the same
+# 			as the data file name created on the slave.
+#
+# 		) FILE_BLOCK_SIZE:
+#
+# 			This option - which is specific to InnoDB general tablespaces, and is ignored by NDB -
+# 			defines the block size for the tablespace data file.
+#
+# 			Values can be specified in bytes or kilobytes.
+#
+# 			For example, an 8 kilobyte file block size can be specified as 8192 or 8K
+#
+# 			If you do not specify this option, FILE_BLOCK_SIZE defaults to the innodb_page_Size
+# 			value.
+#
+# 			FILE_BLOCK_SIZE is required when you intend to use the tablespace for storing
+# 			compressed InnoDB tables (ROW_FORMAT=COMPRESSED)
+#
+# 			In this case, you must define the tablespace FILE_BLOCK_SIZE when creating the tablespace.
+#
+#			If FILE_BLOCK_SIZE is equal to the innodb_page_size value, the tablespace can contain only
+# 			tables having an uncompressed row format (COMPACT, REDUNDANT and DYNAMIC)
+#
+# 			Tables with a COMPRESSED row format have a different physical page size than uncompressed tables.
+#
+# 			Therefore, compressed tables cannot coexist in the same tablespace as uncompressed tables.
+#
+# 			For a general tablespace to contain compressed tables, FILE_BLOCK_SIZE must be specified,
+# 			and the FILE_BLOCK_SIZE value must be a valid compressed page size in relation to the
+# 			innodb_page_size value.
+#
+# 			Also, the physical page size of the compressed table (KEY_BLOCK_SIZE) must be equal
+# 			to FILE_BLOCK_SIZE/1024
+#
+# 			For example, if innodb_page_size=16K, and FILE_BLOCK_SIZE=8K, the KEY_BLOCK_SIZE
+# 			of the table must be 8.
+#
+# 			For more information, see SECTION 15.6.3.3, "GENERAL TABLESPACES"
+#
+# 		) USE LOGFILE GROUP:
+#
+# 			Required for NDB, this is the name of a log file group previously created using
+# 			CREATE_LOGFILE_GROUP
+#
+# 			Not supported for InnoDB, where it fails with an error.
+#
+# 		) EXTENT_SIZE:
+#
+# 			This option is specific to NDB, and is not supported by InnoDB, where it fails
+# 			with an error.
+#
+# 			EXTENT_SIZE sets the size, in bytes, of the extents used by any files belonging
+# 			to the tablespace.
+#
+# 			The default value is 1M. The minimum size is 32K, and theoretical maximum is
+# 			2G, although the practical maximum size depends on a number of factors.
+#
+# 			In most cases, changing the extent size does not have any measurable effect
+# 			on performance, and the default value is recommended for all but the most unusual situations.
+#
+# 			An extent is a unit of disk space allocation.
+#
+# 			One extent is filled with as much data as that extent can contain before another extent is used.
+#
+# 			In theory, up to 65,535 (64K) extents may be used per data file; however, the recommended
+# 			maximum is 32,768 (32K)
+#
+# 			The recommended maximum size for a single data file is 32G - that is, 32K
+# 			extents x 1 MB per extent.
+#
+# 			In addition, once an extent is allocated to a given partition, it cannot be used to store
+# 			data from a different partition; an extent cannot store data from more than one partition.
+#
+# 			This means, for example that a tablespace having a single datafile whose INITIAL_SIZE
+# 			(described in the following item) is 256 MB and whose EXTENT_SIZE is 128M has just two extents,
+# 			and so can be used to store data from at most two different disk data table partitions.
+#
+# 			You can see how many extents remain free in a given data file by querying the INFORMATION_SCHEMA.FILES
+# 			table, and so derive an estimate for how much space remains free in the file.
+#
+# 			For further discussion and examples, see SECTION 25.10, "THE INFORMATION_SCHEMA FILES TABLE"
+#
+# 		) INITIAL_SIZE:
+#
+# 			This option is specific to NDB, and is not supported by InnoDB, where it fails with an error.
+#
+# 			The INITIAL_SIZE parameter sets the total size in bytes of the data file that was specific
+# 			using ADD DATAFILE.
+#
+# 			Once this file has been created, its size cannot be changed;
+#
+# 			However, you can add more data files to the tablespace using ALTER_TABLESPACE_---_ADD_DATAFILE
+#
+# 			INITIAL_SIZE is optional; its default value is 128MB (134217728)
+#
+# 			On 32-bit systems, the maximum supported value for INITIAL_SIZE is 4GB (4294967296)
+#
+# 		) AUTOEXTEND_SIZE:
+#
+# 			Currently ignored by MySQL; reserved for possible future use.
+#
+# 			Has no effect in any release of MySQL 8.0 or MySQL NDB Cluster 8.0, regardless
+# 			of the storage engine used.
+#
+# 		) MAX_SIZE:
+#
+# 			Currently ignored by MySQL;
+#
+# 			reserved for possible future use. Has no effect in any release of MySQL 8.0 or
+# 			MySQL NDB Cluster 8.0, regardless of the storage engine used.
+#
+# 		) NODEGROUP:
+#
+# 			Currently ignored by MySQL
+#
+# 			reserved for possible future use. has no effect in any release of MysQL 8.0 or
+# 			MySQL NDB CLuster 8.0, regardless of the storage engine used
+#
+# 		) WAIT:
+#
+# 			Currently ignored by MySQL;
+#
+# 			reserved for possible future use. Has no effect in any release of MySQL 8.0 or
+# 			MySQL NDB Cluster 8.0, regardless of the storage engine used.
+#
+# 		) COMMENT:
+#
+# 			Currently ignored by MySQL;
+#
+# 			reserved for possible future use.
+#
+# 			Has no effect in any release of MySQL 8.0 or MySQL NDB Cluster 8.0, regardless
+# 			of the storage engine used.
+#
+# 		) The ENCRYPTION option is used to enable or disable page-level data encryption for an
+# 			InnoDB general tablespace.
+#
+# 			Option values are not case-sensitive.
+#
+# 			Encryption support for general tablespaces was introduced in MySQL 8.0.13
+#
+# 			A keyring plugin must be installed and configured to use the ENCRYPTION option.
+#
+# 			When a general tablespace is encrypted, all tables residing in the tablespace is
+# 			encrypted.
+#
+# 			For more information, see SECTION 15.6.3.9, "TABLESPACE ENCRYPTION"
+#
+# 		) ENGINE:
+#
+# 			Defines the storage engine which uses the tablespace, where engine_name
+# 			is the name of the storage engine.
+#
+# 			Currently, only the InnoDB storage engine is supported by standard MySQL
+# 			8.0 releases
+#
+# 			MySQL NDB Cluster supports both NDB and InnoDB tablespaces.
+#
+# 			The value of the default_storage_engine system variable is used
+# 			for ENGINE if the option is not specified.
+#
+# NOTES
+#
+# 		) For the rules covering the naming of MySQL tablespaces, see SECTION 9.2, "SCHEMA OBJECT NAMES"
+#
+# 		In addition to these rules, the slash character ("/") is not permitted, nor can
+# 		you use names beginning with innodb_, as this prefix is reserved for system use.
+#
+# 		) Creation of temporary general tablespace is not supported
+#
+# 		) General tablespaces do not support temporary tables
+#
+# 		) The TABLESPACE option may be used with CREATE_TABLE or ALTER_TABLE to assign
+# 			an InnoDB table partition or subpartition to a file-per-table tablespace.
+#
+# 			All partitions must belong to the same storage engine.
+#
+# 			Assigning table partitions to shared InnoDB tablespaces is not supported.
+#
+# 			Shared tablespaces include the InnoDB system tablesapce and general tablespaces.
+#
+# 		) General tablespaces support the addition of tables of any row format using CREATE_TABLE_---_TABLESPACE,
+# 			innodb_file_per_table does not need to be enabled.
+#
+# 		) innodb_strict_mode is not applicable to general tablespaces.
+#
+# 			Tablespace management rules are strictly enforced indepdently of
+# 			innodb_strict_mode
+#
+# 			If CREATE TABLESPACE parameters are incorrect or incompatible,
+# 			the operation fails regardless of the innodb_strict_mode setting.
+#
+# 			When a table is added to a general tablespace using CREATE_TABLE_---_TABLESPACE
+# 			or ALTER_TABLE_---_TABLESPACE then innodb_strict_mode is ignored but the
+# 			statement is evaluated as if innodb_strict_mode is enabled.
+#
+# 		) Use DROP TABLESPACE to remove a tablespace.
+#
+# 			ALl tables must be dropped from a tablespace using DROP_TABLE prior to
+# 			dropping the tablespace.
+#
+# 			Before dropping an NDB Cluster tablespace you must also remove all
+# 			its data files using one or more ALTER_TABLESPACE_---_DROP_DATAFILE
+# 			statements.
+#
+# 			See SECTION 22.5.13.1, "NDB CLUSTER DISK DATA OBJECTS"
+#
+# 		) ALl parts of an InnoDB table added to an InnoDB general tablespace reside
+# 			in the general tablespace, including indexes and BLOB pages.
+#
+# 			For an NDB table assigned to a tablespace, only those columns which are not indexed
+# 			are stored on disk, and actually use the tablespace data files.
+#
+# 			Indexes and indexed columns for all NDB tables are always kept in memory.
+#
+# 		) Similar to the system tablespace, truncating or dropping tables stored in a general
+# 			tablespace creates free space internally in the general tablespace
+# 			.ibd data file which can only be used for new InnoDB data.
+#
+# 			Space is not released back to the operating system as it is for
+# 			file-per-table tablespaces.
+#
+# 		) A general tablespace is not associated with any database or schema.
+#
+# 		) ALTER_TABLE_---_DISCARD_TABLESPACE and ALTER_TABLE_---_IMPORT_TABLESPACE
+# 			are not supported for tables that belong to a general tablespace.
+#
+# 		) The several uses tablespace-level metadata locking for DDL that references
+# 			general tablespaces.
+#
+# 			By comparison, the server uses table-level metadata locking for DDL
+# 			that references file-per-table tablespaces.
+#
+# 		) A generated or existing tablespace cannot be changed to a general tablespace
+#
+# 		) There is no conflict between general tablespace names and file-per-table tablespace
+# 			names.
+#
+# 			The "/" character, which is present in file-per-table tablespace names,
+# 			is not permitted in general tablespace names.
+#
+# 		) mysqldump and mysqlpump do not dump InnoDB CREATE_TABLESPACE statements
+#
+# INNODB EXAMPLES
+#
+# This example demonstrates creating a general tablespace and adding three uncompressed
+# tables of different row formats.
+#
+# 		CREATE TABLESPACE `ts1` ADD DATAFILE 'ts1.ibd' ENGINE=INNODB;
+#
+# 		CREATE TABLE t1 (c1 INT PRIMARY KEY) TABLESPACE ts1 ROW_FORMAT=REDUNDANT;
+#
+# 		CREATE TABLE t2 (c1 INT PRIMARY KEY) TABLESPACE ts1 ROW_FORMAT=COMAPCT;
+#
+# 		CREATE TABLE t3 (c1 INT PRIMARY KEY) TABLESPACE ts1 ROW_FORMAT=DYNAMIC;
+#
+# This example demonstrates creating a general tablespace and adding a compressed table.
+#
+# The example assumes a default innodb_page_size value of 16K
+#
+# The FILE_BLOCK_SIZE of 8192 requires that the compressed table have a KEY_BLOCK_SIZE
+# of 8.
+#
+# 		CREATE TABLESPACE `ts2` ADD DATAFILE 'ts2.ibd' FILE_BLOCK_SIZE = 8192 Engine=InnoDB;
+#
+# 		CREATE TABLE t4 (c1 INT PRIMARY KEY) TABLESPACE ts2 ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
+#
+# This example demonstrates creating a general tablespace without specifying the ADD DATAFILE
+# clause, which is optional as of MySQL 8.0.14
+#
+# 		CREATE TABLESPACE `ts3` ENGINE=INNODB;
+#
+# This example demonstrates creating an undo tablespace.
+#
+# 		CREATE UNDO TABLESPACE undo_003 ADD DATAFILE 'undo_003.ibu';
+#
+# NDB EXAMPLE
+#
+# Suppose that you wish to create an NDB Cluster Disk Data tablespace named
+# myts using a datafile named mydata-1.dat 
+#
+# An NDB tablespace always requires the use of a log file group consisting
+# of one or more undo log files.
+#
+# For htis example, we first create a log file group named mylg that contains
+# one undo long file named myundo-1.dat, using the CREATE_LOGFILE_GROUP statement
+# shown here:
+#
+# 		CREATE LOGFILE GROUP myg1
+# 			ADD UNDOFILE 'myundo-1.dat'
+# 			ENGINE=NDB;
+# 		Query OK, 0 rows affected (3.29 sec)
+#
+# Now you can create the tablespace previously described using the following statement:
+#
+# 		CREATE TABLESPACE myts
+# 			ADD DATAFILE 'mydata-1.dat'
+# 			USE LOGFILE GROUP mylg
+# 			ENGINE=NDB;
+# 		Query OK, 0 rows affected (2.98 sec)
+#
+# You can now create a Disk Data table using a CREATE_TABLE statement with the
+# TABLESPACE and STORAGE DISK options, similar to what is shown here:
+#
+# 		CREATE TABLE mytable (
+# 			id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+# 			lname VARCHAR(50) NOT NULL,
+# 			fname VARCHAR(50) NOT NULL,
+# 			dob DATE NOT NULL,
+# 			joined DATE NOT NULL,
+# 			INDEX(last_name, first_name)
+# 		)
+# 			TABLESPACE myts STORAGE DISK
+# 			ENGINE=NDB;
+# 		Query OK, 0 rows affected (1.41 sec)
+#
+# It is important to note that only the dob and joined columns from mytable are actually
+# stored on disk, due to the fact that the id, lname, and fname columns are all indexed.
+#
+# As mentioned previously, when CREATE TABLESPACE is used with ENGINE [=] NDB, a tablespace
+# and associated data file are created on each NDB Cluster data node.
+#
+# You can verify that the data files were created and obtain all information about them
+# by querying the INFORMATION_SCHEMA.FILES table, as shown here:
+#
+# 		SELECT FILE_NAME, FILE_TYPE, LOGFILE_GROUP_NAME, STATUS, EXTRA
+# 			FROM INFORMATION_SCHEMA.FILES
+# 			WHERE TABLESPACE_NAME = 'myts';
+#  	
+# 		+----------------------+-----------------+---------------------------------+--------------+--------------------+
+# 		| file_name 			  | file_type 		  | logfile_group_name 					| status 		| extra 					|
+# 		+----------------------+-----------------+---------------------------------+--------------+--------------------+
+# 		| mydata-1.dat 		  | DATAFILE 		  | mylg 									| NORMAL 		| CLUSTER_NODE=5 	   |
+# 		| mydata-1.dat 		  | DATAFILE 		  | mylg 									| NORMAL 		| CLUSTER_NODE=6 	   |
+# 		| NULL 					  | TABLESPACE 	  | mylg  									| NORMAL 		| NULL 					|
+# 		+----------------------+-----------------+---------------------------------+--------------+--------------------+
+# 		3 rows in set (0.01 sec)
+#
+# For additional information and examples, see SECTION 22.5.13.1, "NDB CLUSTER DISK DATA OBJECTS"
+#
+# 13.1.22 CREATE TRIGGER SYNTAX
+#
+# 		CREATE
+# 			[DEFINER = { user | CURRENT_USER }]
+# 			TRIGGER trigger_name
+# 			trigger_name trigger_event
+# 			ON tbl_name FOR EACH ROW
+# 			[trigger_order]
+# 			trigger_body
+#
+# 		trigger_time: { BEFORE | AFTER }
+#
+# 		trigger_event: { INSERT | UPDATE | DELETE }
+#
+# 		trigger_order: { FOLLOWS | PRECEDES } other_trigger_name
+#
+# This statement creates a new trigger.
+#
+# A trigger is a named database object that is associated with a table, and that activates
+# when a particular event occurs for the table.
+#
+# The trigger becomes associated with the table named tbl_name, which must refer to a permanent
+# table.
+#
+# You cannot associate a trigger with a TEMPORARY table or a view.
+#
+# Trigger names exist in the schema namespace, meaning that all triggers must have unique names
+# within a schema.
+#
+# Triggers in different schemas can have the same name.
+#
+# This section describes CREATE_TRIGGER syntax. For additional discussion, see SECTION 24.3.1, "TRIGGER SYNTAX AND EXAMPLES"
+#
+# CREATE_TRIGGER requires the TRIGGER privilege for the table associated with the trigger.
+#
+# The statement might also require the SET_USER_ID or SUPER privilege, depending on
+# the DEFINER value, as described later in this section.
+#
+# If binary logging is enabled, CREATE_TRIGGER might require the SUPER privilege,
+# as described in SECTION 24.7, "BINARY LOGGING OF STORED PROGRAMS"
+#
+# The DEFINER clause determines the security context to be used when checking access
+# privileges at trigger activation time, as described later in this section.
+#
+# trigger_time is the trigger action time.
+#
+# It can be BEFORE or AFTER to indicate that the trigger activates before or after
+# each row to be modified.
+#
+# Basic column value checks occur prior to trigger activation, so you cannot use BEFORE
+# triggers to convert values inappropriate for the column type to valid values.
+#
+# trigger_event indicates the kind of operation that activates the trigger.
+#
+# These trigger_event values are permitted:
+#
+# 		) INSERT: The trigger activates whenever a new row is inserted into the table;
+# 			for example, through INSERT, LOAD_DATA and REPLACE statements.
+#
+# 		) UPDATE: The trigger activates whenever a row is modified; for example, through UPDATE statements.
+#
+# 		) DELETE: The trigger activates whenever a row is deleted from the table;
+#
+# 		For example, through DELETE and REPLACE statements. DROP_TABLE and TRUNCATE_TABLE
+# 		statements on the table do not activate this trigger, because they do not use DELETE.
+#
+# 		Dropping a partition does not activate DELETE triggers, either.
+#
+# The trigger_event does not represent a literal type of SQL statement that activates the trigger so much
+# as it represents a type of table operation.
+#
+# For example, an INSERT trigger activates not only for INSERT statements but also LOAD_DATA statements
+# because both statements insert rows into a table.
+#
+# A potentially confusing example of this is the INSERT INTO --- ON DUPLICATE KEY UPDATE --- syntax:
+#
+# 		a BEFORE INSERT trigger activates for every row, followed by either an
+# 		AFTER INSERT trigger or both the BEFORE UPDATE and AFTER UPDATE triggers,
+# 		depending on whether there was a duplicate key for the row.
+#
+# NOTE:
+#
+# 		Cascaded foreign key actions do not activate triggers
+#
+# It is possible to define multiple triggers for a given table that have the same trigger
+# event and action time.
+#
+# For example, you can have two BEFORE UPDATE triggers for a table.
+#
+# By default, triggers that have the same trigger event and action name activate
+# in the order htey were created.
+#
+# To affect trigger order, specify a trigger_order clause that indicates FOLLOWS
+# or PRECEDES and the name of an existing trigger that also has the same trigger
+# event and action time.
+#
+# With FOLLOWS, the new trigger activates after the existing trigger.
+#
+# With PRECEDES, the new trigger activates before the existing trigger.
+#
+# trigger_body is the statement to execute when the trigger activates.
+#
+# To execute multiple statements, use the BEGIN_---_END compound statement
+# construct.
+#
+# This also enables you to use the same statements that are permitted within stored
+# routines.
+#
+# See SECTION 13.6.1, "BEGIN_---_END COMPOUND-STATEMENT SYNTAX"
+#
+# Some statements are not permitted in triggers, see SECTION C.1, "RESTRICTIONS ON STORED PROGRAMS"
+#
+# Within the trigger body, you can refer to columns in the subject table (the table associated
+# with the trigger) by using the aliases OLD and NEW.
+#
+# OLD.col_name refers to a column of an existing row before it updated or deleted
+#
+# NEW.col_name refers to teh column of a new row to be inserted or an existing row after
+# it is updated.
+#
+# Triggers cannot use NEW.col_name or use OLD.col_name to refer to generated columns.
+#
+# FOr information about generated columns, see SECTION 13.1.20.8, "CREATE TABLE AND GENERATED COLUMNS"
+#
+# MySQL stores the sql_mode system variable setting in effect ´when a trigger is created, and always
+# executes the trigger body with this setting in force, regardless of the current server SQL
+# mode when the trigger begins executing.
+#
+# The DEFINER clause specifies the MySQL account to be used when checking access privileges
+# at trigger activation time.
+#
+# If a user value is given, it should be a MySQL account specified as 'user_name'@'host_name',
+# CURRENT_USER or CURRENT_USER()
+#
+# The default DEFINER value is the user who executes the CREATE_TRIGGER statement.
+#
+# THis is the same as specifying DEFINER = CURRENT_USER explicitly.
+#
+# If you specify the DEFINER clause, these rules determine the valid DEFINER user values:
+#
+# 		) If you do not have the SET_USER_ID or SUPER privilege, the only permitted user value
+# 			is your own account, either specified literally or by using CURRENT_USER 
+#
+# 		You cannot set the definer to some other account
+#
+# 		) If you have the SET_USER_ID or SUPER privilege, you can specify any syntactically
+# 			valid account name.
+#
+# 			If the account does not exist, a warning is generated.
+#
+# 		) Although it is possible to create a trigger with a nonexistent DEFINER account,
+# 			it is not a good idea for such triggers to be activated until the account
+# 			actually does exist.
+#
+# 			Otherwise, the behavior with respect to privilege checking is undefined.
+#
+# MySQL takes the DEFINER user into account when checking trigger privileges as follows:
+#
+# 		) At CREATE_TRIGGER time, the user who issues the statement must have the TRIGGER privilege
+#
+# 		) At trigger activation time, privileges are checked against the DEFINER user.
+#
+# 			This user must have these privileges:
+#
+# 				) The TRIGGER privilege for the subject table
+#
+# 				) The SELECT privilege for the subject table if references to table columns occur
+# 				using OLD.col_name or NEW.col_name in the trigger body.
+#	
+# 				) The UPDATE privilege for the subject table if table columns are targets of
+# 				SET NEW.col_name = value assignments in the trigger body.
+#
+# 				) Whatever other privileges normally are required for the statements executed by the trigger.
+#
+# For more information about trigger security, see SECTION 24.6, "ACCESS CONTROL FOR STORED PROGRAMS AND VIEWS"
+#
+# Within a trigger body, the CURRENT_USER() function returns the account used to check privileges
+# at trigger activation time.
+#
+# This is the DEFINER user, not the user whose actions caused the trigger to be activated.
+#
+# For information about user auditing within triggers, see SECTION 6.3.13,
+# "SQL-BASED MYSQL ACCOUNT ACTIVITY AUDITING"
+#
+# If you use LOCK_TABLES to lock a table that has triggers, the tables used within the trigger
+# are also locked, as described in LOCK TABLES AND TRIGGERS
+#
+# For additional discussions of trigger use, see SECTION 24.3.1, "TRIGGER SYNTAX AND EXAMPLES"
+#
+# 13.1.23 CREATE VIEW SYNTAX
+#
+# CREATE
+# 		[OR REPLACE]
+# 		[ALGORITHM = {UNDEFINED | MERGE | TEMPTABLE}]
+# 		[DEFINER = { user | CURRENT_USER }]
+# 		[SQL SECURITY { DEFINER | INVOKER }]
+# 		VIEW view_name [(column_list)]
+# 		AS select_statement
+# 		[WITH [CASCADED | LOCAL] CHECK OPTION]
+#
+# The CREATE_VIEW statement creates a new view, or replaces an existing view if hte
+# OR REPLACE clause is given.
+#
+# If the view does not exist, CREATE_OR_REPLACE_VIEW is the same as CREATE_VIEW
+# 
+# If the view does exist, CREATE_OR_REPLACE_VIEW replaces it
+#
+# For information about restrictions on view use, see SECTION C.5, "RESTRICTIONS ON VIEWS"
+#
+# The select_statement is a SELECT statement that provides the definition of the view.
+#
+# (Selecting from the view selects, in effect, using the SELECT statement)
+#
+# The select_statement can select from base tables or other views.
+#
+# The view definition is "frozen" at creation time and is not affected by subsequent changes
+# to the definitions of the underlying tables.
+#
+# For example, if a view is defined as SELECT * on a table, new columns added to the table
+# later do not become part of the view, and columns dropped from the table will result in
+# an error when selecting from teh view.
+#
+# the ALGORITHM clause affects how MySQL processes the view.
+#
+# The DEFINER and SQL SECURITY clauses specify the security context to be used when
+# checking access privileges at view invocation time.
+#
+# The WITH CHECK OPTION clause can be given to constrain inserts or updates to rows
+# in tables referenced by the view.
+#
+# These clauses are described later in this section.
+#
+# The CREATE_VIEW statement requires the CREATE_VIEW privilege for the view, and some
+# privilege for each column selected by the SELECT statement.
+#
+# For columns used elsewhere in the SELECT statement, you must have the SELECT privilege.
+#
+# If the OR REPLACE clause is present, you must also have the DROP privilege for the view.
+#
+# CREATE VIEW might also require the SET_USER_ID or SUPER privilege, depending on the DEFINER
+# value, as described later in this section.
+#
+# WHen a view is referenced, privilege checking occurs as described later in this section
+#
+# A view belongs to a database.
+#
+# By default, a new view is created in the default database. To create the view explicitly
+# in a given database, use db_name.view_name syntax to qualify the view name with the
+# database name:
+#
+# 		CREATE VIEW test.v AS SELECT * FROM t;
+#
+# Unqualified table or view names in the SELECT statement are also interpreted with respect
+# to the default database.
+#
+# A view can refer to tables or views in other databases by qualifying the table or view
+# name with the appropriate database name.
+#
+# Within a database, base tables and views share the same namespace, so a base table and
+# a view cannot have the same name.
+#
+# Columns retrieved by the SELECT statement can be simple references to table columns,
+# or expressions that use functions, constant values, operators, and so forth.
+#
+# A view must have unique columns names with no duplicates, just like a base table.
+#
+# By default, the names of the columns retrieved by the SELECT statement are used for
+# the view column names.
+#
+# To define explicit names for the view columns, specify the optional column_list
+# clause as a list of comma-separated identifiers.
+#
+# The number of names in column_list must be the same as the number of columns
+# retrieved by the SELECT statement.
+#
+# https://dev.mysql.com/doc/refman/8.0/en/create-view.html
