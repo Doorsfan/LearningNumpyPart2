@@ -8244,12 +8244,2016 @@
 # 			[ON UPDATE reference_option]
 #
 # reference_option:
-# 		->  
-#  
+# 		RESTRICT | CASCADE | SET NULL | NO ACTION | SET DEFAULT
 #
-# 		
+# table_options:
+# 		table_option [[,] table_option] ---
 #
+# table_option:
+# 		AUTO_INCREMENT [=] value
+# 	 | AVG_ROW_LENGTH [=] value
+#   | [DEFAULT] CHARACTER SET [=] charset_name
+# 	 | CHECKSUM [=] {0 | 1}
+#   | [DEFAULT] COLLATE [=] collation_name
+# 	 | COMMENT [=] 'string'
+# 	 | COMPRESSION [=] {'ZLIB'|'LZ4'|'NONE'}
+# 	 | CONNECTION [=] 'connect_string'
+#   | {DATA|INDEX} DIRECTORY [=] 'absolute path to directory'
+# 	 | DELAY_KEY_WRITE [=] {0 | 1}
+# 	 | ENCRYPTION [=] {'Y' | 'N'}
+# 	 | ENGINE [=] engine_name
+#   | INSERT_METHOD [=] { NO | FIRST | LAST }
+#   | KEY_BLOCK_SIZE [=] value
+#   | MAX_ROWS [=] value
+#   | MIN_ROWS [=] value
+#   | PACK_KEYS [=] {0 | 1 | DEFAULT}
+#   | PASSWORD [=] 'string'
+#   | ROW_FORMAT [=] {DEFAULT|DYNAMIC|FIXED|COMPRESSED|REDUNDANT|COMPACT}
+#   | STATS_AUTO_RECALC [=] {DEFAULT|0|1}
+#   | STATS_PERSISTENT [=] {DEFAULT|0|1}
+#   | STATS_SAMPLE_PAGES [=] value
+#   | TABLESPACE tablespace_name [STORAGE {DISK|MEMORY|DEFAULT}]
+#   | UNION [=] (tbl_name[,tbl_name]---)
+#
+# partition_options:
+# 		PARTITION BY
+# 			{ [LINEAR] HASH(expr)
+# 			| [LINEAR] KEY [ALGORITHM={1|2}] (column_list)
+# 			| RANGE{(expr) | COLUMNS(column_list)}
+# 			| LIST{(expr) | COLUMNS(column_list)} }
+# 		[PARTITIONS num]
+# 		[SUBPARTITION BY
+# 			{ [LINEAR] HASH(expr)
+# 			| [LINEAR] KEY [ALGORITHM={1|2}] (column_list) }
+# 		 [SUBPARTITIONS num]
+# 		]
+# 		[(partition_definition [, partition_definition] ---)]
+#
+# partition_definition:
+# 		PARTITION partition_name
+# 			[VALUES
+# 				{LESS THAN {(expr | value_list) | MAXVALUE}
+# 				|
+# 				IN (value_list)}]
+# 			[[STORAGE] ENGINE [=] engine_name]
+# 			[COMMENT [=] 'string' ]
+# 			[DATA DIRECTORY [=] 'data_dir']
+# 			[INDEX DIRECTORY [=] 'index_dir']
+# 			[MAX_ROWS [=] max_number_of_rows]
+# 			[MIN_ROWS [=] min_number_of_rows]
+# 			[TABLESPACE [=] tablespace_name]
+# 			[(subpartition_definition [, subpartition_definition] ---)]
+#
+# subpartition_definition:
+# 		SUBPARTITION logical_name
+# 			[[STORAGE] ENGINE [=] engine_name]
+# 			[COMMENT [=] 'string' ]
+# 			[DATA DIRECTORY [=] 'data_dir']
+# 			[INDEX DIRECTORY [=] 'index_dir']
+# 			[MAX_ROWS [=] max_number_of_rows]
+# 			[MIN_ROWS [=] min_number_of_rows]
+# 			[TABLESPACE [=] tablespace_name]
+#
+# query_expression:
+# 		SELECT --- (Some valid select or union statement)
+#
+# CREATE_TABLE creates a table with the given name. You must have the CREATE privilege for the table.
+#
+# By default, tables are created in the default database, using the InnoDB storage engine.
+#
+# An error occurs if the table exists, if there is no default database, or if the database
+# does not exist.
+#
+# For information about the physical representation of a table, see SECTION 13.1.20.2, "FILES CREATED BY CREATE TABLE"
+#
+# The original CREATE_TABLE statement, including all specifications and table options are stored
+# by MySQL when the table is created.
+#
+# For more information, see SECTION 13.1.20.1, "CREATE TABLE STATEMENT RETENTION"
+#
+# There are several aspects to the CREATE_TABLE statement, described under the following topics
+# in this section:
+#
+# 		) TABLE NAME
+#
+# 		) TEMPORARY TABLES
+#
+# 		) CLONING OR COPYING A TABLE
+#
+# 		) COLUMN DATA TYPE AND ATTRIBUTES
+#
+# 		) INDEXES AND FOREIGN KEYS
+#
+# 		) TABLE OPTIONS
+#
+# 		) CREATING PARTITIONED TABLES
+#
+# TABLE NAME
+#
+# 		) tbl_name
+#
+# 			The table name can be specified as db_name.tbl_name to create the table in a specific database.
+#
+# 			This works regardless of whether there is a default database, assuming that the database exists.
+#
+# 			If you use quoted identifiers, quote the database and table names separately.
+#
+# 			For example, write `mydb`.`mytbl`, not `mydb.mytbl`
+#
+# 			Rules for permissible table names are given in SECTION 9.2, "SCHEMA OBJECT NAMES"
+#
+# 		) IF NOT EXISTS
+#
+# 			Prevents an error from occurring if the table exists.
+#
+# 			However, there is no verification that the existing table has a structure identical
+# 			to that indicated by the CREATE_TABLE statement.
+#
+# TEMPORARY TABLES
+#
+# You can use the TEMPORARY keyword when creating a table.
+#
+# A TEMPORARY table is visible only within the current session, and is dropped automatically
+# when the session is closed.
+#
+# For more information, see SECTION 13.1.20.3, "CREATE TEMPORARY TABLE SYNTAX"
+#
+# CLONING OR COPYING A TABLE
+#
+# 		) LIKE
+#
+# 			Use CREATE TABLE --- LIKE to create an empty table based on the defininition of another
+# 			table, including any column attributes and indexes defined in the original table:
+#
+# 				CREATE TABLE new_tbl LIKE orig_tbl;
+#
+# 			For more information, see SECTION 13.1.20.4, "CREATE TABLE --- LIKE SYNTAX"
+#
+# 		) [AS] query_expression
+#
+# 			To create one table from another, add a SELECT statement at the end of the
+# 			CREATE TABLE statement:
+#
+# 				CREATE TABLE new_tbl AS SELECT * FROM orig_tbl;
+#
+# 			For more information, see SECTION 13.1.20.5, "CREATE TABLE --- SELECT SYNTAX"
+#
+# 		) IGNORE|REPLACE
+#
+# 			The IGNORE and REPLACE options indicate how to handle rows that duplicate unique key
+# 			values when copying a table using a SELECT statement.
+#
+# 			For more information, see SECTION 13.1.20.5, "CREATE TABLE --- SELECT SYNTAX"
+#
+# COLUMN DATA TYPES AND ATTRIBUTES
+#
+# There is a hard limit of 4096 columns per table, but the effective maximum may be less
+# for a given table and depends on the factors discussed in SECTION C.10.4, "LIMITS ON TABLE COLUMN COUNT AND ROW SIZE"
+#
+# 		) data_type
+#
+# 			data_type represents the data type in a column definition.
+#
+# 			For a full description of the syntax available for specifying column data types,
+# 			as well as information about the properties of each type, see CHAPTER 11, DATA TYPES
+#
+# 				) Some attributes do not apply to all data types.
+#
+# 					AUTO_INCREMENT applies only to integer and floating-point types.
+#
+# 					Prior to MySQL 8.0.13, DEFAULT does not apply to the BLOB, TEXT, GEOMETRY
+# 					and JSON types.
+#
+# 				) Character data types (CHAR, VARCHAR, the TEXT types, ENUM, SET and any synonyms) synonyms) can include
+# 					CHARACTER SET to specify the character set for the column.
+#
+# 					CHARSET is a synonym for CHARACTER SET.
+#
+# 					A collation for the character set can be specified with the COLLATE attribute,
+# 					along with any other attributes.
+#
+# 					For details, see CHAPTER 10, CHARACTER SETS, COLLATIONS, UNICODE. Example:
+#
+# 						CREATE TABLE t (c CHAR(20) CHARACTER SET utf8 COLLATE utf8_bin);
+#
+# 					MySQL 8.0 interprets length specifications in character column definitions in characters.
+#
+# 					Lengths for BINARY and VARBINARY are in bytes.
+#
+# 				) For CHAR, VARCHAR, BINARY and VARBINARY columns, indexes can be created that use only
+# 					the leading part of column values, using col_name(length) syntax to specify an index
+# 					prefix length.
+#
+# 					BLOB and TEXT columns also can be indexed, but a prefix length must be given.
+#
+# 					Prefix lengths are given in characters for nonbinary string types and in bytes
+# 					for binary string types.
+#
+# 					That is, index entries consist of the first length characters of each column value
+# 					for CHAR, VARCHAR, and TEXT columns, and the first length bytes of each column value
+# 					for BINARY, VARBINARY, and BLOB columns.
+#
+# 					Indexing only a prefix of column values like this can make the index file much smaller.
+#
+# 					For additional information about index prefixes, see SECTION 13.1.15, "CREATE INDEX SYNTAX"
+#
+# 					Only the InnoDB and MyISAM storage engines support indexing on BLOB and TEXT columns.
+#
+# 					For example:
+#
+# 						CREATE TABLE test (blob_col BLOB, INDEX(blob_col(10)));
+#
+# 					If a specified index prefix exceeds the maximum column data type size, CREATE_TABLE
+# 					handles the index as follows:
+#
+# 						) For a nonunique index, either an error occurs (if strict SQL mode is enabled),
+# 							or the index length is reduced to lie within the maximum column data type size
+# 							and a warning is produed (if strict SQL mode is not enabled)
+#
+# 						) For a unique index, an error occurs regardless of SQL mode because reducing the index
+# 							length might enable insertion of nonunique entries that do not meet the specified
+# 							uniqueness requirement.
+#
+# 			) JSON columns cannot be indexed.
+#
+# 				You can work around this restriction by creating an index on a generated column
+# 				that extracts a scalar value from the JSON column.
+#
+# 				See INDEXING A GENERATED COLUMN TO PROVIDE A JSON COLUMN INDEX, for a detailed example.
+#
+# 		) NOT NULL | NULL
+#
+# 			If neither NULL nor NOT NULL is specified, the column is treated as though NULL had been specified.
+#
+# 			In MySQL 8.0, only the InnoDB, MyISAM, and MEMORY storage engines support indexes on columns
+# 			that can have NULL values.
+#
+# 			In other cases, you must declare indexed columns as NOT NULL or an error results
+#
+# 		) DEFAULT
+#
+# 			Specifies a default value for a column.
+#
+# 			For more information about default value handling, including the case that
+# 			a column definition includes no explicit DEFAULT value, see SECTION 11.7, "DATA TYPE DEFAULT VALUES"
+#
+# 			If the NO_ZERO_DATE or NO_ZERO_IN_DATE SQL mode is enabled and a date-valued default is not correct
+# 			according to that mode, CREATE_TABLE produces a warning if strict SQL mode is not enabled and an
+# 			error if strict mode is enabled.
+#
+# 			For example, with NO_ZERO_IN_DATE enabled, c1 DATE DEFAULT '2010-00-00' produces a warning.
+#
+# 		) AUTO_INCREMENT
+#
+# 			An integer or floating-point column can have the additional attribute AUTO_INCREMENT.
+#
+# 			When you insert a value of NULL (recommended) or 0 into an indexed AUTO_INCREMENT column,
+# 			the column is set to the next sequence value.
+#
+# 			Typically this is value+1, where value is the largest value for the column currently
+# 			in the table.
+#
+# 			AUTO_INCREMENT sequences begin with 1.
+#
+# 			To retrieve an AUTO_INCREMENT value after inserting a row, use the LAST_INSERT_ID()
+# 			SQL function or the mysql_insert_id() C API function
+#
+# 			See SECTION 12.15, "INFORMATION FUNCTIONS" and SECTION 28.7.7.38, "mysql_insert_id()"
+#
+# 			If the NO_AUTO_VALUES_ON_ZERO SQL mode is enabled, you can store 0 in AUTO_INCREMENT
+# 			columns as 0 without generating a new sequence value.
+#
+# 			See SECTION 5.1.11, "SERVER SQL MODES"
+#
+# 			There can be only one AUTO_INCREMENT column per table, it must be indexed, and it cannot
+# 			have a DEFAULT value.
+#
+# 			An AUTO_INCREMENT column works properly only if it contains only positive values.
+#
+# 			Inserting a negative number is regarded as inserting a very large positive number.
+#
+# 			This is done to avoid precision problems when numbers "wrap" over from positive to
+# 			negative and also to ensure that you do not accidentally get an AUTO_INCREMENT
+# 			column that contains 0.
+#
+# 			For MyISAM tables, you can specify an AUTO_INCREMENT secondary column in a multiple-column
+# 			key.
+#
+# 			See SECTION 3.6.9, "USING AUTO_INCREMENT"
+#
+# 			To make MySQL compatible with some ODBC applications, you can find the AUTO_INCREMENT
+# 			value for the last inserted row with the following query:
+#
+# 				SELECT * FROM tbl_name WHERE auto_col IS NULL
+#
+# 			This method requires that sql_auto_is_null variable is not set to 0.
+#
+# 			See SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# 			For information about InnoDB and AUTO_INCREMENT, see SECTION 15.6.1.4,
+# 			"AUTO_INCREMENT HANDLING IN INNODB"
+#
+# 			For information about AUTO_INCREMENT and MySQL Replication, see 
+# 			SECTION 17.4.1.1, "REPLICATION AND AUTO_INCREMENT"
+#
+# 		) COMMENT
+#
+# 			A comment for a column can be specified with the COMMENT option, up to
+# 			1024 characters long.
+#
+# 			The comment is displayed by the SHOW_CREATE_TABLE and SHOW_FULL_COLUMNS
+# 			statements.
+#
+# 		) COLUMN_FORMAT
+#
+# 			In NDB Cluster, it is also possible to specify a data storage format for
+# 			individual columns of NDB tables using COLUMN_FORMAT.
+#
+# 			Permissible column formats are FIXED, DYNAMIC and DEFAULT.
+#
+# 			FIXED is used to specify fixed-width storage, DYNAMIC permits the column
+# 			to be variable-width, and DEFAULT causes the column to use fixed-width
+# 			or variable-width storage as determined by the column's data type
+# 			(possibly overridden by a ROW_FORMAT specifier)
+#
+# 			For NDB tables, the default value for COLUMN_FORMAT is FIXED.
+#
+# 			COLUMN_FORMAT currently has no effect on columns of tables using storage engines
+# 			other than NDB.
+#
+# 			MySQL 8.0 silently ignores COLUMN_FORMAT
+#
+# 		) STORAGE
+#
+# 			For NDB tables, it is possible to specify whether the column is stored on disk or
+# 			in memory by using a STORAGE clause.
+#
+# 			STORAGE DISK causes the column to be stored on disk, and STORAGE MEMORY causes
+# 			in-memory storage to be used.
+#
+# 			The CREATE_TABLE statement used must still include a TABLESPACE clause:
+#
+# 				CREATE TABLE t1 (
+# 					c1 INT STORAGE DISK,
+# 					c2 INT STORAGE MEMORY
+# 				) ENGINE NDB;
+# 				ERROR 1005 (HY000): Can't create table 'c.t1' (errno: 140)
+#
+# 				CREATE TABLE t1 (
+# 					c1 INT STORAGE DISK,
+# 					c2 INT STORAGE MEMORY
+# 				) TABLESPACE ts_1 ENGINE NDB;
+# 				Query OK, 0 rows affected (1.06 sec)
+#
+# 			For NDB tables, STORAGE DEFAULT is equivalent to STORAGE MEMORY.
+#
+# 			The STORAGE clause has no effect on tables using storage engines other than
+# 			NDB.
+#
+# 			The STORAGE keyword is supported only in the build of mysqld that is supplied
+# 			with NDB Cluster; it is not recognized in any other version of MySQL, where
+# 			any attempt to use the STORAGE keyword cause a syntax error.
+#
+# 		) GENERATED ALWAYS
+#
+# 			Used to specify a generated column expression.
+#
+# 			For information about generated columns, see SECTION 13.1.20.8, "CREATE TABLE AND GENERATED COLUMNS"
+#
+# 			Stored generated columns can be indexed.
+#
+# 			InnoDB supports secondary indexes on virtual generated columns.
+# 			See SECTION 13.1.20.9, "SECONDARY INDEXES AND GENERATED COLUMNS"
+#
+# INDEXES AND FOREIGN KEYS
+#
+# Several keywords apply to creation of indexes and foreign keys.
+#
+# For general background in addition to the following descriptions, see
+# SECTION 13.1.15, "CREATE INDEX SYNTAX" and SECTION 13.1.20.6, "USING FOREIGN KEY CONSTRAINTS"
+#
+# 		) CONSTRAINT <SYMBOL>
+#
+# 			If the CONSTRAINT symbol clause is given, the symbol value, if used, must be unique
+# 			in the database.
+#
+# 			A duplicate symbol results in an error.
+#
+# 			If the clause is not given, or a symbol is not included following the CONSTRAINT keyword,
+# 			a name for the constraint is created automatically.
+#
+# 		) PRIMARY KEY
+#
+# 			A unique index where all key columns must be defined as NOT NULL.
+#
+# 			If they are not explicitly declared as NOT NULL, MySQL declares them so
+# 			implicitly (and silently)
+#
+# 			A table can have only one PRIMARY KEY. 
+#
+# 			The name of a PRIMARY KEY is always PRIMARY, which thus cannot be used
+# 			as the name for any other kind of index.
+#
+# 			If you do not have a PRIMARY KEY and an application asks for the PRIMARY KEY
+# 			in your tables, MySQL returns the first UNIQUE index that has no NULL
+# 			columns as the PRIMARY KEY.
+#
+# 			In InnoDB tables, keep the PRIMARY KEY short to minimize storage overhead
+# 			for secondary indexes.
+#
+# 			Each secondary index entry contains a copy of the primary key columns
+# 			for the corresponding row. (See SECTION 15.6.2.1, "CLUSTERED AND SECONDARY INDEXES")
+#
+# 			In the created table, a PRIMARY KEY is placed first, followed by all UNIQUE indexes,
+# 			and then the nonunique indexes.
+#
+# 			This helps the MySQL optimizer to prioritize which index to use and also
+# 			more quickly to detect duplicated UNIQUE keys.
+#
+# 			A PRIMARY KEY can be a multiple-column index.
+#
+# 			However, you cannot create a multiple-column index using the PRIMARY KEY
+# 			attribute in a column specification.
+#
+# 			Doing so only marks that single column as primary.
+#
+# 			You must use a separate PRIMARY KEY(key_part, ---) clause
+#
+# 			If a table has a PRIMARY KEY or UNIQUE NOT NULL index that consists
+# 			of a single column that has an integer type, you can use _rowid
+# 			to refer to the indexed column in SELECT statements, as described
+# 			in Unique Indexes.
+#
+# 			In MySQL, the name of a PRIMARY KEY is PRIMARY.
+#
+# 			Foro ther indexes, if you do not assign a name, the index is assigned
+# 			the same name as the first indexed column, with an optional suffix
+# 			(_2,_3,---) to make it unique.
+#
+# 			You can see index names for a table using SHOW INDEX FROM tbl_name.
+#
+# 			See SECTION 13.7.6.22, "SHOW INDEX SYNTAX"
+#
+# 		) KEY | INDEX
+#
+# 			KEY is normally a synonym for INDEX.
+#
+# 			The key attribute PRIMARY KEY can also be specified as just KEY when given
+# 			in a column definition.
+#
+# 			This was implemented for compatibility with other database systems.
+#
+# 		) UNIQUE
+#
+# 			A UNIQUE index creates a constraint such that all values in the index must be distinct.
+#
+# 			An error occurs if you try to add a new row with a key value that matches an
+# 			existing row.
+#
+# 			For all engines, a UNIQUE index permits multiple NULL values for columns that
+# 			can contain NULL.
+#
+# 			If you specify a prefix value for a column in a UNIQUE index, the column values
+# 			must be unique within the prefix length.
+#
+# 			If a table has a PRIMARY KEY or UNIQUE NOT NULL index that consists of a single
+# 			column that has an integer type, you can use _rowid to refer to the indexed
+# 			column in SELECT statements, as described in UNIQUE INDEXES.
+#
+# 		) FULLTEXT
+#
+# 			A FULLTEXT index is a special type of index used for full-text searches.
+#
+# 			Only the InnoDB and MyISAM storage engines support FULLTEXT indexes.
+#
+# 			They can be created only from CHAR, VARCHAR, and TEXT columns.
+#
+# 			Indexing always happens over the entire column; column prefix indexing
+# 			is not supported and any prefix length is ignored if specified.
+#
+# 			See SECTION 12.9, "FULL-TEXT SEARCH FUNCTIONS", for details of operation.
+#
+# 			A WITH PARSER clause can be specified as an index_option value to associate
+# 			a parser plugin with the index if full-text indexing and searching operations
+# 			need special handling.
+#
+# 			This clause is valid only for FULLTEXT indexes.
+#
+# 			InnoDB and MyISAM support full-text parser plugins.
+#
+# 			See FULL-TEXT PARSER PLUGINS and SECTION 29.2.4.4, "WRITING FULL-TEXT PARSER PLUGINS"
+# 			for more information.
+#
+# 		) SPATIAL
+#
+# 			You can create SPATIAL indexes on spatial data types.
+#
+# 			Spatial types are supported only for InnoDB and MyISAM tables, and indexed
+# 			columns must be declared as NOT NULL.
+#
+# 			See SECTION 11.5, "SPATIAL DATA TYPES"
+#
+# 		) FOREIGN KEY
+#
+# 			MySQL supports foreign keys, which let you cross-reference related data
+# 			across tables, and foreign key constraints, which help keep this spread-out
+# 			data consistent.
+#
+# 			For definition and option information, see REFERENCE_DEFINITION and REFERENCE_OPTION
+#
+# 			Partitioned tables employing the InnoDB storage engine do not support foreign keys.
+#
+# 			See SECTION 23.6, "RESTRICTIONS AND LIMITATIONS ON PARTITIONING", for more information.
+#
+# 		) CHECK
+#
+# 			The CHECK clause is parsed but ignored by all storage engines.
+#
+# 			See SECTION 1.8.2.3, "FOREIGN KEY DIFFERENCES"
+#
+# 		) key_part
+#
+# 			) A key_part specification can end with ASC or DESC to specify whether index values
+# 				are stored in ascending or descending order.
+#
+# 				The default is ascending if no order specifier is given.
+#
+# 			) Prefixes, defined by the length attribute, can be up to 767 bytes long for InnoDB tables
+# 				that use the REDUNDANT or COMPACT row format.
+#
+# 				The prefix length limit is 3072 bytes for InnoDB tables that use the DYNAMIC
+# 				or COMPRESSED row format.
+#
+# 				For MyISAM tables, the prefix length limit is 1000 bytes.
+#
+# 				Prefix limits are measured in bytes.
+#
+# 				However, prefix lengths for index specifications in CREATE_TABLE,
+# 				ALTER_TABLE and CREATE_INDEX statements are interpreted as number of
+# 				characters for nonbinary string types (CHAR, VARCHAR, TEXT) and number of
+# 				bytes for binary string types (BINARY, VARBINARY, BLOB)
+#
+# 				Take this into account when specifying a prefix length for a nonbinary
+# 				string column that uses a multibyte character set.
+#
+# 		) index_type
+#
+# 			Some storage engine permit you to specify an index type when creating an index.
+#
+# 			The syntax for the index_type specifier is USING type_name
+#
+# 			Example:
+#
+# 				CREATE TABLE lookup
+# 					(id INT, INDEX USING BTREE (id))
+# 					ENGINE = MEMORY;
+#
+# 			The preferred position for USING is after the index column list.
+#
+# 			It can be given before the column list, but support for use of the option
+# 			in that position is deprecated and will be removed in a future release.
+#
+# 		) index_option
+#
+# 			index_option values specify additional options for an index
+#
+# 				) KEY_BLOCK_SIZE
+#
+# 					For MyISAM tables, KEY_BLOCK_SIZE optionally specifies the size in bytes to use
+# 					for index key blocks.
+#
+# 					The value is treated as a hint; a different size could be used if necessary.
+#
+# 					A KEY_BLOCK_SIZE value specified for an individual index definition overrides
+# 					the table-level KEY_BLOCK_SIZE value.
+#
+# 					For information about the table-level KEY_BLOCK_SIZE attribute, see TABLE OPTIONS
+#
+# 				) WITH PARSER
+#
+# 					The WITH PARSER option can only be used with FULLTEXT indexes.
+#
+# 					It associates a parser plugin with the index if full-text indexing
+# 					and searching operations need special handling.
+#
+# 					InnoDB and MyISAM support full-text parser plugins.
+#
+# 					If you have a MyISAM table with an associated full-text parser
+# 					plugin, you can convert the table to InnoDB using ALTER TABLE.
+#
+# 				) COMMENT
+#
+# 					In MySQL 8.0, index definitions can include an optional comment
+# 					of up to 1024 characters.
+#
+# 					You can set the InnoDB MERGE_THRESHOLD value for an individual index using
+# 					the index_option COMMENT clause.
+#
+# 					See SECTION 15.8.11, "CONFIGURING THE MERGE THRESHOLD FOR INDEX PAGES"
+#
+# 			For more information about permissible index_option values, see SECTION 13.1.15, "CREATE INDEX SYNTAX"
+#
+# 			For more information about indexes, see SECTION 8.3.1, "HOW MYSQL USES INDEXES"
+#
+# 		) reference_definition
+#
+# 			For reference_definition syntax details and examples, see SECTION 13.1.20.6,
+# 			"USING FOREIGN KEY CONSTRAINTS"
+#
+# 			For information specific to foreign keys in InnoDB, see SECTION 15.6.1.5, "InnoDB AND FOREIGN KEY CONSTRAINTS"
+#
+# 			InnoDB and NDB tables support checking of foreign key constraints.
+#
+# 			The  columns of the referenced table must always be explicitly named.
+#
+# 			Both ON DELETE and ON UPDATE actions on foreign keys are supported.
+#
+# 			For more detailed information and examples, see SECTION 13.1.20.6,
+# 			"USING FOREIGN KEY CONSTRAINTS"
+#
+# 			For information specific to foreign keys in InnoDB, see SECTION 15.6.1.5,
+# 			"InnoDB AND FOREIGN KEY CONSTRAINTS"
+#
+# 			For other storage engines, MySQL Server parses and ignores the FOREIGN KEY
+# 			and REFERENCES syntax in CREATE_TABLE statements.
+#
+# 			See SECTION 1.8.2.3, "FOREIGN KEY DIFFERENCES"
+#
+# 				IMPORTANT:
+#
+# 					For users familiar with the ANSI/ISO SQL Standard, please note that no storage engine,
+# 					includin InnoDB, recognizes or enforces the MATCH clause used in referential integrity
+# 					constraint definitions.
+#
+# 					Use of an explicit MATCH clause will not have the specified effect, and also causes
+# 					ON DELETE and ON UPDATE clauses to be ignored. For these reasons, specifying
+# 					MATCH should be avoided.
+#
+# 					The MATCH clause in SQL standard controls how NULL values in a composite (multiple-column)
+# 					foreign key are handled when comparing to a primary key.
+#
+# 					InnoDB essentially implements the semantics defined by MATCH SIMPLE, which permit a foreign
+# 					key to be all or partially NULL.
+#
+# 					In that case, the (child table) row containing such a foreign key is permitted to be inserted,
+# 					and does not match any row in the referenced (parent) table.
+#
+# 					It is possible to implement other semantics using triggers.
+#
+# 					Additionally, MySQL requires that the referenced columns be indexed for performance.
+#
+# 					However, InnoDB does not enforce any requirement that the referenced columns be declared
+# 					UNIQUE or NOT NULL.
+#
+# 					The handling of foreign key references to nonunique keys or keys that contain NULL values
+# 					is not well defined for operations such as UPDATE or DELETE CASCADE.
+#
+# 					You are advised to use foreign keys that reference only keys that are both UNIQUE 
+# 					(or PRIMARY) and NOT NULL.
+#
+# 					MySQL parses but ignores "inline REFERENCES specifications" (as defined in the SQL standard)
+# 					where the references are defined as part of the column specification.
+#
+# 					MySQL accepts REFERENCES clauses only when specified as part of a separate FOREIGN KEY 
+# 					specification.
+#
+# 		) reference_option
+#
+# 			For information about the RESTRICT, CASCADE, SET NULL, NO ACTION and SET DEFAULT options, see
+# 			SECTION 13.1.20.6, "USING FOREIGN KEY CONSTRAINTS"
+#
+# TABLE OPPTIONS
+#
+# Table options are used to optimize the behavior of the table.
+#
+# In most cases, you do not have to specify any of them. These options apply to all storage engines
+# unless otherwise indicated.
+#
+# Options that do not apply to a given storage engine may be accepted and remembered as part of the
+# table definition.
+#
+# Such options then apply if you later use ALTER_TABLE to convert the table to use a different storage engine.
+#
+# 		) ENGINE
+#
+# 			Specifies the storage engine for the table, using one of the names shown in the following table.
+#
+# 			The engine name can be unquoted or quoted. The quoted name 'DEFAULT' is recognized but ignored.
+#
+# 			STORAGE ENGINE 			DESC
+#
+# 			InnoDB 					Transaction-safe tables with row locking and foreign keys.
+#
+# 										The default storage engine for new tables. 
+#
+# 										See CHAPTER 15, The InnoDB Storage Engine, and in particular Section 15.1,
+# 										"Introduction to InnoDB" if you have MySQL experience but are new to InnoDB.
+#  		
+# 			MyISAM 					The binary portable storage engine that is primarily used for read-only or read-mostly
+# 										workloads.
+#
+# 										See SECTION 16.2, "THE MYISAM STORAGE ENGINE"
+#
+# 			MEMORY 					The data for this storage engine is stored only in memory. See SECTION 16.3, "THE MEMORY STORAGE ENGINE"
+#
+# 			CSV 						Tables that store rows in comma-separated values format. See SECTION 16.4, "THE CSV STORAGE ENGINE"
+#
+# 			ARCHIVE 					The archiving storage engine. See SECTION 16.5, "THE ARCHIVE STORAGE ENGINE"
+#
+# 			EXAMPLE 					An example engine. See SECTION 16.9, "THE EXAMPLE STORAGE ENGINE"
+#
+# 			FEDERATED 				Storage engine that accesses remote tables. See SECTION 16.8, "THE FEDERATED STORAGE ENGINE"
+#
+# 			HEAP 						This is a synonym for MEMORY
+#
+# 			MERGE 					A collection of MyISAM tables used as one table.
+#
+# 										Also known as MRG_MyISAM. See SECTION 16.7, "THE MERGE STORAGE ENGINE"
+#
+# 			NDB 						Clustered, fault-tolerant, memory-based tables, supporting transactions and foreign
+# 										keys.
+#
+# 										Also known as NDBCLUSTER.
+#
+# 										See CHAPTER 22, MySQL NDB CLUSTER 8.0
+#
+# 			By default, if a storage engine is specified that is N/A, the statement fails with an error.
+#
+# 			You can override this behavior by removing NO_ENGINE_SUBSTITUTION from the server SQL mode
+# 			(see SECTION 5.1.11, "SERVER SQL MODES") so that MySQL allows substitution of the specified
+# 			engine with the default storage engine instead.
+#
+# 			Normally, in such cases, this is InnoDB, which is the default value for the default_storage_engine
+# 			system variable.
+#
+# 			When NO_ENGINE_SUBSTIUTTION is disabled, a warning occurs if the storage engine specification is not honored.
+#
+# 		) AUTO_INCREMENT
+#
+# 			The initial AUTO_INCREMENT value for the table.
+#
+# 			In MySQL 8.0, this works for MyISAM, MEMORY, InnoDB and ARCHIVE tables.
+#
+# 			To set the first auto-increment value for engines that do not support the
+# 			AUTO_INCREMENT table option, insert a "dummy" row with a value one less than the
+# 			desired value after creating the table, and then delete the dummy row.
+#
+# 			For engines that support the AUTO_INCREMENT table option in CREATE_TABLE statements,
+# 			you can also use ALTER TABLE tbl_name AUTO_INCREMENT = N to reset the AUTO_INCREMENT value.
+#
+# 			The value cannot be set lower than the maximum value currently in the column.
+#
+# 		) AVG_ROW_LENGTH
+#
+# 			An approximation of the average row length for your table. You need to set this only for large
+# 			tables with variable-size rows.
+#
+# 			When you create a MyISAM table, MySQL uses the product of the MAX_ROWS and AVG_ROW_LENGTH options
+# 			to decide how big the resulting table is.
+#
+# 			If you do not specify either option, the max size for MyISAM data and index file is 256TB by default.
+#
+# 			(If your OS does not support files that large, table sizes are constrained by the file size limit)
+#
+# 			If you want to keep down the pointer size to make the index smaller and faster and you do not really
+# 			need big files, you can decrease the default pointer size by setting the myisam_data_pointer_size
+# 			system variable.
+#
+# 			(See SECTION 5.1.8, "SERVER SYSTEM VARIABLES")
+#
+# 			If you want all your tables to be able to grow above the default limit and are willing to have your
+# 			tables slightly slower and larger than necessary, you can increase the default point size by setting
+# 			this variable.
+#
+# 			Setting this value to 7 permits table sizes up to 65,536TB
+#
+# 		) [DEFAULT] CHARACTER SET
+#
+# 			Specifies a default character set for the table.
+#
+# 			CHARSET is a synonym for CHARACTER SET.
+#
+# 			If the character set name is DEFAULT, the database character set is used.
+#
+# 		) CHECKSUM
+#
+# 			Set this to 1 if you want MySQL to maintain live checksum for all rows (that is,
+# 			a checksum that MySQL updates automatically as the table changes)
+#
+# 			This makes the table a little slower to update, but also makes it easier
+# 			to find corrupted tables.
+#
+# 			The CHECKSUM_TABLE statement reports the checksum. (MyISAM only)
+#
+# 		) [DEFAULT] COLLATE
+#
+# 			Specifies a default collation for the table.
+#
+# 		) COMMENT
+#
+# 			A comment for the table, up to 2048 characters long.
+#
+# 			You can set the InnoDB MERGE_THRESHOLD value for a table using the 
+# 			table_option COMMENT clause.
+#
+# 			See SECTION 15.8.11, "CONFIGURING THE MERGE THRESHOLD FOR INDEX PAGES"
+#
+# 			SETTING NDB_TABLE OPTIONS.
+#
+# 			The table comment in a CREATE TABLE that creates an NDB table or an
+# 			ALTER_TABLE statement which alters one can also be used to specify one
+# 			to four of the NDB_TABLE options:
+#
+# 				NOLOGGING
+#
+# 				READ_BACKUP
+#
+# 				PARTITION_BALANCE
+#
+# 				FULLY_REPLICATED
+#
+# 			as a set of name-value pairs, separated by commas if need be, immediately
+# 			following the string NDB_TABLE= that begins the quoted comment text.
+#
+# 			An example statement using this syntax is shown here (emphasized text):
+#
+# 				CREATE TABLE t1 (
+# 					c1 INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+# 					c2 VARCHAR(100),
+# 					c3 VARCHAR(100) )
+# 				ENGINE=NDB
+# 				COMMENT="NDB_TABLE=READ_BACKUP=0,PARTITION_BALANCE=FOR_RP_BY_NODE";
+#
+# 			Spaces are not permitted within the quoted string.
+#
+# 			The string is case-insensitive.
+#
+# 			The comment is displayed as part of the output of SHOW_CREATE_TABLE
+#
+# 			The text of the comment is also available as the TABLE_COMMENT column of the
+# 			MySQL Information Schema TABLES table.
+#
+# 			This comment syntax is also supported with ALTER_TABLE statements for NDB tables.
+#
+# 			Keep in mind that a table comment used with ALTER TABLE replaces any existing
+# 			comment which the table might have had previously.
+#
+# 			Setting the MERGE_THRESHOLD option in table comments is not supported for NDB tables
+# 			(it is ignored)
+#
+# 			For complete syntax information and examples, see SECTION 13.1.20.10, "SETTING NDB_TABLE OPTIONS"
+#
+# 		) COMPRESSION
+#
+# 			The compression algorithm used for page level compression for InnoDB tables.
+#
+# 			Supported values include Zlib, LZ4, and None.
+#
+# 			The COMPRESSION attribute was introduced with the transparent page compression
+# 			feature.
+#
+# 			Page compression is only supported with InnoDB tables that reside in file-per-table
+# 			tablespaces, and is only available on Linux and Windows platforms that support
+# 			sparse files and hole punching.
+#
+# 			For more information, see SECTION 15.9.2, "InnoDB PAGE COMPRESSION"
+#
+# 		) CONNECTION
+#
+# 			The connection string for a FEDERATED table
+#
+# 			NOTE:
+#
+# 				Older versions of MySQL used a COMMENT option for the connection string
+#
+# 		) DATA DIRECTORY, INDEX DIRECTORY
+#
+# 			For InnoDB, the DATA_DIRECTORY='directory' clause permits creating a file-per-table
+# 			tablespace outside of the data directory.
+#
+# 			The tablespace data file is created in the specified directory, inside a subdirectory
+# 			with the same name as the schema.
+#
+# 			The innodb_file_per_table variable must be enabled to use the DATA DIRECTORY
+# 			clause.
+#
+# 			The full directory path must be specified.
+#
+# 			For more information, see SECTION 15.6.3.6, "CREATING A TABLESPACE OUTSIDE OF THE DATA DIRECTORY"
+#
+# 			When creating MyISAM tables, you can use the DATA DIRECTORY='directory' clause, the INDEX DIRECTORY='directory'
+# 			clause, or both.
+#
+# 			They specify where to put a MyISAM table's data file and index file, respectively.
+#
+# 			Unlike InnoDB tables, MySQL does not create subdirectories that correspond to the 
+# 			database name when creating a MyISAM table with a DATA DIRECTORY or INDEX DIRECTORY option.
+#
+# 			Files are created in the directory that is specified.
+#
+# 			You must have the FILE privilege to use the DATA DIRECTORY or INDEX DIRECTORY table option.
+#
+# 			IMPORTANT:
+#
+# 				Table-level DATA DIRECTORY and INDEX DIRECTORY options are ignored for partitioned tables.
+# 				(Bug #32091)
+#
+# 			These options work only when you are not using the --skip-symbolic-links option.
+#
+# 			Your OS must also have a working, thread-safe realpath() call
+#
+# 			See SECTION 8.12.2.2, "USING SYMBOLIC LINKS FOR MYISAM TABLES ON UNIX", for more
+# 			complete information.
+#
+# 			If a MyISAM table is created with no DATA DIRECTORY option, the .MYD file is created
+# 			in the database directory.
+#
+# 			By default, if MyISAM finds an existing .MYD file in this case, it overwrites it.
+#
+# 			The same applies to .MYI files for tables created with no INDEX DIRECTORY option.
+#
+# 			To suppress this behavior, start the server with the --keep_files_on_create option,
+# 			in which case MyISAM will not overwrite existing files and returns an error instead.
+#
+# 			If a MyISAM table is created with a DATA DIRECTORY or INDEX DIRECTORY option and
+# 			an existing .MYD or .MYI file is found, MyISAM always returns an error.
+#
+# 			It will not overwrite a file in the specified directory.
+#
+# 				IMPORATNT:
+#
+# 					You cannot use path names that contain the MySQL data directory with
+# 					DATA DIRECTORY or INDEX DIRECTORY.
+#
+# 					THis includes partitioned tables and individual table partitions.
+# 					(See Bug #32167)
+#
+# 		) DELAY_KEY_WRITE
+#
+# 			Set this to 1 if you want to delay key updates for the table until the table is closed.
+#
+# 			See the description of the delay_key_write system variable in SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+# 			(MyISAM only)
+#
+# 		) ENCRYPTION
+#
+# 			Set the ENCRYPTION option to 'Y' to enable page-level data encryption for an InnoDB
+# 			table created in a file-per-table tablespace.
+#
+# 			Option values are not case-sensitive.
+#
+# 			The ENCRYPTION option was introduced with the InnoDB tablespace encryption feature;
+# 			see SECTION 15.6.3.9, "TABLESPACE ENCRYPTION"
+#
+# 			A keyring plugin must be installed and configured to use the ENCRYPTION option.
+#
+# 		) INSERT_METHOD
+#
+# 			If you want to insert data into a MERGE table; you must specify with INSERT_METHOD
+# 			the table into which the row should be inserted.
+#
+# 			INSERT_METHOD is an option useful for MERGE tables only.
+#
+# 			Use a value of FIRST or LAST to have inserts go to the first or last table,
+# 			or a value of NO to prevent inserts.
+#
+# 			See SECTION 16.7, "THE MERGE STORAGE ENGINE"
+#
+# 		) KEY_BLOCK_SIZE
+#
+# 			For MyISAM tables, KEY_BLOCK_SIZE optionally specifies the size in bytes to use
+# 			for index key blocks.
+#
+# 			The value is treated as a hint; a different size could be used if necessary.
+#
+# 			A KEY_BLOCK_SIZE value specified for an individual index definition overrides
+# 			the table-level KEY_BLOCK_SIZE value.
+#
+# 			For InnoDB tables, KEY_BLOCK_SIZE specifies the page size in kilobytes to use
+# 			for compressed InnoDB tables.
+#
+# 			The KEY_BLOCK_SIZE value is treated as a hint; a different size could be used
+# 			by InnoDB if necessary.
+#
+# 			KEY_BLOCK_SIZE can only be less than or equal to the innodb_page_size value.
+#
+# 			A value of 0 represents the default compressed page size, which is half of the
+# 			innodb_page_size value.
+#
+# 			Depending on innodb_page_size, possible KEY_BLOCK_SIZE values include
+# 			0, 1, 2, 4, 8 and 16.
+#
+# 			See SECTION 15.9.1, "InnoDB TABLE COMPRESSION" for more information
+#
+# 			Oracle recommends enabling innodb_strict_mode when specifying KEY_BLOCK_SIZE
+# 			for InnoDB tables.
+#
+# 			When innodb_strict_mode is enabled, specifying an invalid KEY_BLOCK_SIZE value
+# 			returns an error.
+#
+# 			If innodb_strict_mode is disabled, an invalid KEY_BLOCK_SIZE value results
+# 			in a warning, and the KEY_BLOCK_SIZE option is ignored.
+#
+# 			The Create_options column in response to SHOW_TABLE_STATUS reports the
+# 			actual KEY_BLOCK_SIZE used by the table, as does SHOW_CREATE_TABLE
+#
+# 			InnoDB only supports KEY_BLOCK_SIZE at the table level
+#
+# 			KEY_BLOCK_SIZE is not supported with 32KB and 64KB innodb_page_size values.
+#
+# 			InnoDB table compression does not support these page sizes.
+#
+# 			InnoDB does not support the KEY_BLOCK_SIZE option when creating temporary tables.
+#
+# 		) MAX_ROWS
+#
+# 			The maximum number of rows you plan to store in the table.
+#
+# 			This is not a hard limit, but rather a hint to the storage engine that
+# 			the table must be able to store at least this many rows.
+#
+# 				IMPORTANT:
+#
+# 					The use of MAX_ROWS with NDB tables to control the number of table
+# 					partitions is deprecated.
+#
+# 					It remains supported in later versions for backward compatibility,
+# 					but is subject to removal in a future release.
+#
+# 					Use PARTITION_BALANCE instead; see SETTING NDB_TABLE OPTIONS
+#
+# 			The NDB storage engine treats this value as a maximum.
+#
+# 			If you plan to create very large NDB Cluster tables (containing millions of rows),
+# 			you should use this option to insure that NDB allocates sufficient number of index slots
+# 			in the hash table used for storing hashes of the table's primary keys by setting
+# 			MAX_ROWS = 2 * rows, where rows is the number of rows that you expect to insert
+# 			into the table.
+#
+# 			The maximum MAX_ROWS value is 4294967295; larger values are truncated to this limit.
+#
+# 		) MIN_ROWS
+#
+# 			The minimum number of rows you plan to store in the table.
+#
+# 			The MEMORY storage engine uses this option as a hint about memory use.
+#
+# 		) PACK_KEYS
+#
+# 			Takes effect only with MyISAM tables.
+#
+# 			Set this option to 1 if you want to have smaller indexes.
+#
+# 			This usually makes updates slower and reads faster. 
+# 			Setting this option to 0 disables all packing of keys.
+#
+# 			Setting it to DEFAULT tells the storage engine to pack only long
+# 			CHAR, VARCHAR, BINARY or VARBINARY columns.
+#
+# 			If you do not use PACK_KEYS, the default is to pack strings, but not 
+# 			numbers.
+#
+# 			If you use PACK_KEYS=1, numbers are packed as well.
+#
+# 			When packing binary number keys, MySQL uses prefix compression:
+#
+# 				) Every key needs one extra byte to indicate how many bytes of the previous key are the same 
+# 					for the next key.
+#
+# 				) The pointer to the row is stored in high-byte-first order directly after the key, to improve compression.
+#
+# 			This means that if you have many equal keys on two consecutive rows, all following "same" keys
+# 			usually only take two bytes (including the pointer ot the row)
+#
+# 			Compare this to the ordinary case where the following keys takes storage_size_for_key +
+# 			pointer_size (where the pointer size is usually 4)
+#
+# 			Conversely, you get a significant benefit from prefix compression only if you have
+# 			many numbers that are the same.
+#
+# 			If all keys are totally different, you use one byte more per key, if the key is not a key
+# 			that can have NULL values.
+#
+# 			(In this case, the packed key length is stored in the same byte that is used to mark if a key is NULL)
+#
+# 		) PASSWORD
+#
+# 			This option is unused
+#
+# 		) ROW_FORMAT
+#
+# 			Defines the physical format in which the rows are stored.
+#
+# 			When executing a CREATE_TABLE statement with strict mode disabled, if you specify
+# 			a row format that is not supported by the storage engine that is used
+# 			for the table, the table is created using that storage engine's default row format.
+#
+# 			The actual row format of the table is reported in the Row_format and Create_options
+# 			columns in response to SHOW_TABLE_STATUS.
+#
+# 			SHOW_CREATE_TABLE also reports the actual row format of the table.
+#
+# 			Row format choices differ depending on the storage engine used for the table.
+#
+# 			For InnoDB tables:
+#
+# 				) The default row format is defined by innodb_default_row_format, which has
+# 					a default setting of DYNAMIC.
+#
+# 					The default row format is used when the ROW_FORMAT option is not defined
+# 					or when ROW_FORMAT=DEFAULT is used.
+#
+# 					If the ROW_FORMAT option is not defined, or if ROW_FORMAT=DEFAULT is used,
+# 					operations that rebuild a table also silently change the row format
+# 					of the table to the default defined by innodb_default_row_format.
+#
+# 					For more information, see DEFINING THE ROW FORMAT OF A TABLE
+#
+# 				) For more efficient InnoDB storage of data types, especially BLOB types,
+# 					use the DYNAMIC.
+#
+# 					See DYNAMIC ROW FORMAT for requirements associated with the DYNAMIC
+# 					row format.
+#
+# 				) To enable compression for InnoDB tables, specify ROW_FORMAT=COMPRESSED
+#
+# 					The ROW_FORMAT=COMPRESSED option is not supported when creating temporary
+# 					tables.
+#
+# 					See SECTION 15.9, "InnoDB TABLE AND PAGE COMPRESSION" for requirements
+# 					associated with the COMPRESSED row format.
+#
+# 				) The row format used in older versions of MySQL can still be requested by specifying the REDUNDANT row format.
+#
+# 				) When you specify a non-default ROW_FORMAT clause, consider also enabling the innodb_strict_mode configuration option
+#
+# 				) ROW_FORMAT=FIXED is not supported.
+#
+# 					If ROW_FORMAT=FIXED is specified while innodb_strict_mode is disabled, InnoDB issues a warning
+# 					and assumes ROW_FORMAT=DYNAMIC.
+#
+# 					If ROW_FORMAT=FIXED is specified while innodb_strict_mode is enabled,
+# 					which is the default, InnoDB returns an error.
+#
+# 				) For additional information about InnoDB row formats, see SECTION 15.10, "InnoDB ROW FORMATS"
+#
+# 			For MyISAM tables, the option value can be FIXED or DYNAMIC for static or variable-length
+# 			row format.
+#
+# 			myisampack sets the type to COMPRESSED. See SECTION 16.2.3, "MyISAM TABLE STORAGE FORMATS"
+#
+# 			For NDB tables, the default ROW_FORMAT is DYNAMIC
+#
+# 		) STATS_AUTO_RECALC
+#
+# 			Specifies whether to automatically recalculate persistent statistics for an InnoDB table.
+#
+# 			The value DEFAULT causes the persistent statistics setting for the table to be
+# 			determined by the innodb_stats_auto_recalc configuration option.
+#
+# 			The value 1 causes statistics to be recalculated when 10% of the data in teh table
+# 			has changed.
+#
+# 			The value 0 prevents automatic recalculation for this table; with this setting,
+# 			issue an ANALYZE_TABLE statement to recalculate the statistics after making
+# 			substansial changes to the table.
+#
+# 			For more information about the persistent statistics feature, see SECTION 15.8.10.1,
+# 			"CONFIGURING PERSISTENT OPTIMIZER STATISTICS PARAMETERS"
+#
+# 		) STATS_PERSISTENT
+#
+# 			Specifies whether to enable persistent statistics for an InnoDB table.
+#
+# 			The value DEFAULT causes the persistent statistics setting for the table to
+# 			be determined by the innodb_stats_persistent configuration option.
+#
+# 			The value 1 enables persistent statistics for the table, while the value 
+# 			0 turns off this feature.
+#
+# 			After enabling persistent statistics through a CREATE TABLE or ALTER TABLE
+# 			statement, issue an ANALYZE_TABLE statement to calculate the statistics,
+# 			after loading representative data into the table.
+#
+# 			For more information about the persistent statistics feature,
+# 			see SECTION 15.8.10.1, "CONFIGURING PERSISTENT OPTIMIZER STATISTICS PARAMETERS"
+#
+# 		) STATS_SAMPLE_PAGES
+#
+# 			The number of index pages to sample when estimating cardinality and other
+# 			statistics for an indexed column, such as those calculated by ANALYZE_TABLE.
+#
+# 			For more information, see SECTION 15.8.10.1, "CONFIGURING PERSISTENT OPTIMIZER STATISTICS PARAMETERS"
+#
+# 		) TABLESPACE
+#
+# 			The TABLESPACE clause can be used to create a table in an existing general tablespace,
+# 			a file-per-table tablespace, or the system tablespace.
+#
+# 				CREATE TABLE tbl_name --- TABLESPACE [=] tablespace_name
+#
+# 			The general tablespace that you specify must exist prior to using the
+# 			TABLESPACE clause.
+#
+# 			For information about general tablespaces, see SECTION 15.6.3.3, "GENERAL TABLESPACES"
+#
+# 			The tablespace_name is a case-sensitive identifier.
+#
+# 			It may be quoted or unquoted. The forward slash character ("/") is not permitted.
+#
+# 			Names beginning with "innodb_" are reserved for special use.
+#
+# 			To create a table in the system tablespace, specify innodb_system as the tablespace name.
+#
+# 				CREATE TABLE tbl_name --- TABLESPACE [=] innodb_system
+#
+# 			Using TABLESPACE [=] innodb_system you can place a table of any uncompressed row
+# 			format in the system tablespace regardless of the innodb_file_per_table setting.
+#
+# 			For example, you can add a table with ROW_FORMAT=DYNAMIC to the system tablespace
+# 			using TABLESPACE [=] innodb_system
+#
+# 			To create a table in a file-per-table tablespace, specify innodb_file_per_table as
+# 			the tablespace name.
+#
+# 				CREATE TABLE tbl_name --- TABLESPACE [=] innodb_file_per_table
+#
+# 			NOTE:
+#
+# 				If innodb_file_per_table is enabled, you need not specify TABLESPACE=innodb_file_per_table
+# 				to create an InnoDB file-per-table tablespace.
+#
+# 				InnoDB tables are created in file-per-table tablespaces by default when innodb_file_per_table 
+# 				is enabled.
+#
+# 			The DATA DIRECTORY clause is permitted with CREATE TABLE --- TABLESPACE=innodb_file_per_table but
+# 			is otherwise not supported for use in combination with the TABLESPACE clause.
+#
+# 			NOTE:
+#
+# 				Support for TABLESPACE = innodb_file_per_table and TABLESPACE = innodb_temporary clauses
+# 				with CREATE_TEMPORARY_TABLE is deprecated as of MySQL 8.0.13, and will be removed
+# 				in a future version of MySQL.
+#
+# 		) UNION
+#
+# 			Used to access a collection of identical MyISAM tables as one.
+#
+# 			This works only with MERGE tables. See SECTION 16.7, "THE MERGE STORAGE ENGINE"
+#
+# 			You must have SELECT, UPDATE and DELETE privileges for the tables you map to a MERGE table
+#
+# 			NOTE:
+#
+# 				Formerly, all tables used had to be in the same database as the MERGE table itself.
+#
+# 				This restriction no longer applies.
+#
+# CREATING PARTITIONED TABLES
+#
+# partition_options can be used to control partitioning of the table created with CREATE_TABLE
+#
+# Not all options shown in the syntax for partition_options at the beginning of this section are
+# available for all partitioning types.
+#
+# Please see the listings for the following individual types for information specific to each
+# type,  and see CHAPTER 23, PARTITIONING, for more complete information about the workings
+# of and uses for partitioning in MySQL, as well as additional examples of table creation
+# and other statements relating to MySQL partitioning.
+#
+# Partitions can be modified, merged, added to tables, and dropped from tables.
+#
+# For basic information about the MySQL statements to accomplish these tasks, see
+# SECTION 13.1.9, "ALTER TABLE SYNTAX"
+#
+# For more detailed descriptions and examples, see SECTION 23.3, "PARTITION MANAGEMENT"
+#
+# 		) PARTITION BY
+#
+# 			If used, a partition_options clause begins with PARTITION BY.
+#
+# 			This clause contains the function that is used to determine the partition;
+# 			the function returns an integer value ranging from 1 to num, where num is
+# 			the number of partitions.
+#
+# 			(The maximum number of user-defined partitions which a table may contain is 
+# 			1024; the number of subpartitions - discussed later in this section - 
+# 			is included in this maximum)
+#
+# 			NOTE:
+#
+# 				The expression (expr) used in a PARTITION BY clause cannot refer to any
+# 				columns not in the table being created;
+#
+# 				Such references are specifically not permitted and cause the statement to fail
+# 				with an error (Bug #29444)
+#
+# 		) HASH(expr)
+#
+# 			Hashes one or more columns to create a key for placing and locating rows.
+#
+# 			expr is an expression using one or more table columns.
+#
+# 			This can be any valid MySQL expression (including MySQL functions) that
+# 			yields a single integer value.
+#
+# 			For example, these are both valid CREATE_TABLE statements using PARTITION BY HASH:
+#
+# 				CREATE TABLE t1 (col1 INT, col2 CHAR(5))
+# 					PARTITION BY HASH(col1);
+#
+# 				CREATE TABLE t1 (col1 INT, col2 CHAR(5), col3 DATETIME)
+# 					PARTITION BY HASH ( YEAR(col3) );
+#
+# 			You may not use either VALUES LESS THAN or VALUES IN clauses with PARTITION BY HASH
+#
+# 			PARTITION BY HASH uses the remainder of expr divided by the number of partitions (that is, modulus)
+#
+# 			For examples and additional information, see SECTION 23.2.4, "HASH PARTITIONING"
+#
+# 			The LINEAR keyword entails a somewhat different algorithm.
+#
+# 			In this case, the number of the partition in which a row is stored is calculated
+# 			as the result of one or more logical AND operations.
+#
+# 			For discussion and examples of linear hashing, see SECTION 23.2.4.1, "LINEAR HASH PARTITIONING"
+#
+# 		) KEY(column_list)
+#
+# 			This is similar to HASH, except that MySQL supplies the hashing function so as to
+# 			guarantee an even data distribution.
+#
+# 			The column_list argument is simply a list of 1 or more table columns (max: 16)
+#
+# 			This example shows a simple table partitioned by key, with 4 partitions:
+#
+# 				CREATE TABLE tk (col1 INT, col2 CHAR(5), col3 DATE)
+# 					PARTITION BY KEY(col3)
+# 					PARTITIONS 4;
+#
+# 			For tables that are partitioned by key, you can employ linear partitioning by using
+# 			the LINEAR keyword.
+#
+# 			THis has the same effect as with tables that are partitioned by HASH.
+#
+# 			That is, the partition number is found using the & operator rather than
+# 			the modulus (see SECTION 23.2.4.1, "LINEAR HASH PARTITIONING", and SECTION 23.2.5, "KEY PARTITIONING", for details)
+#
+# 			This example uses linear partitioning by key to distribute data between 5 partitions:
+#
+# 				CREATE TABLE tk (col1 INT, col2 CHAR(5), col3 DATE)
+# 					PARTITION BY LINEAR KEY(col3)
+# 					PARTITIONS 5;
+#
+# 			The ALGORITHM={1|2} option is supported with [SUB]PARTITION BY [LINEAR] KEY ALGORITHM=1 causes
+# 			the server to use the same key-hashing functions as MySQL 5.1
+#
+# 			ALGORITHM=2 means that hte server employs the key-hashing functions implemented and used
+# 			by default for new KEY partitioned tables in MySQL 5.5 and later.
+#
+# 			(Partitioned tables created with the key-hashing functions employed in MySQL 5.5 and later
+# 			cannot be used by a MySQL 5.1 server)
+#
+# 			Not specifying the option has the same effect as using ALGORITHM=2
+#
+# 			This option is intended for use chiefly when upgrading or downgrading [LINEAR]
+# 			KEY partitioned tables between MySQL 5.1 and later MySQL versions, or for creating
+# 			tables partitioned by KEY or LINEAR KEY on a MySQL 5.5 or later server which can be used
+# 			on a MySQL 5.1 server
+#
+# 			For more information, see SECTION 13.1.9.1, "ALTER TABLE PARTITION OPERATIONS"
+#
+# 			mysqldump in MySQL 5.7 (and later) writes this option encased in versioned comments like this:
+#
+# 				CREATE TABLE t1 (a INT)
+# 				/*!50100 PARTITION BY KEY */ /*!50611 ALGORITHM = 1 */ /*!50100 ()
+# 						PARTITIONS 3 */
+#
+# 			This causes MySQL 5.6.10 and earlier servers to ignore the option, which would otherwise
+# 			cause a syntax error in those versions.
+#
+# 			If you plan to load a dump made on a MySQL 5.7 server where you use tables that are
+# 			partitioned or subpartitioned by KEY into a MySQL 5.6 server previous to 5.6.11,
+# 			be sure to consult changes in MySQL 5.6
+#
+# 			(The information found there also applies if you are loading a dump containing KEY
+# 			partitioned or subpartitioned tables made from a MySQL 5.7 - actually, 5.6.11
+# 			or later - server into a MySQL 5.5.30 or earlier server)
+#
+# 			Also in MySQL 5.6.11, and later, ALGORITHM=1 is shown when necessary in the output
+# 			of SHOW_CREATE_TABLE using versioned comments in teh same manner as mysqldump.
+#
+# 			ALGORITHM=2 is always omitted from SHOW CREATE TABLE output, even if this option
+# 			was speified when creating the original table.
+#
+# 			You may not use either VALUES LESS THAN or VALUES IN clauses with PARTITION BY KEY
+#
+# 		) RANGE(expr)
+#
+# 			In this case, expr shows a range of values using a set of VALUES LESS THAN operators.
+#
+# 			When using range partitioning, you must define at least one partition using
+# 			VALUE LESS THAN
+#
+# 			You cannot use VALUES IN with range partitioning
+#
+# 			NOTE:
+#
+# 				For tables partitioned by RANGE, VALUES LESS THAN must be used with either
+# 				an integer literal value or an expression that evaluates to a single integer
+# 				value.
+#
+# 				In MySQL 8.0, you can overcome this limitation in a table that is defined
+# 				using PARTITION BY RANGE COLUMNS, as described later in this section.
+#
+# 			Suppose that you have a table that you wish to partition on a column containing
+# 			year values, according to the following scheme.
+#
+	# 			PARTITION NUMBER: 			YEARS RANGE:
+	#
+	# 			0 									1990 and earlier
+	#
+	# 			1 									1991 to 1994
+	#
+	# 			2 									1995 to 1998
+	#
+	# 			3 									1999 to 2002
+	#
+	# 			4 									2003 to 2005
+	#
+	# 			5 									2006 and later
+#
+# 			A table implementing such a partitioning scheme can be realized by the 
+# 			CREATE_TABLE statement shown here:
+#
+# 				CREATE TABLE t1 (
+# 					year_col INT,
+# 					some_data INT
+# 				)
+# 				PARTITION BY RANGE (year_col) (
+# 					PARTITION p0 VALUES LESS THAN (1991),
+# 					PARTITION p1 VALUES LESS THAN (1995),
+# 					PARTITION p2 VALUES LESS THAN (1999),
+# 					PARTITION p3 VALUES LESS THAN (2002),
+# 					PARTITION p4 VALUES LESS THAN (2006),
+# 					PARTITION p5 VALUES LESS THAN MAXVALUE
+# 				);
+#
+# 			PARTITION --- VALUES LESS THAN --- statements work in a consecutive fashion.
+#
+# 			VALUES LESS THAN MAXVALUE works to specify "leftover" values that are greater
+# 			than the maximum value otherwise specified.
+#
+# 			VALUES LESS THAN clauses work sequentially in a manner similar to that of hte case
+# 			portions of a switch --- case block (as found in many languages)
+#
+# 			THat is, the clauses must be arranged in such a way that hte upper limit specified
+# 			in each successive VALUES LESS THAN is greater than that of the previous one,
+# 			with the one referencing MAXVALUE coming last of all in the list.
+#
+# 		) RANGE COLUMNS (column_list)
+#
+# 			This variant of RANGE facilitates partition pruning for queries using range conditions
+# 			on multiple columns (that is, having conditions such as WHERE a = 1 AND b < 10 or
+# 			WHERE a = 1 AND b = 10 AND c < 10)
+#
+# 			It enables you to specify value ranges in multiple columns by using a list of columns
+# 			in the COLUMNS clause and a set of column values in each PARTITION --- VALUES LESS THAN (value_list)
+# 			partition definition clause.
+#
+# 			(In the simplest case, this set consists of a single column)
+#
+# 			The maximum number of columns that can be referenced in the column_list and
+# 			value_list is 16.
+#
+# 			The column_list used in the COLUMNS clause may contain only names of columns;
+# 			each column in the list must be one of the following MySQL data types:
+#
+# 				The integer types
+#
+# 				The string types
+#
+# 				´Time or date column types
+#
+# 			Columns using BLOB, TEXT, SET, ENUM, BIT or spatial data types
+# 			are not permitted;
+#
+# 			Columns that use floating-point number types are also not permitted.
+#
+# 			You also may not use functions or arithmetic expressions in the COLUMNS clause.
+#
+# 			The VALUES LESS THAN clause used in a partition definition must specify a literal value
+# 			for each column that appears in the COLUMNS() clause
+#
+# 			That is, the list of values used for each VALUES LESS THAN clause must contain the 
+# 			same number of values as there are columns listed in the COLUMNS clause.
+#
+# 			AN attempt to use more or fewer values in a VALUES LESS THAN clause than there are
+# 			in the COLUMNS clause causes the statements to fail with the:
+#
+# 			 error Inconsistency in usage of column lists for partitionining 	error
+#
+# 			You cannot use NULL for any value appearing in VALUES LESS THAN
+#
+# 			It is possible to use MAXVALUE more than once for a given column
+# 			other than the first, as shown in this example:
+#
+# 				CREATE TABLE rc (
+# 					a INT NOT NULL,
+# 					b INT NOT NULL
+# 				)
+# 				PARTITION BY RANGE COLUMNS(a,b) (
+# 					PARTITION p0 VALUES LESS THAN (10,5),
+# 					PARTITION p1 VALUES LESS THAN (20,10),
+# 					PARTITION p2 VALUES LESS THAN (50,MAXVALUE),
+# 					PARTITION p3 VALUES LESS THAN (65,MAXVALUE),
+# 					PARTITION p4 VALUES LESS THAN (MAXVALUE,MAVALUE)
+# 				);
+#
+# 			Each value in a VALUES LESS THAN value list must match the type of the corresponding
+# 			column exactly; no conversion is made.
+#
+# 			For example, you cannot use the string '1' for a value that matches a column that uses
+# 			an integer type (you must use the numeral 1 instead), nor can you use hte numeral 1
+# 			for a value that matches a column that uses a string type (in such a case, you must use a quoted string '1')
+#
+# 			For more information, see SECTION 23.2.1, "RANGE PARTITIONING" and SECTION 23.4, "PARTITION PRUNING"
+#
+# 		) LIST(expr)
+#
+# 			THis is useful when assigning partitions based on a table column with a restricted set of possible values,
+# 			such as a state or country code.
+#
+# 			In such a case, all rows pertaining to a certain state or country can be assigned
+# 			to a single partition, or a partition can be reserved for a certain set of states
+# 			or countries.
+#
+# 			It is similar to RANGE, except that only VALUES IN may be used to specify permissible
+# 			values for each partition.
+#
+# 			VALUES IN is used with a list of values to be matched.
+#
+# 			For instance, you could create a partitioning scheme such as
+# 			the following:
+#
+# 				CREATE TABLE client_firms (
+# 					id INT,
+# 					name VARCHAR(35)
+# 				)
+# 				PARTITION BY LIST (id) (
+# 					PARTITION r0 VALUES IN (1, 5, 9, 13, 17, 21),
+# 					PARTITION r1 VALUES IN (2, 6, 10, 14, 18, 22),
+# 					PARTITION r2 VALUES IN (3, 7, 11, 15, 19, 23),
+# 					PARTITION r3 VALUES IN (4, 8, 12, 16, 20, 24)
+# 				);
+#
+# 			When using list partitioning, you must define at least one partition using VALUES IN.
+#
+# 			You cannot use VALUES LESS THAN with PARTITION BY LIST.
+#
+# 			NOTE:
+#
+# 				For tables partitioned by LIST, the value list used with VALUES IN must consist
+# 				of integer values only.
+#
+# 				In MySQL 8.0, you can overcome this limitation using partitioning by LIST COLUMNS,
+# 				which is described later in this section.
+#
+# 		) LIST COLUMNS(column_list)
+#
+# 			This variant on LIST facilitates partition pruning for queries using comparison conditions
+# 			on multiple columns (that is, having conditions such as WHERE a = 5 AND b = 5 or WHERE a = 1 AND b = 10 AND c = 5)
+#
+# 			It enables you to specify values in multiple columns by using a list of columns in the
+# 			COLUMNS clause and a set of column values in each PARTITION --- VALUES IN (value_list)
+# 			partition definition clause.
+#
+# 			The rules governing regarding data types for the column list used in LIST COLUMNS (column_list)
+# 			and the value listed used in VALUES IN (value_list) are the same as those for the column
+# 			list used in RANGE COLUMNS (column_list) and the value list used in VALUES LESS THAN (value_list),
+# 			respectively, except that in the VALUES IN clause, MAXVALUE is not permitted, and you may use NULL.
+#
+# 			There is one important difference between the list of values used for VALUES IN with PARTITION BY LIST COLUMNS
+# 			as opposed to when it is used with PARTITION BY LIST.
+#
+# 			When used with PARTITION BY LIST COLUMNS, each element in the VALUES IN clause must be a set of column values;
+# 			the number of values in each set must be the same as the number of columns used in the COLUMNS clause, and the
+# 			data types of these values must match those of the columns (and occur in the same order)
+#
+# 			In the simplest case, the set consists of a single column.
+#
+# 			The maximum number of columns that can be used in the column_list and in the elements
+# 			making up the value_list is 16.
+#
+# 			The table defined by the following CREATE TABLE statement provides an example of a table
+# 			using LIST COLUMNS partitioning:
+#
+# 				CREATE TABLE lc (
+# 					a INT NULL,
+# 					b INT NULL
+# 				)
+# 				PARTITION BY LIST COLUMNS(a,b) (
+# 					PARTITION p0 VALUES IN( (0,0), (NULL,NULL) ),
+# 					PARTITION p1 VALUES IN( (0,1), (0,2), (0,3), (1,1), (1,2) ),
+# 					PARTITION p2 VALUES IN( (1,0), (2,0), (2,1), (3,0), (3,1) ),
+# 					PARTITION p3 VALUES IN( (1,3), (2,2), (2,3), (3,2), (3,3) )
+# 				);
+#
+# 		) PARTITIONS num
+#
+# 			The number of partitions may optionally be specified with a PARTITIONS num clause,
+# 			where num is the number of partitions.
+#
+# 			If both this clause and any PARTITION clause are used, num must be equal to the
+# 			total number of any partitions that are declared using PARTITION clauses.
+#
+# 			NOTE:
+#
+# 				Whether or not you use a PARTITIONS clause in creating a table that is partitioned
+# 				by RANGE or LIST, you must still include at least one PARTITION VALUES clause in
+# 				the table definition (see below)
+#
+# 		) SUBPARTITION BY
+#
+# 			A partition may optionally be divided into a number of subpartitions.
+#
+# 			This can be indicated by using the optional SUBPARTITION BY clause.
+#
+# 			Subpartitioning may be done by HASH or KEY.
+#
+# 			Either of these may be LINEAR. These work in the same way as previously described
+# 			for the equivalent partitioning types.
+#
+# 			(It is not possible to subpartition by LIST or RANGE)
+#
+# 			The number of subpartitions can be indicated using the SUBPARTITIONS keyword
+# 			followed by an integer value.
+#
+# 		) Rigorous checking of the value used in PARTITIONS or SUBPARTITIONS clauses is applied
+# 			and this value must adhere to the following rules:
+#
+# 				) THe value must be a positive, nonzero integer
+#
+# 				) No leading zeros are permitted
+#
+# 				) The value must be an integer literal, and cannot not be an expression.
+#
+# 					For example, PARTITIONS 0.2E+01 is not permitted, even though 0.2E+01 evaluates
+# 					to 2. (Bug #15890)
+#
+# 		) partition_definition
+#
+# 			Each partition may be individually defined using a partition_definition clause.
+#
+# 			The individual parts making up this clause are as follows:
+#
+# 				) PARTITION partition_name
+#
+# 					Specifies a logical name for the partition
+#
+# 				) VALUES
+#
+# 					For range partitioning, each partition must include a VALUES LESS THAN clause;
+# 					for list partitioning, you must specify a VALUES IN clause for each partition.
+#
+# 					This is used to determine which rows are to be stored in this partition.
+#
+# 					See the discussion of partitioning types in CHAPTER 23, PARTITIONING, for syntax examples.
+#
+# 				) [STORAGE] ENGINE
+#
+# 					MySQL accepts a [STORAGE] ENGINE option for both PARTITION and SUBPARTITION.
+#
+# 					Currently, the only way in which this option can be used is to set all partitions
+# 					or all subpartitions to the same storage engine, and an attempt to set different storage
+# 					engines for partitions or subpartitions in the same table will give rise to the error:
+#
+# 						ERROR 1469 (HY000): The mix of handlers in the partitions is not permitted in this version of MySQL
+#
+# 				) COMMENT
+#
+# 					An optional COMMENT clause may be used to specify a string that describes the partition.
+#
+# 					Example:
+#
+# 						COMMENT = 'Data for the years previous to 1999'
+#
+# 					The maximum length for a partition comment is 1024 chars.
+#
+# 				) DATA DIRECTORY and INDEX DIRECTORY
+#
+# 					DATA DIRECTORY and INDEX DIRECTORY may be used to indicate the directory where,
+# 					respectively, the data and indexes for this partition are to be stored.
+#
+# 					Both the data_dir and the index_dir must be absolute system path names.
+#
+# 					You must have the FILE privilege to use the DATA DIRECTORY or INDEX DIRECTORY partition option.
+#
+# 					Example:
+#
+# 						CREATE TABLE th (id INT, name VARCHAR(30), adate DATE)
+# 						PARTITION BY LIST(YEAR(adate))
+# 						(
+# 							PARTITION p1999 VALUES IN (1995, 1999, 2003)
+# 								DATA DIRECTORY = '/var/appdata/95/data'
+# 								INDEX DIRECTORY = '/var/appdata/95/idx',
+# 							PARTITION p2000 VALUES IN (1996, 2000, 2004)
+# 								DATA DIRECTORY = '/var/appdata/96/data'
+# 								INDEX DIRECTORY = '/var/appdata/96/idx',
+# 							PARTITION p2001 VALUES IN (1997, 2001, 2005)
+# 								DATA DIRECTORY = '/var/appdata/97/data'
+# 								INDEX DIRECTORY = '/var/appdata/97/idx',
+# 							PARTITION p2002 VALUES IN (1998, 2002, 2006)
+# 								DATA DIRECTORY = '/var/appdata/98/data'
+# 								INDEX DIRECTORY = '/var/appdata/98/idx'
+# 						);
+#
+# 					DATA DIRECTORY and INDEX DIRECTORY behave in the same way as in the CREATE TABLE statements
+# 					table_option clause as used for MyISAM tables.
+#
+# 					One data directory and one index directory may be specified per partition.
+#
+# 					If left unspecified, the data and the indexes are stored by default in teh table's database
+# 					directory.
+#
+# 					The DATA DIRECTORY and INDEX DIRECTORY options are ignored for creating partitioned tables if
+# 					NO_DIR_IN_CREATE is in effect.
 # 				
-#	
+# 				) MAX_ROWS and MIN_ROWS
 #
-# https://dev.mysql.com/doc/refman/8.0/en/create-table.html
+# 					May be used to specify, respectively, the maximum and the minimum number of rows to be stored
+# 					in the partition.
+#
+# 					The values for max_number_of_rows and min_number_of_rows must be positive integers.
+#
+# 					As with the table-level options with the same names, these act only as "suggestions"
+# 					to the server and are not hard limits.
+#
+# 				) TABLESPACE
+#
+# 					May be used to designate an InnoDB file-per-table tablespace for the partition by specifying
+# 					TABLESPACE `innodb_file_per_table
+#
+# 					All partitions must belong to the same storage engine
+#
+# 					Placing InnoDB table partitions in shared InnoDB tablespaces is not supported.
+#
+# 					Shared tablespaces include the InnoDB system tablesapce and general tablespaces.
+#
+# 		) subpartition_definition
+#
+# 			The partition definition may optionally contain one or more subpartition_definition clauses.
+#
+# 			Each of these consists at a minimum of the SUBPARTITION name, where name is an identifier
+# 			for the subpartition.
+#
+# 			Except for the replacement of the PARTITION keyword with SUBPARTITION, the syntax for a 
+# 			subpartition definintion is identical to that for a partition definition.
+#
+# 			Subpartitioning must be done by HASH or KEY, and can be done only on RANGE or LIST partitions.
+#
+# 			See SECTION 23.2.6, "SUBPARTITIONING"
+#
+# PARTITIONING BY GENERATED COLUMNS
+#
+# Partitioning by generated columns is permitted.
+#
+# For example:
+#
+# 		CREATE TABLE t1 (
+# 			s1 INT,
+# 			s2 INT AS (EXP(s1)) STORED
+# 		)
+# 		PARTITION BY LIST (s2) (
+# 			PARTITION p1 VALUES IN (1)
+# 		);
+#
+# Partitioning sees a generated column as a regular column, which enables workarounds for limitations
+# on functions that are not permitted for partitioning (see SECTION 23.6.3, "PARTITIONING LIMITATIONS RELATING TO FUNCTIONS")
+#
+# THe preceding example demonstrates this technique:
+#
+# 		EXP() cannot be used directly in teh PARTITION BY clause, but a generated
+# 		column defined using EXP() is permitted.
+#
+# 13.1.20.1 CREATE TABLE STATEMENT RETENTION
+#
+# The original CREATE_TABLE statement, including all specifications and table options are stored by
+# MySQL when the table is created.
+#
+# The information is retained so that if you change storage engines, collations or other settings
+# using an ALTER_TABLE statement, the original table options specified are retained.
+#
+# This enables you to change between InnoDB and MyISAM table types even though the row formats
+# supported by the two engines are different.
+#
+# Because the text of the original statement is retained, but due to the way that certain values
+# and options may be silently reconfigured, the active table definition (accessible through 
+# DESCRIBE or with SHOW_TABLE_STATUS) and the table creation string (accessible through
+# SHOW_CREATE_TABLE) may report different values.
+#
+# For InnoDB tables, SHOW_CREATE_TABLE and the Create_options column reported by SHOW_TABLE_STATUS
+# show the actual ROW_FORMAT and KEY_BLOCK_SIZE attributes used by the table.
+#
+# In previous MySQL releases, the originally specified values for these attributes were reported.
+#
+# 13.1.20.2 FILES CREATED BY CREATE TABLE
+#
+# For an InnoDB table created in a file-per-table tablespace or general tablespace, table data
+# and associated indexes are stored in an ibd file in the database directory.
+#
+# When an InnoDB table is created in the system tablespace, table data and indexes are stored
+# in the ibdata* files that represent the system tablespace.
+#
+# The innodb_file_per_table option controls whether tables are created in file-per-table
+# tablespaces or the system tablespace, by default.
+#
+# The TABLESPACE option can be used to place a table in a file-per-table tablespace,
+# general tablespace, or the  system tablespace, regardless of the innodb_file_per_table
+# setting.
+#
+# For MyISAM tables, the storage engine creates data and index files.
+#
+# Thus, for each MyISAM table tbl_name, there are two disk files.
+#
+# FILE 			PURPOSE
+#
+# tbl_name.MYD Data file
+# tbl_name.MYI Index file
+#
+# Chapter 16, ALTERNATIVE STORAGE ENGINES describes what files each storage engine
+# creates to represent tables.
+#
+# If a table name contains special characters, the names for the table files 
+# contain encoded versions of those characters as described in SECTION 9.2.3, "MAPPING OF IDENTIFIERS TO FILE NAMES"
+#
+# 13.1.20.3 CREATE TEMPORARY TABLE SYNTAX
+#
+# You can use the TEMPORARY keyword when creating a table.
+#
+# A TEMPORARY table is visible only within the current session, and is dropped automatically when
+# the session is closed.
+#
+# THis means that two different sessions can use the same temporary table name without conflicting
+# with each other or with an existing non-TEMPORARY table of the same name.
+#
+# (The existing table is hidden until the temporary table is dropped)
+#
+# InnoDB does not support compressed temporary tables.
+#
+# When innodb_strict_mode is enabled (the default), CREATE_TEMPORARY_TABLE returns an error
+# if ROW_FORMAT=COMPRESSED or KEY_BLOCK_SIZE is specified.
+#
+# If innodb_strict_mode is disabled, warnings are issued and the temporary table is created
+# using a non-compressed row format.
+#
+# The innodb_file_per-table option does not affect the creation of InnoDB temporary tables.
+#
+# CREATE_TABLE causes an implicit commit, except when used with the TEMPORARY keyword.
+#
+# See SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT"
+#
+# TEMPORARY tables have a very loose relationship with databases (schemas)
+#
+# Dropping a database does not automatically drop any TEMPORARY tables created
+# within that database.
+#
+# ALso, you can create a TEMPORARY table in a nonexistent database if you qualify the
+# table name with the database name in the CREATE TABLE statement.
+#
+# In this case, all subsequent references to the table must be qualified with the database name.
+#
+# To create a temporary table, you must have the CREATE_TEMPORARY_TABLES privilege.
+#
+# After a session has created a temporary table, the server performs no further
+# privilege checks on the table.
+#
+# The creating session can perform any operation on the table, such as DROP_TABLE,
+# INSERT, UPDATE or SELECT.
+#
+# One implication of this behavior is that a session can manipulate its temporary table
+# even if the current user has no privilege to create them.
+#
+# Suppose that hte current user does not have the CREATE_TEMPORARY_TABLES privilege
+# but is able to execute a definer-context stored procedure that executes with the
+# privileges of a user who does have CREATE_TEMPORARY_TABLES and that creates a 
+# temporary table.
+#
+# While the procedure executes, the session uses the privileges of the defining user.
+#
+# After hte procedure returns, the effective privileges revert to those of the current
+# user, which can still see the temporary table and perform any operation on it.
+#
+# YOu cannot use CREATE TEMPORARY TABLE --- LIKE to create an empty table based on the
+# definition of a table that resides in teh mysql tablespace, InnoDB system tablespace
+# (innodb_system), or a general tablespace.
+#
+# The tablespace definition for such a table includes a TABLESPACE attribute that defines
+# the tablespace where the table resides, and the aformentioned tablespaces do not support
+# temporary tables.
+#
+# To create a temporary table based on the definition of such a table, use this syntax instead:
+#
+# 		CREATE TEMPORARY TABLE new_tbl SELECT * FROM orig_tbl LIMIT 0;
+#
+# NOTE:
+#
+# 		Support for TABLESPACE = innodb_file_per_table and TABLESPACE = innodb_temporary clauses
+# 		with CREATE_TEMPORARY_TABLE is deprecated as of MysQL 8.0.13.
+#
+# 13.1.20.4 CREATE TABLE --- LIKE SYNTAX
+#
+# Use CREATE TABLE --- LIKE to create an empty table based on the definition
+# of another table, including any column attributes and indexes defined in the
+# original table:
+#
+# 		CREATE TABLE new_tbl LIKE orig_tbl;
+#
+# The copy is created using the same version of the table storage format as the 
+# original table.
+#
+# The SELECT privilege is required on the original table
+#
+# LIKE works only for base tables, not for views.
+#
+# IMPORTANT:
+#
+# 		You cannot execute CREATE TABLE or CREATE TABLE --- LIKE while a LOCK_TABLES statement is in effect.
+#
+# 		CREATE_TABLE_---_LIKE makes the same checks as CREATE_TABLE
+#
+# 		This means that if the current SQL mode is different from the mode in effect when
+# 		the original table was created, the table definition might be considered invalid for
+# 		the new mode and the statement will fail.
+#
+# For CREATE TABLE --- LIKE, the destination table preserves generated column information
+# from the original table.
+#
+# For CREATE TABLE --- LIKE, the destination table expression default values from the original table
+#
+# CREATE TABLE --- LIKE does not preserve any DATA DIRECTORY or INDEX DIRECTORY table options
+# that were specified for the original table, or any foreign key defintiions.
+#
+# If hte original table is a TEMPORARY table, CREATE TABLE --- LIKE does not preserve TEMPORARY
+#
+# To create a TEMPORARY destination table, use CREATE TEMPORARY TABLE --- LIKE
+#
+# Tables created in the mysql tablespace, the InnoDB system tablespace (innodb_system),
+# or general tablespaces include a TABLESPACE attribute in the table definition, which
+# defines the tablespace where the table resides.
+#
+# Due to a temporary regression, CREATE TABLE --- LIKE preserves the TABLESPACE attribute
+# and creates the table in the defined tablespace regardless of the innodb_file_per_table
+# setting.
+#
+# To avoid the TABLESPACE attribute when creating an empty table based on the definition
+# of such a table, use this syntax instead:
+#
+# 		CREATE TABLE new_tbl SELECT * FROM orig_tbl LIMIT 0;
+#
+# 13.1.20.5 CREATE TABLE --- SELECT SYNTAX
+#
+# You can create one table from another by adding a SELECT statement at the end
+# of the CREATE_TABLE statement:
+#
+# 		CREATE TABLE new_tbl [AS] SELECT * FROM orig_tbl;
+#
+# MySQL creates new columns for all elements in the SELECT. For example:
+#
+# 		CREATE TABLE test (a INT NOT NULL AUTO_INCREMENT,
+# 					PRIMARY KEY (a), KEY(b))
+# 					ENGINE=MyISAM SELECT b,c FROM test2;
+#
+# This creates a MyISAM table with three columns, a,b and c.
+#
+# The ENGINE option is part of the CREATE_TABLE statement, and should
+# not be used following the SELECT; This would result in syntax error.
+#
+# THe same is true for other CREATE_TABLE options such as CHARSET.
+#
+# Notice that the columns from the SELECT statements are appended to the right
+# side of the table, not overlapped onto it.
+#
+# Take the following example:
+#
+# 		SELECT * FROM foo;
+# 		+----+
+# 		| n  |
+# 		+----+
+# 		| 1  |
+# 		+----+
+#
+# 		CREATE TABLE bar (m INT) SELECT n FROM foo;
+# 		Query OK, 1 row affected (0.02 sec)
+# 		Records: 1 Duplicates: 0 Warnings: 0
+#
+# 		SELECT * FROM bar;
+# 		+--------+-------+
+# 		| m 		| n 	  |
+# 		+--------+-------+
+# 		| NULL   | 1 	  |
+# 		+--------+-------+
+# 		1 row in set (0.00 sec)
+#
+# -> https://dev.mysql.com/doc/refman/8.0/en/create-table-select.html
+#
