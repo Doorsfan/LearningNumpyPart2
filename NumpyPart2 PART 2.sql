@@ -12265,4 +12265,2010 @@
 # The number of names in column_list must be the same as the number of columns
 # retrieved by the SELECT statement.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/create-view.html
+# A view can be created from many kinds of SELECT statements.
+#
+# It can refer to base tables or other views. It can use joins, UNION and subqueries.
+#
+# The SELECT need not even refer to any tables:
+#
+# 		CREATE VIEW v_today (today) AS SELECT CURRENT_DATE;
+#
+# The following example defines a view that selects two columns from another table as well
+# as an expression calculated from those columns:
+#
+# 		CREATE TABLE t (qty INT, price INT);
+# 		INSERT INTO t VALUES(3, 50);
+# 		CREATE VIEW v AS SELECT qty, price, qty*price AS value FROM t;
+# 		SELECT * FROM v;
+# 		+-------+----------+----------+
+# 		| qty   | price 	 | value 	|
+# 		+-------+----------+----------+
+# 		| 3 	  | 50 		 | 150 		|
+# 		+-------+----------+----------+
+#
+# A view definition is subject to the following restrictions:
+#
+# 		) The SELECT statement cannot refer to system variables or user-defined variables
+#
+# 		) Within a stored program, the SELECT statement cannot refer to program parameters
+# 			or local variables.
+#
+# 		) The SELECT statement cannot refer to prepared statemnt parameters.
+#
+# 		) Any table or view referred to in the definition must exist.
+#
+# 			If, after the view has been created, a table or view that the definition
+# 			refers to is dropped, use of the view results in an error.
+#
+# 			To check a view definition for problems of this kind, use the CHECK_TABLE statement.
+#
+# 		) The definition cannot refer to a TEMPORARY table, and you cannot create a TEMPORARY view.
+#
+# 		) You cannot associate a trigger with a view
+#
+# 		) Aliases for column names in the SELECT statement are checked against the maximum column
+# 			length of 64 characters (not the maximum alias length of 256 characters)
+#
+# ORDER BY is permitted in a view definition, but it is ignored if you select from a view using
+# a statement that has its own ORDER BY.
+#
+# For other options or clauses in the definition, they are added to the options or clauses
+# of the statement that references the view, but the effect is undefined.
+#
+# For example, if a view definition includes a LIMIT clause, and you select from the view
+# using a statement that has its own LIMIT clause, it is undefined which limit applies.
+#
+# This same principle applies to options such as ALL, DISTINCT, or SQL_SMALL_RESULT that follow
+# the SELECT keyword, and to clauses such as INTO, FOR UPDATE, FOR SHARE, LOCK IN SHARE MODE,
+# and PROCEDURE.
+#
+# The results obtained from a view may be affected if you change the query processing
+# environment by changing system variables:
+#
+# 		CREATE VIEW v (mycol) AS SELECT 'abc';
+# 		Query OK, 0 rows affected (0.01 sec)
+#
+# 		SET sql_mode = '';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		SELECT "mycol" FROM v;
+# 		+----------+
+# 		| mycol    |
+# 		+----------+
+# 		| mycol    |
+# 		+----------+
+# 		1 row in set (0.01 sec)
+#
+# 		SET sql_mode = 'ANSI_QUOTES';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		SELECT "mycol" FROM v;
+# 		+----------+
+# 		| mycol    |
+# 		+----------+
+# 		| abc 	  |
+# 		+----------+
+# 		1 row in set (0.00 sec)
+#
+# The DEFINER and SQL SECURITY clauses determine which MySQL account to use when
+# checking access privileges for the view when a statement is executed that 
+# references the view.
+#
+# The valid SQL SECURITY characteristic values are DEFINER (the default) and INVOKER.
+#
+# These indicate that the required privileges must be held by the user who defined
+# or invoked the view, respectively.
+#
+# If a user value is given for the DEFINER claus, it should be a MySQL account specified
+# as 'user_name'@'host_name', CURRENT_USER or CURRENT_USER() 
+#
+# The default DEFINER value is the user who executes the CREATE_VIEW statement.
+#
+# This is the same as specifying DEFINER = CURRENT_USER explicitly.
+#
+# If the DEFINER clause is present, these rules determine the valid DEFINER user values:
+#
+# 		) If you do not have the SET_USER_ID or SUPER privilege, the only valid user value is
+# 			your own account, either specified literally or by using CURRENT_USER
+#
+# 			You cannot set the definer to some other account
+#
+# 		) If you have the SET_USER_ID or SUPER privilege, you can specify any syntactically
+# 			valid account name.
+#
+# 			If the account does not exist, a warning is generated.
+#
+# 		) Although it is possible to create a view with a nonexistent DEFINER account,
+# 			an error occurs when the view is referenced if the SQL SECURITY value is
+# 			DEFINER but the definer account does not exist.
+#
+# For more information about view security, see SECTION 24.6, "ACCESS CONTROL FOR STORED PROGRAMS AND VIEWS"
+#
+# Within a view definition, CURRENT_USER returns the view's DEFINER value by default.
+#
+# For views defined with the SQL SECURITY INVOKER characteristic, CURRENT_USER returns
+# the account for the view's invoker.
+#
+# For information about user auditing within views, see SECTION 6.3.13, "SQL-BASED MYSQL
+# ACCOUNT ACTIVITY AUDITING"
+#
+# Within a stored routine that is defined with the SQL SECURITY DEFINER characteristic,
+# CURRENT_USER returns the routine's DEFINER value.
+#
+# THis also affects a view defined within such a routine, if hte view definition 
+# contains a DEFINER value of CURRENT_USER
+#
+# MySQL checks view privileges like this:
+#
+# 		) At view definition time, the view creator must have the privileges needed to use the
+# 			top-level objects accessed by the view.
+#
+# 			For example, if the view definitions refers to table columns, the creator must have
+# 			some privilege for each column in the select list of the definition, and the SELECT
+# 			privilege for each column used elsewhere in the definition.
+#
+# 			If the definition refers to a stored function, only the privileges needed to invoke
+# 			the function can be checked.
+#
+# 			The privileges required at function invocation time  can be checked only as it executes:
+#
+# 				For different invocations, different execution paths within the function might be taken.
+#
+# 		) The user who references a view must have appropriate privileges to access it (SELECT to select from it,
+# 			INSERT to insert into it and so forth.)
+#
+# 		) When a view has been referenced, privileges for objects acessed by the view are checked against the
+# 			privileges held by the view DEFINER account or invoker, depending on whether the SQL SECURITY
+# 			characteristic is DEFINER or INVOKER, respectively.
+#
+# 		) If reference to a view causes execution of a stored function, privilege checking for statements executed
+# 		within the function depend on whether the function SQL SECURITY characteristic is DEFINER or INVOKER.
+#
+# 		If the security characteristic is DEFINER, the function runs with the privileges of the DEFINER account.
+#
+# 		If the characteristic is INVOKER, the function runs with the privileges determined by the view's SQL SECURITY
+# 		characteristic.
+#
+# Example: A view might depend on a stored function, and that function might invoke other stored routines.
+#
+# For example, the following view invokes a stored function f():
+#
+# 		CREATE VIEW v AS SELECT * FROM t WHERE t.id = f(t.name);
+#
+# Suppose that f() contains a statement such as this:
+#
+# 		IF name IS NULL then
+# 			CALL p1();
+# 		ELSE
+# 			CALL p2();
+# 		END IF;
+#
+# The privileges required for executing statements within f() need to be checked when
+# f() executes.
+#
+# This might mean that privileges are needed for p1() or p2(), depending on the execution
+# path within f()
+#
+# Those privileges must be checked at runtime, and the user who must possess the privileges
+# is determined by the SQL SECURITY values of the view v and the function f()
+#
+# The DEFINER and SQL SECURITY clauses for views are extensions to standard SQL.
+#
+# In standard SQL, views are handled using the rules for SQL SECURITY DEFINER
+#
+# The standard says that the definer of the view, which is the same as the owner
+# of the view's schema, gets applicable privileges on the view (for example, SELECT)
+# and may grant them.
+#
+# MySQL has no concept of a schema "owner", so MySQL adds a clause to identify the definer.
+#
+# The DEFINER clause is an extension where the intent is to have what the standard
+# has; that is, a permanent record of who defined the view.
+#
+# This is why the default DEFINER value is the account of the view creator.
+#
+# The optional ALGORITHM clause is a MySQL extension to standard SQL.
+#
+# It affects how MySQL processes the view. ALGORITHM takes three values:
+#
+# 		MERGE
+#
+# 		TEMPTABLE
+#
+# 		UNDEFINED
+#
+# For more information, see SECTION 24.5.2, "VIEW PROCESSING ALGORITHMS", as well as
+# SECTION 8.2.2.4, "OPTIMIZING DERIVED TABLES, VIEW REFERENCES, AND COMMON TABLE EXPRESSIONS
+# WITH MERGING OR MATERIALIZATION"
+#
+# Some views are updatable.
+#
+# That is, you can use them in statements such as UPDATE, DELETE or INSERT to update
+# the contents of the underlying table.
+#
+# For a view to be updatable, there must be a one-to-one relationship between the rows
+# in the view and the rows in the underlying table.
+#
+# There are also certain other constructs that make a view nonupdatable.
+#
+# A generated column in a view is considered updatable because it is possible to assign to it.
+#
+# However, if such a column is updated explicitly, the only permitted value is
+# DEFAULT.
+#
+# For information about generated columns, see SECTION 13.1.20.8, "CREATE TABLE AND GENERATED COLUMNS"
+#
+# The WITH CHECK OPTION clause can be given for an updatable view to prevent inserts or updates
+# to rows except those for which the WHERE clause in the select_statement is true.
+#
+# In a WITH CHECK OPTION clause for an updatable view, the LOCAL and CASCADED keywords determine
+# the scope of check testing when the view is defined in terms of another view.
+#
+# The LOCAL keyword restricts the CHECK OPTION only to the view being defined.
+#
+# CASCADED causes the checks for underlying views to be evaluated as well.
+#
+# When neither keyword is given, the default is CASCADED.
+#
+# For more information about updatable views and the WITH CHECK OPTION clause, see
+# SECTION 24.5.3, "UPDATABLE AND INSERTABLE VIEWS", and SECTION 24.5.4, "THE VIEW WITH CHECK OPTION CLAUSE"
+#
+# 13.1.24 DROP DATABASE SYNTAX
+#
+# 		DROP {DATABASE | SCHEMA} [IF EXISTS] db_name
+#
+# DROP_DATABASE drops all tables in the database and deletes teh database.
+#
+# Be very careful with this statement. To use DROP_DATABASE, you need the DROP privilege
+# on the database.
+#
+# DROP_SCHEMA is a synonym for DROP_DATABASE
+#
+# IMPORTANT:
+#
+# 		When a database is dropped, privileges granted specifically for the database are not automatically dropped.
+#
+# 		They must be dropped manually. See SECTION 13.7.1.6, "GRANT SYNTAX"
+#
+# IF EXISTS is used to prevent an error from occurring if the database does not exist.
+#
+# If the default database is dropped, the default database is unset (the DATABASE() function returns NULL)
+#
+# If you use DROP_DATABASE on a symbolically linked database, both the link and the original database are deleted.
+#
+# DROP_DATABASE returns the number of tables that were removed.
+#
+# The DROP_DATABASE statement removes from the given database directory those files and directories
+# that MySQL itself may create during normal operation.
+#
+# This includes all files with the extensions shown in the following list:
+#
+# 		) .BAK
+#
+# 		) .DAT
+#
+# 		) .HSH
+#
+# 		) .MRG
+#
+# 		) .MYD
+#
+# 		) .MYI
+#
+# 		) .cfg
+#
+# 		) .db
+#
+# 		) .ibd
+#
+# 		) .ndb
+#
+# If other files or directories remain in the database directory after MySQL removes those just listed,
+# the database directory cannot be removed.
+#
+# In this case, you must remove any remaining files or directories manually and issue the
+# DROP_DATABASE statement again.
+#
+# Dropping a database does not remove any TEMPORARY tables that were created in that database.
+#
+# TEMPORARY tables are automatically removed when the session that created them ends.
+# See SECTION 13.1.20.3, "CREATE TEMPORARY TABLE SYNTAX"
+#
+# You can also drop databases with mysqladmin.
+#
+# See SECTION 4.5.2, "MYSQLADMIN - CLIENT FOR ADMINSTERING A MYSQL SERVER"
+#
+# 13.1.25 DROP EVENT SYNTAX
+#
+# DROP EVENT [IF EXISTS] event_name
+#
+# This statement drops the event named event_name.
+#
+# The event immediately ceases being active, and is deleted completely from the server
+#
+# If the event does not exist, the error ERROR 1517 (HY000): Unknown event 'event_name' results.
+#
+# You can override this and cause the statement to generate a warning for nonexistent
+# events instead using IF EXISTS
+#
+# This statement requires the EVENT privilege for the schema to which the event
+# to be dropped belongs.
+#
+# 13.1.26 DROP FUNCTION SYNTAX
+#
+# The DROP_FUNCTION statement is used to drop stored functions and user-defined functions
+# (UDFs):
+#
+# 		) For information about dropping stored functions, see SECTION 13.1.29, "DROP PROCEDURE AND DROP FUNCTION SYNTAX"
+#
+# 		) For information about dropping user-defined functions, see SECTION 13.7.4.2, "DROP FUNCTION SYNTAX"
+#
+# 13.1.27 DROP INDEX SYNTAX
+#
+# DROP INDEX index_name ON tbl_name
+# 		[algorithm_option | lock_option] ---
+#
+# algorithm_option:
+# 		ALGORITHM [=] {DEFAULT|INPLACE|COPY}
+#
+# lock_option:
+# 		LOCK [=] {DEFAULT|NONE|SHARED|EXCLUSIVE}
+#
+# DROP_INDEX drops the index named index_name from the table tbl_name
+#
+# This statement is mapped to an ALTER_TABLE statement to drop the index.
+#
+# See SECTION 13.1.9, "ALTER TABLE SYNTAX"
+#
+# To drop a primary key, the index name is always PRIMARY, which must be specified
+# as a quoted identifier because PRIMARY is a reserved word:
+#
+# 		DROP INDEX `PRIMARY` ON t;
+#
+# Indexes on variable-width columns of NDB tables are dropped online; that is, without
+# any table copying.
+#
+# The table is not locked against access from other NDB Cluster API nodes, although
+# it is locked against other operations on the same API node for the duration of the
+# operation.
+#
+# This is done automatically by the server whenever it determines that it is possible
+# to do so;
+#
+# you do not have to use any special SQL syntax or server options to cause it to happen.
+#
+# ALGORITHM and LOCK clauses may be given to influence the table copying method and level
+# of concurrency for reading and writing the table while its indexes are being
+# modified.
+#
+# They have the same meaning as for the ALTER_TABLE statement.
+#
+# For more information, see SECTION 13.1.9, "ALTER TABLE SYNTAX"
+#
+# MySQL NDB Cluster supports online operations using the same ALGORITHM=INPLACE
+# syntax supported in the standard MySQL server.
+#
+# See SECTION 22.5.14, "ONLINE OPERATIONS WITH ALTER TABLE IN NDB CLUSTER", for more information.
+#
+# 13.1.28 DROP LOGFILE GROUP SYNTAX
+#
+# DROP LOGFILE GROUP logfile_group
+# 		ENGINE [=] engine_name
+#
+# This statement drops the log file group named logfile_group.
+#
+# The log file group must already exist or an error results.
+#
+# (For information on creating log file groups, see SECTION 13.1.16, "CREATE LOGFILE GROUP SYNTAX")
+#
+# IMPORTANT:
+#
+# 		Before dropping a log file group, you must drop all tablespaces that use that log file
+# 		group for UNDO logging.
+#
+# The required ENGINE clauses provides the name of the storage engine used by the log file group
+# to be dropped.
+#
+# Currently, the only permitted values for engine_name are NDB and NDBCLUSTER
+#
+# DROP_LOGFILE_GROUP is useful only with Disk Data storage for NDB Cluster.
+#
+# See SECTION 22.5.13, "NDB CLUSTER DISK DATA TABLES"
+#
+# 13.1.29 DROP PROCEDURE AND DROP FUNCTION SYNTAX
+#
+# 	DROP {PROCEDURE | FUNCTION} [IF EXISTS] sp_name
+#
+# This statement is used to drop a stored procedure or function.
+#
+# That is, the specified routine is removed from the server. You must have the ALTER_ROUTINE
+# privilege for the routine.
+#
+# (If the automatic_sp_privileges system variable is enabled, that privilege and EXECUTE are granted
+# automatically to the routine creator when the routine is created and dropped from the creator
+# when the routine is dropped.
+#
+# See SECTION 24.2.2, "STORED ROUTINES AND MYSQL PRIVILEGES")
+#
+# The IF EXISTS clause is a MySQL extension.
+#
+# It prevents an error from occurring if the procedure or function does not exist.
+#
+# A warning is produced that can be viewed with SHOW_WARNINGS.
+#
+# DROP_FUNCTION is also used to drop user-defined functions (see SECTION 13.7.4.2, "DROP FUNCTION SYNTAX")
+#
+# 13.1.30 DROP SERVER SYNTAX
+#
+# DROP SERVER [ IF EXISTS ] server_name
+#
+# Drops the server definition for the server named server_name.
+#
+# The corresponding row in the mysql.servers table is deleted.
+#
+# This statement requires the SUPER privilege.
+#
+# Dropping a server for table does not affect any FEDERATED tables that used
+# this connection information when they were created.
+#
+# See SECTION 13.1.18, "CREATE SERVER SYNTAX"
+#
+# DROP SERVER causes an implicit commit. See SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT"
+#
+# DROP SERVER is not written to the binary log, regardless of the logging format that is in use.
+#
+# 13.1.31 DROP SPATIAL REFERENCE SYSTEM SYNTAX
+#
+# 		DROP SPATIAL REFERENCE SYSTEM
+# 			[IF EXISTS]
+# 			srid
+#
+# 		srid: 32-bit unsigned integer
+#
+# This statement removes a spatial reference system (SRS) definition from the data
+# dictionary.
+#
+# It requires the SUPER privilege.
+#
+# Example:
+#
+# 		DROP SPATIAL REFERENCE SYSTEM 4120;
+#
+# If no SRS definition with the SRID value exists, an error occurs unless IF EXISTS
+# is specified.
+#
+# In that case, a warning occurs rather than an error.
+#
+# If the SRID value is used by some column in an existing table, an error occurs.
+# For example:
+#
+# 		DROP SPATIAL REFERENCE SYSTEM 4326;
+# 		ERROR 3716 (SR005): Can't modify SRID 4326. There is at
+# 		least one column depending on it.
+#
+# To identify which column or columns use the SRID, use this query:
+#
+# 		SELECT * FROM INFORMATION_SCHEMA.ST_GEOMETRY_COLUMNS WHERE SRS_ID=4326;
+#
+# SRID values must be in the range of 32-bit unsigned integers, with these restrictions:
+#
+# 		) SRID 0 is a valid SRID but cannot be used with DROP_SPATIAL_REFERENCE_SYSTEM
+#
+# 		) If the value is in a reserved SRID range, a warning occurs.
+#
+# 			Reserved ranges are [0, 32767] (reserved by EPSG), [60,000,000,000,69,999,999] (reserved by EPSG),
+# 			and [2,000,000,000,2,147,483,647] (reserved by MySQL)
+#
+# 			EPSG stands for the European Petroleum Survey Group
+#
+# 		) Users should not drop SRSs with SRIDs in the reserved ranges.
+#
+# 			If system-installed SRSs are dropped, the SRS definitions may be recreated
+# 			for MySQL upgrades.
+#
+# 13.1.32 DROP TABLE SYNTAX
+#
+# 		DROP [TEMPORARY] TABLE [IF EXISTS]
+# 			tbl_name [, tbl_name] ---
+# 			[RESTRICT | CASCADE]
+#
+# DROP_TABLE removes one or more tables. You must have the DROP privilege
+# for each table.
+#
+# Be careful with this statement.
+#
+# It removes the table definition and all table data.
+#
+# For a partitioned table, it permanently removes the table definition,
+# all its partitions and all data stored in those partitions.
+#
+# It also removes partition definitions associated with the dropped table.
+#
+# DROP_TABLE causes an implicit commit, except when used with the TEMPORARY
+# keyword.
+#
+# See SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT"
+#
+# IMPORTANT:
+#
+# 		When a table is dropped, privileges granted specifically for the table are NOT
+# 		automatically dropped.
+#
+# 		They must be dropped manually.
+#
+# 		See SECTION 13.7.1.6, "GRANT SYNTAX"
+#
+# If any tables named in the argument list do not exist, the statement fails with an
+# error indicating by name which nonexisting tables it was unable to drop, and no
+# changes are made.
+#
+# Use IF EXISTS to prevent an error from occurring for tables that do not exist.
+#
+# Instead of an error, a NOTE is generated for each nonexistent table; these notes
+# can be displayed with SHOW_WARNINGS. See SECTION 13.7.6.40, "SHOW WARNINGS SYNTAX"
+#
+# IF EXISTS can also be useful for dropping tables in unusual circumstances under which
+# there is an entry in the data dictionary but no table managed by the storage engine.
+#
+# (For example, if an abnormal server exit occurs after removal of the table from the
+# storage engine but before removal of the data dictionary entry)
+#
+# The TEMPORARY keyword has the following effects:
+#
+# 		) The statement drops only TEMPORARY tables
+#
+# 		) The statement does not cause an implicit commit
+#
+# 		) No access rights are checked. A TEMPORARY table is visible only with the session
+# 			that created it, so no check is necessary.
+#
+# Using TEMPORARY is a good way to ensure that you do not accidentally drop a 
+# non-TEMPORARY table
+#
+# The RESTRICT and CASCADE keywords do nothing. They are permitted to make porting easier
+# from other database systems.
+#
+# DROP_TABLE is not supported with all innodb_force_recovery settings.
+#
+# See SECTION 15.20.2, "FORCING INNODB RECOVERY"
+#
+# 13.1.33 DROP TABLESPACE SYNTAX
+#
+# 		DROP [UNDO] TABLESPACE tablespace_name
+# 			[ENGINE [=] engine_name]
+#
+# This statement drops a tablespace that was previously created using CREATE_TABLESPACE.
+#
+# It is supported by the NDB and InnoDB storage engines.
+#
+# The UNDO keyword, introduced in MySQL 8.0.14, must be specified to drop an undo tablespace.
+#
+# Only undo tablespaces created using CREATE_UNDO_TABLESPACE syntax can be dropped.
+#
+# An undo tablespace must be in an empty state before it can be dropped.
+# For more information, see SECTION 15.6.3.4, "UNDO TABLESPACES"
+#
+# ENGINE sets the storage engine that uses the tablespace, where engine_name is the name
+# of the storage engine.
+#
+# Currently, the values InnoDB and NDB are supported.
+#
+# If not set, the value of default_storage_engine is used
+#
+# If it is not the same as the storage engine used to create the tablespace,
+# the DROP TABLESPACE statement fails.
+#
+# tablespace_name is a case-sensitive identifier in MySQL.
+#
+# For an InnoDB general tablespace, all tables must be dropped from the tablespace
+# prior to a DROP TABLESPACE operation.
+#
+# If the tablespace is not empty, DROP TABLESPACE returns an error.
+#
+# An NDB tablespace to be dropped must not contain any data files; in other words,
+# before you can drop an NDB tablespace, you must first drop each of its data
+# files using ALTER_TABLESPACE_---_DROP_DATAFILE
+#
+# NOTES
+#
+# 		) A general InnoDB tablespace is not deleted automatically when the last table in the
+# 			tablespace is dropped.
+#
+# 			The tablespace must be dropped explicitly using DROP TABLESPACE tablespace_name
+#
+# 		) A DROP_DATABASE operation can drop tables that belong to a general tablespace but it cannot
+# 			drop the tablespace, even if the operation drops all tables that belong to the tablespace.
+#
+# 			The tablespace must be dropped explicitly using DROP TABLESPACE tablespace_name
+#
+# 		) Similar to the system tablespace, truncating or dropping tables stored in a general tablespace
+# 			creates free space internally in the general tablespace .ibd data file which can only
+# 			be used for new InnoDB data.
+#
+# 			Space is not released back to the operating system as it is for file-per-table tablespaces
+#
+# InnoDB EXAMPLES
+#
+# This example demonstrates how to drop an InnoDB general tablespace.
+#
+# The general tablespace ts1 is created with a single table. 
+# Before dropping the tablespace, the table must be dropped.
+#
+# 		CREATE TABLESPACE `ts1` ADD DATAFILE 'ts1.ibd' Engine=InnoDB;
+#
+# 		CREATE TABLE t1 (c1 INT PRIMARY KEY) TABLESPACE ts10 Engine=InnoDB;
+#
+# 		DROP TABLE t1;
+#
+# 		DROP TABLESPACE ts1;
+#
+# This example demonstrates dropping an undo tablespace.
+#
+# An undo tablespace must be in an empty state before it can be dropped.
+#
+# For more information, see SECTION 15.6.3.4, "UNDO TABLESPACES"
+#
+# 		DROP UNDO TABLESPACE undo_003;
+#
+# NDB EXAMPLE
+#
+# This example shows how to drop an NDB tablespace myts having a data file named mydata-1.dat
+# after first creating the tablespace, and assumes the existence of a log file group named
+# mylg (see SECTION 13.1.16, "CREATE LOGFILE GROUP SYNTAX")
+#
+# 		CREATE TABLESPACE myts
+# 			ADD DATAFILE 'mydata-1.dat'
+# 			USE LOGFILE GROUP mylg
+# 			ENGINE=NDB;
+#
+# You must remove all data files from the tablespace using ALTER_TABLESPACE, as shown here
+# , before it can be dropped:
+#
+# 		ALTER TABLESPACE 
+# 			DROP DATAFILE 'mydata-1.dat'
+# 			ENGINE=NDB;
+#
+# 		DROP TABLESPACE myts;
+#
+# 13.1.34 DROP TRIGGER SYNTAX
+#
+# 		DROP TRIGGER [IF EXISTS] [schema_name.]trigger_name
+#
+# This statement drops a trigger. The schema (database) name is optional.
+#
+# If the schema is omitted, the trigger is dropped from the default schema.
+#
+# DROP_TRIGGER requires the TRIGGER privilege for the table associated with the trigger.
+#
+# Use IF EXISTS to prevent an error from occurring for a trigger that does not exist.
+#
+# A NOTE is generated for a nonexistent trigger when using IF EXISTS.
+#
+# See SECTION 13.7.6.40, "SHOW WARNINGS SYNTAX"
+#
+# Triggers for a table are also dropped if you drop the table.
+#
+# 13.1.35 DROP VIEW SYNTAX
+#
+# 		DROP VIEW [IF EXISTS]
+# 			view_name [, view_name] ---
+# 			[RESTRICT | CASCADE]
+#
+# DROP_VIEW removes one or more views.
+#
+# You must have the  DROP privilege for each view.
+#
+# If any views named in the argument list do not exist, the statement fails
+# with an error indicating by name which nonexisting views it was unable to
+# drop, and no changes are made.
+#
+# 		NOTE:
+#
+# 			In MySQL 5.7 and earlier, DROP_VIEW returns an error if any views named in the argument
+# 			list do not exist, but also drops all views in the list that do exist.
+#
+# 			Due to the change in behavior in MySQL 8.0, a partially completed DROP_VIEW operaiton
+# 			on a MySQL 5.7 master fails when replicated on a MySQL 8.0 slave
+#
+# 			To avoid this failure scenario, use IF EXISTS syntax in DROP_VIEW statements to prevent
+# 			an error from occurring for views that do not exist.
+#
+# 			For more information, see SECTION 13.1.1, "ATOMIC DATA DEFINITION STATEMENT SUPPORT"
+#
+# The IF EXISTS clause prevents an error from occurring for views taht do not exist.
+#
+# When this clause is given, a NOTE is generated for each nonexistent view.
+#
+# See SECTION 13.7.6.40, "SHOW WARNINGS SYNTAX"
+#
+# RESTRICT and CASCADE, if given, are parsed and ignored.
+#
+# 13.1.36 RENAME TABLE SYNTAX
+#
+# RENAME TABLE
+# 		tbl_name TO new_tbl_name
+# 		[, tbl_name2 TO new_tbl_name2] ---
+#
+# RENAME_TABLE renames one or more tables. You must have ALTER and DROP privileges
+# for the original table, and CREATE and INSERT privileges for the new table.
+#
+# For example, to rename a table named old_table to new_table, use this statement:
+#
+# 		RENAME TABLE old_table TO new_table;
+#
+# That statement is equivalent to the following ALTER_TABLE statement:
+#
+# 		ALTER TABLE old_table RENAME new_table;
+#
+# RENAME TABLE, unlike ALTER_TABLE, can rename multiple tables within a single statement:
+#
+# 		RENAME TABLE old_table1 TO new_table1,
+# 						 old_table2 TO new_table2,
+# 						 old_table3 TO new_table3;
+#
+# Renaming operations are performed left to right.
+#
+# Thus, to swap two table names, do this (assuming that a table with the intermediary
+# name tmp_table does not already exist):
+#
+# 		RENAME TABLE old_table TO tmp_table,
+# 						 new_table TO old_table,
+# 						 tmp_table TO new_table;
+#
+# Metadata locks on tables are acquired in name order, which in some cases can make a difference
+# in operation outcome when multiple transactions execute concurrently.
+#
+# See SECTION 8.11.4, "METADATA LOCKING"
+#
+# As of MySQL 8.0.13, you can rename tables locked with a LOCK_TABLES statement, provided
+# that they are locked with a WRITE lock or are the product of renaming WRITE-locked
+# tables from earlier steps in a multiple-table rename operation.
+#
+# For example, this is permitted:
+#
+# 		LOCK TABLE old_table1 WRITE;
+# 		RENAME TABLE old_table1 TO new_table1,
+# 						 new_table1 TO new_table2;
+#
+# This is not permitted:
+#
+# 		LOCK TABLE old_table1 READ;
+# 		RENAME TABLE old_table1 TO new_table1,
+# 						 new_table1 TO new_table2;
+#
+# Prior to MySQL 8.0.13, to execute RENAME TABLE, there must be no tables locked with LOCK TABLES.
+#
+# With the transaction table locking conditions satisfied, the rename operation is done atomically;
+# no other session can access any of the tables while the rename is in progress.
+#
+# If any error occurs during a RENAME TABLE, the statement fails and no changes are made.
+#
+# You can use RENAME TABLE to move a table from one database to another:
+#
+# 		RENAME TABLE current_db.tbl_name TO other_db.tbl_name;
+#
+# Using this method to move all tables from one database to a different one in effect
+# renames the database (an operation for which MySQL has no single statement), except
+# that the original database continue to exist, albeit with no tables.
+#
+# Like RENAME TABLE, ALTER TABLE --- RENAME can also be used to move a table to a different
+# database.
+#
+# Regardless of the statement used, if the rename operation would move the table to a database
+# located on a different file system, the success of the outcome is platform specific and
+# depends on the underlying OS calls used to move table files.
+#
+# If a table has triggers, attempts to rename the table into a different database fail with a
+# Trigger in wrong schema (ER_TRG_IN_WRONG_SCHEMA) error
+#
+# To rename TEMPORARY tables, RENAME TABLE does not work.
+#
+# Use ALTER_TABLE instead.
+#
+# RENAME TABLE works for views, except that views cannot be renamed into a different database.
+#
+# Any privileges granted specifically for a renamed table or view are not migrated to the new name.
+#
+# They must be changed manually.
+#
+# RENAME TABLE changes interally generated foreign key constraint names and user-defined foreign
+# key constraint names that contain the string "tbl_name_ibfk_" to reflect the new table name.
+#
+# InnoDB interprets foreign key constraint names that contain the string "tbl_name_ibfk_"
+# as internally generated names.
+#
+# Foreign key constraint names that point to the renamed table are automatically updated unless
+# there is a conflict, in which case the statement fails with an error.
+#
+# A conflict occurs if the renamed constraint name already exists.
+#
+# In such cases, you must drop and re-create the foreign keys for them to function properly.
+#
+# 13.1.37 TRUNCATE TABLE SYNTAX
+#
+# TRUNCATE [TABLE] tbl_name
+#
+# TRUNCATE_TABLE empties a table completely. It requires the DROP privilege.
+#
+# Logically, TRUNCATE_TABLE is similar to DELETE statement that deletes all rows,
+# or a sequence of DROP_TABLE and CREATE_TABLE statements.
+#
+# To achieve a high performance, TRUNCATE_TABLE bypasses the DML method of deleting data.
+#
+# Thus, it does not cause ON DELETE triggers to fire, it cannot be performed for 
+# InnoDB tables with parent-child foreign key relationships, and it cannot be rolled
+# back like a DML operation.
+#
+# However, TRUNCATE TABLE operations on tables that use an atomic DDL-supported storage
+# engine are either fully committed or rolled back if the server halts during their operation.
+#
+# For more information, see SECTION 13.1.1, "ATOMIC DATA DEFINITION STATEMENT SUPPORT"
+#
+# Although TRUNCATE_TABLE is similar to DELETE, it is classified as a DDL statement rather than
+# a DML statement.
+#
+# It differs from DELETE in the following ways:
+#
+# 		) Truncate operations drop and re-create the table, which is much faster than deleting rows
+# 			one by one, particularly for large tables.
+#
+# 		) Truncate operations cause an implicit commit, and so cannot be rolled back.
+#
+# 			See SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT"
+#
+# 		) Truncation operations cannot be performed if the session holds an active table lock
+#
+# 		) TRUNCATE_TABLE fails for an InnoDB table or NDB table if there are any FOREIGN KEY constraints
+# 			from other tables that reference the table.
+#
+# 			Foreign key constraints between columns of the same table are permitted.
+#
+# 		) Truncation operations do not return a meaningful value for the number of deleted rows.
+#
+# 			The usual result is "0 rows affected", which should be interpreted as "no information"
+#
+# 		) As long as the table definition is valid, the table can be re-created as an empty table with TRUNCATE_TABLE,
+# 			even if the data or index files have become corrupted.
+#
+# 		) Any AUTO_INCREMENT value is reset to its start value. This is true even for MyISAM and InnoDB, which normally
+# 			do not reuse sequence values.
+#
+# 		) When used with partitioned tables, TRUNCATE_TABLE preserves the partitioning; that is, the data and index
+# 			files are dropped and re-created, while the partition definitions are unaffected.
+#
+# 		) The TRUNCATE_TABLE statement does not invoke ON DELETE triggers
+#
+# 		) Truncating a corrupted InnoDB table is supported.
+#
+# TRUNCATE_TABLE for a table closes all handlers for the table that were opened with HANDLER_OPEN
+#
+# TRUNCATE_TABLE is treated for purposes of binary logging and replication as DROP_TABLE followed by CREATE_TABLE -
+# that is, as DDL rather than DML.
+#
+# This is due to the fact that, when using InnoDB and other transactional storage engines where the transaction
+# isolation level does not permit statement-based logging (READ COMMITTED or READ UNCOMMITTED), the statement
+# was not logged and replicated when using STATEMENT or MIXED logging mode.
+#
+# (Bug #36763)
+#
+# However, it is still applied on replication slaves using InnoDB in the manner described previously.
+#
+# In MySQL 5.7 and earlier, on a system with a large buffer pool and innodb_adaptive_hash_index
+# enabled, a TRUNCATE TABLE operation could cause a temporary drop in system performance due to
+# an LRU scan that occurred when removing the table's adaptive hash index entries (Bug #68184)
+#
+# The remapping of TRUNCATE_TABLE to DROP_TABLE and CREATE_TABLE in MySQL 8.0 avoids the problematic
+# LRU scan.
+#
+# TRUNCATE_TABLE can be used with Performance Schema summary tables, but the effect is to reset the
+# summary columns to 0 or NULL, not to remove rows.
+#
+# See SECTION 26.12.16, "PERFORMANCE SCHEMA SUMMARY TABLES"
+#
+# 13.2 DATA MANIPULATION STATEMENTS
+#
+# 13.2.1 CALL SYNTAX
+# 13.2.2 DELETE SYNTAX
+# 13.2.3 DO SYNTAX
+#
+# 13.2.4 HANDLER SYNTAX
+# 13.2.5 IMPORT TABLE SYNTAX
+# 13.2.6 INSERT SYNTAX
+#
+# 13.2.7 LOAD DATA INFILE SYNTAX
+# 13.2.8 LOAD XML SYNTAX
+# 13.2.9 REPLACE SYNTAX
+# 
+# 13.2.10 SELECT SYNTAX
+# 13.2.11 SUBQUERY SYNTAX
+# 13.2.12 UPDATE SYNTAX
+#
+# 13.2.13 WITH SYNTAX (COMMON TABLE EXPRESSIONS)
+#
+# 13.2.1 CALL SYNTAX
+#
+# CALL sp_name([parameter[,---]])
+# CALL sp_name[()]
+#
+# The CALL statement invokes a stored procedure that was defined previously with CREATE_PROCEDURE
+#
+# Stored procedures that take no arguments can be invoked without parentheses.
+#
+# That is, CALL p() and CALL p are equivalent.
+#
+# CALL can pass back values to its caller using parameters that are declared as OUT or
+# INOUT parameters.
+#
+# When the procedure returns, a client program can also obtain the number of rows
+# affected for the final statement executed within the routine:
+#
+# 		At the SQL level, call the ROW_COUNT() function
+#
+# 		From the C API, call the mysqL_affected_rows() function
+#
+# For information about the effect of unhandled conditions on procedure parameters,
+# see SECTION 13.6.7.8, "CONDITION HANDLING AND OUT OR INOUT PARAMETERS"
+#
+# To get back a value from a procedure using an OUT or INOUT parameter, pass the parameter
+# by means of a user variable, and then check the value of the variable after the
+# procedure returns.
+#
+# (If you are calling the procedure from within another stored procedure or function,
+# you can also pass a routine parameter or local routine variable as an IN or INOUT parameter)
+#
+# For an INOUT parameter, initialize its value before passing it to the procedure.
+#
+# The following procedure has an OUT parameter that the procedure sets to
+# the current server version, and an INOUT value that the procedure increments by one
+# from its current value:
+#
+# 		CREATE PROCEDURE p (OUT ver_param VARCHAR(25), INOUT incr_param INT)
+# 		BEGIN
+# 			# Set value of OUT parameter
+# 			SELECT VERSION() INTO ver_param;
+# 			# Increment value of INOUT parameter
+# 			SET incr_param = incr_param + 1;
+# 		END;
+#
+# Before calling the procedure, initialize the variable to be passed as the INOUT parameter.
+#
+# After calling the procedure, the values of the two variables will have been set or modified:
+#
+# 		SET @increment = 10;
+# 		CALL p(@version, @increment);
+# 		SELECT @version, @increment;
+# 		+-----------------------------+-------------+
+# 		| @version 							| @increment  |
+# 		+-----------------------------+-------------+
+# 		| 8.0.3-rc-debug-log 			| 11 			  |
+# 		+-----------------------------+-------------+
+#
+# IN prepared CALL statements used with PREPARE and EXECUTE, placeholders
+# can be used for IN parameters, OUT, and INOUT parameters.
+#
+# These types of parameters can be used as follows:
+#
+# 		SET @increment = 10;
+# 		PREPARE s FROM 'CALL p(?, ?)';
+# 		EXECUTE s USING @version, @increment;
+# 		SELECT @version, @increment;
+# 		+----------------------+---------------+
+# 		| @version 				  | @increment 	|
+# 		+----------------------+---------------+
+# 		| 8.0.3-rc-debug-log   | 11 			   |
+# 		+----------------------+---------------+
+#
+# To write C programs that use the CALL SQL statements to execute stored procedures
+# that produce result sets, the CLIENT_MULTI_RESULTS flag must be enabled.
+#
+# THis is because each CALL returns a result to indicate the call status, in addition
+# to any result sets that might be returned by statements executed within the procedure.
+#
+# CLIENT_MULTI_RESULTS must also be enabled if CALL is used to execute any stored procedure
+# that contains prepared statements.
+#
+# It cannot be determined when such a procedure is loaded whether those statements will produce
+# result sets, so it is necessary to assume that they will.
+#
+# CLIENT_MULTI_RESULTS can be enabled when you call mysql_real_connect(), either explicitly
+# by passing the CLIENT_MULTI_RESULTS flag itself, or implicitly by passing CLIENT_MULTI_STATEMENTS
+# (which also enables CLIENT_MULTI_RESULTS) 
+#
+# CLIENT_MULTI_RESULTS is enabled by default
+#
+# To process the result of a CALL statement executed using mysql_query() or mysql_real_query(),
+# use a loop that calls mysql_next_result() to determine whether there are more results.
+#
+# For an example, see SECTION 28.7.19, "C API MULTIPLE STATEMENT EXECUTION SUPPORT"
+#
+# C programs can use hte prepared-statement interface to execute CALL statements and access
+# OUT and INOUT parameters.
+#
+# This is done by processing the result of a CALL statement using a loop that calls
+# mysql_stmt_next_result() to determine whether there are more results.
+#
+# For an example, see SECTION 28.7.21, "C API PREPARED CALL STATEMENT SUPPORT"
+#
+# Languages that provide a MySQL interface can use prepared CALL statements to directly
+# retrieve OUT and INOUT procedure statements.
+#
+# Metadata changes to objects referred to by stored programs are detected and cause 
+# automatic reparsing of the affected statements when the program is next executed.
+#
+# For more information, see SECTION 8.10.3, "CACHING OF PREPARED STATEMENTS AND STORED PROGRAMS"
+#
+# 13.2.2 DELETE SYNTAX
+#
+# DELETE is a DML statement that removes rows from a table
+#
+# A DELETE statement can start with a WITH clause to define common table expressions accessible
+# within the DELETE.
+#
+# See SECTION 13.2.13, "WITH SYNTAX (COMMON TABLE EXPRESSIONS)"
+#
+# SINGLE-TABLE SYNTAX
+#
+# 		DELETE [LOW_PRIORITY] [QUICK] [IGNORE] FROM tbl_name
+# 			[PARTITION (partition_name [, partition_name] ---)]
+# 			[WHERE where_condition]
+# 			[ORDER BY ---]
+# 			[LIMIT row_count]
+#
+# The DELETE statement deletes rows from tbl_name and returns the number of deleted rows.
+#
+# To check the number of deleted rows, call the ROW_COUNT() function described in
+# SECTION 12.15, "INFORMATION FUNCTIONS"
+#
+# MAIN CLAUSES
+#
+# The conditions in the optional WHERE clause identify which rows to delete.
+#
+# With no WHERE clause, all rows are deleted.
+#
+# where_condition is an expression that evaluates to true for each row to be deleted.
+# It is specified as described in SECTION 13.2.10, "SELECT SYNTAX"
+#
+# If the ORDER BY clause is specified, the rows are deleted in the order that is specified.
+#
+# The LIMIT clause places a limit on the number of rows that can be deleted.
+#
+# These clauses apply to single-table deletes, but not multi-table deletes
+#
+# MULTIPLE-TABLE SYNTAX
+#
+# 		DELETE [LOW_PRIORITY] [QUICK] [IGNORE]
+# 			tbl_name[.*] [, tbl_name[.*]] ---
+# 			FROM table_references
+# 			[WHERE where_condition]
+#
+# 		DELETE [LOW_PRIORITY] [QUICK] [IGNORE]
+# 			FROM tbl_name[.*] [, tbl_name[.*]] ---
+# 			USING table_references
+# 			[WHERE where_condition]
+#
+# PRIVILEGES
+#
+# You need the DELETE privilege on a table to delete rows from it.
+#
+# You need only the SELECT privilege for any columns that are only read,
+# such as those named in the WHERE clause.
+#
+# PERFORMANCE
+#
+# When you do not need to know the number of deleted rows, the TRUNCATE_TABLE
+# statement is a faster way to empty a table than a DELETE statement with no WHERE clause.
+#
+# Unlike DELETE, TRUNCATE_TABLE cannot be used within a transaction or if you have a lock
+# on the table.
+#
+# See SECTION 13.1.37, "TRUNCATE TABLE SYNTAX" and SECTION 13.3.6, "LOCK TABLES AND UNLOCK TABLES SYNTAX"
+#
+# The speed of delete operations may also be affected by factors discussed in SECTION 8.2.5.3,
+# "OPTIMIZING DELETE STATEMENTS"
+#
+# To ensure that a given DELETE statement does not take too much time, the MySQL-specific LIMIT
+# row_count clause for DELETE specifies the maximum number of rows to be deleted.
+#
+# If the number of rows to delete is larger than the limit, repeat the DELETE statement
+# until the number of affected rows is less than the LIMIT value.
+#
+# SUBQUERIES
+#
+# You cannot delete from a table and select from the same table in a subquery
+#
+# PARTITIONED TABLE SUPPORT
+#
+# DELETE supports explicit partition selection using the PARTITION option, which takes a list of the
+# comma-separated names of one or more partitions or subpartitions (or both) from which to select
+# rows to be dropped.
+#
+# Partitions not included in the list are ignored.
+#
+# Given a partitioned table t with a partition named p0, executing the statement
+# DELETE FROM t PARTITION (p0) has the same effect on the table as executing ALTER_TABLE_t_TRUNCATE_PARTITION_(p0);
+# in both cases, all rows in partition p0 are dropped.
+#
+# PARTITION can be used along with a WHERE condition, in which case the condition is tested
+# only on rows in the listed partitions.
+#
+# For example, 
+#
+# 		DELETE FROM t PARTITION (p0) WHERE c < 5 
+# 
+# deletes rows only from partition p0 for which the condition c < 5 is true;
+# rows in any other partitions are not checked and thus not affected by the DELETE
+#
+# The PARTITION option can also be used in multiple-table DELETE statements.
+#  
+# You can use up to one such option per table named in the FROM option
+#
+# For more information and examples, see SECTION 23.5, "PARTITION SELECTION"
+#
+# AUTO-INCREMENT COLUMNS
+#
+# If you delete the row containing the maximum value for an AUTO_INCREMENT column,
+# the value is not reused for a MyISAM or InnoDB table.
+#
+# if you delete all rows in the table with DELETE FROM tbl_name (without a WHERE clause)
+# in autocommit mode, the sequence starts over for all storage engines except InnoDB
+# and MyISAM.
+#
+# There are some exceptions to this behavior for InnoDB tables, as discussed
+# in SECTION 15.6.1.14, "AUTO_INCREMENT HANDLING IN INNODB"
+#
+# For MyISAM tables, you can specify an AUTO_INCREMENT secondary column in a multiple-column
+# key.
+#
+# In this case, reuse of values deleted from the top of the sequence occurs even for
+# MyISAM tables. See SECTION 3.6.9, "USING AUTO_INCREMENT"
+#
+# MODIFIERS
+#
+# The DELETE statement supports the following modifiers:
+#
+# 		) If you specify LOW_PRIORITY, the server delays execution of the DELETE until no other
+# 			clients are reading from the table.
+#
+# 			This affects only storage engines that use only table-level locking
+# 			(such as MyISAM, MEMORY and MERGE)
+#
+# 		) For MyISAM tables, if you use the QUICK modifier, the storage engine does not merge
+# 			index leaves during delete, which may speed up some kinds of delete operations.
+#
+# 		) The IGNORE modifier causes MySQL to ignore errors during the process of deleting rows.
+#
+# 			(Errors encountered during the parsing stage are processed in the usual manner)
+#
+# 			Errors that are ignored due to the use of IGNORE are returend as warnings.
+#
+# 			For more information, see COMPARISON OF THE IGNORE KEYWORD AND STRICT SQL MODE
+#
+# ORDER OF DELETION
+#
+# If the DELETE statement includes an ORDER BY clause, rows are deleted in the order specified
+# by the clause.
+#
+# This is useful primarily in conjunction with LIMIT.
+#
+# For example, the following statement finds rows matching the WHERE clause, sorts them
+# by timestamp_column, and deletes the first (oldest) one:
+#
+# 		DELETE FROM somelog WHERE user = 'jcole'
+# 		ORDER BY timestamp_column LIMIT 1;
+#
+# ORDER BY also helps to delete rows in an order required to avoid referential
+# integrity violations.
+#
+# INNODB TABLES
+#
+# If you are deleting many rows from a large table, you may exceed the lock table
+# size for an InnoDB table.
+#
+# To avoid this problem, or simply to minimize the time that the table remains locked,
+# the following strategy (which does not use DELETE at all) might be helpful:
+#
+# 		1. Select the rows NOT to be deleted into an empty table that has the same structure as the original table:
+#
+# 			INSERT INTO t_copy SELECT * FROM t WHERE --- ;
+#
+# 		2. Use RENAME_TABLE to atomically move the original table out of the way and rename the copy to the original name:
+#
+# 			RENAME TABLE t TO t_old, t_copy TO t;
+#
+# 		3. Drop the original table:
+#
+# 			DROP TABLE t_old;
+#
+# No other sessions can access the tables involved while RENAME_TABLE executes, so the rename operation
+# is not subject to concurrency problems.
+#
+# See SECTION 13.1.36, "RENAME TABLE SYNTAX"
+#
+# MYISAM TABLES
+#
+# In MyISAM tables, deleted rows are maintained in a linked list and subsequent INSERT operations
+# reuse old row positions.
+#
+# To reclaim unused space and reduce file size, use the OPTIMIZE TABLE statement or the
+# myisamchk utility to reorganize tables.
+#
+# OPTIMIZE_TABLE is easier to use, but myisamchk is faster.
+#
+# See SECTION 13.7.3.4, "OPTIMIZE TABLE SYNTAX", and SECTION 4.6.4, "MYISAMCHK -- MyISAM TABLE-MAINTENANCE UTILITY"
+#
+# The QUICK modifier affects whether index leaves are merged for delete operations.
+#
+# DELETE QUICK is most useful for applications where index values for deleted rows are replaced by similar
+# index values from rows inserted later.
+#
+# In this case, the holes left by deleted values are reused.
+#
+# DELETE QUICK is not useful when deleted values lead to underfilled blocks spanning
+# a range of index values for which new inserts occur again.
+#
+# In this case, use of QUICK can lead to wasted space in the index that remains unreclaimed.
+#
+# Here is an example of such a scenario:
+#
+# 		1. Create a table that contains an indexed AUTO_INCREMENT column
+#
+# 		2. Insert many rows into the table. Each insert results in an index value that is added
+# 			to the high end of the index.
+#
+# 		3. Delete a block of rows at the low end of the column range using DELETE QUICK
+#
+# In this scenario, the index blocks associated with the deleted index values become underfilled
+# but are not merged with other index blocks due to the use of QUICK.
+#
+# They remain underfilled when new inserts occur, because new rows do not have index values
+# in the deleted range.
+#
+# Furthermore, they remain underfilled even if you later use DELETE without QUICK, unless some
+# of the deleted index values happen to lie in index blocks within or adjacent to the
+# underfilled blocks.
+#
+# To reclaimed unused index space under these circumstances, use OPTIMIZE_TABLE
+#
+# If you are going to delete many rows from a table, it might be faster to use DELETE QUICK
+# followed by OPTIMIZE TABLE.
+#
+# This rebuilds the index rather than performing many index block merge operations.
+#
+# MULTI-TABLE DELETES
+#
+# You can specify multiple tables in a DELETE statement to delete rows from one or more
+# tables depending on teh condition in teh WHERE clause.
+#
+# You cannot use ORDER BY or LIMIT in a multiple-table DELETE
+#
+# The table_references clause lists the tables involved in the join,
+# as described in SECTION 13.2.10.2, "JOIN SYNTAX"
+#
+# For the first multiple-table syntax, only matching rows from tables listed before
+# the FROM clause are deleted.
+#
+# For the second multiple-table syntax, only matching rows from the tables listed
+# in the FROM clause (before the USING clause) are deleted.
+#
+# The effect is that you can delete rows from many tables at the same time and have
+# additional tables that are used only for searching:
+#
+# 		DELETE t1, t2 FROM t1 INNER JOIN t2 INNER JOIN t3
+# 		WHERE t1.id=t2.id AND t2.id=t3.id;
+#
+# OR
+#
+# 		DELETE FROM t1, t2 USING t1 INNER JOIN t2 INNER JOIN t3
+# 		WHERE t1.id=t2.id AND t2.id=t3.id;
+#
+# These statements use all three tables when searching for rows to delete, but delete
+# matching rows only from tables t1 and t2.
+#
+# The preceding examples use INNER JOIN, but multiple-table DELETE statements cna use
+# other types of join permitted in SELECT statements, such as LEFT JOIN
+#
+# For example, to delete rows that exist in t1 that have no match in t2, use a LEFT JOIN:
+#
+# 		DELETE t1 FROM t1 LEFT JOIN t2 ON t1.id=t2.id WHERE t2.id IS NULL;
+#
+# The syntax permits .* after each tbl_name for compatibility with Access.
+#
+# If you use a multiple-table DELETE statement involving InnoDB tables for which
+# there are foreign key constraints, the MySQL optimizer might process tables in
+# an order that differs from that of their parent/child relationship.
+#
+# In this case, the statement fails and rolls back.
+#
+# Instead, you should delete from a single table and rely on the ON DELETE 
+# capabilities that INnoDB provides to cause the other tables ot be modified accordingly.
+#
+# NOTE:
+#
+# 		if you declare an alias for a table, you must use the alias when referring to teh table:
+#
+# 			DELETE t1 FROM test AS t1, test2 WHERE ---
+#
+# Table aliases in a multiple-table DELETE should be declared only in the table_references
+# part of the statement.
+#
+# Elsewhere, alias references are permitted but not alias declarations.
+#
+# CORRECT:
+#
+# 		DELETE a1, a2 FROM t1 AS a1 INNER JOIN t2 AS a2
+# 		WHERE a1.id=a2.id;
+#
+# 		DELETE FROM a1, a2 USING t1 AS a1 INNER JOIN t2 AS a2
+# 		WHERE a1.id=a2.id;
+#
+# INCORRECT:
+#
+# 		DELETE t1 AS a1, t2 AS a2 FROM t1 INNER JOIN t2
+# 		WHERE a1.id=a2.id;
+#
+# 		DELETE FROM t1 AS a1, t2 AS a2 USING t1 INNER JOIN t2
+# 		WHERE a1.id=a2.id;
+#
+# 13.2.3 DO SYNTAX
+#
+# 		DO expr [, expr] ---
+#
+# DO executes the expressions but does not return any results.
+#
+# In most respects, DO is shorthand for SELECT expr, ---, but has the advantage
+# that it is slightly faster when you do not care about the result.
+#
+# DO is useful primarily with functions that have side effects, such as
+# RELEASE_LOCCK()
+#
+# Example: This SELECT statement pauses, but also produces a result set:
+#
+# 		SELECT SLEEP(5);
+# 		+-------------+
+# 		| SLEEP(5) 	  |
+# 		+-------------+
+# 		| 		0 		  |
+# 		+-------------+
+# 		1 row in set (5.02 sec)
+#
+# DO, on the other hand, pauses without producing a result set:
+#
+# 		DO SLEEP(5);
+# 		Query OK, 0 rows affected (4.99 sec)
+#
+# This could be useful, for example in a stored function or trigger, which prohibit
+# statements that produce result sets.
+#
+# DO only executes expressions.
+#
+# It cannot be used in all cases where SELECT can be used.
+#
+# For example, DO id FROM t1 is invalid ebcause it references a table.
+#
+# 13.2.4 HANDLER SYNTAX
+#
+# 		HANDLER tbl_name OPEN [ [AS] alias]
+#
+# 		HANDLER tbl_name READ index_name { = | <= | >= | < | > } (value1, value2, ---)
+# 			[ WHERE where_condition ] [LIMIT --- ]
+# 		HANDLER tbl_name READ index_name { FIRST | NEXT | PREV | LAST }
+# 			[ WHERE where_condition ] [LIMIT --- ]
+#
+# 		HANDLER tbl_name READ { FIRST | NEXT }
+# 			[ WHERE where_condition ] [LIMIT --- ]
+# 
+# 		HANDLER tbl_name CLOSE
+#
+# The HANDLER statement provides direct access to table storage engine interfaces.
+#
+# It is available for InnoDB and MyISAM tables.
+#
+# The HANDLER --- OPEN statement opens a table, making it accessible using subsequent
+# HANDLER --- READ statements.
+#
+# This table object is not shared by other sessions and is not closed until the
+# session calls HANDLER --- CLOSE or the session terminates.
+#
+# If you open the table using an alias, further references to the open table with
+# other HANDLER statements must use the alias rather than the table name.
+#
+# If you do not use an alias, but open the table using a table name qualified
+# by the database name, further references must use the unqualified table name.
+#
+# For example, for a table opened using mydb.mytable - further references must use mytable
+#
+# The first HANDLER --- READ syntax fetches a row where the index specified statisfies
+# the given values and the WHERE condition is met.
+#
+# If you have a multiple-column index, specify the index column values as a comma-separated
+# list.
+#
+# Either specify values for all the columns in the index, or specify values for a leftmost
+# prefix of the index columns.
+#
+# Suppose that an index my_idc includes three columns named col_a, col_b and col_c, in taht order.
+#
+# The HANDLER statement can specify values for all three columns in the index,
+# or for the columns in a leftmost prefix. For example:
+#
+# 		HANDLER --- READ my_idx = (col_a_val, col_b_val, col_c_val) ---
+# 		HANDLER --- READ my_idx = (col_a_val, col_b_val) ---
+# 		HANDLER --- READ my_idx = (col_a_val) ---
+#
+# To employ the HANDLER interface to refer to a table's PRIMARY KEY, use the quoted
+# identifier `PRIMARY`:
+#
+# 		HANDLER tbl_name READ `PRIMARY` ---
+#
+# The second HANDLER --- READ syntax fetches a row from the table in index order that
+# matches the WHERE condition.
+#
+# The third HANDLER --- READ syntax fetches a row from the table in natural row order
+# that matches the WHERE condition.
+#
+# It is faster than HANDLER tbl_name READ index_name when a full table scan is desired.
+#
+# Natural row order is the order in which rows are stored in a MyISAM table data file.
+#
+# This statement works for INnoDB tables as well, but there is no such concept because
+# there is no separate data file.
+#
+# Without a LIMIT clause, all forms of HANDLER --- READ fetch a single row if one is 
+# available.
+#
+# To return a specific number of rows, include a LIMIT clause.
+#
+# It has the same syntax as for the SELECT statement. See SECTION 13.2.10, "SELECT SYNTAX"
+#
+# HANDLER -- CLOSE closes a table that was opened with HANDLER --- OPEN
+#
+# There are several reasons to use the HANDLER interface instead of normal
+# SELECT statements:
+#
+# 		) HANDLER is faster than SELECT
+#
+# 			) A desiganted storage engine handler object is allocated for the HANDLER --- OPEN.
+#
+# 				THe object is reused for subsequent HANDLER statements for that table;
+# 				it need not be reinitialized for each one.
+#
+# 			) There is less parsing involved
+#
+# 			) There is no optimizer or query-checking overhead
+#
+# 			) The handler interface does not have to provide a consistent look of the data (for example,
+# 				dirty reads are permitted), so the storage engine can use optimizations that SELECT
+# 				does not normally permit.
+#
+# 		) HANDLER makes it easier to port to MySQL applications that use a low-level ISAM-like interface.
+#
+# 			(See SECTION 15.19, "INNODB MEMCACHED PLUGIN" for an alternative way to adapt applications
+# 			that use the key-value store paradigm)
+#
+# 		) HANDLER enables you to traverse a database in a manner that is difficult (or even impossible)
+# 			to accomplish with SELECT.
+#
+# 			The HANDLER interface is a more natural way to look at data when working with applications
+# 			that provide an interactive user interface to the database.
+#
+# HANDLER is a somewhat low-level statement.
+#
+# For example, it does not provide consistency.
+#
+# That is, HANDLER --- OPEN does NOT take a snapshot of the table, and does NOT 
+# lock the table.
+#
+# THis means that after a HANDLER --- OPEN statement is issued, table data can be modified 
+# (by the current session or other sessions) and these modifications might be only
+# partially visible to HANDLER --- NEXT or HANDLER --- PREV scans.
+#
+# An open handler can be closed and marked for reopen, in which case the handler loses
+# its position in the table.
+#
+# This occurs when both of the following circumstances are true:
+#
+# 		) Any session executes FLUSH_TABLES or DDL statements on the handler's table
+#
+# 		) The session in which the handler is open executes non-HANDLER statements that use tables
+#
+# TRUNCATE_TABLE for a table closes all handlers for the table that were opened with HANDLER_OPEN
+#
+# If a table is flushed with FLUSH_TABLES_tbl_name_WITH_READ_LOCK was opened with HANDLER,
+# the handler is implicitly flushed and loses its position.
+#
+# 13.2.5 IMPORT TABLE SYNTAX
+#
+# 		IMPORT TABLE FROM sdi_file [, sdi_file] ---
+#
+# The IMPORT_TABLE statement imports MyISAM tables based on information contained in .sdi
+# (Serialized Dictionary Information) metadata files.
+#
+# IMPORT TABLE requires the FILE privilege to read the .sdi and table content files,
+# and the CREATE privilege for the table to be created.
+#
+# Tables can be exported from one server using mysqldump to write a file of SQL statements
+# and imported into another server using mysql to process the dump file.
+#
+# IMPORT TABLE provides a faster alternative using the "raw" table files
+#
+# Prior to import, the files that provide the table content must be placed in the 
+# appropriate schema directory for the import server, and the .sdi file must be
+# located in a directory accessible to the server.
+#
+# For example, the .sdi file can be placed in the directory named by the secure_file_priv
+# system variable, or (if secure_file_priv is empty) in a directory under the server
+# data directory.
+#
+# The following example describes how to export MyISAM tables named employees and
+# managers from the hr schema of one server and import them into the hr schema of
+# another server.
+#
+# The examples uses these assumptions (to perform a similar operaiton on your own system,
+# modify the path names as called for):
+#
+# 		) For the export server, export_basedir represents its base directory, and its data directory
+# 			is export_basedir/data
+#
+# 		) For the import server, import_basedir represents its base directory, and its data directory
+# 			is import_basedir/data
+#
+# 		) Table files are exported from the export server into the /tmp/export directory and
+# 			this directory is secure (not accessible to other users)
+#
+# 		) The import server uses /tmp/mysql-files as the directory named by its secure_file_priv
+# 			system variable
+#
+# To export tables from the export server, use this procedure:
+#
+# 		1. Ensure a consistent snapshot by executing this statement to lock the tables so that they cannot
+# 			be modified during export:
+#
+# 				FLUSH TABLES hr.employees, hr.managers WITH READ LOCK;
+#
+# 			While the lock is in effect, the tables can still be used, but only for read access.
+#
+# 		2. At the file system level, copy the .sdi and table content files from the hr schema directory
+# 			to the secure export directory:
+#
+# 				) The .sdi file is located in the hr schema directory, but might not have exactly
+# 					the same basename as the table name.
+#
+# 					For example, the .sdi files for the employees and managers tables might be named
+# 					employees_125.sdi and managers_238.sdi
+#
+# 				) For a MyISAM table, the content files are its .MYD data file and .MYI index file
+#
+# 			Given those file names, the copy commands are:
+#
+# 				cd export_basedir/data/hr
+# 				cp employees_125.sdi /tmp/export
+# 				cp managers_238.sdi /tmp/export
+# 				cp employees.{MYD,MYI} /tmp/export
+# 				cp managers.{MYD,MYI} /tmp/export
+#
+# 		3. Unlock the tables:
+#
+# 			UNLOCK TABLES;
+#
+# To import tables into hte import server, use this procedure:
+#
+# 		1. The import schema must exist.
+#
+# 			If necessary, execute this statement to create it:
+#
+# 				CREATE SCHEMA hr;
+#
+# 		2. At the file system level, copy the .sdi files to the import server
+# 			secure_file_priv directory, /tmp/mysql-files
+#
+# 			Also, copy the table content files to the hr schema directory:
+#
+# 				cd /tmp/export
+# 				cp employees_125.sdi /tmp/mysql-files
+# 				cp managers_238.sdi /tmp/mysql-files
+# 				cp employees.{MYD,MYI} import_basedir/data/hr
+# 				cp managers.{MYD,MYI} import_basedir/data/hr
+#
+# 		3. Import the tables by executing an IMPORT_TABLE statement that names the .sdi files:
+#
+# 			IMPORT TABLE FROM
+# 				'/tmp/mysql-files/employees.sdi',
+# 				'/tmp/mysql-files/managers.sdi';
+#
+# The .sdi file need not be placed in the import server directory named by the secure_file_priv
+# system variable if that variable is empty; it can be in any directory accessible to the server,
+# including the schema directory for the imported table.
+#
+# If the .sdi file is placed in that directory, however, it may be rewritten; the import
+# operation creates a new .sdi file for hte table, which will overwrite the old .sdi file
+# if hte operation uses the same file name for the new file.
+#
+# Each sdi_file value must be a string literal that names the .sdi file for a table
+# or is a pattern that matches .sdi files.
+#
+# If the string is a pattern, any leading directory path and the .sdi file name
+# suffix must be given literally.
+#
+# Pattern characters are permitted only in the base name part of the file name:
+#
+# 		) ? matches any single character
+#
+# 		) * matches any sequence of characters, including no characters
+#
+# Using a pattern, the previous IMPORT_TABLE statement could have been written like
+# this (assuming that the /tmp/mysql-files directory contains no other .sdi files matching
+# the pattern):
+#
+# 		IMPORT TABLE FROM '/tmp/mysql-files/*.sdi';
+#
+# To interpret the location of .sdi file path names, the server uses the same rules for
+# IMPORT_TABLE as the server-side rules for LOAD_DATA (that is, the non-LOCAL rules)
+#
+# See SECTION 13.2.7, "LOAD DATA INFILE SYNTAX", paying particular attention to the
+# rules used to interpret relative path names.
+#
+# IMPORT_TABLE fails if the .sdi or table files cannot be located.
+#
+# After importing a table, the server attempts to open it and reports
+# as warnings any problems detected.
+#
+# To attempt a repair to correct any reported issues, use REPAIR_TABLE
+#
+# IMPORT_TABLE is not written to the binary log
+#
+# RESTRICTIONS AND LIMITATIONS
+#
+# IMPORT_TABLE applies only to non-TEMPORARY MyISAM tables.
+#
+# It does not apply to tables created with a transactional storage engine,
+# tables created with CREATE_TEMPORARY_TABLE or views.
+#
+# The table data and index files must be placed in the schema directory for the
+# import server prior to the import operation, unless the table as defined on the
+# export server uses the DATA DIRECTORY or INDEX DIRECTORY table options.
+#
+# In that case, modify the import procedure using one of these alternatives
+# before executing the IMPORT_TABLE statement:
+#
+# 		) Put the data and index files into the same directory on the import server
+# 			host as on the export server host, and create symlinks in the import server
+# 			schema directory to those files.
+#
+# 		) Put the data and index files into an import server host directory from that on the export
+# 			server host, and create symlinks in the import server schema directory to those files.
+#
+# 			In addition, modify the .sdi file to reflect the different file locations
+#
+# 		) Put the data and index files into the schema directory on the import server host,
+# 			and modify the .sdi file to remove the data and index directory table options.
+#
+# Any collation IDs stored in the .sdi file must refer to the same collations on the export
+# and import servers.
+#
+# Trigger information for a table is not serialized into the table .sdi file, so triggers
+# are not restored by the import operaiton
+#
+# Some edits to an .sdi file are permissible prior to executing the IMPORT_TABLE statement,
+# whereas others are problematic or may even cause the import operation to fail:
+#
+# 		) Changing the data directory and index directory table options is required if the locations
+# 			of the data and index files differ between the export and import servers.
+#
+# 		) Changing the schema name is required to import the table into a different schema on the import server
+# 			tahn on the export server
+#
+# 		) Changing schema and table names may be required to accomodate differences between
+# 			file system case-sensitivity semantics on the export and import servers or differences
+# 			in lower_case_table_names settings.
+#
+# 			Changing the table names in the .sdi file may require renaming the tbale files as well
+#
+# 		) In some cases, changes to column definitions are permitted.
+#
+# 			Changing data types is likely to cause problems.
+#
+# 13.2.6 INSERT SYNTAX
+#
+# 13.2.6.1 INSERT --- SELECT SYNTAX
+# 13.2.6.2 INSERT --- ON DUPLICATE KEY UPDATE SYNTAX
+# 13.2.6.3 INSERT DELAYED SYNTAX
+#
+# 		INSERT [LOW_PRIORITY | DELAYED | HIGH_PRIORITY] [IGNORE]
+# 			[INTO] tbl_name
+# 			[PARTITION (partition_name [, partition_name] ---)]
+# 			[(col_name [, col_name] ---)]
+# 			{VALUES | VALUE} (value_list) [, (value_list)] ---
+# 			[ON DUPLICATE KEY UPDATE assignment_list]
+#
+# 		INSERT [LOW_PRIORITY | DELAYED | HIGH_PRIORITY] [IGNORE]
+# 			[INTO] tbl_name
+# 			[PARTITION (partition_name [, partition_name] ---)]
+# 			SET assignment_list
+# 			[ON DUPLICATE KEY UPDATE assignment_list]
+#
+# 		INSERT [LOW_PRIORITY | HIGH_PRIORITY] [IGNORE]
+# 			[INTO] tbl_name
+# 			[PARTITION (partition_name [, partition_name] ---)]
+# 			[(col_name [, col_name] ---)]
+# 			SELECT ---
+# 			[ON DUPLICATE KEY UPDATE assignment_list]
+#
+# 		value:
+# 			{expr | DEFAULT}
+#
+# 		value_list:
+# 			value [, value] ---
+#
+# 		assignment:
+# 			col_name = value
+#
+# 		assignment_list:
+# 			assignment [, assignment] ---
+#
+# INSERT inserts new rows into an existing table.
+#
+# The INSERT --- VALUES and INSERT --- SET forms of the statement insert rows based
+# on explicitly specified values.
+#
+# The INSERT --- SELECT form inserts rows selected from another table or tables.
+#
+# INSERT with an ON DUPLICATE KEY UPDATE clause enables existing rows to be updated if
+# a row to be inserted would cause a duplicate value in a UNIQUE index or PRIMARY KEY.
+#
+# For additional information about INSERT_---_SELECT and INSERT_---_ON_DUPLICATE_KEY_UPDATE,
+# see SECTION 13.2.6.1, "INSERT --- SELECT SYNTAX", and SECTION 13.2.6.2, "INSERT --- ON DUPLICATE KEY UPDATE SYNTAX"
+#
+# In MySQL 8.0, the DELAYED keyword is accepted but ignored by the server.
+#
+# For the reasons for this, see SECTION 13.2.6.3, "INSERT DELAYED SYNTAX"
+#
+# Inserting into a table requires the INSERT privilege for the table. 
+#
+# If the ON DUPLICATE KEY UPDATE clause is used and a duplicate key causes an UPDATE to be performed instead, the statement
+# requires the UPDATE privilege for the columns to be updated.
+#
+# For columns that are read but not modified you need only the SELECT privilege (such as for a column referenced only
+# on the right hand side of an col_name=expr assignment in an ON DUPLICATE KEY UPDATE clause)
+#
+# When inserting into a partitioned table, you can control which partitions and subpartitions accept new rows.
+#
+# The PARTITION option takes a list of the comma-separated names of one or more partitions or subpartitions
+# (or both) of the table.
+#
+# if any of hte rows to be inserted by a given INSERT statement do not match one of the partitions
+# listed, the INSERT statement fails with the error:
+#
+# 		Found a row not matching the given partition set
+#
+# for more information and examples, see SECTION 23.5, "PARTITION SELECTION"
+#
+# You can use REPLACE instead of INSERT to overwrite old rows.
+#
+# REPLACE is the counterpart to INSERT_IGNORE in teh treatment of new rows that
+# contain unique key values that duplicate old rows:
+#
+# 		The new rows replace the old rows rather than being discarded.
+#
+# 		see SECTION 13.2.9, "REPLACE SYNTAX"
+#
+# tbl_name is the table into which rows should be inserted.
+#
+# Specify the columns for which the statement provides values as follows:
+#
+# 		) Provide a parenthesized list of comma-separated column names following
+# 			the table name.
+#
+# 			In this case, a value for each named column must be provided by the 
+# 			VALUES list or the SELECT statement.
+#
+# 		) If you do not specify a list of column names for INSERT_---_VALUES or
+# 			INSERT_---_SELECT, values for every column in the table must be provided
+# 			by the VALUES list or the SELECT statement.
+#
+# 			If you do not know the order of hte columns in the table, use DESCRIBE
+# 			tbl_name to find out.
+#
+# 		) A SET clause indicates columns explicitly by name, together with the value
+# 			to assign each one.
+#
+# Column values can be given in several ways:
+#
+# 		) If strict SQL mode is not enabled, any column not explicitly given a value is set
+# 			to its default (explicit or implicit) value.
+#
+# 			For example, if you specify a column list that does not name all the columns
+# 			in the table, unnamed columns are set to their default values.
+#
+# 			Default value assignment is described in SECTION 11.7, "DATA TYPE DEFAULT 
+# 			VALUES"
+#
+# 			See also SECTION 1.8.3.3, "CONSTRAINTS ON INVALID DATA"
+#
+# 			If strict SQL mode is enabled, an INSERT statement generates an error
+# 			if it does not specify an explicit value for every column that has no default
+# 			value.
+#
+# 			See SECTION 5.1.11, "SERVER SQL MODES"
+#
+# 		) If both the column list and the VALUES list are empty, INSERT creates a row
+# 			with each column set to its default value:
+#
+# 				INSERT INTO tbl_name () VALUES();
+#
+# 			If strict mode is not enabled, MySQL uses the implicit default value for any
+# 			column that has no explicitly defined default.
+#
+# 			If strict mode is enabled, an error occurs if any column has no default value.
+#
+# 		) Use the keyword DEFAULT to set a column explicitly to its default value.
+#
+# 			This makes it easier to write INSERT statements that assign values to all
+# 			but a few columns, because it enables you to avoid writing an incomplete VALUES
+# 			list taht does not include a value for each column in the table.
+#
+# 			Otherwise, you must provide the list of column names corresponding to each
+# 			value in the VALUES list.
+#
+# 		) If a generated column is inserted into explicitly, the only permitted value is DEFAULT.
+#
+# 			For information about generated columns, see SECTION 13.1.20.8, "CREATE TABLE AND GENERATED COLUMNS"
+#
+# 		) In expressions, you can use DEFAULT(col_name) to produce the default value for column col_name.
+#
+# 		) Type conversions of an expression expr that provides a column value might occur if the 
+# 			expression data type does not match the column data type.
+#
+# 			Conversion of a given value can result in different inserted values depending on the column
+# 			type.
+#
+# 			For example, inserting the string '1999.0e-2' into an INT, FLOAT, DECIMAL(10,6) or
+# 			YEAR column inserts the value 1999, 19.9921, 19.992100, or 1999, respectively.
+#
+# 			The value stored in the INT and YEAR columns is 1999 because the string-to-number
+# 			conversion looks only at as much of the initial part of the string as may be 
+# 			considered a valid integer or year.
+#
+# 			For the FLOAT and DECIMAL columns, the string-to-number conversion considers the
+# 			entire string a valid numeric value.
+#
+# 		) An expression expr can refer to any column that was set earlier in a value list.
+#
+# 			For example, you can do this because the value for col2 refers to col1, which has
+# 			previously been assigned:
+#
+# 				INSERT INTO tbl_name (col1,col2) VALUES(15,col1*2);
+#
+# 			But the following is not legal, because the value for col1 refers to col2,
+# 			which is assigned after col1:
+#
+# 				INSERT INTO tbl_name (col1, col2) VALUES(col2*2,15);
+#
+# 			An exception occurs for columns that contain AUTO_INCREMENT values.
+#
+# 			Because AUTO_INCREMENT values are generated after other value assignments,
+# 			any reference to an AUTO_INCREMENT column in the assignment returns a 0.
+#
+# INSERT statements that use VALUES syntax can insert multiple rows.
+#
+# To do this, include multiple lists of comma-separated column values, with lists
+# enclosed within parentheses and separated by commas.
+#
+# Example:
+#
+# 		INSERT INTO tbl_name (a,b,c) VALUES(1,2,3),(4,5,6),(7,8,9);
+#
+# Each value list must contain exactly as many values as are to be inserted per row.
+#
+# The following statement is invalid because it contains one list of nine values,
+# rather than three lists of three values each:
+#
+# 		INSERT INTO tbl_name (a,b,c) VALUES(1,2,3,4,5,6,7,8,9);
+#
+# VALUE is a synonym for VALUES in this context.
+#
+# Neither implies anything about hte number of values lists, nor about the number of
+# values per list.
+#
+# Either may be used whether there is a single values list or multiple lists, and
+# regardless of the number of values per list.
+#
+# The affected-rows value for an INSERT can be obtained using the ROW_COUNT() SQL
+# function or the mysql_affected_rows() C API function.
+#
+# See SECTION 12.15, "INFORMATION FUNCTIONS" and SECTION 28.7.7.1, "MYSQL_AFFECTED_ROWS()"
+#
+# If you use an INSERT_---_VALUES statement with multiple value lists or INSERT_---_SELECT,
+# the statement returns an information string in this format:
+#
+# 		Records: N1 Duplicates: N2 Warnings: N3
+#
+# If you are using the C API, the information string can be obtained by invoking the
+# mysql_info() function.
+#
+# See SECTION 28.7.7.36, "MYSQL_INFO()"
+#
+# Records indicate the number of rows processed by the statement.
+#
+# (This is not necessarily the number of rows actually inserted because 
+# Duplicates can be nonzero)
+#
+# Duplicates indicates the number of rows that could not be inserted because they would
+# duplicate some existing unique index value.
+#
+# Warnings indicate the number of attempts to insert column values that were problematic
+# in some way.
+#
+# Warnings can occur under any of the following conditions:
+#
+# 		) Inserting NULL into a column that has been declared NOT NULL.
+#
+# 			For multiple-row INSERT statements or INSERT_INTO_---_SELECT statements,
+# 			the column is set to the implicit default value for the column data type.
+#
+# 			This is 0 for numeric types, the empty string ('') for string types, and the
+# 			"zero" value for date and time types.
+#
+# 			INSERT INTO --- SELECT statements are handled the same way as multiple-row inserts
+# 			because the server does not examine the result set from the SELECT to see whether it
+# 			returns a single row.
+#
+# 			(For a single-row INSERT, no warning occurs when NULL is inserted into a NOT NULL column.
+#
+# 			Instead, the statement fails with an error)
+#
+# 		) Setting a numeric column to a value that lies outside the column's range.
+#
+# 			The value is clipped to the closest endpoint of the range.
+#
+# 		) Assigning a value such as '10.34 a' to a numeric column.
+#
+# 			The trailing nonnumeric text is stripped off and the remaining numeric part
+# 			is inserted.
+#
+# 			If the string value has no leading numeric part, the column is set to 0.
+#
+# 		) Inserting a string into a string column (CHAR, VARCHAR, TEXT or BLOB) that exceeds
+# 			the column's maximum length.
+#
+# 			The value is truncated to the column's maximum length
+#
+# 		) Inserting a value into a date or time column that is illegal for the data type.
+#
+# 			The column is set to the appropriate zero value for the type.
+#
+# 		) For INSERT examples involving AUTO_INCREMENT column values, see SECTION 3.6.9, "USING AUTO_INCREMENT"
+#
+# 			If INSERT inserts a row into a table that has an AUTO_INCREMENT column, you can find
+# 			the value used for that column by using the LAST_INSERT_ID() SQL function or the
+# 			mysql_insert_id() C API function.
+#
+# 				NOTE:
+#
+# 					These two functions do not always behave identically.
+#
+# 					The behavior of INSERT statements with respect to AUTO_INCREMENT columns is discussed
+# 					further in SECTION 12.15, "INFORMATION FUNCTIONS", and SECTION 28.7.7.38, "MYSQL_INSERT_ID()"
+#
+# The INSERT statement supports the following modifiers:
+#
+# 		) if you use the LOW_PRIORITY modifier, execution of the INSERT is delayed until no other
+# 			clients are reading from the table.
+#
+# 			This includes other clients that began reading while existing clients are reading;
+# 			and while the INSERT LOW_PRIORITY statement is waiting.
+#
+# 			It is possible, therefore, for a client that issues an INSERT LOW_PRIORITY
+# 			statement to wait or a very long time.
+#
+# 			LOW_PRIORITY affects only storage engines that use only table-level locking 
+# 			(such as MyISAM, MEMORY, and MERGE)
+#
+# 			NOTE:
+#
+# 				LOW_PRIORITY should normally not be used with MyISAM tables because doing so
+# 				disables concurrent inserts.
+#
+# 				See SECTION 8.11.3, "CONCURRENT INSERTS"
+#
+# 		) https://dev.mysql.com/doc/refman/8.0/en/insert.html
+# 
