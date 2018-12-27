@@ -14270,5 +14270,2015 @@
 #
 # 				See SECTION 8.11.3, "CONCURRENT INSERTS"
 #
-# 		) https://dev.mysql.com/doc/refman/8.0/en/insert.html
+# 		) If  you specify HIGH_PRIORITY, it overrides the effect of the --low-priority-updates option if
+# 			the server was started with that option.
+#
+# 			It also causes concurrent inserts not to be used.
+#
+# 			See SECTION 8.11.3, "CONCURRENT INSERTS"
+#
+# 			HIGH_PRIORITY affects only storage engines that use only table-level locking
+# 			(such as MyISAM, MEMORY, and MERGE)
+#
+# 		) If you use the IGNORE modifier, errors that occur while executing the INSERT statement
+# 			are ignored.
+#
+# 			For example, without IGNORE, a row that duplicates an existing UNIQUE index or PRIMARY KEY
+# 			value in the table causes a duplicate-key error and the statement is aborted.
+#
+# 			With IGNORE, the row is discarded and no error occurs.
+#
+# 			Ignored errors generate warnings instead.
+#
+# 			IGNORE has a similar effect on inserts into partitioned tables where no partition matching
+# 			a given value is found.
+#
+# 			Without IGNORE, such INSERT statements are aborted with an error.
+#
+# 			When INSERT_IGNORE is used, the insert operation fails silently for rows containing
+# 			the unmatched value, but inserts rows that are matched.
+#
+# 			For an example, see SECTION 23.2.2, "LIST PARTITIONING"
+#
+# 			Data conversions that would trigger errors abort the statement if IGNORE is not specified.
+#
+# 			With IGNORE, invalid values are adjusted to the closest values and inserted;
+# 			warnings are produced but the statement does not abort.
+#
+# 			You can determine with the mysql_info() C API function how many rows were actually
+# 			inserted into the table.
+#
+# 			For more information, see COMPARISON OF THE IGNORE KEYWORD AND STRICT SQL MODE
+#
+# 		) If you specify ON DUPLICATE KEY UPDATE, and a row is inserted that would cause a duplicate value
+# 			in a UNIQUE index or PRIMARY KEY, an UPDATE of the old row occurs.
+#
+# 			The affected-rows value per row is 1 if the row is inserted as a new row, 2 if an existing
+# 			row is updated, and 0 if an existing row is set to its current values.
+#
+# 			If you specify the CLIENT_FOUND_ROWS flag to the mysql_real_connect() C API function
+# 			when connecting to mysqld, the affected-rows value is 1 (not 0) if an existing row
+# 			is set to its current values.
+#
+# 			See SECTION 13.2.6.2, "INSERT --- ON DUPLICATE KEY UPDATE SYNTAX"
+#
+# 		) INSERT_DELAYED was deprecated in MySQL 5.6, and is scheduled for eventual removal.
+#
+# 			In MySQL 8.0, the DELAYED modifier is accepted but ignored.
+#
+# 			Use INSERT (without DELAYED) instead. See SECTION 13.2.6.3, "INSERT DELAYED SYNTAX"
+#
+# An INSERT statement affecting a partitioned table using a storage engine such as MyISAM that
+# employs table-level locks locks only those partitions into which rows are actually inserted.
+#
+# (For storage engines such as InnoDB that employ row-level locking, no locking of partitions takes place)
+#
+# For more information, see PARTITIONING AND LOCKING.
+#
+# 13.2.6.1 INSERT --- SELECT SYNTAX
+#
+# 		INSERT [LOW_PRIORITY | HIGH_PRIORITY] [IGNORE]
+# 			[INTO] tbl_name
+# 			[PARTITION (partition_name [, partition_name] ---)]
+# 			[(col_name [, col_name] ---)]
+# 			SELECT
+# 			[ON DUPLICATE KEY UPDATE assignment_list]
+#
+# 		value:
+# 			{expr | DEFAULT}
+#
+# 		assignment:
+# 			col_name = value
+#
+# 		assignment_list:
+# 			assignment [, assignment]
+#
+# With INSERT_---_SELECT, you can quickly insert many rows into a table from the result
+# of a SELECT statement, which can select from one or many tables.
+#
+# For example:
+#
+# 		INSERT INTO tbl_temp2 (fld_id)
+# 			SELECT tbl_temp1.fld_order_id
+# 			FROM tbl_temp1 WHERE tbl_temp1.fld_order_id > 100;
+#
+# The following conditions hold for INSERT_---_SELECT statements:
+#
+# 		) Specify IGNORE to ignore rows that would cause duplicate-key violations
+#
+# 		) The target table of the INSERT statement may appear in the FROM clause of the
+# 			SELECT part of the query.
+#
+# 			However, you cannot insert into a table and select from the same table in a
+# 			subquery.
+#
+# 			When selecting from and inserting into the same table, MySQL creates an internal
+# 			temporary table to hold the rows from the SELECT and then inserts those rows
+# 			into the target table.
+#
+# 			However, you cannot use INSERT INTO t --- SELECT --- FROM t when t is a TEMPORARY
+# 			table, because TEMPORARY tables cannot be referred to twice in the same statement.
+#
+# 			See SECTION 8.4.4, "INTERNAL TEMPORARY TABLE USE IN MYSQL", and SECTION B.6.6.2,
+# 			"TEMPORARY TABLE PROBLEMS"
+#
+# 		) AUTO_INCREMENT columns work as usual
+#
+# 		) To ensure that the binary log can be used to re-create the original tables,
+# 			MySQL does not permit concurrent inserts for INSERT_---_SELECT statements
+# 			(see SECTION 8.11.3, "CONCURRENT INSERTS")
+#
+# 		) To avoid ambiguous column reference problems when the SELECT and the INSERT
+# 			refer to the same table, provide a unique alias for each table used in the 
+# 			SELECT part, and qualify column names in that part with the appropriate alias.
+#
+# You can explicitly select which partitions or subpartitions (or both) of the source or target
+# table (or both) are to be used with a PARTITION option following the name of the table.
+#
+# When PARTITION is used with the name of the source table in the SELECT portion of the statement,
+# rows are selected only from the partitions or subpartitions named in its partition list.
+#
+# When PARTITION is used with the name of the target table for the INSERT portion of the statement,
+# it must be possible to insert all rows selected into the partitions or subpartitions named in the
+# partition list following the option.
+#
+# Otherwise, the INSERT --- SELECT statement fails.
+#
+# For more information and examples, see SECTION 23.5, "PARTITION SELECTION"
+#
+# For INSERT_---_SELECT statements, see SECTION 13.2.6.2, "INSERT --- ON DUPLICATE KEY UPDATE SYNTAX"
+# for conditions under which the SELECT columns can be referred to in an ON DUPLICATE KEY UPDATE clause.
+#
+# The order in which a SELECT statement with no ORDER BY clause returns rows is nondeterminsitic.
+#
+# This means that, when using replication, there is no guarantee that such a SELECT returns rows
+# in the same order on the master and the slave, which can lead to inconsistencies between them.
+#
+# To prevent this from occurring, always write INSERT --- SELECT statements that are to be replicated
+# using an ORDER BY clause that produces the same row order on the master and the slave.
+#
+# See also SECTION 17.4.1.18, "REPLICATION AND LIMIT"
+#
+# Due to this issue, INSERT_---_SELECT_ON_DUPLICATE_KEY_UPDATE and INSERT_IGNORE_---_SELECT
+# statements are flagged as unsafe for statement-based replication.
+#
+# Such statements produce a warning in the error log when using statement-based mode
+# and are written to the binary log using the row-based formats when using MIXED
+# mode. (Bug #11758262, Bug #50439)
+#
+# See also SECTION 17.2.1.1, "ADVANTAGES AND DISADVANTAGES OF STATEMENT-BASED AND ROW-BASED REPLICATION"
+#
+# An INSERT_---_SELECT statement affecting partitioned tables using a storage engine such as
+# MyISAM that employs table-level locks locks all partitions of the target table;
+# However, only those partitions that are actually read from the source table are locked.
+#
+# (This does not occur with tables using storage engines such as InnoDB that employ
+# row-level locking)
+#
+# For more information, see PARTITIONING AND LOCKING
+#
+# 13.2.6.2 INSERT --- ON DUPLICATE KEY UPDATE SYNTAX
+#
+# If you specify an ON DUPLICATE KEY UPDATE clause and a row to be inserted would cause a 
+# duplicate value in a UNIQUE index or PRIMARY KEY, an UPDATE of the old row occurs.
+#
+# For example, if column a is declared as UNIQUE and contains the value 1, the following
+# two statements have similar effect:
+#
+# 		INSERT INTO t1 (a,b,c) VALUES (1,2,3)
+# 			ON DUPLICATE KEY UPDATE c=c+1;
+#
+# 		UPDATE t1 SET c=c+1 WHERE a=1;
+#
+# (The effects are not identical for an InnoDB table where a is an auto-increment column.
+#
+# With an auto-increment column, an INSERT statement increases the auto-increment
+# value but UPDATE does not)
+#
+# If column b is also unique, the INSERT is equivalent to this UPDATE statement instead:
+#
+# 		UPDATE t1 SET c=c+1 WHERE a=1 OR b=2 LIMIT 1;
+#
+# If a=1 OR b=2 matches several rows, only one row is updated.
+#
+# In general, you should try to avoid using an ON DUPLICATE KEY UPDATE clause
+# on tables with multiple unique indexes.
+#
+# With ON DUPLICATE KEY UPDATE, the affected-rows value per row is 1 if the row
+# is inserted as a new row, 2 if an existing row is updated, and 0 if an existing
+# row is set to its current values.
+#
+# If you specify the CLIENT_FOUND_ROWS flag to the mysql_real_connect() C API function
+# when connecting to mysqld, the affected-rows value is 1 (not 0) if an existing
+# row is set to its current values.
+#
+# If a table contains an AUTO_INCREMENT column and INSERT_---_ON_DUPLICATE_KEY_UPDATE inserts
+# or updates a row, the LAST_INSERT_ID() function returns the AUTO_INCREMENT value.
+#
+# The ON DUPLICATE KEY UPDATE clause can contain multiple column assignments,
+# separated by commas.
+#
+# In assignment value expressions in the ON DUPLICATE KEY UPDATE clause, you can use
+# the VALUES(col name) function to refer to column values from the INSERT portion
+# of the INSERT_---_ON_DUPLICATE_KEY_UPDATE statement.
+#
+# In other words, VALUES(col_name) in the ON DUPLICATE KEY UPDATE clause refers
+# to the value of col_name that would be inserted, had no duplicate-key conflict
+# occurred.
+#
+# This function is especially useful in multiple-row inserts.
+#
+# The VALUES() function is meaningful only in the ON DUPLICATE KEY UPDATE clause
+# or INSERT statements and returns NULL otherwise. Example:
+#
+# 		INSERT INTO t1 (a,b,c) VALUES (1,2,3),(4,5,6)
+# 			ON DUPLICATE KEY UPDATE c=VALUES(a)+VALUES(b);
+#
+# That statement is identical to the following two statements:
+#
+# 		INSERT INTO t1 (a,b,c) VALUES (1,2,3)
+# 			ON DUPLICATE KEY UPDATE c=3;
+#
+# 		INSERT INTO t1 (a,b,c) VALUES (4,5,6)
+# 			ON DUPLICATE KEY UPDATE c=9;
+#
+# For INSERT_---_SELECT statements, these rules apply regarding acceptable forms
+# of SELECT query expressions that you can refer to in an ON DUPLICATE KEY UPDATE
+# clause:
+#
+# 		) References to columns from queries on a single table, which may be a derived table
+#
+# 		) References to columns from queries on a join over multiple tables
+#
+# 		) References to columns from DISTINCT queries
+#
+# 		) References to columns in other tables, as long as the SELECT does not use GROUP BY.
+#
+# 			One side effect is that you must qualify references to nonunique column names.
+#
+# References to columns from a UNION are not supported.
+#
+# To work around this restriction, rewrite the UNION as a derived table so that its rows
+# can be treated as a single-table result set.
+#
+# For example, this statement produces an error:
+#
+# 		INSERT INTO t1 (a, b)
+# 			SELECT c, d FROM t2
+# 			UNION
+# 			SELECT e, f FROM t3
+# 		ON DUPLICATE KEY UPDATE b = b + c;
+#
+# Instead, use an equivalent statement that rewrites the UNION as a derived table:
+#
+# 		INSERT INTO t1 (a, b)
+# 		SELECT * FROM
+# 			(SELECT c, d FROM t2
+# 			UNION
+# 			SELECT e, f FROM t3) AS dt
+# 		ON DUPLICATE KEY UPDATE b = b + c;
+#
+# The technique of rewriting a query as a derived table also enables references
+# to columns from GROUP BY queries.
+#
+# Because the results of INSERT_---_SELECT statements depend on the ordering of rows
+# from the SELECT and this order cannot always be guaranteed, it is possible when
+# logging INSERT_---_SELECT_ON_DUPLICATE_KEY_UPDATE statements for the master
+# and the slave to diverge.
+#
+# Thus, INSERT_---_SELECT_ON_DUPLICATE_KEY_UPDATE statements are flagged as unsafe
+# for statement-based replication.
+#
+# Such statements produce a warning in the error log when using statement-based mode
+# and are written to the binary log using the row-based format when using MIXED mode.
+#
+# An INSERT_---_ON_DUPLICATE_KEY_UPDATE statement against a table having more than
+# one unique or primary key is also marked as unsafe. (Bug #117655650, Bug #58637)
+#
+# See also SECTION 17.2.1.1, "ADAVANTAGES AND DISADVANTAGES OF STATEMENT-BASED AND 
+# ROW-BASED REPLICATION"
+#
+# An INSERT --- ON DUPLICATE KEY UPDATE on a partitioned table using a storage engine
+# such as MyISAM that employs table-level locks locks any partitions of the table
+# in which a partitioning key column is updated.
+#
+# (This does not occur with tables using storage engines such as InnoDB that employ
+# row-level locking)
+#
+# For more information, see PARTITIONING AND LOCKING
+#
+# 13.2.6.3 INSERT DELAYED SYNTAX
+#
+# INSERT DELAYED ---
+#
+# The DELAYED option for the INSERT statement is a MySQL extension to standard SQL
+#
+# In previous versions of MySQL, it can be used for certain kinds of tables (such as
+# MyISAM), such that when a client uses INSERT_DELAYED, it gets an okay from the server
+# at once, and the row is queued to be inserted when the table is not in use by any
+# other thread.
+#
+# DELAYED inserts and replaces were deprecated in MySQL 5.6
+#
+# In MySQL 8.0, DELAYED is not supported.
+#
+# The server recognizes but ignores the DELAYED keyword, handles the insert
+# as a nondelayed insert, and generates an ER_WARN_LEGACY_SYNTAX_CONVERTED
+# warning ("INSERT DELAYED is no longer supported. The statement was converted to INSERT")
+#
+# The DELAYED keyword is scheduled for removal in a future release.
+#
+# 13.2.7 LOAD DATA INFILE SYNTAX
+#
+# 		LOAD DATA [LOW_PRIORITY | CONCURRENT] [LOCAL] INFILE 'file_name'
+# 			[REPLACE | IGNORE]
+# 			INTO TABLE tbl_name
+# 			[PARTITION (partition_name [, partition_name] ---)]
+# 			[CHARACTER SET charset_name]
+# 			[{FIELDS | COLUMNS}
+# 				[TERMINATED BY 'string']
+# 				[[OPTIONALLY] ENCLOSED BY 'char']
+# 				[ESCAPED BY 'char']
+# 			]
+# 			[LINES
+# 				[STARTING BY 'string']
+# 				[TERMINATED BY 'string']
+# 			]
+# 			[IGNORE number {LINES | ROWS}]
+# 			[(col_name_or_user_var
+# 				[,col_name_or_user_var] ---)]
+# 			[SET col_name={expr | DEFAULT},
+# 				[, col_name={expr | DEFAULT}] ---]
+#
+# The LOAD_DATA_INFILE statement reads rows from a text file into a table at 
+# a very high speed.
+#
+# LOAD_DATA_INFILE is the complement of SELECT_---_INTO_OUTFILE 
+#
+# (See SECTION 13.2.10.1, "SELECT --- INTO SYNTAX")
+#
+# To write data from a table to a file, use SELECT_---_INTO_OUTFILE
+#
+# To read the file back into a table, use LOAD_DATA_INFILE 
+#
+# The syntax of the FIELDS and LINES clauses is the same for both statements
+#
+# You can also load data files by using the mysqlimport utility;
+#
+# See SECTION 4.5.5, "MYSQLIMPORT -- A DATA IMPORT PROGRAM"
+#
+# mysqlimport operates by sending a LOAD_DATA_INFILE statement to the server.
+#
+# The --local option causes mysqlimport to read data files from the client host.
+#
+# You can specify the --compress option to get better performance over slow
+# networks if the client and server support the compressed protocol.
+#
+# For more information about the efficiency of INSERT versus LOAD_DATA_INFILE and
+# speeding up LOAD_DATA_INFILE, see SECTION 8.2.5.1, "OPTIMIZING INSERT STATEMENTS"
+#
+# 		) PARTITIONED TABLE SUPPORT
+#
+# 		) INPUT FILE NAME, LOCATION, AND CONTENT INTERPRETATION
+#
+# 		) CONCURRENCY CONSIDERATIONS
+#
+# 		) DUPLICATE-KEY HANDLING
+#
+# 		) INDEX HANDLING
+#
+# 		) FIELD AND LINE HANDLING
+#
+# 		) COLUMN LIST SPECIFICATION
+#
+# 		) INPUT PREPROCESSING
+#
+# 		) STATEMENT RESULT INFORMATION
+#
+# 		) MISCELLANEOUS TOPICS
+#
+# PARTITIONED TABLE SUPPORT
+#
+# LOAD DATA supports explicit partition selection using the PARTITION option with
+# a list of one or more comma-separated names of partitions, subpartitions, or both.
+#
+# When this option is used, if any rows from the file cannot be inserted into any of
+# the partitions or subpartitions named in the list, the statement fails with the
+# error:
+#
+# 		Found a row not matching the given partition set
+#
+# For more information and examples, see SECTION 23.5, "PARTITION SELECTION"
+#
+# For partitioned tables using storage engines taht employ table locks, such as
+# MyISAM, LOAD DATA cannot prune any partition locks.
+#
+# This does not apply to tables using storage engines which employ row-level
+# locking, such as InnoDB.
+#
+# For more information, see PARTITIONING AND LOCKING.
+#
+# INPUT FILE NAME, LOCATION AND CONTENT INTERPRETATION
+#
+# The file name must be given as a literal string.
+#
+# On Windows, specify backslashes in path names as forward slashes or doubled
+# backslashes.
+#
+# The character_set_filesystem system variable controls the interpretation of
+# the file name character set.
+#
+# The server uses the character set indicated by the character_set_database system
+# variable to interpret the information in the file.
+#
+# SET_NAMES and the setting of character_set_client do not affect interpretation of
+# input.
+#
+# If the contents of the input file use a character set that differs from teh default,
+# it is usually preferable to specify the character set of the files by using the
+# CHARACTER SET clause.
+#
+# A character set of binary specifies "no conversion"
+#
+# LOAD_DATA_INFILE interprets all fields in the file as having the same character set,
+# regardless of hte data types of the columns into which field values are loaded.
+#
+# For proper interpretation of file contents, you must ensure that it was written
+# with the correct character set.
+#
+# For example, if you write a data file with mysqldump -T or by issuing
+# a SELECT_---_INTO_OUTFILE statement in Mysql, be sure to use a --default-character-set
+# option so that output is written in the character set to be used when the file
+# is loaded with LOAD_DATA_INFILE.
+#
+# 	NOTE:
+#
+# 		It is not possible to load data files that use the ucs2, utf16, utf16le, or utf32 character set.
+#
+# CONCURRENCY CONSIDERATIONS
+#
+# If you use LOW_PRIORITY, execution of the LOAD_DATA statement is delayed until no other clients
+# are reading from the table.
+#
+# This affects only storage engines that use only table-level locking (such as MyISAM, MEMORY and MERGE)
+#
+# If you specify CONCURRENT with a MyISAM table that satisfies the condition for the concurrent
+# inserts (that is, it contains no free blocks in the middle), other threads can retrieve
+# data from the table while LOAD_DATA is executing.
+#
+# This option affects the performance of LOAD_DATA a bit, even if no other thread
+# is using the table at the same time.
+#
+# With row-based replication, CONCURRENT is replicated regardless of MySQL version.
+#
+# With statement-based replication CONCURRENT is not replicated prior to MySQL 5.5.1
+# (see Bug #34628)
+#
+# For more information, see SECTION 17.4.1.19,, "REPLICATION AND LOAD DATA INFILE"
+#
+# The LOCAL keyword affects expected location of the file and error handling, as described
+# later.
+#
+# LOCAL works only if your server and your client both have been configured to permit it.
+#
+# For example, if mysqld was started with the local_infile system variable disabled,
+# LOCAL does not work.
+#
+# See SECTION 6.1.6, "SECURITY ISSUES WITH LOAD DATA LOCAL"
+#
+# The LOCAL keyword affects where the file is expected to be found:
+#
+# 		) If LOCAL is specified, the file is read by the client program on the client
+# 			host and sent to the server.
+#
+# 			The file can be given as a full path name to specify its exact location.
+#
+# 			If given as a relative path name, the name is interpreted relative to the
+# 			directory in which the client program was started.
+#
+# 			When using LOCAL with LOAD_DATA, a copy of the file is created in the directory
+# 			where the MySQL server stores temporary files.
+#
+# 			See SECTION B.6.3.5, "WHERE MySQL STORES TEMPORARY FILES"
+#
+# 			Lack of sufficient space for the copy in this directory can cause the LOAD_DATA_LOCAL
+# 			statement to fail.
+#
+# 		) If LOCAL is not specified, the file must be located on the server host and is read directly
+# 			by the server.
+#
+# 			The server uses the following rules to locate the file:
+#
+# 				) If the file name is an absolute path name, the server uses it as given
+#
+# 				) If the file name is a relative path name with one or more leading components,
+# 					the server searches for the file relative to the server's data directory.
+#
+# 				) If a file name with no leading components is given, the server looks for the file
+# 					in the database directory of the default database.
+#
+# In the non-LOCAL case, these rules mean that a file named as ./myfile.txt is read from the
+# server's data directory, whereas the file named as myfile.txt is read from the database
+# directory of the default database.
+#
+# For example, if db1 is the default database, the following LOAD_DATA statement reads the
+# file data.txt from the database directory for db1, even though the statement explicitly
+# loads the file into a table in the db2 database:
+#
+# 		LOAD DATA INFILE 'data.txt' INTO TABLE db2.my_table;
+#
+# NOTE:
+#
+# 		The server also uses the non-LOCAL rules to locate .sdi files for the IMPORT_TABLE statement
+#
+# Non-LOCAL load operations read text files located on the server.
+#
+# For security reasons, such operations require that you have the FILE privilege.
+#
+# See SECTION 6.2.1, "PRIVILEGES PROVIDED BY MYSQL"
+#
+# Also, non-LOCAL load operations are subject to the secure_file_priv system variable
+# setting.
+#
+# If the variable value is a nonempty directory name, the file to be loaded must be located
+# in that directory.
+#
+# If the variable value is empty (which is insecure), the file need only be readable by the server.
+#
+# Using LOCAL is a bit slower than letting the server access the files directly, because the contents
+# of the file must be sent over the connection by the client to the server.
+#
+# On the other hand, you do not need the FILE privilege to load local files.
+#
+# LOCAL also affects error handling:
+#
+# 		) With LOAD_DATA_INFILE, data-interpretation and duplicate-key errors terminate the operation
+#
+# 		) With LOAD_DATA_LOCAL_INFILE, data-interpretation and duplicate-key errors become warnings and 
+# 			the operation continues because the server has no way to stop transmission of the file
+# 			in the middle of the operation.
+#
+# 			For duplicate-key errors, this is the same as if IGNORE is specified.
+#
+# 			IGNORE is explained further later in this section.
+#
+# DUPLICATE-KEY HANDLING
+#
+# The REPLACE and IGNORE keywords control handling of input rows that duplicate existing rows
+# on unique key values:
+#
+# 		) If you specify REPLACE, input rows replace existing rows.
+#
+# 			In other words, rows that have the same value for a primary key or unique index
+# 			as an existing row.
+#
+# 			See SECTION 13.2.9, "REPLACE SYNTAX"
+#
+# 		) If you specify IGNORE, rows that duplicate an existing row on a unique key value
+# 			are discarded.
+#
+# 			For more information, see COMPARISON OF THE IGNORE KEYWORD AND STRICT SQL MODE
+#
+# 		) If you do not specify either option, the behavior depends on whether the LOCAL keyword
+# 			is specified.
+#
+# 			Without LOCAL, an error occurs when a duplicate key value is found, and the rest of
+# 			the text file is ignored.
+#
+# 			With LOCAL, the default behavior is the same as if IGNORE is specified;
+#
+# 			This is because the server has no way to stop transmission of the file in the
+# 			middle of the operation.
+#
+# INDEX HANDLING
+#
+# To ignore foreign key constraints during the load operation, issue a SET foreign_key_checks = 0
+# statement before executing LOAD_DATA
+#
+# If you use LOAD_DATA_INFILE on an empty MyISAM table, all nonunique indexes are created
+# in a separate batch (as for REPAIR TABLE)
+#
+# Normally, this makes LOAD_DATA INFILE much faster when you have many indexes.
+#
+# In some extreme cases, you can create the indexes even faster by turning them
+# off with ALTER TABLE --- DISABLE KEYS before loading the file into the table
+# and using ALTER TABLE --- ENABLE KEYS to re-create the indexes after loading
+# the file.
+#
+# See SECTION 8.2.5.1, "OPTIMIZING INSERT STATEMENTS"
+#
+# FILE AND LINE HANDLING
+#
+# For both the LOAD_DATA_INFILE and SELECT_---_INTO_OUTFILE statements, the syntax
+# of the FIELDS and LINES clauses is the same.
+#
+# Both clauses are optional, but FIELDS must precede LINES if both are specified.
+#
+# If you specify a FIELDS clause, each of its subclauses (TERMINATED BY, [OPTIONALLY]
+# ENCLOSED BY, and ESCAPED BY) is also optional, except that you must specify
+# at least one of them. 
 # 
+# Arguments to these clauses are permitted to contain only ASCII characters.
+#
+# If you specify no FIELDS or LINES clause, the defaults are the same as if you had
+# written this:
+#
+# 		FIELDS TERMINATED BY '\t' ENCLOSED BY '' ESCAPED BY '\\'
+# 		LINES TERMINATED BY '\n' STARTING BY ''
+#
+# (Backslash is the MySQL escape character within strings in SQL statements, so to specify
+# a literal backslash, you must specify two backslashes for the value to be interpreted
+# as a single backslash.
+#
+# The escape sequences '\t' and '\n' specify tab and newline characters, respectively.)
+#
+# In other words, the default cause LOAD_DATA_INFILE to act as follows when reading input:
+#
+# 		) Look for line boundaries at newlines
+#
+# 		) Do not skip over any line prefix
+#
+# 		) Break lines into fields at tabs
+#
+# 		) Do not expect fields to be enclosed within any quoting characters
+#
+# 		) Interpret characters preceded by the escape character \ as escape sequences.
+#
+# 			For example, \t, \n, and \\ signify tab, newline, and backslash, respectively.
+#
+# 			See the discussion of FIELDS ESCAPED BY later for the full list of escape sequences.
+#
+# Conversely, the defaults cause SELECT_---_INTO_OUTFILE to act as follows when writing output:
+#
+# 		) Write tabs between fields
+#
+# 		) Do not enclose fields within any quoting characters
+#
+# 		) Use \ to escape instances of tab, newline, or \ that occur within field values.
+#
+# 		) Write newlines at the ends of lines.
+#
+# NOTE:
+#
+# 		If you have generated the text file on a Windows system, you might have to use LINES TERMINATED
+# 		BY '\r\n' to read the file properly because Windows programs typically use two characters
+# 		as a line terminator.
+#
+# 		Some programs, such as WordPad, might use \r as a line terminator when writing files
+#
+# 		To read such files, use LINES TERMINATED BY '\r'
+#
+# If all the lines you want to read in have a common prefix that you want to ignore, you can use
+# LINES STARTING BY 'prefix_string' to skip over the prefix, and anything before it.
+#
+# If a line does not include the prefix, the entire line is skipped.
+#
+# Suppose that you issue the following statement:
+#
+# 		LOAD DATA INFILE '/tmp/test.txt' INTO TABLE test
+# 			FIELDS TERMINATED BY ',' LINES STARTING BY 'xxx';
+#
+# If the data file looks like this:
+#
+# 		xxx"abc",1
+# 		something xxx"def",2
+# 		"ghi",3
+#
+# The resulting rows will be ("abc",1) and ("def",2)
+#
+# The third row in the file is skipped because it does not contain the prefix.
+#
+# The IGNORE number LINES option can be used to ignore lines at the start of the file.
+#
+# For example, you can use IGNORE 1 LINES to skip over an initial header line containing
+# column names:
+#
+# 		LOAD DATA INFILE '/tmp/test.txt' INTO TABLE test IGNORE 1 LINES;
+#
+# When you use SELECT_---_INTO_OUTFILE in tandem with LOAD_DATA_INFILE to write data
+# from a database into a file and then read the file back into the database later,
+# the field- and line-handling options for both statements must match.
+#
+# Otherwise, LOAD_DATA_INFILE will not interpret the contents of the file properly.
+#
+# Suppose that you use SELECT_---_INTO_OUTFILE to write a file with fields delimited
+# by commas:
+#
+# 		SELECT * INTO OUTFILE 'data.txt'
+# 			FIELDS TERMINATED BY ','
+# 			FROM table2;
+#
+# To read the comma-delimited file back in, the correct statement would be:
+#
+# 		LOAD DATA INFILE 'data.txt' INTO TABLE table2
+# 			FIELDS TERMINATED BY ',';
+#
+# If instead you tried to read in the file with the statement shown following,
+# it would not work because it instructs LOAD_DATA_INFILE to look for tabs
+# between fields:
+#
+# 		LOAD DATA INFILE 'data.txt' INTO TABLE table2
+# 			FIELDS TERMINATED BY '\t';
+#
+# The likely result is that each input line would be interpreted as a single field.
+#
+# LOAD_DATA_INFILE can be used to read files obtained from external sources.
+#
+# For example, many programs can export data in comma-separated values (CSV) format,
+# such that lines have fields separated by commas and enclosed within double quotation
+# marks, with an initial line of column names.
+#
+# If the lines in such a file are terminated by carriage return/newline pairs,
+# the statement shown here illustrates the field- and line-handling options
+# you would use to load the file:
+#
+# 		LOAD DATA INFILE 'data.txt' INTO TABLE tbl_name
+# 			FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+# 			LINES TERMINATED BY '\r\n'
+# 			IGNORE 1 LINES;
+#
+# If the input values are not necessarily enclosed within quotation marks,
+# use OPTIONALLY before the ENCLOSED BY keywords.
+#
+# Any of the field- or line-handling options can specify an empty string
+# ('')
+#
+# If not empty, the FIELDS [OPTIONALLY] ENCLOSED BY and FIELDS ESCAPED BY
+# values must be a single character.
+#
+# The FIELDS TERMINATED BY, LINES STARTING BY, and LINES TERMINATED BY values
+# can be more than one character.
+#
+# For example, to write lines that are terminated by carriage return/linefeed
+# pairs, or to read a file containing such lines, specify a LINES TERMINATED BY '\r\n'
+# clause.
+#
+# To read a file containing jokes that are separated by lines consisting of 
+# %%, you can do this:
+#
+# 		CREATE TABLE jokes
+# 			(a INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+# 			joke TEXT NOT NULL);
+# 		LOAD DATA INFILE '/tmp/jokes.txt' INTO TABLE jokes
+# 			FIELDS TERMINATED BY ''
+# 			LINES TERMINATED BY '\n%%\n' (joke);
+#
+# FIELDS [OPTIONALLY] ENCLOSED BY controls quoting of fields.
+#
+# For output (SELECT --- INTO OUTFILE), if you omit the word OPTIONALLY,
+# all fields are enclosed by the ENCLOSED BY character.
+#
+# An example of such output (using a comma as the field delimiter)
+# is shown here:
+#
+# 		"1","a string","100.20"
+# 		"2","a string containing a , comma","102.20"
+# 		"3","a string containing a \" quote","102.20"
+# 		"4","a string containing a \", quote and comma","102.20"
+#
+# If you specify OPTIONALLY, the ENCLOSED BY character is used only to enclose values
+# from columns that have a string data type (such as CHAR, BINARY, TEXT or ENUM):
+#
+# 		1,"a string",100.20
+# 		2,"a string containing a , comma",102.20
+# 		3,"a string containing a \" quote",102.20
+# 		4,"a string containing a \", quote and comma",102.20
+#
+# Occurrences of the ENCLOSED BY character within a field value are escaped by
+# prefixing them with the ESCAPED BY character.
+#
+# Also, if you specify an empty ESCAPED BY value, it is possible to inadvertedly
+# generate output that cannot be read properly by LOAD_DATA_INFILE
+#
+# For example, the preceding output just shown would appear as follows
+# if the escape character is empty.
+#
+# Observe that the second field in the fourth line contains a comma following
+# the quote, which (errorneously) appears to terminate the field:
+#
+# 		1,"a string",100.20
+# 		2,"a string containing a , comma",102.20
+# 		3,"a string containing a " quote",102.20
+# 		4,"a string containing a ", quote and comma",102.20
+#
+# For input, the ENCLOSED BY character, if present, is stripped from the ends of field values.
+#
+# (This is true regardless of whether OPTIONALLY is specified; OPTIONALLY has no effect on
+# input interpretation)
+#
+# Occurrences of the ENCLOSED BY character preceded by the ESCAPED BY character
+# are interpreted as part of the current field value.
+#
+# If the field begins with the ENCLOSED BY character, instances of that character
+# are recognized as terminating a field value only if followed by the field or
+# line TERMINATED BY sequence.
+#
+# To avoid ambiguity, occurrences of the ENCLOSED BY character within a field value
+# can be doubled and are interpreted as a single instance of the character.
+#
+# For example, if ENCLOSED BY '"' is specified, quotation marks are handled as shown here:
+#
+# 		"The ""BIG"" boss" 	-> The "BIG" boss
+# 		
+# 		The "BIG" boss 		-> The "BIG" boss
+#
+# 		The ""BIG"" boss 		-> The ""BIG"" boss
+#
+# FIELDS ESCAPED BY controls how to read or write special characters:
+#
+# 		) For input, if the FIELDS ESCAPED BY character is not empty, occurences
+# 			of that character are stripped and the following character is taken
+# 			literally as part of a field value.
+#
+# 			Some two-character sequences that are exceptions, where the first character
+# 			is the escape character.
+#
+# 			These sequences are shown in the following table (using \ for the escape character)
+#
+# 			The rules for NULL handling are described later in this section.
+#
+# 				CHARACTER 	ESCAPE SEQUENCE
+# 
+#  			\0 			An ASCII NUL (X'00') character
+#
+# 				\b 			a backspace character
+#
+# 				\n 			A newline (linefeed) character
+#
+# 				\r 			A carriage return character
+#
+# 				\t 			A tab character
+#
+# 				\Z 			ASCII 26 (control+Z)
+#
+# 				\N 			NULL
+#
+# 			For more information about \-escape syntax, see SECTION 9.1.1, "STRING LITERALS"
+#
+# 			If the FIELDS ESCAPED BY character is empty, escape-sequence interpretation does not occur.
+#
+# 		) For output, if the FIELDS ESCAPED BY character is not empty, it is used to prefix the following
+# 			characters on output:
+#
+# 			) The FIELDS ESCAPED BY character
+#
+# 			) The FIELDS [OPTIONALLY] ENCLOSED BY character
+#
+# 			) The first character of the FIELDS TERMINATED BY and LINES TERMINATED BY values,
+# 				if the ENCLOSED BY character is empty or unspecified.
+#
+# 			) ASCII 0 (what is actually written following the escape character is ASCII 0, not a zero-valued byte)
+#
+# 			If the FIELDS ESCAPED BY character is empty, no characters are escaped and NULL is output as NULL,
+# 			not \N
+#
+# 			It is probably not a good idea to specify an empty escape character, particularly if field values
+# 			in your data contain any of the characters in the list just given.
+#
+# In certain cases, field- and line-handling options interact:
+#
+# 		) If LINES TERMINATED BY is an empty string and FIELDS TERMINATED BY is nonempty, lines are also
+# 			terminated with FIELDS TERMINATED BY
+#
+# 		) If the FIELDS TERMINATED BY and FIELDS ENCLOSED BY values are both empty (''), a fixed-row
+# 			(nondelimited) format is used.
+#
+# 			With fixed-row format, no delimiters are used between fields (but you can still have a line terminator)
+#
+# 			Instead, column values are read and written using a field width wide enough to hold all values
+# 			in the field.
+#
+# 			For TINYINT, SMALLINT, MEDIUMINT, INT, and BIGINT, the field widths are 4, 6, 8, 11 and 20, respectively,
+# 			no matter what the declared display width is.
+#
+# 			LINES TERMINATED BY is still used to separate lines.
+#
+# 			If a line does not contain all fields, the rest of the columns are set to their
+# 			default values.
+#
+# 			If you do not have a line terminator, you should set this to ''
+#
+# 			In this case, the text file must contain all fields for each row.
+#
+# 			Fixed row format also affects handling of NULL values, as described later.
+#
+# 			NOTE:
+#
+# 				Fixed-size format does not work if you are using a multibyte character set
+#
+# Handling of NULL values varies according to the FIELDS and LINES options in use:
+#
+# 		) For the default FIELDS and LINES values, NULL is written as a field value of 
+# 			\N for output, and a field value of \N is read as NULL for input
+#
+# 			(Assuming that the ESCAPED BY character is \)
+#
+# 		) If FIELDS ENCLOSED BY is not empty, a field containing the literal word NULL
+# 			as its value is read as a NULL value.
+#
+# 			This differs from the word NULL enclosed within FIELDS ENCLOSED BY characters,
+# 			which is read as the string 'NULL'
+#
+# 		) If FIELDS ESCAPED BY is empty, NULL is written as the word NULL
+#
+# 		) With fixed-row format (which is used when FIELDS TERMINATED BY and FIELDS ENCLOSED BY
+# 			are both empty), NULL is written as a empty string.
+#
+# 			This causes both NULL values and empty strings in the table to be indistinguishable when
+# 			written to the file because both are written as empty strings.
+#
+# 			If you need to be able to tell the two apart when reading the file back in,
+# 			you should not use fixed-row format.
+#
+# An attempt to load NULL into a NOT NULL column causes assignment of the implicit default value
+# for the column's data type and a warning, or an error in strict SQL mode.
+#
+# Implicit default values are discussed in SECTION 11.7, "DATA TYPE DEFAULT VALUES"
+#
+# Some cases are not supported by LOAD_DATA_INFILE:
+#
+# 		) Fixed-size rows (FIELDS TERMINATED BY and FIELDS ENCLOSED BY both empty) and BLOB or TEXT columns.
+#
+# 		) If you specify one separator that is the same as or a prefix of another, LOAD_DATA_INFILE cannot
+# 			interpret the input properly.
+#
+# 			For example, the following FIELDS clause would cause problems:
+#
+# 				FIELDS TERMINATED BY '"' ENCLOSED BY '"'
+#
+# 		) If FIELDS ESCAPED BY is empty, a field value that contains an occurrence of FIELDS
+# 			ENCLOSED BY or LINES TERMINATED BY followed by the FIELDS TERMINATED BY value
+# 			causes LOAD_DATA_INFILE to stop reading a field or line too early.
+#
+# 			This happens because LOAD_DATA_INFILE cannot properly determine whether the field
+# 			or line value ends.
+#
+# COLUMN LIST SPECIFICATION
+#
+# The following example loads all columns of the persondata table:
+#
+# 		LOAD DATA INFILE 'persondata.txt' INTO TABLE persondata;
+#
+# By default, when no column list is provided at the end of the LOAD_DATA_INFILE
+# statement, input lines are expected to contain a field for each table column.
+#
+# If you want to load only some of a table's columns, specify a column list:
+#
+# 		LOAD DATA INFILE 'persondata.txt' INTO TABLE persondata
+# 		(col_name_or_user_var [, col_name_or_user_var] ---);
+#
+# You must also specify a column list if the order of the fields in the input file
+# differs from the order of the columns in the table.
+#
+# Otherwise, MySQL cannot tell how to match input fields with table columns.
+#
+# INPUT PREPROCESSING
+#
+# Each col_name_or_user_var value is either a column or a user variable.
+#
+# With user variables, the SET clause enables you to perform preprocessing
+# transformations on their values before assigning the result to columns.
+#
+# User variables in the SET clause can be used in several ways.
+#
+# The following example uses the first input column directly for the value
+# of t1.column1, and assigns the second input column to a user variable
+# that is subjected to a division operation beore being used for the
+# value of t1.column2:
+#
+# 		LOAD DATA INFILE 'file.txt'
+# 			INTO TABLE t1
+# 			(column1, @var1)
+# 			SET column2 = @var1/100;
+#
+# The SET clause can be used to supply values not derived from the input file.
+#
+# The following statement sets column3 to the current date and time:
+#
+# 		LOAD DATA INFILE 'file.txt'
+# 			INTO TABLE t1
+# 			(column1, column2)
+# 			SET column3 = CURRENT_TIMESTAMP;
+#
+# You can also discard an input value by assigning it to a user variable
+# and not assigning the variable to a table column:
+#
+# 		LOAD DATA INFILE 'file.txt'
+# 			INTO TABLE t1
+# 			(column1, @dummy, column2, @dummy, column3);
+#
+# Use of the column/variable list and SET clause is subject to the following restrictions:
+#
+# 		) Assignments in the SET clause should have only column names on the left hand side of assignment operators
+#
+# 		) You can use subqueries in the right hand side of SET assignments.
+#
+# 			A subquery that returns a value to be assigned to a column may be a scalar subquery only.
+#
+# 			ALso, you cannot use a subquery to select from the table that is being loaded.
+#
+# 		) Lines ignored by an IGNORE clause are not processed for the column/variable list or SET clause
+#
+# 		) User variables cannot be used when loading data with fixed-row format because user variables do
+# 			not have a display width
+#
+# When processing an input line, LOAD_DATA splits it into fields and uses the values according to
+# the column/variable list and the SET clause, if they are present.
+#
+# Then the resulting row is inserted into the table. If there are BEFORE INSERT or AFTER INSERT
+# triggers for the table, they are activated before or after inserting the row, respectively.
+#
+# If an input line has too many fields, the extra fields are ignored and the number of warnings
+# is incremented.
+#
+# If an input line has too few fields, the table columns for which input fields are missing are set
+# to their default values.
+#
+# Default value assignment is described in SECTION 11.7, "DATA TYPE DEFAULT VALUES"
+#
+# An empty field value is interpreted different from a missing field:
+#
+# 		) For string types, the column is set to the empty string
+#
+# 		) For numeric types, the column is set to 0
+#
+# 		) For date and time types, the column is set to the appropriate "zero" value for the type.
+#
+# 			See SECTION 11.3, "DATE AND TIME TYPES"
+#
+# These are the same values that result if you assign an empty string explicitly to a string,
+# numeric, or date or time type explicitly in an INSERT or UPDATE statement.
+#
+# Treatment of empty or incorrect field values differs from that just described if the SQL
+# mode is set to a restrictive value.
+#
+# For example, if sql_mode is set to TRADITIONAL, conversion of an empty value or a value
+# such as 'x' for a numeric column results in an error, not conversion to 0.
+#
+# (With LOCAL or IGNORE, warnings occur rather than errors, even with a restrictive sql_mode value,
+# and the row is inserted using the same closest-value behavior used for nonrestrictive
+# SQL modes.
+#
+# This occurs because the server has no way to stop transmission of the file in the middle of the operation)
+#
+# TIMESTAMP columns are set to the current date and time only if there is a NULL value for the
+# column (that is, \N) and the column is not declared to permit NULL values, or if the TIMESTAMP
+# column's default value is the current timestamp and it is omitted from the field list when a 
+# field list is specified.
+#
+# LOAD_DATA_INFILE regards all input as strings, so you cannot use numeric values for ENUM or
+# SET columns the way you can with INSERT statements.
+#
+# All ENUM and SET values must be specified as strings.
+#
+# BIT values cannot be loaded directly using binary notation (for example, b'011010')
+#
+# To work around this, use the SET clause to strip off the leading b' and trailing '
+# and perform a base-2 to base-10 conversion so that MySQL loads the values into the
+# BIT column properly:
+#
+# 		cat /tmp/bit_test.txt
+# 		b'10
+# 		b'1111111'
+# 		mysql test
+# 		LOAD DATA INFILE '/tmp/bit_test.txt'
+# 		INTO TABLE bit_test (@var1)
+# 		SET b = CAST(CONV(MID(@var1, 3, LENGTH(@var1)-3), 2, 10) AS UNSIGNED);
+# 		Query OK, 2 rows affected (0.00 sec)
+# 		Records: 2 Deleted: 0 Skipped: 0 Warnings: 0
+#
+# 		SELECT BIN(b+0) FROM bit_test;
+# 		+------------+
+# 		| BIN(b+0)   |
+# 		+------------+
+# 		| 10 		    |
+# 		| 1111111    |
+# 		+------------+
+# 		2 rows in set (0.00 sec)
+#
+# For BIT values in 0b binary notation (for example, 0b011010), use this SET
+# clause instead to strip off the leading 0b:
+#
+# 		SET b = CAST(CONV(MID(@var1, 3, LENGTH(@var1)-2), 2, 10) AS UNSIGNED)
+#
+# STATEMENT RESULT INFORMATION
+#
+# When the LOAD_DATA_INFILE statement finishes, it returns an information string in the
+# following format:
+#
+# 		Records: 1 Deleted: 0 Skipped: 0 Warnings: 0
+#
+# Warnings occur under the same circumstances as when values are inserted using the INSERT
+# statement (see SECTION 13.2.6, "INSERT SYNTAX"), except that LOAD_DATA_INFILE also generates
+# warnings when there are too few or too many fields in the input row.
+#
+# You can use SHOW_WARNINGS to get a list of the first max_error_count warnings as information
+# about what went wrong.
+#
+# See SECTION 13.7.6.40, "SHOW WARNINGS SYNTAX"
+#
+# If you are using the C API, you can get information about the statement by calling the
+# mysql_info() function.
+#
+# See SECTION 28.7.7.36, "MYSQL_INFO()"
+#
+# MISCELLANEOUS TOPICS
+#
+# On Unix, if you need LOAD_DATA to read from a pipe, you can use the following technique 
+# (the example loads a listing of the / directory into the table db1.t1):
+#
+# 		mkfifo /mysql/data/db1/ls.dat
+# 		chmod 666 /mysql/data/db1/ls.dat
+# 		find / -ls > /mysql/data/db1/ls.dat &
+# 		mysql -e "LOAD DATA INFILE 'ls.dat' INTO TABLE t1" db1
+#
+# Here you must run the command that generates the data to be loaded and the mysql commands
+# either on separate terminals, or run the data generation process in the background
+# (as shown in the preceding example)
+#
+# If you do not do this, the pipe will block until data is read by the mysql process
+#
+# 13.2.8 LOAD XML SYNTAX
+#
+# 		LOAD XML [LOW_PRIORITY | CONCURRENT] [LOCAL] INFILE 'file_name'
+# 			[REPLACE | IGNORE]
+# 			INTO TABLE [db_name.]tbl_name
+# 			[CHARACTER SET charset_name]
+# 			[ROWS IDENTIFIED BY '<tagname>']
+# 			[IGNORE number {LINES | ROWS}]
+# 			[(field_name_or_user_var
+# 				[, field_name_or_user_var] ---)]
+# 			[SET col_name={expr | DEFAULT},
+# 				[, col_name={expr | DEFAULT}] ---]
+#
+# The LOAD_XML statement reads data from an XML file into a table.
+#
+# The file_name must be given as a literal string. The tagname in the optional ROWS IDENTIFIED BY 
+# clause must also be given as a literal string, and must be surrounded by angle brackets (< and >)
+#
+# LOAD_XML acts as the complement of running the mysql client in XML output mode (that is, starting
+# the client with the --xml option)
+#
+# To write data from a table to an XML file, you can invoke the mysql client with the --xml
+# and -e options from the system shell, as shown here:
+#
+# 		mysql --xml -e 'SELECT * FROM mydb.mytable' > file.xml
+#
+# To read the file back into a table, use LOAD_XML_INFILE
+#
+# By default, the <row> element is considered to be the equivalent of a database
+# table row; this can be changed using the ROWS IDENTIFIED BY clause.
+#
+# This statement supports three different XML formats:
+#
+# 		) Column names as attributes and column values as attribute values:
+#
+# 			<row column1="value1" column2="value2" ---/>
+#
+# 		) Column names as tags and column values as the content of these tags:
+#
+# 			<row>
+# 				<column1>value1</column1>
+# 				<column2>value2</column2>
+# 			</row>
+#
+# 		) Column names are the name attributes of <field> tags, and values are the contents of these tags:
+#
+# 			<row>
+# 				<field name='column1'>value1</field>
+# 				<field name='column2'>value2</field>
+# 			</row>
+#
+# 			This is the format used by other MySQL tools, such as mysqldump
+#
+# All three formats can be used in the same XML file; the import routine automatically
+# detects the format for each row and interprets it correctly.
+#
+# Tags are matched based on the tag or attribute name and the column name.
+#
+# The following clauses work essentially the same way for LOAD_XML as they do for LOAD_DATA:
+#
+# 		) LOW_PRIORITY or CONCURRENT
+#
+# 		) LOCAL
+#
+# 		) REPLACE or IGNORE
+#
+# 		) CHARACTER SET
+#
+# 		) SET
+#
+# See SECTION 13.2.7, "LOAD DATA INFILE SYNTAX", for more information about these clauses.
+#
+# (field_name_or_user_var, ---) is a list of one or more comma-separated XML fields or user variables.
+#
+# The name of a user variable used for this purpose must match the name of a field from the XML file,
+# prefixed with @.
+#
+# You can use field names to select only desired fields.
+#
+# User variables can be employed to store the corresponding field values for subsequent re-use.
+#
+# The IGNORE number LINES or IGNORE number ROWS clause causes the first number rows in the
+# XML file to be skipped.
+#
+# It is analogous to the LOAD_DATA statement's IGNORE --- LINES clause.
+#
+# Suppose that we have a table named person, created as shown here:
+#
+# 		USE test;
+#
+# 		CREATE TABLE person (
+# 			person_id INT NOT NULL PRIMARY KEY,
+# 			fname VARCHAR(40) NULL,
+# 			lname VARCHAR(40) NULL,
+# 			created TIMESTAMP
+# 		);
+#
+# Suppose further that this table is initially empty.
+#
+# Now suppose that we have a simple XML file person.xml, whose contents
+# are as shown here:
+#
+# 		<list>
+# 			<person person_id="1" fname="Kapek" lname="Sainnouine"/>
+# 			<person person_id="2" fname="Sajon" lname="Rondela"/>
+# 			<person person_id="3"><fname>Likame</fname><lname>Örrtmons</lname></person>
+# 			<person person_id="4"><fname>Slar</fname><lname>Manlanth</lname></person>
+# 			<person><field name="person_id">5</field><field name="fname">Stoma</field>
+# 				<field name="lname">Milu</field></person>
+# 			<person><field name="person_id">6</field><field name="fname">Nirtam</field>
+# 				<field name="lname">Sklöd</field></person>
+# 			<person person_id="7"><fname>Sungam</fname><lname>Dulbåd</lname></person>
+# 			<person person_id="8" fname="Srafef" lname="Encmelt"/>
+# 		</list>
+#
+# Each of the permissible XML formats discussed previously is represented in this example file.
+#
+# To import the data in person.xml into the person table, you can use this statement:
+#
+# 		LOAD XML LOCAL INFILE 'person.xml'
+# 			INTO TABLE person
+# 			ROWS IDENTIFIED BY '<person>';
+# 		Query OK, 8 rows affected (0.00 sec)
+# 		Records: 8 Deleted: 0 Skipped: 0 Warnings: 0
+#
+# Here, we assume that person.xml is located in the MySQL data directory.
+#
+# If the file cannot be found, the following error results:
+#
+# 		ERROR 2 (HY000): File '/person.xml' not found (Errcode: 2)
+#
+# The ROWS IDENTIFIED BY '<person>' clause means that each <person> element in the XML
+# file is considered equivalent to a row in the table into which the data is to be
+# imported.
+#
+# In this case, this is the person table in the test database.
+#
+# As can be seen by the response from the server, 8 rows were imported into the test.person
+# table.
+#
+# This can be verified by a simple SELECT statement:
+#
+# 		SELECT * FROM person;
+# 		+-----------------+---------------+----------------+----------------------+
+# 		| person_id 		| fname 			 | lname 			| created 				  |
+# 		+-----------------+---------------+----------------+----------------------+
+# 		| 1 				   | Kapek 			 | Sainnouine 	   | 2007-07-13 16:18:47  |
+# 		| 2 					| Sajon 			 | Rondela 			| 2007-07-13 16:18:47  |
+# 		| 3 					| Likame 		 | Örrtmons 		| 2007-07-13 16:18:47  |
+# 		| 4 					| etc.
+# 		etc.
+#
+# This shows, as stated earlier in this section, that any or all of hte 3 permitted XML
+# formats may appear in a single file and be read in using LOAD_XML
+#
+# The inverse of the import operation just shown - that is, dumping MySQL table data
+# into an XML file - can be accomplished using the mysql client from the system shell,
+# as shown here:
+#
+# 		mysql --xml -e "SELECT * FROM test.person" > person-dump.xml
+# 		cat person-dump.xml
+# 		<?xml version="1.0"?>
+#
+# 		<resultset statement="SELECT * FROM test.person" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+# 			<row>
+# 				<field name="person_id">1</field>
+# 				<field name="fname">Kapek</field>
+# 				<field name="lname">Sainnouine</field>
+# 			</row>
+#
+# 			<row>
+# 				<field name="person_id">2</field>
+# 				etc.
+# 			etc.
+# 		</resultset>
+#
+# NOTE:
+#
+# 		The --xml option causes the mysql client to use XML formatting for its output;
+#
+# 		The -e option causes the client to execute the SQL statement immediately following
+# 		the option. See SECTION 4.5.1, "MYSQL -- THE MYSQL COMMAND-LINE CLIENT"
+#
+# YOu can verify that hte dump is valid by creating a copy of the person table
+# and importing the dump file into the new table, like this:
+#
+# 		USE test;
+# 		CREATE TABLE person2 LIKE person;
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		LOAD XML LOCAL INFILE 'person-dump.xml'
+# 			INTO TABLE person2;
+# 		Query OK, 8 rows affected (0.01 sec)
+# 		Records: 8 Deleted: 0 Skipped: 0 Warnings: 0
+#
+# 		SELECT * FROM person2;
+# 		+---------------------+---------------+-----------------------+---------------------+
+# 		| person_id 			 | fname 		  | lname 					  | created 				|
+# 		+---------------------+---------------+-----------------------+---------------------+
+# 		| etc.
+# 		8 rows in set (0.00 sec)
+#
+# There is no requirement that every field in the XML file be matched with a column in the 
+# corresponding table.
+#
+# Fields which have no corresponding columns are skipped.
+#
+# You can see this by first emptying the person2 table and dropping the created column,
+# then using the same LOAD XML statement we just employed previously, like this:
+#
+# 		TRUNCATE person2;
+# 		Query OK, 8 rows affected (0.26 sec)
+#
+# 		ALTER TABLE person2 DROP COLUMN created;
+# 		Query OK, 0 rows affected (0.52 sec)
+# 		Records: 0 Duplicates: 0 Warnings: 0
+#
+# 		SHOW CREATE TABLE person2\G
+# 		************************** 1. row *********************************
+# 				Table: person2
+# 		Create table: CREATE TABLE `person2` (
+# 			`person_id` int(11) NOT NULL,
+# 			`fname` varchar(40) DEFAULT NULL,
+# 			`lname` varchar(40) DEFAULT NULL,
+# 			PRIMARY KEY (`person_id`)
+# 		) ENGINE=InnoDB DEFAULT CHARSET=utf8
+# 		1 row in set (0.00 sec)
+#
+# 		LOAD XML LOCAL INFILE 'person-dump.xml'
+# 			INTO TABLE person2;
+# 		Query OK, 8 rows affected (0.01 sec)
+# 		Records: 8 Deleted: 0 Skipped: 0 Warnings: 0
+#
+# 		SELECT * FROM person2;
+# 		+--------------+--------------+--------------+
+# 		| person_id    | fname 		   | lname 			|
+# 		+--------------+--------------+--------------+
+# 		| 		etc.
+# 		8 rows in set (0.00 sec)
+#
+# The order in which the fields are given within each row of the XML file does not
+# affect the operation of LOAD XML; the field order can vary from row to row,
+# and is not required to be in the same order as the corresponding columns in the table.
+#
+# As mentioned previously, you can use a (field_name_or_user_var, ---) list of one or more
+# XML fields (to select desired fields only) or user variables (to store the corresponding
+# field values for later use)
+#
+# User variables can be especially useful when you want to insert data from an XML file
+# into table columns whose names do not match those of the XML fields.
+#
+# To see how this works, we first create a table named individual whose structure
+# matches that of the person table, but whose columns are named differently:
+#
+# 		CREATE TABLE individual (
+# 			individual_id INT NOT NULL PRIMARY KEY,
+# 			name1 VARCHAR(40) NULL,
+# 			name2 VARCHAR(40) NULL,
+# 			made TIMESTAMP
+# 		);
+# 		Query OK, 0 rows affected (0.42 sec)
+#
+# In this case, you cannot simply load the XML file directly into the table,
+# because the field and column names do not match:
+#
+# 		LOAD XML INFILE '../bin/person-dump.xml' INTO TABLE test.individual;
+# 		ERROR 1263 (22004): Column set to default value; NULL supplied to NOT NULL column
+# 		'individual_id' at row 1
+#
+# This happens because the MySQL server looks for field names matching the column names
+# of hte target table.
+#
+# You can work around this problem by selecting the field values into user variables,
+# then setting the target table's columns equal to the values of those variables
+# using SET.
+#
+# You can perform both of these operations in a single statement, as shown here:
+#
+# 		LOAD XML INFILE '../bin/person-dump.xml'
+# 				INTO TABLE test.individual (@person_id, @fname, @lname, @created)
+# 				SET individual_id=@person_id, name1=@fname, name2=@lname, made=@created;
+# 		Query OK, 8 rows affected (0.05 sec)
+# 		Records: 8 Deleted: 0 Skipped: 0 Warnings: 0
+#
+# 		SELECT * FROM individual;;
+# 		+-----------------+--------------+-------------------+------------------------+
+# 		| individual_id 	| name1 			| name2 				  | made 					   |
+# 		+-----------------+--------------+-------------------+------------------------+
+# 		| etc.
+#
+# 		8 rows in set (0.00 sec)
+#
+# The names of the user variables must match those of the corresponding fields from the
+# XML file, with the addition of hte required @ prefix to indicate that they are variables.
+#
+# THe user variables need not be listed or assigned in the same order as the corresponding fields.
+#
+# Using a ROWS IDENTIFIED BY '<tagname>' clause, it is possible to import data from the same XML
+# file into database tables with different definitions.
+#
+# For this example, suppose that you have a file named address.xml which contains the following XML:
+#
+# 		<?xml version="1.0"?>
+#
+# 		<list>
+# 			<person person_id="1">
+# 				<fname>Robert</fname>
+# 				<lname>Jones</lname>
+# 				<address address_id="1" street="Mill Creek Road" zip="45365" city="Sidney"/>
+#  			<address address_id="2" street="Main Street" zip="28681" city="Taylorsville"/>
+# 			</person>
+#
+# 			etc.
+#
+# 		</list>
+#
+# You can again use the test.person table as defined previously in this section,
+# after clearing all the existing records from the table and then showing its
+# structure as shown here:
+#
+# 		mysql< TRUNCATE person;
+# 		Query OK, 0 rows affected (0.04 sec)
+#
+# 		mysql< SHOW CREATE TABLE person\G
+# 		******************* 1. row *************************
+# 				Table: person
+# 		Create Table: CREATE TABLE `person` (
+# 			`person_id` int(11) NOT NULL,
+# 			`fname` varchar(40) DEFAULT NULL,
+# 			`lname` varchar(40) DEFAULT NULL,
+# 			`created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+# 		  PRIMARY KEY (`person_id`)
+# 		) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4
+# 		1 row in set (0.00 sec)
+#
+# Now create an address table in the test database using the following CREATE_TABLE statement:
+#
+# 		CREATE TABLE address (
+# 			address_id INT NOT NULL PRIMARY KEY,
+# 			person_id INT NULL,
+# 			street VARCHAR(40) NULL,
+# 			zip INT NULL,
+# 			city VARCHAR(40) NULL,
+# 			created TIMESTAMP
+# 		);
+#
+# To import the data from the XML file into the person table, execute the following
+# LOAD_XML statement, which specifies that rows are to be specified by the
+# <person> element, as shown here:
+#
+# 		LOAD XML LOCAL INFILE 'address.xml'
+# 			INTO TABLE person
+# 			ROWS IDENTIFIED BY '<person>';
+# 		Query OK, 2 rows affected (0.00 sec)
+# 		Records: 2 Deleted: 0 Skipped: 0 Warnings: 0
+#
+# You can verify that hte records were imported using a SELECT statement:
+#
+# 		SELECT * FROM person;
+# 		+------------------+------------------+-----------+----------------------+
+# 		| person_id 		 | fname 			  | lname 	  | created 			    |
+# 		+------------------+------------------+-----------+----------------------+
+# 		| 1 					 | Robert 			  | Jones 	  | 2007-07-24 17:37:06  |
+# 		| 2 					 | Mary 				  | Smith 	  | 2007-07-24 17:37:06  |
+# 		+------------------+------------------+-----------+----------------------+
+# 		2 rows in set (0.00 sec)
+#
+# Since the <address> elements in the XML file have no corresponding columns in the
+# person table, they are skipped.
+#
+# To import the data from the <address> elements into the address table, using the
+# LOAD_XML statement shown here:
+#
+# 		LOAD XML LOCAL INFILE 'address.xml'
+# 			INTO TABLE address
+# 			ROWS IDENTIFIED BY '<address>';
+# 		Query OK, 3 rows affected (0.00 sec)
+# 		Records: 3 Deleted: 0 Skipped: 0 Warnings: 0
+#
+# You can see that the data was imported using a SELECT statement such as this one:
+#
+# 		SELECT * FROM address;
+# 		+-------------+---------------+--------------------+---------+---------------+---------------------+
+# 		| address_id  | person_id 		| street 				| zip     | city 			  | created 		      |
+# 		+-------------+---------------+--------------------+---------+---------------+---------------------+
+# 		| 1 			  | 1 				| Mill Creek Road 	| 45365   | Sidney 		  | 2007-07-24 17:37:37 |
+# 		 etc.
+# 		
+# 		3 rows in set (0.00 sec)
+#
+# The data from the <address> element that is enclosed in XML comments is not imported.
+#
+# However, since there is a person_id column in the address table, the value of the 
+# person_id attribute from the parent <person> element for each <address> is imported
+# into the address table.
+#
+# SECURITY CONSIDERATIONS
+#
+# AS with the LOAD_DATA statement, the transfer of the XML file from the client
+# host to the server host is initiated by the MySQL server.
+#
+# In theory, a patched server could be built that would tell the client program to
+# transfer a file of the server's choosing rather than the file named by the client
+# in the LOAD_XML statement.
+#
+# Such a server could access any file on the client host to which the client
+# user has read access.
+#
+# In a Web environment, clients usually connect to MySQL from a Web server.
+#
+# A user that can run any command against the MySQL server can use LOAD_XML_LOCAL
+# to read any files ot which the Web server process has read access.
+#
+# In this environment, the client with respect tot the MySQL server is actually
+# the Web server, not the remote program being run by the user who connects
+# to the Web server.
+#
+# You can disable loading of XML files from clients by starting the server with
+# --local-infile=0 or --local-infile=OFF
+#
+# This option can also be used when starting the mysql client to disable
+# LOAD_XML for the duration of the client session.
+#
+# To prevent a client from loading XML files from the server, do not grant
+# the FILE privilege to the corresponding MySQL user account, to revoke
+# this privilege if the client user account already has it.
+#
+# IMPORTANT:
+#
+# 		Revoking the FILE privilege (or not granting it in the first place) keeps
+# 		hte user only from executing the LOAD_XML_INFILE statement
+#
+# 		(as well as the LOAD_FILE() function; it does not prevent the user
+# 		from executing LOAD_XML_LOCAL_INFILE 
+#
+# 		To disallow this statement, you must start the server or the client
+# 		with --local-infile=OFF
+#
+# 		In other words, the FILE privilege affects only whether the client
+# 		can read files on the server;
+#
+# 		it has no bearing on whether the client can read files on the local file system.
+#
+# For partitioned tables using storage engines that employ table locks, such as MyISAM;
+# any locks caused by LOAD XML performs locks on all partitions of the table.
+#
+# This does not apply to tables using storage engines which employ row-level locking,
+# such as InnoDB.
+#
+# For more information, see PARTITIONING AND LOCKING
+#
+# 13.2.9 REPLACE SYNTAX
+#
+# 	REPLACE [LOW_PRIORITY | DELAYED]
+# 		[INTO] tbl_name
+# 		[PARTITION (partition_name [, partition_name] ---)]
+# 		[(col_name [, col_name] ---)]
+# 		{VALUES | VALUE} (value_list) [, (value_list)] ---
+#
+# 	REPLACE [LOW_PRIORITY | DELAYED]
+# 		[INTO] tbl_name
+# 		[PARTITION (partition_name [, partition_name] ---)]
+# 		SET assignment_list
+#
+# 	REPLACE [LOW_PRIORITY | DELAYED]
+# 		[INTO] tbl_name
+# 		[PARTITION (partition_name [, partition_name] ---)]
+# 		[(col_name [, col_name] ---)]
+# 		SELECT ---
+#
+# 	value:
+# 		{expr | DEFAULT}
+#
+# 	value_list:
+# 		value [, value] ---
+#
+# 	assignment:
+# 		col_name = value
+#
+# 	assignment_list:
+# 		assignment [, assignment] ---
+#
+# REPLACE works exactly like INSERT, except that if an old row in the table has the same value as a new row
+# for a PRIMARY KEY or a UNIQUE index, the old row is deleted before hte new row is isnerted.
+#
+# See SECTION 13.2.6, "INSERT SYNTAX"
+#
+# REPLACE is a MySQL extension to the SQL standard.
+#
+# It either inserts, or deletes and inserts.
+#
+# For another MySQL extension to standard SQL - that either inserts
+# or updates - see SECTION 13.2.6.2, "INSERT --- ON DUPLICATE KEY UPDATE SYNTAX"
+#
+# DELAYED inserts and replaces were deprecated in MySQL 5.6
+#
+# In MySQL 8.0, DELAYED is not supported. THe server recognizes but ignores the DELAYED
+# keyword, handles the replace as a nondelayed replace, and generates an ER_WARN_LEGACY_SYNTAX_CONVERTED
+# warning.
+#
+# ("REPLACE DELAYED is no longer supported. The statement was converted to REPLACE")
+#
+# The DELAYED keyword will be removed in a future release.
+#
+# NOTE:
+#
+# 		REPLACE makes sense only if a table has a PRIMARY KEY or UNIQUE index.
+#
+# 		Otherwise, it becomes equivalent to INSERT, because there is no index to be
+# 		used to determine whether a new row duplicates another.
+#
+# Values for all columns are taken from the values specified in the REPLACE statement.
+#
+# Any missing columns are set to their default values, just as happens for INSERT.
+#
+# You cannot refer to values from the current row and use them in the new row.
+#
+# If you use an assignment such as SET col_name = col_name + 1, the reference
+# to the column name on the right hand side is treated as DEFAULT(col_name),
+# so the assignment is equivalent to SET col_name = DEFAULT(col_name) + 1
+#
+# To use REPLACE, you must have both the INSERT and DELETE privileges for the table.
+#
+# If a generated column is replaced explicitly, the only permitted value is DEFAULT.
+#
+# For information about generated columns, see SECTION 13.1.20.8,, "CREATE TABLE AND GENERATED COLUMNS"
+#
+# REPLACE supports explicit partition selection using the PARTITION keyword with a list
+# of comma-separated names of partitions, subpartitions, or both.
+#
+# As with INSERT, if it is not possible to insert the new row into any of these
+# partitions or subpartitions, the REPLACE statement fails with the error:
+#
+# 		Found a row not matching the given partition set
+#
+# For more information, and examples - see SECTION 23.5, "PARTITION SELECTION"
+#
+# The REPLACE statement returns a count to indicate the number of rows affected.
+#
+# This is the sum of hte rows deleted and inserted. If the count is 1 for a single-row
+# REPLACE, a row was inserted and no rows were deleted.
+#
+# If the count is greater than 1, one or more old rows were deleted before the new row
+# was inserted.
+#
+# It is possible for a single row to replace more than one old row if the table contains
+# multiple unique indexes and the new row duplicates values for different old rows
+# in different unique indexes.
+#
+# THe affected-rows count makes it easy to determine whether REPLACE only added a row
+# or whether it also replaced any rows:
+#
+# 		Check whether the count is 1 (added) or greater (replaced)
+#
+# If you are using the C API, the affected-rows count cna be obtained using the
+# mysql_affected_rows() function.
+#
+# You cannot replace into a table and select from the same table in a subquery.
+#
+# MySQL uses the following algorithm for REPLACE (and LOAD DATA --- REPLACE):
+#
+# 		1. Try to insert the new row into the table
+#
+# 		2. While the insertion fails because a duplicate-key error occurs for a primary key or unique index:
+#
+# 			a. Delete from the table the conflicting row that has the duplicate key value
+#
+# 			b. Try again to insert the new row into the table
+#
+# It is possible that in the case of a duplicate-key error, a storage engine may perform
+# the REPLACE as an update rather than a delete plus insert, but the semantics are the
+# same.
+#
+# There are no user-visible effects other than a possible difference in how the storage
+# engine increments Handler_xxx status variables.
+#
+# Because the results of REPLACE --- SELECT statements depend on the ordering of rows
+# from the SELECT and this order cannot always be guaranteed, it is possible when
+# logging these statements for the master and the slave to diverge.
+#
+# For this reason, REPLACE --- SELECT statements are flagged as unsafe for statement-based
+# replication.
+#
+# Such statements produce a warning in the error log when using statement-based mode and are
+# written to the binary log using the row-based format when using MIXED mode.
+#
+# See also SECTION 17.2.1.1, "ADVANTAGES AND DISADVANTAGES OF STATEMENT-BASED AND ROW-BASED REPLICATION"
+#
+# When modifying an existing table that is not partitioned to accomodate partitioning, or, when modifying
+# the partitioning of an already partitioned table, you may consider altering the table's primary key
+# (see SECTION 23.6.1, "PARTITIONING KEYS, PRIMARY KEYS, AND UNIQUE KEYS")
+#
+# You should be aware that, if you do this, the results of REPLACE statements may be affected,
+# just as they would be if you modified the primary key of a nonpartitioned table.
+#
+# Consider the table created by the following CREATE_TABLE statement:
+#
+# 		CREATE TABLE test (
+# 			id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+# 			data VARCHAR(64) DEFAULT NULL,
+# 			ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+# 			PRIMARY KEY (id)
+# 		);
+#
+# When we create this table and run the statements shown in the mysql client, the result
+# is as follows:
+#
+# 		REPLACE INTO test VALUES (1, 'Old', '2014-08-20 18:47:00');
+# 		Query OK, 1 row affected (0.04 sec)
+#
+# 		REPLACE INTO test VALUES (1, 'New', '2014-08-20 18:47:42');
+# 		Query OK, 2 rows affected (0.04 sec)
+#
+# 		SELECT * FROM test;
+# 		+----+---------+-----------------------+
+# 		| id | data    | ts 							|
+# 		+----+---------+-----------------------+
+# 		| 1  | New 		| 2014-08-20 18:47:42   |
+# 		+----+---------+-----------------------+
+# 		1 row in set (0.00 sec)
+#
+# Now we create a second table almost identical to the first, except that hte primary key
+# now covers 2 columns, as shown here (emphasized text):
+#
+# 		CREATE TABLE test2 (
+# 			id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+# 			data VARCHAR(64) DEFAULT NULL,
+# 			ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+# 			PRIMARY KEY (id, ts)
+# 		);
+#
+# When we run on test2 the same two REPLACE statements, as we did on the original test table,
+# we obtain a different result:
+#
+# 		REPLACE INTO test2 VALUES (1, 'Old', '2014-08-20 18:47:00');
+# 		Query OK, 1 row affected (0.05 sec)
+#
+# 		REPLACE INTO test2 VALUES (1, 'New', '2014-08-20 18:47:42');
+# 		Query OK, 1 row affected (0.06 sec)
+#
+# 		SELECT * FROM test2;
+# 		+----+----------+--------------------+
+# 		| id | data     | ts 					 |
+# 		+----+----------+--------------------+
+# 		| 1  | Old 		 | 2014-08-20 18:47:00|
+# 		| 1  | New 		 | 2014-08-20 18:47:42|
+# 		+----+----------+--------------------+
+# 		2 rows in set (0.00 sec)
+#
+# This is due to the fact that, when run on test2, both the id and ts column values must match
+# those of an existing row for hte row to be replaced; otehrwise, a row is inserted.
+#
+# A REPLACE statement affecting a partitioned table using a storage engine such as MyISAM that
+# employs table-level locks locks only those partitions containing rows that match the
+# REPLACE statement WHERE clause, as long as none of the table partitioning columns are updated;
+# otherwise the entire table is locked.
+#
+# (For storage engines such as InnoDB that employ row-level locking, no locking of partitions
+# takes place)
+#
+# For more information, see PARTITIONING AND LOCKING
+#
+# 13.2.10 SELECT SYNTAX
+#
+# 13.2.10 SELECT --- INTO SYNTAX
+# 13.2.10.2 JOIN SYNTAX
+# 13.2.10.3 UNION SYNTAX
+#
+# 		SELECT
+# 			[ALL | DISTINCT | DISTINCTROW ]
+# 				[HIGH_PRIORITY]
+# 				[STRAIGHT_JOIN]
+# 				[SQL_SMALL_RESULT] [SQL_BIG_RESULT] [SQL_BUFFER_RESULT]
+# 				SQL_NO_CACHE [SQL_CALC_FOUND_ROWS]
+# 			select_expr [, select_expr ---]
+# 			[FROM table_references
+# 				[PARTITION partition_list]
+# 			[WHERE where_condition]
+# 			[GROUP BY {col_name | expr | position}, --- [WITH ROLLUP]]
+# 			[HAVING where_condition]
+# 			[WINDOW window_name AS (window_spec)
+# 				[, window_name AS (window_spec)] ---]
+# 			[ORDER BY {col_name | expr | position}
+# 				[ASC | DESC], --- [WITH ROLLUP]]
+# 			[LIMIT {[offset,] row_count | row_count OFFSET offset}]
+# 			[INTO OUTFILE 'file_name'
+# 				[CHARACTER SET charset_name]
+# 				export_options
+# 			| INTO DUMPFILE 'file_name'
+# 			| INTO var_name [, var_name]]
+# 		 [FOR {UPDATE | SHARE} [OF tbl_name [, tbl_name] ---] [NOWAIT | SKIP lOCKED]
+# 			| LOCK IN SHARE MODE]]
+#
+# SELECT is used to retrieve rows selected from one or more tables, and can include
+# UNION statements and subqueries.
+#
+# See SECTION 13.2.10.3, "UNION SYNTAX" and SECTION 13.2.11, "SUBQUERY 	SYNTAX"
+#
+# A SELECT statement can start with a WITH clause to define common table expressions
+# accessible within the SELECT.
+#
+# See SECTION 13.2.13, "WITH SYNTAX (COMMON TABLE EXPRESSIONS)"
+#
+# The most commonly used clauses of SELECT statements are these:
+#
+# 		) Each select_expr indicates a column that you want to retrieve.
+#
+# 			There must be at least one select_expr
+#
+# 		) table_references indicates the tables or tables from which to retrieve rows.
+#
+# 			Its syntax is described in SECTION 13.2.10.2, "JOIN SYNTAX"
+#
+# 		) SELECT supports explicit partition selection using the PARTITION with a list
+# 			of partitions or subpartitions (or both) following the name of hte table
+# 			in a table_refrence (see SECTION 13.2.10.2, "JOIN SYNTAX")
+#
+# 			In this case, rows are selected only from the partitions listed, and any
+# 			other partitions of the table are ignored.
+#
+# 			For more information and examples, see SECTION 23.5, "PARTITION SELECTION"
+#
+# 			SELECT --- PARTITION from tables using storage engines such as MyISAM that
+# 			perform table-level locks (and thus partition locks) lock only the partitions
+# 			or subpartitions named by the PARTITION option.
+#
+# 			For more information, see PARTITIONING AND LOCKING
+#
+# 		) The WHERE clause, if given, indicates the condition or conditions that rows
+# 			must satisfy to be selected.
+#
+# 			where_condition is an expression that evaluates to true for each row to be selected.
+#
+# 			The statement selects all rows if there is no WHERE clause.
+#
+# 			In the WHERE expression, you can use any of the functions and operators taht MySQL
+# 			supports, except for aggregate (summary) functions.
+#
+# 			See SECTION 9.5, "EXPRESSIONS" and CHAPTER 12, FUNCTIONS AND OPERATORS.
+#
+# SELECT can also be used to retrieve rows computed without reference to any table.
+#
+# For example:
+#
+# 		SELECT 1+1;
+# 			2
+#
+# You are permitted to specify DUAL as a dummy table name in situations where
+# no tables are referneced:
+#
+# 		SELECT 1 +1 FROM DUAL;
+# 			2
+#
+# DUAL is purely for the convenience of people who require that all SELECT
+# statements should have FROM and possibly other clauses.
+#
+# MySQL may ignore the clauses.
+#
+# MySQL does not require FROM DUAL if no tables are referenced.
+#
+# In general, clauses used must be given in exactly the order shown in the 
+# syntax description.
+#
+# For example, a HAVING clause must come after any GROUP BY clause and
+# before any ORDER BY clause.
+#
+# The exception is that the INTO clause can appear either as shown in the syntax
+# description or immediately following the select_expr list.
+#
+# For more information about INFO, see SECTION 13.2.10.1, "SELECT --- INTO SYNTAX"
+#
+# The list of select_expr terms comprises the select list that indicates which columns
+# to retrieve.
+#
+# Terms specify a column or expression or can use *-shorthand:
+#
+# 		) A select list consisting only of a single unqualified * can be used
+# 			as shorthand to select all columns from all tables.
+#
+# 				SELECT * FROM t1 INNER JOIN t2 ---
+#
+# 		) tbl_name.* can be used as qualified shorthand to select all columns
+# 			from the named table:
+#
+# 				SELECT t1.*, t2.* FROM t1 INNER JOIN t2 ---
+#
+# 		) Use of an unqualified * with other items in the select list may produce a parse error.
+#
+# 			To avoid this problem, use a qualified tbl_name.* reference
+#
+# 				SELECT AVG(score), t1.* FROM t1 ---
+#
+# The following list provides additional information about other SELECT clauses:
+#
+# 		) A select_expr can be given an alias using AS alias_name.
+#
+# 			The alias is used as the expression's column name and can be used in
+# 			GROUP BY, ORDER BY, or HAVING clauses.
+#
+# 			For example:
+#
+# 				SELECT CONCAT(last_name, ', ', first_name) AS full_name
+# 					FROM mytable ORDER BY full_name;
+#
+# 			The AS keyword is optional when aliasing a select_expr with an identifier.
+#
+# 			The preceeding example could have been written like this:
+#
+# 				SELECT CONCAT(last_name, ', ',first_name) full_name
+# 					FROM mytable ORDER BY full_name;
+#
+# 			However, because the AS is optional, a subtle problem can occur if you
+# 			forget the comma between two select_expr expressions:
+#
+# 				MySQL interprets the second as an alias name.
+#
+# 				For example, in the following statement, columnb is treated
+# 				as an alias name:
+#
+# 					SELECT columna columnb FROM mytable;
+#
+# 			For this reason, it is good practice to be in the habit of using AS explicitly
+# 			when specifying column aliases.
+#
+# 			It is not permissible to refer to a column alias in a WHERE clause, because the
+# 			column value might not yet be determined when the WHERE clause is executed.
+#
+# 			See SECTION B.6.4.4, "PROBLEMS WITH COLUMN ALIASES"
+#
+# 		) The FROM table_references caluse indicates the table or tables from which to
+# 			retrieve rows.
+#
+# 			If you name more than one table, you are performing a join.
+#
+# 			For information on join syntax, see SECTION 13.2.10.2, "JOIN SYNTAX"
+#
+# 			For each table specified, you can optionally specify an alias.
+#
+# 				tbl_name [[AS] alias] [index_hint]
+#
+# 			The use of index hints provides the optimizer with information about how
+# 			to choose indexes during query processing.
+#
+# 			For a description of the syntax for specifying these hints, see SECTION 8.9.4, "INDEX HINTS"
+#
+# 			You can use SET max_seeks_for_key=value as an alternative way to force MySQL
+# 			to prefer key scans instead of table scans.
+#
+# 			See SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# 		) You can refer to a table within the default database as tbl_name, or as db_name.tbl_name
+# 			to specify a database explicitly.
+#
+# 			You can refer to a column as col_name, tbl_name.col_name or db_name.tbl_name.col_name
+#
+# 			You need not specify a tbl_name or db_name.tbl_name prefix for a column reference
+# 			unless the reference would be ambiguous.
+#
+# 			See SECTION 9.2.1, "IDENTIFIER QUALIFIERS", for examples of ambiguity that require
+# 			the more explicit column reference forms.
+#
+# 		) A table reference can be aliased using tbl_name AS alias_name or tbl_name alias_name:
+#
+# 			SELECT t1.name, t2.salary FROM employee AS t1, info AS t2
+# 				WHERE t1.name = t2.name;
+#
+# 			SELECT t1.name, t2.salary FROM employee t1, info t2
+# 				WHERE t1.name = t2.name;
+#
+# 		) Columns selected for output can be referred to in ORDER BY and GROUP BY clauses
+# 			using column names, column aliases or column positions.
+#
+# 			Column positions are integers and begin with 1:
+#
+# 				SELECT college, region, seed FROM tournament
+# 					ORDER BY region, seed;
+#
+# 				SELECT college, region AS r, seed AS s FROM tournament
+# 					ORDER BY r, s;
+#
+# 				SELECT college, region, seed FROM tournament
+# 					ORDER BY 2, 3;
+#
+# 			https://dev.mysql.com/doc/refman/8.0/en/select.html
