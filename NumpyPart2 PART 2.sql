@@ -16281,4 +16281,2022 @@
 # 				SELECT college, region, seed FROM tournament
 # 					ORDER BY 2, 3;
 #
-# 			https://dev.mysql.com/doc/refman/8.0/en/select.html
+# 			To sort in reverse order, add the DESC (descending) keyword to the name of the column
+# 			in the ORDER BY clause that you are sorting by.
+#
+# 			The default is ascending order; This can be specified explicitly using the ASC keyword.
+#
+# 			If ORDER BY occurs within a subquery and also is applied in the outer query, the outermost
+# 			ORDER BY takes precedence.
+#
+# 			For example, results for the following statement are sorted in descending order,
+# 			not ascending order:
+#
+# 				(SELECT --- ORDER BY a) ORDER BY a DESC;
+#
+# 			Use of column positions is deprecated because the syntax has been removed from the SQL standard.
+#
+# 		) Prior to MySQL 8.0.13, MySQL supported a nonstandard syntax extension that permitted explicit
+# 			ASC or DESC designators for GROUP BY columns.
+#
+# 			MySQL 8.0.12 and later supports ORDER BY with grouping functions so that use of this extension
+# 			is no longer necessary.
+#
+# 			(Bug #86312, Bug #26073525)
+#
+# 			This also means you can sort on an arbitrary column or columns when using GROUP BY, like this:
+#
+# 				SELECT a, b, COUNT(c) AS t FROM test_table GROUP BY a,b ORDER BY a,t DESC;
+#
+# 			As of MySQL 8.0.13, the GROUP BY extension is no longer supported:
+#
+# 				ASC or DESC designators for GROUP BY columns are not permitted.
+#
+# 		) When you use ORDER BY or GROUP BY to sort a column in a SELECT, the server sorts values
+# 			using only the initial number of bytes indicated by the max_sort_length system variable.
+#
+# 		) MySQL extends the use of GROUP BY to permit selecting fields that are not mentioned in the
+# 			GROUP BY clause.
+#
+# 			If you are not getting the results that you expect from your query, please read the 
+# 			description of GROUP BY found in SECTION 12.20, "AGGREGATE (GROUP BY) FUNCTIONS"
+#
+# 		) GROUP BY permits a WITH ROLLUP modifier. See SECTION 12.20.2, "GROUP BY MODIFIERS"
+#
+# 			Previously, it was not permitted to use ORDER BY in a query having a WITH ROLLUP modifier.
+#
+# 			This restriction is lifted as of MySQL 8.0.12
+#
+# 			See SECTION 12.20.2, "GROUP BY MODIFIERS"
+#
+# 		) The HAVING clause is applied nearly last, just before items are sent to the client,
+# 			with no optimization
+#
+# 			(LIMIT is applied after HAVING)
+#
+# 			The SQL standard requires that HAVING must reference only columns in the GROUP BY clause
+# 			or columns used in aggregate functions.
+#
+# 			However, MySQL supports an extension to this behavior, and permits HAVING to refer
+# 			to columns in the SELECT list and columns in outer subqueries as well.
+#
+# 			If the HAVING clause refers to a column that is ambiguous, a warning occurs.
+#
+# 			In the following statement, col2 is ambiguous because it is used as both an alias
+# 			and a column name:
+#
+# 				SELECT COUNT(col1) AS col2 FROM t GROUP BY col2 HAVING col2 = 2;
+#
+# 			Preference is given to standard SQL behavior, so if a HAVING column name
+# 			is used both in GROUP BY and as an aliased column in the output column list,
+# 			preference is given to the column in the GROUP BY column.
+#
+# 		) Do not use HAVING for items that should be in the WHERE clause.
+#
+# 			For example, do not write the following:
+#
+# 				SELECT col_name FROM tbl_name HAVING col_name > 0;
+#
+# 			Write this instead:
+#
+# 				SELECT col_name FROM tbl_name WHERE col_name > 0;
+#
+# 		) The HAVING clause can refer to aggregate functions, which the WHERE clause cannot:
+#
+# 			SELECT user, MAX(salary) FROM users
+# 				GROUP BY users HAVING MAX(salary) > 10;
+#
+# 			(This did not work in some older versions of MySQL)
+#
+# 		) MySQL permits duplicate column names.
+#
+# 			That is, there can be more than one select_expr with the same name.
+#
+# 			This is an extension to standard SQL. Because MySQL also permits
+# 			GROUP BY and HAVING to refer to select_expr values, this can result
+# 			in an ambiguity:
+#
+# 				SELECT 12 AS a, a FROM t GROUP BY a;
+#
+# 			In that statement, both columns have the name a.
+#
+# 			To ensure that the correct column is used for grouping, use different
+# 			names for each select_expr
+#
+# 		) The WINDOW clause, if present, defines named windows that can be referred to by window functions.
+#
+# 			For details, see SECTION 12.21.4, "NAMED WINDOWS"
+#
+# 		) MySQL resolves unqualified column or alias references in ORDER BY clauses by searching
+# 			in the select_expr values, then in the columns of the tables in the FROM clause.
+#
+# 			For GROUP BY or HAVING clauses, it searches the FROM clause before searching in the
+# 			select_expr values.
+#
+# 			(For GROUP BY and HAVING, this differs from the pre-MySQL 5.0 behavior that used the same
+# 			rules as for ORDER BY)
+#
+# 		) The LIMIT clause can be used to constrain the number of rows returned by the SELECT statement.
+#
+# 			LIMIT takes one or two numeric arguments, which must both be nonnegative integer constants,
+# 			with these exceptions:
+#
+# 				) Within prepared statements, LIMIT parameters can be specified using ? placeholder markers.
+#
+# 				) Within stored programs, LIMIT parameters can be specified using integer-valued routine parameters
+# 					or local variables.
+#
+# 			With two arguments, the first argument specifies the offset of the first row to return,
+# 			and the second specifies the maximum number of rows to return.
+#
+# 			The offset of the initial row is 0 (not 1):
+#
+# 				SELECT * FROM tbl LIMIT 5,10; # Retrieve rows 6-15
+#
+# 			To retrieve all rows from a certain offset up to the end of the result set,
+# 			you can use some large number for the second parameter.
+#
+# 			This statement retrieves all rows from the 96th row to the last:
+#
+# 				SELECT * FROM tbl LIMIT 95,<a lot>;
+#
+# 			With one argument, the value specifies the number of rows to return from the
+# 			beginning of the result set:
+#
+# 				SELECT * FROM tbl LIMIT 5; #Retrieve first 5 rows
+#
+# 			In other words, LIMIT row_count is equivalent to LIMIT 0, row_count
+#
+# 			For prepared statements, you can use placeholders. The following statements will return
+# 			one row from the tbl table:
+#
+# 				SET @a=1;
+# 				PREPARE STMT FROM 'SELECT * FROM tbl LIMIT ?';
+# 				EXECUTE STMT USING @a;
+#
+# 			The following statements will return the second to sixth row from the tbl table:
+#
+# 				SET @skip=1; SET @numrows=5;;
+# 				PREPARE STMT FROM 'SELECT * FROM tbl LIMIT ?, ?';
+# 				EXECUTE STMT USING @skip, @numrows;
+#
+# 			For compatibility with PostgreSQL, MySQL also supports the LIMIT row_count OFFSET offset syntax
+#
+# 			If LIMIT occurs within a subquery and also is applied in the outer query, the outermost
+# 			LIMIT takes precedence.
+#
+# 			For example, the following statement produces two rows, not one:
+#
+# 				(SELECT --- LIMIT 1) LIMIT 2;
+#
+# 		) The SELECT_---_INTO form of SELECT enables the query result to be written to a file
+# 			or stored in variables.
+#
+# 			For more information, see SECTION 13.2.10.1, "SELECT --- INTO SYNTAX"
+#
+# 		) If you use FOR UPDATE with a storage engine that uses page or row locks, rows examined
+# 			by the query are write-locked until the end of the current transaction.
+#
+# 			You cannot use FOR UPDATE as part of the SELECT in a statement such as:
+#
+# 				CREATE_TABLE_new_table_SELECT_---_FROM_old_table_---
+#
+# 			(If you attempt to do so, the statement is rejected with the error Can't
+# 			update table 'old_table' while 'new_table' is being created)
+#
+# 			FOR SHARE and LOCK IN SHARE MODE set shared locks that permit other transactions
+# 			to read the examined rows but not to update or delete them.
+#
+# 			FOR SHARE and LOCK IN SHARE MODE are equivalent.
+#
+# 			However, FOR SHARE, like FOR UPDATE, supports NOWAIT, SKIP LOCKED,
+# 			and OF tbl_name options.
+#
+# 			FOR SHARE is a replacement for LOCK IN SHARE MODE, but LOCK IN SHARE MODE
+# 			remains available for backward compatibility.
+#
+# 			NOWAIT causes a FOR UPDATE or FOR SHARE query to execute immediately,
+# 			returning an error if a row lock cannot be obtained due to a lock
+# 			held by another transaction.
+#
+# 			SKIP LOCKED causes a FOR UPDATE or FOR SHARE query to execute immediately,
+# 			excluding rows from the result set that are locked by another transaction.
+#
+# 			NOWAIT and SKIP LOCKED options are unsafe for statement-based replication.
+#
+# 				NOTE:
+#
+# 					Queries that skip locked rows return an inconsistent view of the data.
+#
+# 					SKIP LOCKED is therefore not suitable for general transactional work.
+#
+# 					However, it may be used to avoid lock contention when multiple sessions
+# 					access the same queue-like table.
+#
+# 			OF tbl_name applies FOR UPDATE and FOR SHARE queries to named tables.
+#
+# 			For example:
+#
+# 				SELECT * FROM t1, t2 FOR SHARE OF t1 FOR UPDATE OF t2;
+#
+# 			All tables referenced by the query block are locked when OF tbl_name
+# 			is omitted.
+#
+# 			Consequently, using a locking clause without OF tbl_name in combination
+# 			with another locking clause returns an error.
+#
+# 			Specifying the same table in multiple locking clauses returns an error.
+#
+# 			If an alias is specified as the table name in the SELECT statement,
+# 			a locking clause may only use the alias.
+#
+# 			If the SELECT statement does not specify an alias explicitly, the locking
+# 			clause may only specify the actual table name.
+#
+# 			For more information about FOR UPDATE and FOR SHARE, see SECTION 15.7.2.4,
+# 			"LOCKING READS"
+#
+# 			For additional information about NOWAIT and SKIP LOCKED options, see
+# 			LOCKING READ CONCURRENCY WITH NOWAIT AND SKIP LOCKED.
+#
+# Following the SELECT keyword, you can use a number of modifiers that affect the
+# operation of the statement.
+#
+# HIGH_PRIORITY, STRAIGHT_JOIN and modifiers beginning with SQL_ are MySQL extensions
+# to standard SQL.
+#
+# 		) The ALL and DISTINCT modifiers specify whether duplicate rows should be returned.
+#
+# 			ALL (the default) specifies that all matching rows should be returned, including
+# 			duplicates.
+#
+# 			DISTINCT specifies removal of duplicate rows from the result set.
+#
+# 			It is an error to specify both modifiers. DISTINCTROW is a synonym for
+# 			DISTINCT.
+#
+# 			In MySQL 8.0.12 and later, DISTINCT can be used with a query that also uses
+# 			WITH ROLLUP. (Bug #87450, Bug #26640100)
+#
+# 		) HIGH_PRIORITY gives the SELECT higher priority than a statement that updates a table.
+#
+# 			You should use this only for queries that are very fast and must be done at once.
+#
+# 			A SELECT HIGH_PRIORITY query that is issued while the table is locked for reading
+# 			runs even if there is an update statement waiting for the table to be free.
+#
+# 			This affects only storage engines that use only table-level locking (such as MyISAM, MEMORY, and MERGE)
+#
+# 			HIGH_PRIORITY cannot be used with SELECT statements that are part of a UNION.
+#
+# 		) STRAIGHT_JOIN forces the optimizer to join the tables in the order in which they are listed
+# 			in the FROM clause.
+#
+# 			You can use this to speed up a query if the optimizer joins the tables in nonoptimal
+# 			order.
+#
+# 			STRAIGHT_JOIN also can be used in the table_references list. See SECTION 13.2.10.2, "JOIN SYNTAX"
+#
+# 			STRAIGHT_JOIN does not apply to any table that the optimizer treats as a const or system table.
+#
+# 			Such a table produces a single row, is read during the optimization phase of query execution,
+# 			and references to its columns are replaced with the appropriate column values before query
+# 			execution proceeds.
+#
+# 			These tables will appear first in the query plan displayed by EXPLAIN.
+#
+# 			See SECTION 8.8.1, "OPTIMIZING QUERIES WITH EXPLAIN"
+#
+# 			This exception may not apply to const or system tables that are
+# 			used on the NULL-complemented side of an outer join (that is, the right-side table
+# 			of a LEFT JOIN or the left-side table of a RIGHT JOIN)
+#
+# 		) SQL_BIG_RESULT or SQL_SMALL_RESULT can be used with GROUP BY or DISTINCT to tell
+# 			the optimizer that the result set has many rows or is small, respectively.
+#
+# 			For SQL_BIG_RESULT, MySQL directly uses disk-based temporary tables if they are created,
+# 			and prefers sorting to using a temporary table with a key on the GROUP BY elements.
+#
+# 			For SQL_SMALL_RESULT, MySQL uses in-memory temporary tables to store the resulting table
+# 			instead of using sorting.
+#
+# 			This should not normally be needed.
+#
+# 		) SQL_BUFFER_RESULT forces the result to be put into a temporary table.
+#
+# 			This helps MySQL free the table locks early and helps in cases where
+# 			it takes a long time to send the result set to the client.
+#
+# 			This modifier can be used only for top-level SELECT statements,
+# 			not for subqueries or following UNION.
+#
+# 		) SQL_CALC_FOUND_ROWS tells MySQL to calculate how many rows there would be
+# 			in the result set, disregarding any LIMIT clause.
+#
+# 			The number of rows can then be retrieved with SELECT FOUND_ROWS()
+#
+# 			See SECTION 12.15, "INFORMATION FUNCTIONS"
+#
+# 		) The SQL_CACHE and SQL_NO_CACHE modifiers were used with the query cache prior to MySQL 8.0
+#
+# 			The query cache was removed in MySQL 8.0
+#
+# 			The SQL_CACHE modifier was removed as well.
+#
+# 			SQL_NO_CACHE is deprecated, has no effect, and will be removed in a future MySQL release.
+#
+# A SELECT from a partitioned table using a storage engine such as MyISAM that employs
+# table-level locks locks only those partitions containing rows that match the SELECT
+# statement WHERE clause.
+#
+# (This does not occur with storage engines such as InnoDB that employ row-level locking)
+#
+# For more information, see PARTITIONING AND LOCKING
+#
+# 13.2.10.1 SELECT --- INTO SYNTAX
+#
+# The SELECT_---_INTO form of SELECT enables a query result to be stored in variables or 
+# written to a file:
+#
+# 		) SELECT --- INTO var_list selects column values and stores them into variables
+#
+# 		) SELECT --- INTO OUTFILE writes the selected rows to a file. Column and line terminators can be
+# 			specified to produce a specific output format.
+#
+# 		) SELECT --- INTO DUMPFILE writes a single row to a file without any formatting.
+#
+# The SELECT syntax description (see SECTION 13.2.10, "SELECT SYNTAX") shows the INTO clause
+# near the end of the statement.
+#
+# It is also possible to use INTO immediately following the select_expr list
+#
+# An INTO clause should not be used in a nested SELECT because such a SELECT
+# must return its result to the outer context.
+#
+# The INTO clause can name a list of one or more variables, which can be user-defined
+# variables, stored procedure or function parameters, or stored program local variables.
+#
+# (Within a prepared SELECT --- INTO OUTFILE statement, only user-defined variables
+# are permitted; see SECTION 13.6.4.2, "LOCAL VARIABLE SCOPE AND RESOLUTION")
+#
+# The selected values are assigned to the variables.
+#
+# The number of variables must match the number of columns.
+# The query should return a single row.
+#
+# If the query returns no rows, a warning with error code 1329 occurs
+# (No data), and the variable values remain unchanged.
+#
+# If the query returns multiple rows, error 1172 occurs (Result consisted of more than one row)
+#
+# If it is possible that the statement may retrieve multiple rows, you can use LIMIT 1 to limit
+# the result set to a single row.
+#
+# 		SELECT id, data INTO @x, @y FROM test.t1 LIMIT 1;
+#
+# User variable names are not case-sensitive. See SECTION 9.4, "USER-DEFINED VARIABLES"
+#
+# The SELECT_---_INTO_OUTFILE 'file_name' form of SELECT writes the selected rows to a file.
+#
+# The file is created on the server host, so you must have the FILE privilege to use this
+# syntax.
+#
+# file_name cannot be an existing file, which among other things prevents files such as
+# /etc/passwd and database tables from being destroyed.
+#
+# The character_set_filesystem system variable controls the interpretation of the file name.
+#
+# The SELECT_---_INTO_OUTFILE statement is intended primarily to let you very quickly
+# dump a table to a text file on the server machine.
+#
+# If you want to create the resulting file on some other host than the server host,
+# you normally cannot use SELECT_---_INTO_OUTFILE since there is no way to write a path
+# to the file relative to the server host's file system.
+#
+# However, if the MySQL client software is installed on the remote machine, you can
+# instead use a client command such as mysql -e "SELECT ---" > file_name to generate
+# the file on the client host.
+#
+# It is also possible to create the resulting file on a different host other than the
+# server host, if the location of the file on the remote host can be accessed using
+# a network-mapped path on the server's file system.
+#
+# In this case, the presence of mysql (or some other MySQL client program) is not
+# required on the target host.
+#
+# SELECT_---_INTO_OUTFILE is the complement of LOAD_DATA_INFILE.
+#
+# Columns values are written converted to the character set specified in the
+# CHARACTER SET clause.
+#
+# If no such clause is present, values are dumped using the binary character set.
+#
+# In effect, there is no character set conversion. 
+#
+# If a result set contains columns in several character sets, 
+# the output data file will as well and you may not be able to reload the file correctly.
+#
+# The syntax for the export_options part of the statement consists of the same FIELDS
+# and LINES clauses that are used with the LOAD_DATA_INFILE statement.
+#
+# See SECTION 13.2.7, "LOAD DATA INFILE SYNTAX", for information about the FIELDS
+# and LINES clauses, including their default values and permissible values.
+#
+# FIELDS ESCAPED BY controls how to write special characters.
+#
+# If the FIELDS ESCAPED BY character is not empty, it is used when necessary to avoid
+# ambiguity as a prefix that precedes following characters on output:
+#
+# 		) The FIELDS ESCAPED BY character
+#
+# 		) The FIELDS [OPTIONALLY] ENCLOSED BY character
+#
+# 		) The first character of the FIELDS TERMINATED BY and LINES TERMINATED BY values
+#
+# 		) ASCII NUL (the zero-valued byte; what is actually written following the escape character is ASCII 0,
+# 			not a zero-valuted byte)
+#
+# The FIELDS TERMINATED BY, ENCLOSED BY, ESCAPED BY, or LINES TERMINATED BY characters must be
+# escaped so that you can read the file back in reliably.
+#
+# ASCII NUL is escaped to make it easier to view with some pagers.
+#
+# The resulting file does not have to conform to SQL syntax, so nothing else need be escaped.
+#
+# If the FIELDS ESCAPED BY character is empty, no characters are escaped and NULL is output as
+# NULL, not \N
+#
+# It is probably not a good idea to specify an empty escape character, particularly if field values
+# in your data contain any of the characters in the list just given.
+#
+# Here is an example that produces a file in the comma-separated values (CSV) format used
+# by many programs:
+#
+# 		SELECT a,b,a+b INTO OUTFILE '/tmp/result.txt'
+# 			FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"'
+# 			LINES TERMINATED BY '\n'
+# 			FROM test_table;
+#
+# If you use INTO DUMPFILE instead of INTO OUTFILE, MySQL writes only one row into the file,
+# without any column or line termination and without performing any escape processing.
+#
+# This is useful if you want to store a BLOB value in a file.
+#
+# 		NOTE:
+#
+# 			Any file created by INTO OUTFILE or INTO DUMPFILE is writable by all users on the
+# 			server host.
+#
+# 			The reason for this is that the MySQL server cannot create a file that is owned
+# 			by anyone other than the user under whose account it is running.
+#
+# 			(You should never run mysqld as root for this and other reasons)
+#
+# 			The file thus must be world-writable so that you can manipulate its contents.
+#
+# 			If the secure_file_priv system variable is set to a nonempty directory name,
+# 			the file to be written must be located in that directory.
+#
+# In the context of SELECT_---_INTO statements that occur as part of events executed by the
+# Event Scheduler, diagnostics messages (not only errors, but also warnings) are written
+# to the error log, and, on Windows, to the application event log.
+#
+# For additional information, see SECTION 24.4.5, "EVENT SCHEDULER STATUS"
+#
+# 13.2.10.2 JOIN SYNTAX
+#
+# MySQL supports the following JOIN syntax for the table_references part of SELECT
+# statements and multiple-table DELETE and UPDATE statements:
+#
+# 		table_references:
+# 			escaped_table_reference [, escaped_table_reference] ---
+#
+# 		escaped_table_reference:
+# 			table_reference
+# 		 | { OJ table_reference }
+#
+# 		table_reference:
+# 			table_factor
+# 		 | join_table
+#
+# 		table_factor:
+# 				tbl_name [PARTITION (partition_names)]
+# 					[[AS] alias] [index_hint_list]
+# 			| table_subquery [AS] alias [(col_list)]
+# 			| ( table_references )
+#
+# 		join_table:
+# 			table_reference [INNER | CROSS] JOIN table_factor [join_condition]
+# 		 | table_reference STRAIGHT_JOIN table_factor
+# 		 | table_reference STRAIGHT_JOIN table_factor ON conditional_expr
+# 		 | table_reference {LEFT|RIGHT} [OUTER] JOIN table_reference join_condition
+# 		 | table_reference NATURAL [INNER | {LEFT|RIGHT} [OUTER]] JOIN table_factor
+#
+# 		join_condition:
+# 			ON conditional_expr
+# 		 | USING (column_list)
+#
+# 		index_hint_list:
+# 			index_hint [, index_hint] ---
+#
+# 		index_hint:
+# 			USE {INDEX|KEY}
+# 				[FOR {JOIN|ORDER BY|GROUP BY}] ([index_list])
+# 		 | IGNORE {INDEX|KEY}
+# 				[FOR {JOIN|ORDER BY|GROUP BY}] (index_list)
+# 		 | FORCE {INDEX|KEY}
+# 				[FOR {JOIN|ORDER BY|GROUP BY}] (index_list)
+#
+# 		index_list:
+# 			index_name [, index_name] ---
+#
+# A table reference is also known as a join expression
+#
+# A table reference (when it refers to a partitioned table) may contain a PARTITION option,
+# including a list of comma-separated partitions, subpartitions, or both.
+#
+# This option follows the name of the table and precedes any alias declaration.
+#
+# The effect of this option is that rows are selected only from the listed partitions
+# or subpartitions.
+#
+# Any partitions or subpartitions not named in the list are ignored.
+#
+# For more information and examples, see SECTION 23.5, "PARTITION SELECTION"
+#
+# The syntax of table_factor is extended in MySQL in comparison with standard SQL.
+#
+# The standard accepts only table_reference, not a list of them inside a pair of parentheses.
+#
+# This is a conservative extension if each comma in a list of table_reference items is considered
+# as equivalent to an inner join.
+#
+# For example:
+#
+# 			SELECT * FROM t1 LEFT JOIN (t2, t3, t4)
+# 									ON (t2.a = t1.a AND t3.b = t1.b AND t4.c = t1.c)
+#
+# 		is equivalent to:
+#
+# 			SELECT * FROM t1 LEFT JOIN (t2 CROSS JOIN t3 CROSS JOIN t4)
+# 									ON (t2.a = t1.a AND t3.b = t1.b AND t4.c = t1.c)
+#
+# In MySQL, JOIN, CROSS JOIN and INNER JOIN are syntactic equivalents (they can replace each other)
+#
+# In standard SQL, they are not equivalent. INNER JOIN is used with an ON clause, CROSS JOIN
+# is used otherwise.
+#
+# In general, parentheses can be ignored in join expressions containing only inner join operations.
+#
+# MySQL also supports nested joins. See SECTION 8.2.1.7, "NESTED JOIN OPTIMIZATION"
+#
+# Index hints can be specified to affect how the MySQL optimizer makes use of indexes.
+# For more information, see SECTION 8.9.4, "INDEX HINTS"
+#
+# Optimizer hints and the optimizer_switch system variable are other ways to influence
+# optimizer use of indexes.
+#
+# See SECTION 8.9.2, "OPTIMIZER HINTS", and SECTION 8.9.3, "SWITCHABLE OPTIMIZATIONS"
+#
+# The following list describes general factors to take into account when writing joins:
+#
+# 		) A table reference can be aliased using tbl_name AS alias_name or tbl_name alias_name:
+#
+# 			SELECT t1.name, t2.salary
+# 				FROM employee AS t1 INNER JOIN info AS t2 ON t1.name = t2.name;
+#
+# 			SELECT t1.name, t2.salary
+# 				FROM employee t1 INNER JOIN info t2 ON t1.name = t2.name;
+#
+# 		) A table_subquery is also known as a derived table or subquery in the FROM clause.
+#
+# 			See SECTION 13.2.11.8, "DERIVED TABLES"
+#
+# 			Such subqueries must include an alias to give the subquery result a table name,
+# 			and may optionally include a list of table column names in parentheses.
+#
+# 			A trivial example follows:
+#
+# 				SELECT * FROM (SELECT 1, 2, 3) AS t1;
+#
+# 		) INNER JOIN and , (comma) are semantically equivalent in the absence of a join condition:
+#
+# 			Both produce a Cartesian product between the specified tables (that is, each and every row
+# 			in the first table is joined to each and every row in the second table)
+#
+# 			However, the precedence of the comma operator is less than that of INNER JOIN, CROSS JOIN,
+# 			LEFT JOIN, and so on.
+#
+# 			If you mix comma joins with the other join types when there is a join condition, an error
+# 			of the form:
+#
+# 				Unknown column 'col_name' in 'on clause' may occur
+#
+# 			Information about dealing with this problem is given later in this section.
+#
+# 		) The conditional_expr used with ON is any conditional expression of the form that can be used
+# 			in a WHERE clause.
+#
+# 			Generally, the ON clause serves for conditions that specify how to join tables,
+# 			and the WHERE clause restricts which rows to include in the result set
+#
+# 		) If there is no matching row for the right table in the ON or USING part in a LEFT JOIN,
+# 			a row with all columns set to NULL is used for the right table.
+#
+# 			You can use this fact to find rows in a table that have no counterpart in another table:
+#
+# 				SELECT left_tbl.*
+# 					FROM left_tbl LEFT JOIN right_tbl ON left_tbl.id = right_tbl.id
+# 					WHERE right_tbl.id IS NULL;
+#
+# 			This example finds all rows in left_tbl with an id value that is not present in
+# 			right_tbl (that is, all rows in left_tbl with no corresponding row in right_tbl)
+#
+# 			See SECTION 8.2.1.8, "OUTER JOIN OPTIMIZATION"
+#
+# 		) The USING(column_list) clause names a list of columns that must exist in both tables.
+#
+# 			If tables a and b both contain columns c1, c2, and c3, the following join compares
+# 			corresponding columns from the two tables:
+#
+# 				a LEFT JOIN b USING (c1, c2, c3)
+#
+# 		) The NATURAL [LEFT] JOIN of two tables is defined to be semantically equivalent to an
+# 			INNER JOIN or a LEFT JOIN with a USING clause that names all columns that
+# 			exist in both tables.
+#
+# 		) RIGHT JOIN works analogously to LEFT JOIN. To keep code portable across databases,
+# 			it is recommended that you use LEFT JOIN instead of RIGHT JOIN.
+#
+# 		) The { OJ --- } syntax shown in the join syntax description exists only for compatibility
+# 			with ODBC.
+#
+# 			The curly braces in the syntax should be written literally, they are not metasyntax
+# 			as used elsewhere in syntax desc.
+#
+# 				SELECT left_tbl.*
+# 					FROM { OJ left_tbl LEFT OUTER JOIN right_tbl ON left_tbl.id = right_tbl.id }
+# 					WHERE right_tbl.id IS NULL;
+#
+# 			You can use other types of joins within { OJ --- }, such as INNER JOIN or RIGHT OUTER JOIN.
+#
+# 			This helps with compatibility with some third-party apps, but is not official ODBC syntax
+#
+# 		) STRAIGHT_JOIN is similar to JOIN, except that the left table is always read before the right table.
+#
+# 			This can be used for those (few) cases for which the join optimizer processes the tables
+# 			in a suboptimal order.
+#
+# 			Some join examples:
+#
+# 				SELECT * FROM table1, table2;
+#
+# 				SELECT * FROM table1 INNER JOIN table2 ON table1.id = table2.id;
+#
+# 				SELECT * FROM table1 LEFT JOIN table2 ON table1.id = table2.id;
+#
+# 				SELECT * FROM table1 LEFT JOIN table2 USING (id);
+#
+# 				SELECT * FROM table1 LEFT JOIN table2 ON table1.id = table2.id
+# 					LEFT JOIN table3 ON table2.id = table3.id;
+#
+# Natural joins and joins with USING, including outer join variants, are processed
+# according to the SQL:2003 standard:
+#
+# 		) Redundant columns of a NATURAL join do not appear.
+#
+# 			Consider this set of statements:
+#
+# 				CREATE TABLE t1 (i INT, j INT);
+# 				CREATE TABLE t2 (k INT, j INT);
+#
+# 				INSERT INTO t1 VALUES(1, 1);
+# 				INSERT INTO t2 VALUES(1, 1);
+#
+# 				SELECT * FROM t1 NATURAL JOIN t2;
+# 				SELECT * FROM t1 JOIN t2 USING (j);
+#
+# 			In the first SELECT statement, column j appears in both tables and thus becomes
+# 			a join column, so, according to standard SQL, it should appear only once in the output,
+# 			not twice.
+#
+# 			Similarly, in the second SELECT statement, column j is named in the USING clause and
+# 			should appear only once in the output, not twice.
+#
+# 			Thus, the statements produce this output:
+#
+# 				+--------+--------+----------+
+# 				| j 	   | i      | k 		  |
+# 				+--------+--------+----------+
+# 				| 1 		| 1 		| 1 		  |
+# 				+--------+--------+----------+
+#
+# 				+--------+--------+----------+
+# 				| j 		| i 		| k 		  |
+# 				+--------+--------+----------+
+# 				| 1 		| 1 		| 1 		  |
+# 				+--------+--------+----------+
+#
+# 			Redundant column elimination and column ordering occurs according to standard SQL,
+# 			producing this display order:
+#
+# 				) First, coalesced common columns of the two joined tables, in the order in which they occur in the first table
+#
+# 				) Second, columns unique to the first table, in order in which they occur in that table
+#
+# 				) Third, columns unique to the second table, in order in which they occur in that table
+#
+# 			The single result column that replaces two common columns is defined using the coalesce operation.
+#
+# 			That is, for two t1.a and t2.a the resulting single join column a is defined as
+# 			a = COALESCE(t1.a, t2.a), where:
+#
+# 				COALESCE(x, y) = (CASE WHEN x IS NOT NULL THEN x ELSE y END)
+#
+# 			If the join operation is any other join, the result columns of the join consist of the
+# 			concatenation of all columns of the joined tables.
+#
+# 			A consequence of the definition of coalesced columns is that, for outer joins, the coalesced column
+# 			contains the value of the non-NULL column if one of the two columns is always NULL.
+#
+# 			If neither or both columns are NULL, both common columns have the same value, so it does not
+# 			matter which one is chosen at the value of the coalesced column.
+#
+# 			A simple way to interpret this is to consider that a coalesced column of an outer join
+# 			is represented by the common column of the inner table of a JOIN.
+#
+# 			Suppose that the tables t1(a, b) and t2(a, c) have the following contents:
+#
+# 				t1 	t2
+# 				----  ----
+# 				1 x   2 z
+# 				2 y   3 w
+#
+# 			Then, for this join, column a contains the values of t1.a
+#
+# 				SELECT * FROM t1 NATURAL LEFT JOIN t2;
+# 				+---------+--------+-----------+
+# 				| a       | b 		 | c 			 |
+# 				+---------+--------+-----------+
+# 				| 1 		 | x 		 | NULL   	 |
+# 				| 2 		 | y 		 | z 			 |
+# 				+---------+--------+-----------+
+#
+# 			By contrast, for this join, column a contains the values of t2.a
+#
+# 				SELECT * FROM t1 NATURAL RIGHT JOIN t2;
+# 				+---------+---------+---------+
+# 				| a 		 | c 		  | b 		|
+# 				+---------+---------+---------+
+# 				| 2 		 | z 		  | y 		|
+# 				| 3 		 | w 		  | NULL 	|
+# 				+---------+---------+---------+
+#
+# 			Compare those results to the otherwise equivalent queries with JOIN --- ON:
+#
+# 				SELECT * FROM t1 LEFT JOIN t2 ON (t1.a = t2.a);
+# 				+--------+---------+---------+---------+
+# 				| a      | b 		 | a 		  | c 		|
+# 				+--------+---------+---------+---------+
+# 				| 1 		| x 		 | NULL 	  | NULL 	|
+# 				| 2 		| y 		 | 2 		  | z 		|
+# 				+--------+---------+---------+---------+
+#
+# 				SELECT * FROM t1 RIGHT JOIN t2 ON (t1.a = t2.a);
+# 				+--------+---------+---------+---------+
+# 				| a 		| b 		 | a 		  | c 		|
+# 				+--------+---------+---------+---------+
+# 				| 2 		| y 		 | 2 		  | z 		|
+# 				| NULL   | NULL 	 | 3 		  | w 		|
+# 				+--------+---------+---------+---------+
+#
+# 		) A USING clause can be rewritten as an ON clause that compares corresponding columns.
+#
+# 			However, although USING and ON are similar, they are not quite the same.
+#
+# 			Consider the following two queries:
+#
+# 				a LEFT JOIN b USING (c1, c2, c3)
+# 				a LEFT JOIN b ON a.c1 = b.c1 AND a.c2 = b.c2 AND a.c3 = b.c3
+#
+# 			With respect to determining which rows satisfy the join condition, both joins
+# 			are semantically identical.
+#
+# 			With respect to determining which columns to display for SELECT * expansion,
+# 			the two joins are not semantically identical.
+#
+# 			The USING join selects the coalesced value of corresponding columns,
+# 			whereas the ON join selects all columns from all tables.
+#
+# 			For the USING join, SELECT * selects these values:
+#
+# 				COALESCE(a.c1, b.c1), COALESCE(a.c2, b.c2), COALESCE(a.c3, b.c3)
+#
+# 			For the ON join, SELECT * selects these values:
+#
+# 				a.c1, a.c2, a.c3, b.c1, b.c2, b.c3
+#
+# 			With an inner join, COALESCE(a.c1, b.c1) is the same as either a.c1 or
+# 			b.c1 because both columns will have teh same value.
+#
+# 			With an outer join (such as LEFT JOIN), one of the two columns can be NULL
+#
+# 			That column is omitted from the result.
+#
+# 		) An ON clause can refer only to its operands.
+#
+# 			Example:
+#
+# 				CREATE TABLE t1 (i1 INT);
+# 				CREATE TABLE t2 (i2 INT);
+# 				CREATE TABLE t3 (i3 INT);
+# 				SELECT * FROM t1 JOIN t2 ON (i1 = i3) JOIN t3;
+#
+# 			The statement fails with an Unknown column 'i3' in 'on clause' error because
+# 			i3 is a column in t3, which is not an operand of the ON clause.
+#
+# 			To enable the join to be processed, rewrite the statement as follows:
+#
+# 				SELECT * FROM t1 JOIN t2 JOIN t3 ON (i1 = i3);
+#
+# 		) JOIN has higher precedence than the comma operator (,), so the join expression
+# 			t1, t2 JOIN t3 is interpreted as (t1, (t2 JOIN t3)), not as ((t1, t2) JOIN t3)
+#
+# 			This affects statements that use an ON clause because that clause can refer only
+# 			to columns in the operands of the join, and the precedence affects interpretation
+# 			of what those operands are.
+#
+# 			EXAMPLE:
+#
+# 				CREATE TABLE t1 (i1 INT, j1 INT);
+# 				CREATE TABLE t2 (i2 INT, j2 INT);
+# 				CREATE TABLE t3 (i3 INT, j3 INT);
+#
+# 				INSERT INTO t1 VALUES(1, 1);
+# 				INSERT INTO t2 VALUES(1, 1);
+# 				INSERT INTO t3 VALUES(1, 1);
+#
+# 				SELECT * FROM t1, t2 JOIN t3 ON (t1.i1 = t3.i3);
+#
+# 			The JOIN takes precedence over the comma operator, so the operands for the ON clause
+# 			are t2 and t3.
+#
+# 			Because t1.i1 is not a column in either of the operands, the result is an
+# 			Unknown column 't1.i1' in 'on clause' error
+#
+# 			To enable the join to be processed, use either of these strategies:
+#
+# 				) Group the first two tables explicitly with parentheses so that the operands
+# 					for the ON clause are (t1, t2) and t3:
+#
+# 					SELECT * FROM (t1, t2) JOIN t3 ON (t1.i1 = t3.i3);
+#
+# 				) Avoid the use of the comma operator and use JOIN instead:
+#
+# 					SELECT * FROM t1 JOIN t2 JOIN t3 ON (t1.i1 = t3.i3);
+#
+# 			The same precedence interpretation also applies to statements that mix
+# 			the comma operator with INNER JOIN, CROSS JOIN, LEFT JOIN, and RIGHT JOIN,
+# 			all of which have higher precedence than the comma operator.
+#
+# 		) A MySQL extension compared to the SQL:2003 standard is that MySQL permits you to
+# 			qualify the common (coalesced) columns of NATURAL or USING joins, whereas 
+# 			the standard disallows that.
+#
+# 13.2.10.3 UNION SYNTAX
+#
+# 		SELECT ---
+# 		UNION [ALL | DISTINCT] SELECT ---
+# 		[UNION [ALL | DISTINCT] SELECT ---]
+#
+# UNION is used to combine the result from multiple SELECT statements into a single result set.
+#
+# The column names from the first SELECT statement are used as the column names for the
+# results returned.
+#
+# Selected columns listed in corresponding positions of each SELECT statement should have
+# the same data type.
+#
+# (For example, the first column selected by the first statement should have the same type
+# as the first column selected by the other statements)
+#
+# If the data types of corresponding SELECT columns do not match, the types and lengths of
+# the columns in the UNION result take into account the values retrieved by all of
+# the SELECT statements.
+#
+# For example, consider the following:
+#
+# 		SELECT REPEAT('a',1) UNION SELECT REPEAT('b',10);
+# 		+----------------------+
+# 		| REPEAT('a',1) 		  |
+# 		+----------------------+
+# 		| a 						  |
+# 		| bbbbbbbbbb 			  |
+# 		+----------------------+
+#
+# The SELECT statements are normal select statements, but with the following restrictions:
+#
+# 		) Only the last SELECT statement can use INTO OUTFILE (However, the entire UNION result is written to the file)
+#
+# 		) HIGH_PRIORITY cannot be used with SELECT statements that are part of a UNION.
+#
+# 			If you specify it for the first SELECT, it has no effect.
+#
+# 			If you specify it for any subsequent SELECT statements, a syntax error results.
+#
+# The default behavior for UNION is that duplicate rows are removed from the result.
+#
+# The optional DISTINCT keyword has no effect other than the default because it also
+# specifies duplicate-row removal.
+#
+# With the optional ALL keyword, duplicate-row removal does not occur and the result includes
+# all matching rows from all the SELECT statements.
+#
+# You can mix UNION_ALL and UNION_DISTINCT in the same query.
+#
+# Mixed UNION types are treated such that a DISTINCT union overrides any ALL union
+# to its left.
+#
+# A DISTINCT union can be produced explicitly by using UNION_DISTINCT or implicitly
+# by using UNION with no following DISTINCT or ALL keyword.
+#
+# To apply ORDER BY or LIMIT to an individual SELECT, place the clause inside the
+# parentheses that enclose the SELECT:
+#
+# 		(SELECT a FROM t1 WHERE a=10 AND B=1 ORDER BY a LIMIT 10)
+# 		UNION
+# 		(SELECT a FROM t2 WHERE a=11 AND B=2 ORDER BY a LIMIT 10);
+#
+# However, use of ORDER BY for individual SELECT statements implies nothing about
+# the order in which the rows appear in the final result because UNION
+# by default produces an unordered set of rows.
+#
+# Therefore, the use of ORDER BY in this context is typically in conjunction
+# with LIMIT, so that it is used to determine the subset of the selected
+# rows to retrieve for the SELECT, even though it does not necessarily affect
+# the order of those rows in the final UNION result.
+#
+# If ORDER BY appears without LIMIT in a SELECT, it is optimized away
+# because it will have no effect anyway.
+#
+# To use an ORDER BY or LIMIT clause to sort or limit the entire UNION result,
+# parenthesize the individual SELECT statements and place the ORDER BY or
+# LIMIT after the last one.
+#
+# The following example uses both clauses:
+#
+# 		(SELECT a FROM t1 WHERE a=10 AND B=1)
+# 		UNION
+# 		(SELECT a FROM t2 WHERE a=11 AND B=2)
+# 		ORDER BY a LIMIT 10;
+#
+# A statement without parentheses is equivalent ot one parenthesized
+# as just shown.
+#
+# This kind of ORDER BY cannot use column references that include a table
+# name (that is, names in tbl_name.col_name format)
+#
+# Instead, provide a column alias in the first SELECT statement and refer
+# to the alias in the ORDER BY.
+#
+# (Alternatively, refer to the column in the ORDER BY using its column position.
+#
+# However, use of column positions is deprecated)
+#
+# Also, if a column to be sorted is aliased, the ORDER BY clause must refer to the
+# alias, not the column name.
+#
+# The first of the following statements will work, but the second will fail
+# with an:
+#
+# 		Unknown column 'a' in 'order clause' error
+#
+# 		(SELECT a AS b FROM t) UNION (SELECT ---) ORDER BY b;
+# 		(SELECT a AS b FROM t) UNION (SELECT ---) ORDER BY a;
+#
+# To cause rows in a UNION result to consist of the sets of rows retrieved by each
+# SELECT one after the other, select an additional column in each SELECT to use
+# as a sort column and add an ORDER BY following the last SELECT:
+#
+# 		(SELECT 1 AS sort_col, col1a, col1b, --- FROM t1)
+# 		UNION
+# 		(SELECT 2, col2a, col2b, --- FROM t2) ORDER BY sort_col;
+#
+# To additionally maintain sort order within individual SELECT results,
+# add a secondary column to the ORDER BY clause:
+#
+# 		(SELECT 1 AS sort_col, col1a, col1b, --- FROM t1)
+# 		UNION
+# 		(SELECT 2, col2a, col2b, --- FROM t2) ORDER BY sort_col, col1a;
+#
+# Use of an additional column also enables you to determine which SELECT
+# each row comes from.
+#
+# Extra columns can provide other identifying information as well, such as
+# a string that indicates a table name.
+#
+# UNION queries with an aggregate function in an ORDER BY clause are rejected
+# with an ER_AGGREGATE_ORDER_FOR_UNION error.
+#
+# Example:
+#
+# 		SELECT 1 AS foo UNION SELECT 2 ORDER BY MAX(1);
+#
+# 13.2.11 SUBQUERY SYNTAX
+#
+# 13.2.11.1 THE SUBQUERY AS SCALAR OPERAND
+# 13.2.11.2 COMPARISONS USING SUBQUERIES
+# 13.2.11.3 SUBQUERIES WITH ANY, IN, or SOME
+#
+# 13.2.11.4 SUBQUERIES WITH ALL
+# 13.2.11.5 ROW SUBQUERIES
+# 13.2.11.6 SUBQUERIES WITH EXISTS OR NOT EXISTS
+#
+# 13.2.11.7 CORRELATED SUBQUERIES
+# 13.2.11.8 DERIVED TABLES
+# 13.2.11.9 SUBQUERY ERRORS
+#
+# 13.2.11.10 OPTIMIZING SUBQUERIES
+# 13.2.11.11 REWRITING SUBQUERIES AS JOINS
+#
+# A subquery is a SELECT statement within another statement.
+#
+# All subquery forms and operations that the SQL standard requires are supported,
+# as well as a few features that are MySQL-specific.
+#
+# Here is an example of a subquery:
+#
+# 		SELECT * FROM t1 WHERE column1 = (SELECT column1 FROM t2);
+#
+# In this example, SELECT * FROM t1 --- is the outer query (or outer statement), and
+# (SELECT column1 FROM t2) is the subquery.
+#
+# We say that the subquery is nested within the outer query, and in fact it is possible
+# to nest subqueries within other subqueries, to a considerable depth.
+#
+# A subquery must always appear within parentheses.
+#
+# The main advantages of subqueries are:
+#
+# 		) They allow queries that are structured so that it is possible to isolate each part of a statement
+#
+# 		) They provide alternative ways to perform operations that would otherwise reuqire complex joins and unions
+#
+# 		) Many people find subqueries more readable than complex joins or unions.
+#
+# Here is an example statement that shows the major points about subquery syntax as specified
+# by the SQL standard and supported in MySQL:
+#
+# 		DELETE FROM t1
+# 		WHERE s11 > ANY
+# 			(SELECT COUNT(*) /* no hint */ FROM t2
+# 				WHERE NOT EXISTS
+# 					(SELECT * FROM t3
+# 						WHERE ROW(5*t2.s1,77)=
+# 						 	(SELECT 50,11*s1 FROM t4 UNION SELECT 50,77 FROM
+# 								(SELECT * FROM t5) AS t5)));
+#
+# A subquery can return a scalar (a single value), a single row, a single column or a table
+# (one or more rows of one or more columns)
+#
+# These are called scalar, column, row, and table subqueries.
+#
+# Subqueries that return a particular kind of result often can be used only in certain
+# contexts, as described in teh following sections.
+#
+# There are few restrictions on the type of statements in which subqueries can be used.
+#
+# A subquery can contain many of the keywords or clauses that an ordinary SELECT
+# can contain:
+#
+# 		DISTINCT
+#
+# 		GROUP BY
+#
+# 		ORDER BY
+#
+# 		LIMIT
+#
+# 		joins
+#
+# 		index hints
+#
+# 		UNION constructs
+#
+# 		comments
+#
+# 		functions
+#
+# 		etc.
+#
+# A subquery's outer statement can be any one of:
+#
+# 		SELECT
+#
+# 		INSERT
+#
+# 		UPDATE
+#
+# 		DELETE
+#
+# 		SET
+#
+# 		DO
+#
+# In MySQL, you cannot modify a table and select from the same table in a subquery.
+#
+# This applies to statements such as DELETE, INSERT, REPLACE, UPDATE and LOAD DATA INFILE (because subqueries can be used in the SET clause)
+#
+# For information about how the optimizer handles subqueries, see SECTION 8.2.2,
+# "OPTIMIZING SUBQUERIES, DERIVED TABLES, VIEW REFERENCES, AND COMMON TABLE EXPRESSIONS"
+#
+# For a discussion of restrictions on subquery use, including performance issues for certain
+# forms of subquery syntax, see SECTION C.4, "RESTRICTIONS ON SUBQUERIES"
+#
+# 13.2.11.1 THE SUBQUERY AS SCALAR OPERAND
+#
+# In its simplest form, a subquery is a scalar subquery that returns a single value.
+#
+# A scalar subquery is a simple operand, and you can use it almost anywhere a single
+# column value or literal is legal, and you can expect it to have those characteristics
+# that all operands have:
+#
+# 		a data type
+#
+# 		a length
+#
+# 		indication taht it can be NULL
+#
+# 		etc.
+#
+# For example:
+#
+# 		CREATE TABLE t1 (s1 INT, s2 CHAR(5) NOT NULL);
+# 		INSERT INTO t1 VALUES(100, 'abcde');
+# 		SELECT (SELECT s2 FROM t1);
+#
+# The subquery in this SELECT returns a single value ('abcde') that has a data type
+# of CHAR, a length of 5, a character set and collation equal to the defaults in effect
+# at CREATE_TABLE time, and an indication that the value in the column can be NULL.
+#
+# Nullability of the value selected by a scalar subquery is not copied because if the
+# subquery result is empty,, the result is NULL.
+#
+# For the subquery just shown, if t1 were empty, the result would be NULL even though
+# s2 is NOT NULL
+#
+# There are a few contexts in which a scalar subquery cannot be used.
+#
+# If a statement permits only a literal value, you cannot use a subquery.
+#
+# For example, LIMIT requires literal integer arguments, and LOAD_DATA_INFILE
+# requires a literal string file name.
+#
+# You cannot use subqueries to supply these values.
+#
+# When you see examples in the following sections that contain the rather 
+# spartan construct (SELECT column1 FROM t1), imagine that your own code contains
+# much more diverse and complex stuff.
+##
+# Suppose that we make two tables:
+#
+# 		CREATE TABLE t1 (s1 INT);
+# 		INSERT INTO t1 VALUES(1);
+#
+# 		CREATE TABLE t2 (s1 INT);
+# 		INSERT INTO t2 VALUES(2);
+#
+# Then perform a SELECT:
+#
+# 		SELECT (SELECT s1 FROM t2) FROM t1;
+#
+# The result is 2 because there is a row in t2 containing a column s1 that
+# has a value of 2.
+#
+# A scalar subquery can be part of an expression, but remember the parentheses,
+# even if the subquery is an operand that provides an argument for a function.
+#
+# For example:
+#
+# 		SELECT UPPER((SELECT s1 FROM t1)) FROM t2;
+#
+# 13.2.11.2 COMPARISONS USING SUBQUERIES
+#
+# The most common use of a subquery is in the form:
+#
+# 		non_subquery_operand comparison_operator (subquery)
+#
+# Where comparison_operator is one of these operators:
+#
+# 		= > < >= <= <> != <=>
+#
+# For example:
+#
+# 		--- WHERE 'a' = (SELECT column1 FROM t1)
+#
+# MySQL also permits this construct:
+#
+# 		non_subquery_operand LIKE (subquery)
+#
+# At one time the only legal place for a subquery was on the right side of a comparison,
+# and you might still find some old DBMSs that insist on this.
+#
+# Here is an example of a common-form subquery comparison that you cannot do with a join.
+#
+# It finds all the rows in table t1 for which the column1 value is equal to
+# a maximum value in table t2:
+#
+# 		SELECT * FROM t1
+# 			WHERE column1 = (SELECT MAX(column2) FROM t2);
+#
+# Here is another example, which again is impossible with a join because it
+# involves aggregating for one of the tables.
+#
+# It finds all rows in table t1 containing a value that occurs twice
+# in a given column:
+#
+# 		SELECT * FROM t1 AS t
+# 			WHERE 2 = (SELECT COUNT(*) FROM t1 WHERE t1.id = t.id);
+#
+# For a comparison of the subquery to a scalar, the subquery must return a scalar.
+#
+# For a comparison of the subquery to a row constructor, the subquery must be a row
+# subquery that returns a row with the same number of values as the row constructor.
+#
+# See SECTION 13.2.11.5, "ROW SUBQUERIES"
+#
+# 13.2.11.3 SUBQUERIES WITH ANY, IN, OR SOME
+#
+# Syntax:
+#
+# 		operand comparison_operator ANY (subquery)
+# 		operand IN (subquery)
+# 		operand comparison_operator SOME (subquery)
+#
+# Where comparison_operator is one of these operators:
+#
+# 		= > < >= <= <> !=
+#
+# The ANY keyword, which must follow a comparison operator, means
+# "return TRUE if the comparison is TRUE for ANY of the values in teh column that the subquery returns"
+#
+# For example:
+#
+# 		SELECT s1 FROM t1 WHERE s1 > ANY (SELECT s1 FROM t2);
+#
+# Suppose that there is a row in table t1 containing (10)
+#
+# The expression is TRUE if table t2 contains (21, 14, 7) because there is a value
+# 7 in t2 that is less than 10.
+#
+# The expression is FALSE if table t2 contains (20,10), or if table  t2 is empty
+#
+# The expression is unknown (that is, NULL) if table t2 contains (NULL, NULL, NULL)
+#
+# When used with a subquery, the word IN is an alias for = ANY
+#
+# Thus, these two statements are the same:
+#
+# 		SELECT s1 FROM t1 WHERE s1 = ANY (SELECT s1 FROM t2);
+# 		SELECT s1 FROM t1 WHERE s1 IN 	(SELECT s1 FROM t2);
+#
+# IN and = ANY are not synonyms when used with an expression list.
+#
+# IN can take an expression list, but = ANY cannot.
+#
+# See SECTION 12.3.2, "COMPARISON FUNCTIONS AND OPERATORS"
+#
+# NOT IN is not an alias for <> ANY, but for <> ALL. See SECTION 13.2.11.4,, "SUBQUERIES WITH ALL"
+#
+# The word SOME is an alias for ANY. Thus, these two statements are the same:
+#
+# 		SELECT s1 FROM t1 WHERE s1 <> ANY 	(SELECT s1 FROM t2);
+# 		SELECT s1 FROM t1 WHERE s1 <> SOME  (SELECT s1 FROM t2);
+#
+# Use of the word SOME is rare, but this example shows why it might be useful.
+#
+# To most people, the enlgish phrase "a is not equal to b" means "there is no b which is equal
+# to a", but that is not what is meant by the SQL syntax.
+#
+# The <> syntax means, not equal to or !=
+#
+# The syntax means "there is some b to which a is not equal"
+#
+# Using <> SOME instead helps ensure the meaning
+#
+# 13.2.11.4 SUBQUERIES WITH ALL
+#
+# Syntax:
+#
+# 		operand comparison_operator ALL (subquery)
+#
+# The word ALL which must follow a comparison operator, means "return TRUE if the comparison is TRUE for ALL of the
+# values in the column that the subquery returns"
+#
+# For example:
+#
+# 		SELECT s1 FROM t1 WHERE s1 > ALL (SELECT s1 FROM t2);
+#
+# Suppose that there is a row in table t1 containing (10)
+#
+# The expression is TRUE if table t2 contains (-5,0,+5) because 10 is greater than all
+# three values in t2.
+#
+# The expression is FALSE if table t2 contains (12,6,NULL,-100) beause there is a single
+# value 12 in table t2 that is greater than 10.
+#
+# The expression is unknown (that is, NULL) if table t2 contains (0,NULL,1)
+#
+# Finally, the expression is TRUE if table t2 is empty.
+#
+# So, the following expression is TRUE when table t2 is empty:
+#
+# 		SELECT * FROM t1 WHERE 1 > ALL (SELECT s1 FROM t2);
+#
+# But this expression is NULL when table t2 is empty:
+#
+# 		SELECT * FROM t1 WHERE 1 > (SELECT s1 FROM t2);
+#
+# In addition, the following expression is NULL when table t2 is empty:
+#
+# 		SELECT * FROM t1 WHERE 1 > ALL (SELECT MAX(s1) FROM t2);
+#
+# In general, tables containing NULL values and empty tables are "edge cases"
+#
+# When writing subqueries, always consider whether you have taken those two
+# possibilities in account.
+#
+# NOT IN is an alias for <> ALL. Thus, these two statements are teh same:
+#
+# 		SELECT s1 FROM t1 WHERE s1 <> ALL (SELECT s1 FROM t2);
+# 		SELECT s1 FROM t1 WHERE s1 NOT IN (SELECT s1 FROM t2);
+#
+# 13.2.11.5 ROW SUBQUERIES
+#
+# Scalar or column subqueries return a single value or a column of values.
+#
+# A row subquery is a subquery variant that returns a single row an can thus
+# return more than one column value.
+#
+# Legal operators for row subquery comparisons are:
+#
+# 		= > < >= <= <> != <=>
+#
+# Here are two examples:
+#
+# 		SELECT * FROM t1
+# 			WHERE (col1,col2) = (SELECT col3, col4 FROM t2 WHERE id = 10);
+# 		SELECT * FROM t1
+# 			WHERE ROW(col1,col2) = (SELECT col3, col4 FROM t2 WHERE id = 10);
+#
+# For both queries, if the table t2 contains a single row with id = 10, the subquery
+# returns a single row.
+#
+# If this row has col3 and col4 values equal to the col1 and col2 values of any rows
+# in t1, the WHERE expression is TRUE and each query returns those t1 rows.
+#
+# If the t2 row col3 and col4 values are not equal the col1 and col2 values
+# of any t1 row, the expression is FALSE and the query returns an empty result set.
+#
+# The expression is unknown(that is,NULL) if the subquery produces no rows.
+#
+# An error occurs if the subquery produces multiple rows because a row subquery
+# can return at most one row.
+#
+# For information about how each operator work for row comparisons, see SECTION 12.3.2,
+# "COMPARISON FUNCTIONS AND OPERATORS"
+#
+# The expressions (1,2) and ROW(1,2) are sometimes called row constructors.
+#
+# The two are equivalent.
+#
+# The row constructor and the row returned by the subquery must contain the same number of values
+#
+# A row constructor is used for comparisons with subqueries that return two or more columns.
+#
+# When a subquery returns a single column, this is regarded as a scalar value and not as
+# a row, so a row constructor cannot be used with a subquery that does not return at least
+# two columns.
+#
+# Thus, the following query fails with a syntax error:
+#
+# 		SELECT * FROM t1 WHERE ROW(1) = (SELECT column1 FROM t2)
+#
+# Row constructors are legal in other contexts.
+#
+# For example, the following two statements are semantically equivalent 
+# (and are handled in the same way by the optimizer):
+#
+# 		SELECT * FROM t1 WHERE (column1, column2) = (1,1);
+# 		SELECT * FROM t1 WHERE column1 = 1 AND column2 = 1;
+#
+# The following query answers the request, "find all rows in table t1 that also exist in table t2":
+#
+# 		SELECT column1, column2, column3
+# 			FROM t1
+# 			WHERE (column1, column2, column3) IN
+# 					 (SELECT column1, column2, column3 FROM t2);
+#
+# For more information about the optimizer and row constructors, see SECTION 8.2.1.20, "ROW CONSTRUCTOR EXPRESSION OPTIMIZATION"
+#
+# 13.2.11.6 SUBQUERIES WITH EXISTS OR NOT EXISTS
+#
+# If a subquery returns any rows at all, EXISTS subquery is TRUE, and NOT EXISTS subquery is FALSE.
+#
+# For example:
+#
+# 		SELECT column1 FROM t1 WHERE EXISTS (SELECT * FROM t2);
+#
+# Traditionally, an EXISTS subquery starts with SELECT *, but it could begin with SELECT 5 or SELECT column1
+# or anything at all.
+#
+# MySQL ignores the SELECT list in such a subquery, so it makes no difference.
+#
+# For the preceding example, if t2 contains any rows, even rows with nothing but NULL values,
+# the EXISTS condition is TRUE.
+#
+# This is actually an unlikely example because a [NOT] EXISTS subquery almost always
+# contains correlations.
+#
+# Here are some more realistic examples:
+#
+# 		) What kind of store is present in one or more cities
+#
+# 			SELECT DISTINCT store_type FROM stores
+# 				WHERE EXISTS (SELECT * FROM cities_stores
+# 								  WHERE cities_stores.store_type = stores.store_type);
+#
+# 		) What kind of store is present in no cities?
+#
+# 			SELECT DISTINCT store_type FROM stores
+# 				WHERE NOT EXISTS (SELECT * FROM cities_stores
+# 										WHERE cities_stores.store_type = stores.store_type);
+#
+# 		) What kind of store is present in all cities?
+#
+# 			SELECT DISTINCT store_type FROM stores s1
+# 				WHERE NOT EXISTS (
+# 					SELECT * FROM cities WHERE NOT EXISTS (
+# 						SELECT * FROM cities_stores
+# 							WHERE cities_stores.city = cities.city
+# 							AND cities_stores.store_type = stores.store_type));
+#
+# The last example is a double-nested NOT EXISTS query.
+#
+# That is, it has a NOT EXISTS clause within a NOT EXISTS clause.
+#
+# Formally, it answers the question "does a city exist with a store that is not in Stores"?
+#
+# But it is easier to say that a nested NOT EXISTS answers the question "is x TRUE for all y?"
+#
+# 13.2.11.7 CORRELATED SUBQUERIES
+#
+# A correlated subquery is a subquery that contains a reference to a table that also appears
+# in the outer query.
+#
+# For example:
+#
+# 		SELECT * FROM t1
+# 			WHERE column1 = ANY (SELECT column1 FROM t2
+# 										WHERE t2.column2 = t1.column2);
+#
+# Notice that the subquery contains a reference to a column of t1, even though
+# the subquery's FROM clause does not mention a table t1
+#
+# So, MySQL looks outside the subquery, and finds t1 in the outer query
+#
+# Suppose that table t1 contains a row where column1 = 5 and column2 = 6; meanwhile,
+# table t2 contains a row where column1 = 5 and column2 = 7
+#
+# The simple expression --- WHERE column1 = ANY (SELECT column1 FROM t2) would be TRUE,
+# but in this example, the WHERE clause within the subquery is FALSE (because (5,6) is
+# not equal to (5,7)), so the expression as a whole is FALSE
+#
+# SCOPING RULE: MySQL evaluates from inside to outside.
+#
+# For example:
+#
+# 		SELECT column1 FROM t1 AS x
+# 			WHERE x.column1 = (SELECT column1 FROM t2 AS x
+# 				WHERE x.column1 = (SELECT column1 FROM t3
+# 					WHERE x.column2 = t3.column1));
+#
+# In this statement, x.column2 must be a column in table t2 because SELECT column1 FROM t2 AS x ---
+# renames t2 
+#
+# It is not a column in table t1 because SELECT column1 FROM t1 --- is an outer query that is farther out
+#
+# For subqueries in HAVING or ORDER BY clauses, MySQL also looks for column names
+# in the outer select list.
+#
+# For certain cases, a correlated subquery is optimized.
+#
+# For example:
+#
+# 		val IN (SELECT key_val FROM tbl_name WHERE correlated_condition)
+#
+# Otherwise, they are inefficient and likely to be slow.
+#
+# Rewriting the query as a join might improve performance.
+#
+# Aggregate functions in correlated subqueries may contain outer references,
+# provided the function contains nothing but outer references, and provided the
+# function is not contained in another function or expression.
+#
+# 13.2.11.8 DERIVED TABLES
+#
+# A derived table is an expression that generates a table within the scope of a query
+# FROM clause.
+#
+# For example, a subquery in a SELECT statement FROM clause is a derived table:
+#
+# 		SELECT --- FROM (subquery) [AS] tbl_name ---
+#
+# The JSON_TABLE() function generates a table and provides another way to create a derived table:
+#
+# 		SELECT * FROM JSON_TABLE(arg_list) [AS] tbl_name ---
+#
+# The [AS] tbl_name clause is mandatory because every table in a FROM clause must have
+# a name.
+#
+# Any columns in the derived table must have unique names.
+#
+# Alternatively, tbl_name may be followed by a parenthesized list of names
+# for the derived table columns:
+#
+# 		SELECT --- FROM (subquery) [AS] tbl_name (col_list) ---
+#
+# The number of column names must be the same as the number of table columns.
+#
+# For the sake of illustration, assume that you have this table:
+#
+# 		CREATE TABLE t1 (s1 INT, s2 CHAR(5), s3 FLOAT);
+#
+# Here is how to use a subquery in the FROM clause, using the example table:
+#
+# 		INSERT INTO t1 VALUES (1, '1', 1.0);
+# 		INSERT INTO t1 VALUES (2, '2', 2.0);
+# 		SELECT sb1,sb2,sb3
+# 			FROM (SELECT s1 AS sb1, s2 AS sb2, s3*2 AS sb3 FROM t1) AS sb
+# 			WHERE sb1 > 1;
+#
+# Result:
+#
+# 		+-------+---------+-----------+
+# 		| sb1   | sb2 	   | sb3 		|
+# 		+-------+---------+-----------+
+# 		| 2 	  | 2 		| 4 			|
+# 		+-------+---------+-----------+
+#
+# Here is another example: Suppose that you want to know the average of a set
+# of sums for a grouped table.
+#
+# This does not work:
+#
+# 		SELECT AVG(SUM(column1)) FROM t1 GROUP BY column1;
+#
+# However, this query provides the desired information:
+#
+# 		SELECT AVG(sum_column1)
+# 			FROM (SELECT SUM(column1) AS sum_column1
+# 					FROM t1 GROUP BY column1) AS t1;
+#
+# Notice that the column name used within the subquery (sum_column1) is recognized
+# in the outer query.
+#
+# The column names for a derived table come from its select list:
+#
+# 		SELECT * FROM (SELECT 1, 2, 3, 4) AS dt;
+# 		+----+-----+------+------+
+# 		| 1  | 2   | 3    | 4    |
+# 		+----+-----+------+------+
+# 		| 1  | 2   | 3    | 4 	 |
+# 		+----+-----+------+------+
+#
+# To provide column names explicitly, follow the derived table
+# name with a parenthesized list of column names:
+#
+# 		SELECT * FROM (SELECT 1, 2, 3, 4) AS dt (a, b, c, d);
+# 		+----+------+------+---------+
+# 		| a  | b    | c 	 | d 		  |
+# 		+----+------+------+---------+
+# 		| 1  | 2    | 3    | 4 		  |
+# 		+----+------+------+---------+
+#
+# A derived table can return a scalar, column, row or table
+#
+# Derived tables are subject to these restrictions:
+#
+# 		) A derived table cannot be a correlated subquery
+#
+# 		) A derived table cannot contain references to other tables of the same SELECT
+#
+# 		) Prior to MySQL 8.0.14, a derived table cannot contain outer references.
+#
+# 			This is a MySQL restriction that is lifted in MySQL 8.0.14, not a restriction
+# 			of the SQL standard.
+#
+# 			For example, the derived table dt in the following query contains a reference
+# 			t1.b to the table t1 in the outer query:
+#
+# 				WHERE t1.d > (SELECT AVG(dt.a)
+# 									FROM (SELECT SUM(t2.a) AS a FROM
+# 											t2 WHERE t2.b = t1.b GROUP BY t2.c) dt
+# 								WHERE dt.a > 10);
+#
+# 			The query is valid in MySQL 8.0.14 and higher.
+#
+# 			Before 8.0.14, it produces an error: 
+#
+# 				Unknown column 't1.b' in 'where clause'
+#
+# The optimizer determines information about derived tables in such a way that
+# EXPLAIN does not need to materialize them.
+#
+# See SECTION 8.2.2.4, "OPTIMIZING DERIVED TABLES, VIEW REFERENCES, AND COMMON TABLE
+# EXPRESSIONS WITH MERGING OR MATERIALIZATION"
+#
+# It is possible under certain circumstances that using EXPLAIN_SELECT will modify table
+# data.
+#
+# This can occur if the outer query accesses any tables and an inner query invokes
+# a stored function that changes one or more rows of a table.
+#
+# Suppose that there are two tables t1 and t2 in database d1, and a stored function
+# f1 that modifies t2, created as shown here:
+#
+# 		CREATE DATABASE d1;
+# 		USE d1;
+# 		CREATE TABLE t1 (c1 INT);
+# 		CREATE TABLE t2 (c1 INT);
+# 		CREATE FUNCTION f1(p1 INT) RETURNS INT
+# 			BEGIN
+# 				INSERT INTO t2 VALUES (p1);
+# 				RETURN p1;
+# 			END;
+#
+# Referencing the function directly in an EXPLAIN_SELECT has no effect on t2,
+# as shown here:
+#
+# 		SELECT * FROM t2;
+# 		Empty set (0.02 sec)
+#
+# 		EXPLAIN SELECT f1(5)\G
+# 		******************************* 1. row ***********************************
+# 
+# 								id: 1
+# 					select_type: SIMPLE
+# 							table: NULL
+# 					partitions : NULL
+# 							type : NULL
+# 				possible_keys : NULL
+# 				key 			  : NULL
+# 						key_len : NULL
+# 							ref  : NULL
+# 							rows : NULL
+# 						filtered: NULL
+# 							Extra: No tables used
+# 				1 row in set (0.01 sec)
+#
+# 		SELECT * FROM t2;
+# 		Empty set (0.01 sec)
+#
+# This is because the SELECT statement did not reference any tables, as can be seen in the 
+# table and Extra columns of the output.
+#
+# This is also true of the following nested SELECT:
+#
+# 		EXPLAIN SELECT NOW() AS a1, (SELECT f1(5)) AS a2\G
+# 		************************* 1. row *****************************
+# 
+# 								id: 1
+# 				select_type   : PRIMARY
+# 							table: NULL
+# 						   type : NULL
+# 				possible_keys : NULL
+# 							  key: NULL
+# 						key_len : NULL
+# 							  ref: NULL
+# 							rows : NULL
+# 						filtered: NULL
+# 							Extra: No tables used
+# 		1 row in set, 1 warning (0.00 sec)
+#
+# 		SHOW WARNINGS;
+# 		+--------+----------+--------------------------------------------+
+# 		| Level  | Code 	  | Message 											  |
+# 		+--------+----------+--------------------------------------------+
+# 		| Note   | 1249     | Select 2 was reduced during optimization   |
+# 		+--------+----------+--------------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		SELECT * FROM t2;
+# 		Empty set (0.00 se)
+#
+# However, if the outer SELECT references any tables, the optimizer executes the
+# statement in the subquery as well, with the result that t2 is modified:
+#
+# 		EXPLAIN SELECT * FROM t1 AS a1, (SELECT f1(5)) AS a2\G
+# 		**************************** 1. row *****************************
+# 						id: 1
+# 			select_type: PRIMARY
+# 					table: <derived2>
+# 			partitions : NULL
+# 					type : system
+# 		possible_keys : NULL
+# 					  key: NULL
+# 				key_len : NULL
+# 					  ref: NULL
+# 					 rows: 1
+# 				filtered: 100.00
+# 					Extra: NULL
+# 		*************************** 2. row *******************************
+# 						id: 1
+# 			select_type: PRIMARY
+# 					table: a1
+# 			partitions : NULL
+# 					type : ALL
+# 		possible_keys : NULL
+# 					key  : NULL
+# 				key_len : NULL
+# 					ref  : NULL
+# 					rows : 1
+# 			filtered   : 100.00
+# 					Extra: NULL
+# 		************************* 3. row *********************************
+# 						id: 2
+# 			select_type: DERIVED
+# 					table: NULL
+# 			partitions : NULL
+# 					type : NULL
+# 		possible_keys : NULL
+# 					key  : NULL
+# 				key_len : NULL
+# 					ref  : NULL
+# 					rows : NULL
+# 				filtered: NULL
+# 					Extra: No tables used
+# 		3 rows in set (0.00 sec)
+#
+# 		SELECT * FROM t2;
+# 		+--------+
+# 		| c1 	   |
+# 		+--------+
+# 		| 5 	   |
+# 		+--------+
+# 		1 row in set (0.00 sec)
+#
+# This also means that an EXPLAIN_SELECT statement such as the one shown
+# here may take a long time to execute because the BENCHMARK() function
+# is executed once for each row in t1:
+#
+# 		EXPLAIN SELECT * FROM t1 AS a1, (SELECT BENCHMARK(1000000, MD5(NOW())));
+#
+# 13.2.11.9 SUBQUERY ERRORS
+#
+# There are some errors that apply only to subqueries. This section describes them.
+#
+# 		) Unsupported subquery syntax:
+#
+	# 			ERROR 1235 (ER_NOT_SUPPORTED_YET)
+	# 			SQLSTATE = 42000
+	# 			Message = "This version of MySQL doesn't yet support
+	# 			'LIMIT & IN/ALL/ANY/SOME subquery'"
+	#
+# 			This means that MySQL does not support statements of the following form:
+#
+# 				SELECT * FROM t1 WHERE s1 IN (SELECT s2 FROM t2 ORDER BY s1 LIMIT 1)
+#
+# 		) Incorrect number of columns from subquery:
+#
+# 				ERROR 1241 (ER_OPERAND_COL)
+# 				SQLSTATE = 21000
+# 				Message = "Operand should contain 1 column(s)"
+#
+# 			This error occurs in cases like this:
+#
+# 				SELECT (SELECT column1, column2 FROM t2) FROM t1;
+#
+# 			You may use a subquery that returns multiple columns, if the purpose is row
+# 			comparison.
+#
+# 			In other contexts, the subquery must be a scalar operand.
+#
+# 			See SECTION 13.2.11.5, "ROW SUBQUERIES"
+#
+# 		) Incorrect number of rows from subquery:
+#
+# 				ERROR 1242 (ER_SUBSELECT_NO_1_ROW)
+# 				SQLSTATE = 21000
+# 				Message = "Subquery returns more than 1 row"
+#
+# 		 	This error occurs for statements where the subquery must return at most one row
+# 			but returns multiple rows.
+#
+# 			Consider the following example:
+#
+# 				SELECT * FROM t1 WHERE column1 = (SELECT column1 FROM t2);
+#
+# 			If SELECT column1 FROM t2 returns just one row,, the previous query will work.
+#
+# 			If the subquery returns more thhan one row, error 1242 will occur.
+#
+# 			In that case, the query should be rewritten as:
+#
+# 				SELECT * FROM t1 WHERE column1 = ANY (SELECT column1 FROM t2);
+#
+# 		) Incorrectly used table in subquery:
+#
+# 				Error 1093 (ER_UPDATE_TABLE_USED)
+# 				SQLSTATE = HY000
+# 				Message = "You can't specify target table 'x'
+# 				for update in FROM clause"
+#
+# 			This error occurs in cases such as the following, which attempts to modify a table
+# 			and select from the same table in the subquery:
+#
+# 				UPDATE t1 SET column2 = (SELECT MAX(column1) FROM t1);
+#
+# 			You can use a subquery for assignment within an UPDATE statement because subqueries
+# 			are legal in UPDATE and DELETE statements as well as in SELECT statements.
+#
+# 			However, you cannot use the same table (in this case, table t1) for both the subquery
+# 			FROM clause and the update target.
+#
+# For transactional storage engines, the failure of a subquery causes the entire statement to fail.
+#
+# For nontransactional storage engines, data modifications made before the error was
+# encountered are preserved.
+#
+# 13.2.11.10 OPTIMIZING SUBQUERIES
+#
+# Development is ongoing, so no optimization tip is reliable for the long term.
+#
+# The following list provides some interesting tricks that you might want to paly
+# with.
+#
+# See also SECTION 8.2.2, "OPTIMIZING SUBQUERIES, DERIVED TABLES, VIEW REFERENCES, AND COMMON TABLE EXPRESSIONS"
+#
+# 		) Use subquery clauses that affect the number or order of the rows in the subquery.
+#
+# 			For example:
+#
+# 				SELECT * FROM t1 WHERE t1.column1 IN
+# 					(SELECT column1 FROM t2 ORDER BY column1);
+#
+# 				SELECT * FROM t1 WHERE t1.column1 IN
+# 					(SELECT DISTINCT column1 FROM t2);
+#
+# 				SELECT * FROM t1 WHERE EXISTS 
+# 					(SELECT * FROM t2 LIMIT 1);
+#
+# 		) Replace a join with a subquery. For example, try this:
+#
+# 				SELECT DISTINCT column1 FROM t1 WHERE t1.column1 IN (
+# 					SELECT column1 FROM t2);
+#
+# 			Instead of this:
+#
+# 				SELECT DISTINCT t1.column1 FROM t1, t2
+# 					WHERE t1.column1 = t2.column1;
+#
+# 		) Some subqueries can be transformed to joins for compatibility with older versions
+# 			of MySQL that do not support subqueries.
+#
+# 			However, in some cases, converting a subquery to a join may improve performance.
+#
+# 			See SECTION 13.2.11.11, "REWRITING SUBQUERIES AS JOINS"
+#
+# 		) Move clauses from outside to inside the subquery. For example, use  this query:
+#
+# 				SELECT * FROM t1
+# 					WHERE s1 IN (SELECT s1 FROM t1 UNION ALL SELECT s1 FROM t2);
+#
+# 			Instead of this query:
+#
+# 				SELECT * FROM t1
+# 					WHERE s1 IN (SELECT s1 FROM t1) OR s1 IN (SELECT s1 FROM t2);
+#
+# 			For another example, use this query:
+#
+# 				SELECT (SELECT column1 + 5 FROM t1) FROM t2;
+#
+# 			Instead of this query:
+#
+# 				SELECT (SELECT column1 FROM t1) + 5 FROM t2;
+#
+# 		) Use a row subquery instead of a correlated subquery. For example, use this query:
+#
+# 				SELECT * FROM t1
+# 					WHERE (column1,column2) IN (SELECT column1,column2 FROM t2);
+#
+# 			Instead of this query:
+#
+# 				SELECT * FROM t1
+# 					WHERE EXISTS (SELECT * FROM t2 WHERE t2.column1=t1.column1
+# 									  AND t2.column2=t1.column2);
+#
+# 		) Use NOT (a = ANY (---)) rather than a <> ALL (---)
+#
+# 		) Use x = ANY (table containing (1,2)) rather than x=1 OR x=2
+#
+# 		) Use = ANY rather than exists
+#
+# 		) For uncorrelated subqueries that always return one row, IN is always slower than =
+#
+# 			For example, use this query:
+#
+# 				SELECT * FROM t1
+# 					WHERE t1.col_name = (SELECT a FROM t2 WHERE b = some_const);
+#
+# 			Instead of this query:
+#
+# 				SELECT * FROM t1
+# 					WHERE t1.col_name IN (SELECT a FROM t2 WHERE b = some_const);
+#
+# These tricks might cause programs to go faster or slower.
+#
+# Using MySQL facilities like the BENCHMARK() function, you can get an idea
+# about what helps in your own situation.
+#
+# See SECTION 12.15, "INFORMATION FUNCTIONS"
+#
+# Some optimizations that MySQL itself makes are:
+#
+# 		) MySQL executes uncorrelated subqueries only once.
+#
+# 			Use EXPLAIN to make sure that a given subquery really is uncorrelated.
+#
+# 		) MySQL rewrites IN, ALL, ANY and SOME subqueries in an attempt to take advantage
+# 			of the possibility that the select-list columns in the subquery are indexed.
+#
+# 		) MySQL replaces subqueries of the following form with an index-lookup function,
+# 			which EXPLAIN describes as a special join type (unique_subquery or index_subquery):
+#
+# 			--- IN (SELECT indexed_column FROM single_table ---)
+#
+# 		) MySQL enhances expressions of the following form with an expression involving MIN() or MAX(),
+# 			unless NULL values or empty sets are involved:
+#
+# 				value {ALL|ANY|SOME} {> | < | >= | <=} (uncorrelated subquery)
+#
+# 			For example, this WHERE clause:
+#
+# 				WHERE 5 > ALL (SELECT x FROM t)
+#
+# 			might be treated by the optimizer like this:
+#
+# 				WHERE 5 > (SELECT MAX(x) FROM t)
+#
+# See also MYSQL INTERALS: HOW MYSQL TRANSFORMS SUBQUERIES
+#
+# 13.2.11.11 REWRITING SUBQUERIES AS JOINS
+#
+# Sometimes there are other ways to test membership in a set of values than by using a subquery.
+#
+# Also, on some ocassions - it is not only possible to rewrite a query without a subquery,
+# but it can be more efficient to make use of some of these techniques rather than to use
+# subqueries.
+#
+# One of these is the IN() construct:
+#
+# For example, this query:
+#
+# 			SELECT * FROM t1 WHERE id IN (SELECT id FROM t2);
+#
+# Can be rewritten as:
+#
+# 			SELECT DISTINCT t1.* FROM t1, t2 WHERE t1.id=t2.id;
+#
+# The queries:
+#
+# 		SELECT * FROM t1 WHERE id NOT IN (SELECT id FROM t2);
+# 		SELECT * FROM t1 WHERE NOT EXISTS (SELECT id FROM t2 WHERE t1.id=t2.id);
+#
+# can be rewritten as:
+#
+# 		SELECT table1.*
+# 			FROM table1 LEFT JOIN table2 ON table1.id=table2.id
+# 			WHERE table2.id IS NULL;
+#
+# A LEFT [OUTER] JOIN can be faster than an equivalent subquery because the server might
+# be able to optimizer it better - a fact that is not specific to MySQL Server alone.
+#
+# Prior to SQL-92, outer joins did not exist, so subqueries were the only way to do
+# certain things.
+#
+# Today, MySQL Server and many other modern database systems offer a wide range
+# of outer join types.
+#
+# MySQL Server supports multiple-table DELETE statements that can be used to efficiently
+# delete rows based on information from one table or even from many tables at the
+# same time.
+#
+# Multiple-table UPDATE statements are also supported.
+#
+# See SECTION 13.2.2, "DELETE SYNTAX" and SECTION 13.2.12, "UPDATE SYNTAX"
+#
+# 13.2.12 UPDATE SYNTAX
+#
+# https://dev.mysql.com/doc/refman/8.0/en/update.html
+# 					
