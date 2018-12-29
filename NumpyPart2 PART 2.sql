@@ -18298,5 +18298,2014 @@
 #
 # 13.2.12 UPDATE SYNTAX
 #
-# https://dev.mysql.com/doc/refman/8.0/en/update.html
+# UPDATE is a DML statement that modifies rows in a table.
+#
+# An UPDATE statement can start with a WITH clause to define common table
+# expressions accessible within the UPDATE.
+#
+# See SECTION 13.2.13, "WITH SYNTAX (COMMON TABLE EXPRESSIONS)"
+#
+# Single-table syntax:
+#
+# 		UPDATE [LOW_PRIORITY] [IGNORE] table_reference
+# 			SET assignment_list
+# 			[WHERE where_condition]
+# 			[ORDER BY ---]
+# 			[LIMIT row_count]
+#
+# 		value:
+# 			{expr | DEFAULT}
+#
+# 		assignment:
+# 			col_name = value
+#
+# 		assignment_list:
+# 			assignment [, assignment] ---
+#
+# Multiple-table syntax:
+#
+# 		UPDATE [LOW_PRIORITY] [IGNORE] table_references
+# 			SET assignment_list
+# 			[WHERE where_condition]
+#
+# For the single-table syntax, the UPDATE statement updates columns of existing
+# rows in the named table with new values.
+#
+# The SET clause indicates which columns to modify and the values they should be given.
+#
+# Each value can be given as an expression, or the keyword DEFAULT to set a column
+# explicitly to its default value.
+#
+# The WHERE clause, if given, specifies the conditions that identify which rows to update.
+#
+# With no WHERE clause, all rows are updated.
+#
+# If the ORDER BY clause is specified, the rows are updated in the order that is specified.
+# The LIMIT clause places a limit on the number of rows that can be updated.
+#
+# For the multiple-table syntax, UPDATE updates rows in each table named in table_references
+# that satisfy the conditions.
+#
+# Each matching row is updated once, even if it matches the conditions multiple times.
+#
+# For multiple-table syntax, ORDER BY and LIMIT cannot be used.
+#
+# For partitioned tables, both the single-single and multiple-table forms of this statement
+# support the use of a PARTITION option as part of a table reference.
+#
+# This option takes a list of one or more partitions or subpartitions (or both)
+#
+# Only the partitions (or subpartitions) listed are checked for matches, and a row that
+# is not in any of these partitions or subpartitions is not updated, whether it satisfies
+# the where_condition or not.
+#
+# NOTE:
+#
+# 		Unlike the case when using PARTITION with an INSERT or REPLACE statement, an otherwise
+# 		valid UPDATE --- PARTITION statement is considered successful even if no rows in the
+# 		listed partitions (or subpartitions) match the where_condition
+#
+# For more information and examples, see SECTION 23.5, "PARTITION SELECTION"
+#
+# where_condition is an expression that evaluates to true for each row to be updated:
+# For expression syntax, see SECTION 9.5, "EXPRESSIONS"
+#
+# table_references and where_condition are specified as described in SECTION 13.2.10, "SELECT SYNTAX"
+#
+# You need the UPDATE privilege only for columns referenced in an UPDATE that are actually updated.
+#
+# You need only the SELECT privilege for any columns that are read but not modified.
+#
+# The UPDATE statement supports the following modifiers:
+#
+# 		) With the LOW_PRIORITY modifier, execution of the UPDATE is delayed until no other clients
+# 			are reading from the table.
+#
+# 			This affects only storage engines that use only table-level locking (such as MyISAM, MEMORY, and MERGE)
+#
+# 		) With the IGNORE modifier, the update statement does not abort even if errors occur during the update.
+#
+# 			Rows for which duplicate-key conflicts occur on a unique key value are not updated.
+#
+# 			Rows updated to values that would cause data conversion errors are updated to the closest
+# 			valid values instead.
+#
+# 			For more information, see COMPARISON OF THE IGNORE KEYWORD AND STRICT SQL MODE
+#
+# UPDATE_IGNORE statements, including those having an ORDER BY clause, are flagged as unsafe
+# for statement-based replication.
+#
+# (This is because the order in which the rows are updated determines which rows are ignored)
+#
+# Such statements produce a warning in the error log when using statement-based mode and are 
+# written to the binary log using the row-based format when using MIXED mode.
+#
+# (Bug #11758262, Bug #50439)
+#
+# See SECTION 17.2.1.3, "DETERMINATION OF SAFE AND UNSAFE STATEMENTS IN BINARY LOGGING"
+# for more information.
+#
+# If  you access a column from the table to be updated in an expression, UPDATE uses the current
+# value of the column.
+#
+# For example, the following statement sets col1 to one more than its current value:
+#
+# 		UPDATE t1 SET col1 = col1 + 1;
+#
+# The second assignment in the following statement sets col2 to the current (updated)
+# col1 value, not the original col1 value.
+#
+# The result is that col1 and col2 have the same value.
+#
+# This behavior differs from standard SQL.
+#
+# 		UPDATE t1 SET col1 = col1 + 1, col2 = col1;
+#
+# Single-table UPDATE assignments are generally evaluated from left to right.
+#
+# For multiple-table updates, there is no guarantee that assignments are carried
+# out in any particular order.
+#
+# If you set a column to the value it currently has, MySQL notices this and does
+# not update it.
+#
+# If you update a column that has been declared NOT NULL by setting to NULL, an error
+# occurs if strict SQL mode is enabled; otherwise, the column is set to the implicit
+# default value for the column data type and the warning count is incremented.
+#
+# The implicit default value is 0 for numeric types, the empty string('') for string
+# types, and the "zero" value for date and time types.
+#
+# See SECTION 11.7, "DATA TYPE DEFAULT VALUES"
+#
+# If a generated column is updated explicitly, the only permitted value is DEFAULT.
+#
+# For information about generated columns, see SECTION 13.1.20.8, "CREATE TABLE AND GENERATED COLUMNS"
+#
+# UPDATE returns the number of rows that were actually changed.
+#
+# The mysql_info() C API function returns the number of rows that were matched and updated
+# and the number of warnings that occurred during the UPDATE.
+#
+# You can use LIMIT row_count to restrict the scope of the UPDATE 
+#
+# A LIMIT clause is a rows-matched restriction. The statement stops as soon as it has found
+# row_count rows that satisfy the WHERE clause, whether or not they actually were changed.
+#
+# If an UPDATE statement includes an ORDER BY clause, the rows are updated in the order specified
+# by the clause.
+#
+# This can be useful in certain situations that might otherwise result in an error.
+#
+# Suppose that a table t contains a column id that has a unique index.
+#
+# The following statement could fail with a duplicate-key error, depending
+# on the order in which rows are updated:
+#
+# 		UPDATE t SET id = id + 1;
+#
+# For example, if the table contains 1 and 2 in the id column and 1 is updated
+# to 2 before 2 is updated to 3, an error occurs.
+#
+# To avoid this problem, add an ORDER BY clause to cause the rows with larger
+# id values to be updated before those with smaller values:
+#
+# 		UPDATE t SET id = id + 1 ORDER BY id DESC;
+#
+# You can also perform UPDATE operations covering multiple tables.
+#
+# However, you cannot use ORDER BY or LIMIT with a multiple-table UPDATE.
+#
+# The table_references clause lists the tables involved in teh join.
+#
+# Its syntax is described in SECTION 13.2.10.2, "JOIN SYNTAX"
+#
+# Here is an example:
+#
+# 		UPDATE items,month SET items.price=month.price
+# 		WHERE items.id=month.id;
+#
+# The preceding example shows an inner join that uses the comma operator, but multiple-table
+# UPDATE statements can use any type of join permitted in SELECT statements, such as LEFT JOIN.
+#
+# If you use a multiple-table UPDATE statement involving InnoDB tables for which there are
+# foreign key constraints, the MySQL optimizer might process tables in an order that
+# differs from that of their parent/child relationship.
+#
+# In this case, the statement fails and rolls back.
+#
+# Instead, update a single table and rely on the ON UPDATE capabilities that
+# InnoDB provides to cause the other tables to be modified accordingly.
+#
+# See SECTION 15.6.1.5, "INNODB AND FOREIGN KEY CONSTRAINTS"
+#
+# You cannot update a table and select from the same table in a subquery.
+#
+# An UPDATE on a partitioned table using a storage engine such as MyISAM that employs
+# table-level locks locks only those partitions containing rows that match the
+# UPDATE statement WHERE clause, as long as none of the table partitioning columns
+# are updated.
+#
+# (For storage engines such as InnoDB that employ row-level locking, no locking of
+# partitions takes place)
+#
+# For more information, see PARTITIONING AND LOCKING
+#
+# 13.2.13 WITH SYNTAX (COMMON TABLE EXPRESSIONS)
+#
+# A common table expression (CTE) is a named temporary result set that exists
+# within the scope of a single statement and that can be referred to later
+# within that statement, possibly multiple times.
+#
+# The following discussion describes how to write statements that use CTEs.
+#
+# 		) COMMON TABLE EXPRESISON SYNTAX
+#
+# 		) RECURSIVE COMMON TABLE EXPRESSIONS
+#
+# 		) LIMITING COMMON TABLE EXPRESSION RECURSION
+#
+# 		) RECURSIVE COMMON TABLE EXPRESSION EXAMPLES
+#
+# 		) COMMON TABLE EXPRESSIONS COMPARED TO SIMILAR CONSTRUCTS
+#
+# For informaiton about CTE optimization, see SECTION 8.2.2.4, "OPTIMIZING
+# DERIVED TABLES, VIEW REFERENCES, AND COMMON TABLE EXPRESSIONS WITH MERGING OR MATERIALIZATION"
+#
+# ADDITIONAL RESOURCES
+#
+# These articles contain additional information about using CTEs in MySQL, including many examples:
+#
+# 		<LINKS, RETURN TO AFTER COMPLETED SECTION>
+#
+# COMMON TABLE EXPRESSION SYNTAX
+#
+# To specify common table expressions, use a WITH clause that has one or more comma-separated
+# subclauses.
+#
+# Each subclause provides a subquery that produces a result set and associates a name with the
+# subquery.
+#
+# The following example defines CTEs named cte1 and cte2 in the WITH clause, and refers to them
+# in the top-level SELECT that follows the WITH clause:
+#
+# 		WITH
+# 			cte1 AS (SELECT a, b FROM table1),
+# 			cte2 AS (SELECT c, d FROM table2)
+# 		SELECT b, d FROM cte1 JOIN cte2
+# 		WHERE cte1.a = cte2.c;
+#
+# In the statement containing the WITH clause, each CTE name can be referenced
+# to access the corresponding CTE result set.
+#
+# A CTE name can be referenced in other CTEs, enabling CTEs to be defined based
+# on other CTEs.
+#
+# A CTE can refer to itself to define a recursive CTE
+#
+# Common applications of recursive CTEs include series generation and traversal
+# of hierarchial or tree-structured data.
+#
+# Common table expressions are an optional part of the syntax for DML statements.
+#
+# They are defined using a WITH clause:
+#
+# 		with_clause:
+# 			WITH [RECURSIVE]
+# 				cte_name [(col_name [, col_name] ---)] AS (subquery)
+# 				[, cte_name [(col_name [, col_name] ---)] AS (subquery)] ---
+#
+# cte_name names a single common table expression and can be used as a table
+# reference in the statement containing the WITH clause.
+#
+# The subquery part of AS (subquery) is called the "subquery of the CTE" and is what
+# produces the CTE result set.
+#
+# The parentheses following AS are required.
+#
+# A common table expression is recursive if its subquery refers to its own name.
+#
+# The RECURSIVE keyword must be included if any CTE in the WITH clause is recursive.
+#
+# For more information, see RECURSIVE COMMON TABLE EXPRESSIONS
+#
+# Determination of column names for a given CTE occurs as follows:
+#
+# 		) If a parenthesized list of names follows the CTE name, those names are the column names:
+#
+# 			WITH cte (col1, col2) AS
+# 			(
+# 				SELECT 1, 2
+# 				UNION ALL
+# 				SELECT 3, 4
+# 			)
+# 			SELECT col1, col2 FROM cte;
+#
+# 			The number of names in the list must be the same as the number of columns in the result set.
+#
+# 		) Otherwise, the column names come from the select list of the first SELECT within the AS (subquery) part:
+#
+# 			WITH cte AS
+# 			(
+# 				SELECT 1 AS col1, 2 AS col2
+# 				UNION ALL
+# 				SELECT 3, 4
+# 			)
+# 			SELECT col1, col2 FROM cte;
+#
+# A WITH clause is permitted in these contexts:
+#
+# 		) At the beginning of SELECT, UPDATE and DELETE statements.
+#
+# 			WITH --- SELECT ---
+# 			WITH --- UPDATE ---
+# 			WITH --- DELETE ---
+#
+# 		) At the beginning of subqueries (including derived table subqueries):
+#
+# 			SELECT --- WHERE id IN (WITH --- SELECT ---) ---
+# 			SELECT * FROM (WITH --- SELECT ---) AS dt ---
+#
+# 		) Immediately preceding SELECT for statements that include a SELECT statement:
+#
+# 			INSERT --- WITH --- SELECT ---
+# 			REPLACE --- WITH --- SELECT ---
+# 		
+# 			CREATE TABLE --- WITH --- SELECT ---
+# 			CREATE VIEW --- WITH --- SELECT ---
+#
+# 			DECLARE CURSOR --- WITH --- SELECT ---
+# 			EXPLAIN --- WITH --- SELECT ---
+#
+# Only one WITH clause is permitted at the same level.
+#
+# WITH followed by WITH at the same level is not permitted, so this is illegal:
+#
+# 		WITH cte1 AS (---) WITH cte2 AS (---) SELECT ---
+#
+# To make the statement legal, use a single WITH clause that separates
+# the subclauses by a comma:
+#
+# 		WITH cte1 AS (---), cte2 AS (---) SELECT ---
+#
+# However, a statement can contain multiple WITH clauses if they occur at different
+# levels:
+#
+# 		WITH cte1 AS (SELECT 1)
+# 		SELECT * FROM (WITH cte2 AS (SELECT 2) SELECT * FROM cte2 JOIN cte1) AS dt;
+#
+# A WITH clause can define one or more common table expressions, but each CTE name
+# must be unique to the clause. This is illegal:
+#
+# 		WITH cte1 AS (---), cte1 AS (---) SELECT ---
+#
+# To make the statement legal, define the CTEs with unique names:
+#
+# 		WITH cte1 AS (---), cte2 AS (---) SELECT ---
+#
+# A CTE can refer to itself or to other CTEs:
+#
+# 		) A self-referencing CTE is recursive
+#
+# 		) A CTE can refer to CTEs defined earlier in the same WITH clause, but not those defined later.
+#
+# 		  This constraint rules out mutually-recursive CTEs, where cte1 references cte2 and cte2
+# 			references cte1.
+#
+# 			One of those references must be to a CTE defined later, which is not permitted.
+#
+# 		) A CTE in a given query block can refer to CTEs defined in query blocks at a more outer level,
+# 			but not CTEs defined in query blocks at a more inner level.
+#
+# For resolving references to objects with the same names, derived tables hide CTEs; and CTEs
+# hide base tables, TEMPORARY tables, and views.
+#
+# Name resolution occurs by seaching for objects in the same query block, then proceeding
+# to outer blocks in turn while no object with the name is found.
+#
+# Like derived tables, a CTE cannot contain outer references prior to MySQL 8.0.14
+#
+# This is a MySQL restriction that is lifted in MySQL 8.0.14, not a restriction of the
+# SQL standard.
+#
+# For additional syntax considerations specific to recursive CTEs, see RECURSIVE COMMON TABLE EXPRESSIONS
+#
+# RECURSIVE COMMON TABLE EXPRESSIONS
+#
+# A recursive common table expression is one having a subquery that refers to its own name.
+#
+# For example:
+#
+# 		WITH RECURSIVE cte (n) AS
+# 		(
+# 			SELECT 1
+# 			UNION ALL
+# 			SELECT n + 1 FROM cte WHERE n < 5
+# 		)
+# 		SELECT * FROM cte;
+#
+# When executed, the statement produces this result, a single column containing a simple
+# linear sequence:
+#
+# 		+--------+
+# 		| n 		|
+# 		+--------+
+# 		| 1 	   |
+# 		| 2 		|
+# 		| 3 	   |
+# 		| 4 	   |
+# 		| 5 		|
+# 		+--------+
+#
+# A recursive CTE has this structure:
+#
+# 		) The WITH clause must begin with WITH RECURSIVE if any CTE in the WITH clause refers to itself.
+#
+# 			(If no CTE refers to itself, RECURSIVE is permitted but not required)
+#
+# 			If you forget RECURSIVE for a recursive CTE, this error is a likely result:
+#
+# 				ERROR 1146 (42S02): Table 'cte_name' doesn't exist
+#
+# 		) The recursive CTE subquery has two parts, separated by UNION_[ALL] or UNION_DISTINCT:
+#
+# 			SELECT --- 			--- return initial row set
+# 			UNION ALL
+# 			SELECT --- 			--- return additional row sets
+#
+# 			The first SELECT produces the initial row or rows for the CTE and does not refer to the
+# 			CTE name.
+#
+# 			The second SELECT produces additional rows and recurses by referring to the CTE name
+# 			in its FROM clause.
+#
+# 			Recursion ends when this part produces no new rows.
+#
+# 			Thus, a recursive CTE consists of a nonrecursive SELECT part followed by a recursive SELECT part.
+#
+# 			Each SELECT part can itself be a union of multiple SELECT statements.
+#
+# 		) The types of the CTE result columns are inferred from the column types of the nonrecursive
+# 			SELECT part only, and the columns are all nullable.
+#
+# 			For type determination, the recursive SELECT part is ignored.
+#
+# 		) If the nonrecursive and recursive parts are separated by UNION_DISTINCT, duplicate rows
+# 			are eliminated.
+#
+# 			This is useful for queries that perform transitive closures, to avoid infinite loops.
+#
+# 		) Each iteration of the recursive part operates only on the rows produced by the previous iteration.
+#
+# 			If the recursive part has multiple query blocks, iterations of each query block are
+# 			scheduled in unspecified order, and each query block operates on rows that have been
+# 			produced either by its previous iteration or by other query blocks since that previous
+# 			iteration's end.
+#
+# The recursive CTE subquery shown earlier has this nonrecursive part that retrieves a single row
+# to produce the initial row set:
+#
+# 		SELECT 1
+#
+# The CTE subquery also has this recursive part:
+#
+# 		SELECT n + 1 FROM cte WHERE n < 5
+#
+# At each iteration, that SELECT produces a row within a new value one greater than the
+# value of n from the previous row set.
+#
+# The first iteration operates on the initial row set (1) and produces 1+1=2; 
+#
+# The second iteration operates on the first iteration's row set (2) and produces
+# 2+1=3; and so forth.
+#
+# This continues until recursion ends, which occurs when n is no longer less than 5
+#
+# If the recursive part of a CTE produces wider values for a column than the nonrecursive
+# part, it may be necessary to widen the column in the nonrecursive part to avoid
+# data truncation.
+#
+# Consider this statement:
+#
+# 		WITH RECURSIVE cte AS
+# 		(
+# 			SELECT 1 AS n, 'abc' AS str
+# 			UNION ALL
+# 			SELECT n + 1, CONCAT(str, str) FROM cte WHERE n < 3
+# 		)
+# 		SELECT * FROM cte;
+#
+# In nonstrict SQL mode, the statement produces this output:
+#
+# 		+--------+----------+
+# 		| n 		| str 	  |
+# 		+--------+----------+
+# 		| 1 		| abc 	  |
+# 		| 2 		| abc 	  |
+# 		| 3 		| abc 	  |
+# 		+--------+----------+
+#
+# The str column values are all 'abc' because the nonrecursive SELECT determines
+# the column widths.
+#
+# Consequently, the wider str values produced by the recursive SELECT are truncated.
+#
+# In strict SQL mode, the statement produces an error:
+#
+# 		ERROR 1406 (22001): Data too long for column 'str' at row 1
+#
+# To address this issue, so that the statement does not produce truncation or errors,
+# use CAST() in the nonrecursive SELECT to make the str column wider:
+#
+# 		WITH RECURSIVE cte AS
+# 		(
+# 			SELECT 1 AS n, CAST('abc' AS CHAR(20)) AS str
+# 			UNION ALL
+# 			SELECT n + 1, CONCAT(str, str) FROM cte WHERE n < 3
+# 		)
+# 		SELECT * FROM cte;
+#
+# Now the statement produces this result, without truncation:
+#
+# 		+-----+-----------------+
+# 		| n   | str 				|
+# 		+-----+-----------------+
+# 		| 1   | abc 				|
+# 		| 2   | abcabc 			|
+# 		| 3   | abcabcabcabc 	|
+# 		+-----+-----------------+
+#
+# Columns are accessed by name, not position, which means that columns in the recursive
+# part can access columns in the nonrecursive part that have a different position, as
+# this CTE illustrates:
+#
+# 		WITH RECURSIVE cte AS
+# 		(
+# 			SELECT 1 AS n, 1 AS p, -1 AS q
+# 			UNION ALL
+# 			SELECT n + 1, q * 2, p * 2 FROM cte WHERE n < 5
+# 		)
+# 		SELECT * FROM cte;
+#
+# Because p in one row is derived from q in the previous row, and vice versa,
+# the positive and negative values values swap positions in each successive
+# row of the output:
+#
+# 		+--------+-----------+------------+
+# 		| n 	   | p 		   | q 			 |
+# 		+--------+-----------+------------+
+# 		| 1 		| 1 			| -1 			 |
+# 		| 2 		| -2 			| 2 			 |
+# 		| 3 		| 4 			| -4 			 |
+# 		| 4 		| -8 			| 8 			 |
+# 		| 5 		| 16 			| -16 		 |
+# 		+--------+-----------+------------+
+#
+# Some syntax constraints apply within recursive CTE subqueries:
+#
+# 		) The recursive SELECT part must not contain these constructs:
+#
+# 			) Aggregate functions such as SUM()
+#
+# 			) Window functions
+#
+# 			) GROUP BY
+#
+# 			) ORDER BY
+#
+# 			) LIMIT
+#
+# 			) DISTINCT
+#
+# 			This constraint does not apply to nonrecursive SELECT part of a recursive CTE.
+#
+# 			The prohibition on DISTINCT applies only to UNION members; UNION DISTINCT is 
+# 			permitted.
+#
+# 		) The recursive SELECT part must reference the CTE only once and only in its FROM clause,
+# 			not in any subquery.
+#
+# 			It can reference tables other than the CTE and join them with the CTE:
+#
+# 			If used in a join like this, the CTE must not be on the right side of a LEFT JOIN
+#
+# These constraints come from the SQL standard, other than the MySQL-specific exclusions
+# of ORDER BY, LIMIT, and DISTINCT.
+#
+# For recursive CTEs, EXPLAIN output rows for recursive SELECT parts display Recursive
+# in the Extra column.
+#
+# Cost estimates displayed by EXPLAIN represents cost per iteration, which might differ
+# considerably from total cost.
+#
+# The optimizer cannot predict the number of iterations because it cannot predict
+# when the WHERE clause will become false.
+#
+# CTE actual cost may also be affected by result set size.
+#
+# A CTE that produces many rows may require an internal temporary table large enough
+# to be converted from in-memory to on-disk format and may suffer a performance
+# penalty.
+#
+# If so, increasing the permitted in-memory temporary table-size may improve performance;
+# see SECTION 8.4.4, "INTERNAL TEMPORARY TABLE USE IN MYSQL"
+#
+# LIMITING COMMON TABLE EXPRESSION RECURSION
+#
+# It is important for recursive CTEs that the recursive SELECT part include a condition
+# to terminate recursion.
+#
+# As a development technique to guard against a runaway recursive CTE; you can
+# force termination by placing a limit on execution time:
+#
+# 		) The cte_max_recursion_depth system variable enforces a limit on the number
+# 			of recursion levels for CTEs.
+#
+# 			The server terminates execution of any CTE that recurses more levels
+# 			than the value of this variable.
+#
+# 		) The max_execution_time system variable enforces an execution timeout for SELECT
+# 			statements executed within the current session.
+#
+# 		) The MAX_EXECUTION_TIME optimizer hint enforces a per-query execution timeout for the
+# 			SELECT statement in which it appears.
+#
+# Suppose that a recursive CTE is mistakenly written with no recursion execution termination condition:
+#
+# 		WITH RECURSIVE cte (n) AS
+# 		(
+# 			SELECT 1
+# 			UNION ALL
+# 			SELECT n + 1 FROM cte
+# 		)
+# 		SELECT * FROM cte;
+#
+# By default, cte_max_recursion_depth has a value of 1000, causing the CTE to terminate when
+# it recurses past 1000 levels.
+#
+# Applications can change the session value to adjust for their requirements:
+#
+# 		SET SESSION cte_max_recursion_depth = 10; 		-- Permit only shallow recursion
+# 		SET SESSION cte_max_recursion_depth = 1000000; 	-- permit deeper recursion
+#
+# You can also set the global cte_max_recursion_depth value to affect all sessions
+# that begin subsequently.
+#
+# For queries that execute and thus recurse slowly or in contexts for which there is
+# reason to set the cte_max_recursion_depth value very high, another way to guard
+# against deep recursion is to set a per-session timeout.
+#
+# To do so, execute a statement like this prior to executing the CTE statement:
+#
+# 		SET max_execution_time = 1000; -- impose one second timeout
+#
+# Alternatively, include an optimizer hint within the CTE statement itself:
+#
+# 		WITH RECURSIVE cte (n) AS
+# 		(
+# 			SELECT 1
+# 			UNION ALL
+# 			SELECT n + 1 FROM cte
+# 		)
+# 		SELECT /*+ MAX_EXECUTION_TIME(1000) */ * FROM cte;
+#
+# If a recursive query without an execution time limit enters an infinite loop, you can
+# terminate it from another session using KILL_QUERY
+#
+# Within the session itself, the client program used to run the query might provide
+# a way to kill the query.
+#
+# For example, in mysql, doing CTRL+C interuppts the current statement
+#
+# RECURSIVE COMMON TABLE EXPRESSION EXAMPLES
+#
+# As mentioned previously, recursive common table expressions (CTEs)
+# are frequently used for series generation and traversing hierarchial
+# or tree-structured data.
+#
+# This section shows some simple examples of these techniques.
+#
+# 		) FIBONACCI SERIES GENERATION
+#
+# 		) DATE SERIES GENERATION
+#
+# 		) HIERARCHIAL DATA TRAVERSAL
+#
+# FIBONACCI SERIES GENERATION
+#
+# A Fibonacci series begins with the two numbers 0 and 1 (or 1 and 1) and each number
+# after that is the sum of the previous two numbers.
+#
+# A recursive common table expression can generate a Fibonacci series if each row
+# produced by the recursive SELECT has access to the two previous numbers
+# from the series.
+#
+# The following CTE generates a 10-number series using 0 and 1 as the first two numbers:
+#
+# 		WITH RECURSIVE fibonacci (n, fib_n, next_fib_n) AS
+# 		(
+# 			SELECT 1, 0, 1
+# 			UNION ALL
+# 			SELECT n + 1, next_fib_n, fib_n + next_fib_n
+# 				FROM fibonacci WHERE n < 10
+# 		)
+# 		SELECT * FROM fibonacci;
+#
+# The CTE produces this result:
+#
+# 		+---------+------------+---------------------+
+# 		| n 		 | fib_n 	  | next_fib_n 		   |
+# 		+---------+------------+---------------------+
+# 		| 1 		 | 0 			  | 1 						|
+# 		| 2 		 | 1 			  | 1 						|
+# 		| 3 		 | 1 			  | 2 						|
+# 		| 4 		 | 2 			  | 3 					   |
+# 		| 5 		 | 3 			  | 5 						|
+# 		| 6 		 | 5 			  | 8 						|
+# 		| 7 		 | 8 			  | 13 						|
+# 		| 8 		 | 13 		  | 21 					   |
+# 		| 9 		 | 21 		  | 34 						|
+# 		| 10 		 | 34 		  | 55 						|
+# 		+---------+------------+---------------------+
+#
+# How the CTE works:
+#
+# 		) n is a display column to indicate that the row contains the n-th Fibonacci number.
+#
+# 			For example, the 8th Fibonacci number is 13.
+#
+# 		) The fib_n column displays Fibonacci number n
+#
+# 		) The next_fib_n column displays the next Fibonaci number after number n.
+#
+# 			This column provides the next series value to the next row, so that row can
+# 			produce the sum of the two previous series values in its fib_n column
+#
+# 		) Recursion ends when n reaches 10. This is an arbitrary choice, to limit output to
+# 			a small set of rows.
+#
+# The preceding output shows the entire CTE result.
+#
+# To select just part of it, add an appropriate WHERE clause to the top-level SELECT
+#
+# For example, to select the 8th Fibonacci number, do this:
+#
+# 		WITH RECURSIVE fibonacci ---
+# 		---
+# 		SELECT fib_n FROM fibonacci WHERE n = 8;
+# 		+-----------+
+# 		| fib_n 		|
+# 		+-----------+
+# 		| 13 			|
+# 		+-----------+
+#
+# DATE SERIES GENERATION
+#
+# A common table expression can generate a series of successive dates, which is useful
+# for generating summaries that include a row for all dates in the series, including
+# dates not represented in the summarized data.
+#
+# Suppose that a table of sales numbers contains these rows:
+#
+# 		SELECT * FROM sales ORDER BY date, price;
+# 		+----------------+----------+
+# 		| date 			  | price 	 |
+# 		+----------------+----------+
+# 		| 2017-01-03 	  | 100.00   |
+# 		| 2017-01-03 	  | 200.00   |
+# 		| 2017-01-06 	  | 50.00 	 |
+# 		| 2017-01-08 	  | 10.00 	 |
+# 		| 2017-01-08 	  | 20.00    |
+# 		| 2017-01-08 	  | 150.00   |
+# 		| 2017-01-10 	  | 5.00 	 |
+# 		+----------------+----------+
+#
+# This query summarizes the sales per day:
+#
+# 		SELECT date, SUM(price) AS sum_price
+# 		FROM sales
+# 		GROUP BY date
+# 		ORDER BY date;
+# 		+----------------+------------------+
+# 		| date 			  | sum_price 		   |
+# 		+----------------+------------------+
+# 		| 2017-01-03 	  | 300.00 				|
+# 		| 2017-01-06 	  | 50.00 				|
+# 		| 2017-01-08 	  | 180.00 				|
+# 		| 2017-01-10 	  | 5.00 				|
+# 		+----------------+------------------+
+#
+# However, that result contains "holes" for dates not represented in the range
+# of dates spanned by the table.
+#
+# A result that represents all dates in the range can be produced using a recursive
+# CTE to generate that set of dates, joined with a LEFT JOIN to the sales data.
+#
+# Here is the CTE to generate the date range series:
+#
+# 		WITH RECURSIVE dates (date) AS
+# 		(
+# 			SELECT MIN(date) FROM sales
+# 			UNION ALL
+# 			SELECT date + INTERVAL 1 DAY FROM dates
+# 			WHERE date + INTERVAL 1 DAY <= (SELECT MAX(date) FROM sales)
+# 		)
+# 		SELECT * FROM dates;
+#
+# The CTE produces this result:
+#
+# 		+-------------------+
+# 		| date 				  |
+# 		+-------------------+
+# 		| 2017-01-03 		  |
+# 		| 2017-01-04 		  |
+# 		| 2017-01-05 		  |
+# 		| 2017-01-06 		  |
+# 		| 2017-01-07 		  |
+# 		| 2017-01-08 		  |
+# 		| 2017-01-09 		  |
+# 		| 2017-01-10 		  |
+# 		+-------------------+
+#
+# How the CTE works:
+#
+# 		) The nonrecursive SELECT produces the lowest date in the date range spanned by the sales table.
+#
+# 		) Each row produced by the recursive SELECT adds one day to the date produced by the previous row.
+#
+# 		) Recursion ends after the dates reach the highest date in the date range spanned by the sales table.
+#
+# Joining the CTE with a LEFT JOIN against the sales table produces the sales summary with a row
+# for each date in the range:
+#
+# 		WITH RECURSIVE dates (date) AS
+# 		(
+# 			SELECT MIN(date) FROM sales
+# 			UNION ALL
+# 			SELECT date + INTERVAL 1 DAY FROM dates
+# 			WHERE date + INTERVAL 1 DAY <= (SELECT MAX(date) FROM sales)
+# 		)
+# 		SELECT dates.date, COALESCE(SUM(price), 0) AS sum_price
+# 		FROM dates LEFT JOIN sales ON dates.date = sales.date
+# 		GROUP BY dates.date
+# 		ORDER BY dates.date;
+#
+# The output looks like this:
+#
+# 		+--------------------+--------------+
+# 		| date 					| sum_price 	|
+# 		+--------------------+--------------+
+# 		| 2017-01-03 			| 300.00 		|
+# 		| 2017-01-04 			| 0.00 			|
+# 		| 2017-01-05 			| 0.00 			|
+# 		| 2017-01-06 			| 50.00 			|
+# 		| 2017-01-07 			| 0.00 			|
+# 		| 2017-01-08 			| 180.00 		|
+# 		| 2017-01-09 			| 0.00 			|
+# 		| 2017-01-10 			| 5.00 			|
+# 		+--------------------+--------------+
+#
+# Some points to note:
+#
+# 		) Are the queries inefficient, particularly the one with the MAX() subquery executed
+# 			for each row in the recursive SELECT?
+#
+# 			Checking with EXPLAIN shows that the subqueries are optimized away for efficiency.
+#
+# 		) The use of COALESCE() avoids displaying NULL in the sum_price column on days for which
+# 			no sales data occur in the sales table.
+#
+# HIERARCHIAL DATA TRAVERSAL
+#
+# Recursive common table expressions are useful for traversing data that forms a hierarchy.
+#
+# Consider these statements that create a small data set that shows, for each employee
+# in a company, the employee name and ID number, and the ID of the employee's manager.
+#
+# The top-level employee (the CEO), has a manager ID of NULL (no manager)
+#
+# 		CREATE TABLE employees (
+# 			id 			INT PRIMARY KEY NOT NULL,
+# 			name 			VARCHAR(100) NOT NULL,
+# 			manager_id 	INT NULL,
+# 			INDEX (manager_id),
+# 		FOREIGN KEY (manager_id) REFERENCES EMPLOYEES (id)
+# 		);
+# 		INSERT INTO employees VALUES
+# 		(333, "Yasmina", NULL), #CEO, manager_id is NULL
+# 		(198, "John", 333),
+# 		(692, "Tarek", 333),
+# 		(29, "Pedro", 198),
+# 		(4610, "Sarah", 29),
+# 		(72, "Pierre", 29),
+# 		(123, "Adil", 692);
+#
+# The resulting data set looks like this:
+#
+# 		SELECT * FROM employees ORDER BY id;
+# 		+-----+------------+-------------+
+# 		| id  | name 		 | manager_id  |
+# 		+-----+------------+-------------+
+# 		| 29  | Pedro 		 | 198 		   |
+# 		etc.
+#
+# To produce the organizational chart with the management chain for each
+# employee (that is, the path from CEO to employee), use a recursive CTE:
+#
+# 		WITH RECURSIVE employee_paths (id, name, path) AS
+# 		(
+# 			SELECT id, name, CAST(id AS CHAR(200))
+# 				FROM employees
+# 				WHERE manager_id IS NULL
+# 			UNION ALL
+# 			SELECT e.id, e.name, CONCAT(ep.path, ',', e.id)
+# 				FROM employee_paths AS ep JOIN employees AS e
+# 					ON ep.id = e.manager_id
+#		)
+# 		SELECT * FROM employee_paths ORDER BY path;
+#
+# The CTE produces this output:
+#
+# 		+-------+-----------+-------------------+
+# 		| id 	  | name 	  | path 				 |
+# 		+-------+-----------+-------------------+
+# 		| 333   | Yasmina   | 333 					 |
+# 		| 198   | John 	  | 333, 198 			 |
+# 		| 29 	  | Pedro 	  | 333, 198, 29 	    |
+# 		| 4610  | Sarah 	  | 333, 198, 29, 4610|
+# 		| 72 	  | Pierre 	  | 333, 198, 29, 72  |
+# 		| 692   | Tarek 	  | 333, 692 			 |
+# 		| 123   | Adil 	  | 333, 692, 123 	 |
+# 		+-------+-----------+-------------------+
+#
+# How the CTE works:
+#
+# 		) The nonrecursive SELECT produces the row for the CEO (the row with a NULL-manager ID)
+#
+# 			The path column is widened to CHAR(200) to ensure that there is room for the longer path
+# 			values produced by the recursive SELECT.
+#
+# 		) Each row produced by the recursive SELECT finds all employees who report directly to
+# 			an employee produced by a previous row.
+#
+# 			For each such employee, the row includes the employee ID and name, and the employee
+# 			management chain.
+#
+# 			The chain is the manager's chain, with the employee ID added ot the end.
+#
+# 		) Recursion ends when employees have no others who report to them
+#
+# To find the path for a specific employee or employees, add a WHERE clause
+# to the top-level SELECT.
+#
+# For example, to display the results for Tarek and Sarah, modify that SELECT
+# like this:
+#
+# 		WITH RECURSIVE ---
+# 		---
+# 		SELECT * FROM employees_extended
+# 		WHERE id IN (692, 4610)
+# 		ORDER BY path;
+# 		+------+-------+-----------------------+
+# 		| id   | name  | path 					   |
+# 		+------+-------+-----------------------+
+# 		| 4610 | Sarah | 333, 198, 29, 4610    |
+# 		| 692  | Tarek | 333, 692 					|
+# 		+------+-------+-----------------------+
+#
+# COMMON TABLE EXPRESSIONS COMPARED TO SIMILAR CONSTRUCTS
+#
+# Common table expressions (CTEs) are similar to derived tables in some ways:
+#
+# 		) Both constructs are named
+#
+# 		) Both constructs exist for the scope of a single statement
+#
+# Because of these similarities, CTEs and derived tables often can be used
+# interchangably.
+#
+# As a trivial example, these statements are equivalent:
+#
+# 		WITH cte AS (SELECT 1) SELECT * FROM cte;
+# 		SELECT * FROM (SELECT 1) AS dt;
+#
+# However, CTEs have some advantages over derived tables:
+#
+# 		) A derived table can be referenced only a single time within a query.
+#
+# 			A CTE can be referenced multiple times.
+#
+# 			To use multiple instances of a derived table result, you must derive
+# 			the result multiple times.
+#
+# 		) A CTE can be self-referencing (recursive)
+#
+# 		) One CTE can refer to another
+#
+# 		) A CTE may be easier to read when its definition appears at the beginning
+# 			of the statement rather than embedded within it.
+#
+# CTEs are similar to tables created with CREATE [TEMPORARY] TABLE but need not be defined
+# or dropped explicitly.
+#
+# For a CTE, you need no privileges to create tables.
+#
+# 13.3 TRANSACTIONAL AND LOCKING STATEMENTS
+#
+# 13.3.1 START TRANSACTION, COMMIT, AND ROLLBACK SYNTAX
+# 13.3.2 STATEMENTS THAT CANNOT BE ROLLED BACK
+#
+# 13.3.3 STATEMENTS THAT CAUSE AN IMPLICIT COMMIT
+# 13.3.4 SAVEPOINT, ROLLBACK TO SAVEPOINT, AND RELEASE SAVEPOINT SYNTAX
+#
+# 13.3.5 LOCK INSTANCE FOR BACKUP AND UNLOCK INSTANCE SYNTAX
+# 13.3.6 LOCK TABLES AND UNLOCK TABLES SYNTAX
+#
+# 13.3.7 SET TRANSACTION SYNTAX
+# 13.3.8 XA TRANSACTIONS
+#
+# MySQL supports local transactions (within a given client session) through statements,
+# such as SET_autocommit, START_TRANSACTION, COMMIT, and ROLLBACK.
+#
+# See SECTION 13.3.1, "START TRANSACTION, COMMIT, AND ROLLBACK SYNTAX"
+#
+# XA transaction support enables MySQL to participate in distributed transactions
+# as well.
+#
+# See SECTION 13.3.8, "XA TRANSACTIONS"
+#
+# 13.3.1 START TRANSACTION, COMMIT AND ROLLBACK SYNTAX
+#
+# START TRANSACTION 
+# 		[transaction_characteristic [, transaction_characteristic] ---]
+#
+# transaction_characteristic: {
+# 		WITH CONSISTENT SNAPSHOT
+# 	 | READ WRITE
+# 	 | READ ONLY
+# }
+#
+# BEGIN [WORK]
+# COMMIT [WORK] [AND [NO] CHAIN] [[NO] RELEASE]
+# ROLLBACK [WORK] [AND [NO] CHAIN] [[NO] RELEASE]
+# SET autocommit = {0 | 1}
+#
+# These statements provide control over use of transactions:
+#
+# 	) START TRANSACTION or BEGIN start a new transaction
+#
+# 	) COMMIT commits the current transaction, making its changes permanent
+#
+# 	) ROLLBACK rolls back the current transaction, canceling its changes
+#
+# 	) SET autocommit disables or enables the default autocommit mode for the current session
+#
+# By default, MySQL runs with autocommit mode enabled.
+#
+# This means that as soon as you execute a statement that updates (modifies) table,
+# MySQL stores the update on disk to make it permanent.
+#
+# The change cannot be rolled back.
+#
+# To disable autocommit mode implicitly for a single series of statements, use the
+# START TRANSACTION statement:
+#
+# 		START TRANSACTION;
+# 		SELECT @A:=SUM(salary) FROM table1 WHERE type=1;
+# 		UPDATE table2 SET summary=@A WHERE type=1;
+# 		COMMIT;
+#
+# With START TRANSACTION, autocommit remains disabled until you end the transaction
+# with COMMIT or ROLLBACK.
+#
+# The autocommit mode then reverts to its previous state.
+#
+# START TRANSACTION permits several modifiers that control transaction characteristics.
+#
+# To specify multiple modifiers, separate them by commas.
+#
+# 	) The WITH CONSISTENT SNAPSHOT modifier starts a consistent read for storage engines that
+# 		are capable of it.
+#
+# 		This applies only to InnoDB
+#
+# 		The effect is the same as issuing a START TRANSACTION followed by a SELECT
+# 		from any InnoDB table.
+#
+# 		See SECTION 15.7.2.3, "CONSISTENT NONLOCKING READS"
+#
+# 		The WITH CONSISTENT SNAPSHOT modifier does not change the current transaction
+# 		isolation level, so it provides a consistent snapshot only if the current
+# 		isolation level is one that permits a consistent read.
+#
+# 		The only isolation level that permits a consistent read is REPEATABLE_READ
+#
+# 		For all other isolation levels, the WITH CONSISTENT SNAPSHOT clause is ignored.
+#
+# 		A warning is generated when the WITH CONSISTENT SNAPSHOT clause is ignored.
+#
+# 	) The READ WRITE and READ ONLY modifiers set the transaction access mode.
+#
+# 		They permit or prohibit changes to tables used in the transaction.
+#
+# 		The READ ONLY restriction prevents the transaction from modifying or locking
+# 		both transactional and nontransactional tables that are visible to other
+# 		transactions;
+#
+# 		The transaction can still modify or lock temporary tables
+#
+# 		MySQL enables extra optimizations for queries on InnoDB tables when
+# 		the transaction is known to be read-only.
+#
+# 		Specifying READ ONLY ensures these optimizations are applied in cases
+# 		where the read-only status cannot be determined automatically.
+#
+# 		See SECTION 8.5.3, "OPTIMIZING INNODB READ-ONLY TRANSACTIONS" for more information.
+#
+# 		If no access mode is specified, the default mode applies.
+#
+# 		Unless the default has been changed, it is read/write.
+#
+# 		it is not permitted to specify both READ WRITE and READ ONLY in the same
+# 		statement.
+#
+# 		In read-only mode, it remains possible to change tables created with the
+# 		TEMPORARY keyword using DML statements.
+#
+# 		Changes made with DDL statements are not permitted, just as with permanent
+# 		tables.
+#
+# 		For additional information about transaction access mode, including ways to change
+# 		the default mode, see SECTION 13.3.7, "SET TRANSACTION SYNTAX"
+#
+# 		If the read_only system variable is enabled, explicitly starting a transaction
+# 		with START TRANSACTION READ WRITE requires the CONNECTION_ADMIN or SUPER privilege.
+#
+# 			IMPORTANT:
+#
+# 				Many APIS used for writing MySQL client applications (such as JDBC) provide
+# 				their own methods for starting transactions that can (and sometimes should)
+# 				be used instead of sending a START TRANSACTION statement from the client.
+#
+# 				See CHAPTER 28, CONNECTORS AND APIS, or the documentation for your API
+# 				for more information.
+#
+# 		To disable autocommit mode explicitly, use the following statement:
+#
+# 			SET autocommit=0;
+#
+# 		After disabling autocommit mode by setting the autocommit variable to zero, changes to
+# 		transaction-safe tables (such as those for InnoDB or NDB) are not made permanent
+# 		immediately.
+#
+# 		You must use COMMIT to store your changes to disk or ROLLBACK to ignore the changes.
+#
+# 		autocommit is a session variable and must be set for each session.
+#
+# 		To disable autocommit mode for each new connection, see the description
+# 		of the autocommit system variable at SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# 		BEGIN and BEGIN WORK are supported as aliases of START TRANSACTION for initiating
+# 		a transaction.
+#
+# 		START TRANSACTION is standard SQL syntax, is the recommended way to start an
+# 		ad-hoc transaction, and permits modifiers that BEGIN does not.
+#
+# 		The BEGIN statement differs from the use of the BEGIN keyword that starts a BEGIN_---_END
+# 		compound statement.
+#
+# 		The latter does not begin a transaction. See SECTION 13.6.1, "BEGIN --- END COMPOUND-STATEMENT SYNTAX"
+#
+# 		NOTE:
+#
+# 			Within all stored programs (stored procedures and functions, triggers, and events), the parser
+# 			treats BEGIN [WORK] as the beginning of a BEGIN_---_END block.
+#
+# 			Begin a transaction in this context with START_TRANSACTION instead.
+#
+# 		The optional WORK keyword is supported for COMMIT and ROLLBACK, as are teh CHAIN and RELEASE
+# 		clauses.
+#
+# 		CHAIN and RELEASE can be used for additional control over transaction completion.
+#
+# 		The value of the completion_type system variable determines the default completion
+# 		behavior.
+#
+# 		See SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# 		The AND CHAIN clause causes a new transaction to begin as soon as the current one ends,
+# 		and the new transaction has the same isolation level as the just-terminated transaction.
+#
+# 		The new transaction also uses the same access mode (READ WRITE or READ ONLY) as the just-terminated
+# 		transaction.
+#
+# 		The RELEASE clause causes the server to disconnect the current client session after terminating
+# 		the current transaction.
+#
+# 		Including the NO keyword suppresses CHAIN or RELEASE completion, which can be useful if
+# 		the completion_type system variable is set to cause chaining or release completion by default.
+#
+# 		Beginning a transaction causes any pending transaction to be committed.
+#
+# 		See SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT", for more information.
+#
+# 		Beginning a transaction also causes table locks acquired with LOCK_TABLES to be released,
+# 		as though you had executed UNLOCK_TABLES
+#
+# 		Beginning a transaction does not release a global read lock acquired with FLUSH_TABLES_WITH_READ_LOCK
+#
+# 		For best results, transactions should be performed using only tables managed by a single
+# 		transaction-safe storage engine.
+#
+# 		Otherwise, the following problems can occur:
+#
+# 			) If you use tables from more than one transaction-safe storage engine (such as InnoDB),
+# 				and the transaction isolation level is not SERIALIZABLE, it is possible that when
+# 				one transaction commits, another ongoing transaction that uses the same tables will
+# 				see only some of the changes made by the first transaction.
+#
+# 				That is, the atomicity of transactions is not guaranteed with mixed engines and
+# 				inconsistencies can result.
+#
+# 				(If mixed-engine transactions are infrequent, you can use SET_TRANSACTION_ISOLATION_lEVEL
+# 				to set the isolation level to SERIALIZABLE on a per-transaction basis as necessary.)
+#
+# 			) If you use tables that are not transaction-safe within a transaction, changes to those tables
+# 				are stored at once, regardless of the status of autocommit mode.
+#
+# 			) If you issue a ROLLBACK statement after updating a nontransactional table within a transaction,
+# 				an ER_WARNING_NOT_COMPLETE_ROLLBACK warning occurs.
+#
+# 				Changes to transaction-safe tables are rolled back, but not changes to nontransaction-safe tables.
+#
+# 		Each transaction is stored in the binary log in one chunk, upon COMMIT.
+#
+# 		Transactions that are rolled back are not logged.
+#
+# 		(Exception:
+#
+# 			Modifications to nontransactional tables cannot be rolled back.
+#
+# 			If a transaction that is rolled back includes modifications to nontransactional
+# 			tables, the entire transaction is logged with a ROLLBACK statement at the
+# 			end to ensure that modifications to the nontransactional tables are replicated)
+#
+# 			See SECTION 5.4.4, "THE BINARY lOG"
+#
+# 			You can change the isolation level or access mode for transactions with the
+# 			SET_TRANSACTION statement.
+#
+# 			See SECTION 13.3.7, "SET TRANSACTION SYNTAX"
+#
+# 			Rolling back can be a slow operation that may occur implicitly without the user
+# 			having explicitly asked for it (for example, when an error occurs)
+#
+# 			Because of this, SHOW_PROCESSLIST displays Rolling back in the State column
+# 			for the session, not only for explicit rollbacks performed with the ROLLBACK
+# 			statement but also for implicit rollbacks.
+#
+# 				NOTE:
+#
+# 					In MySQL 8.0, BEGIN, COMMIT and ROLLBACK are not affected by
+# 					--replicate-do-db or --replicate-ignore-db rules
+#
+# 13.3.2 STATEMENTS TAHT CANNOT BE ROLLED BACK
+#
+# Some statements cannot be rolled back.
+#
+# In general, these include data definition language (DDL) statements, such as those
+# that create or drop databases,, those that create, drop or alter tables
+# or stored routines.
+#
+# You should design your transactions not to include such statements.
+#
+# If you issue a statement early in a transaction that cannot be rolled back,
+# and then another statement later fails, the full effect of the transaction
+# cannot be rolled back in such cases by issuing a ROLLBACK statement.
+#
+# 13.3.3 STATEMENTS THAT CAUSE AN IMPLICIT COMMIT
+#
+# The statements listed in this section (and any synonyms for them) implicitly
+# end any transaction active in the current session, as if you had done a COMMIT
+# before executing the statement.
+#
+# Most of these statements also cause an implicit commit after executing.
+#
+# The intent is to handle each such statement in its own special transaction.
+#
+# Transaction-control and locking statements are exceptions:
+#
+# If an implicit commit occurs before execution, another does not occur after.
+#
+# 		) DATA DEFINITION LANGUAGE (DDL) STATEMENTS THAT DEFINE OR MODIFY DATABASE OBJECTS.
+#
+# 			ALTER_EVENT
+#
+# 			ALTER_FUNCTION
+#
+# 			ALTER_PROCEDURE
+#
+# 			ALTER_SERVER
+#
+# 			ALTER_TABLE
+#
+# 			ALTER_VIEW
+#
+# 			CREATE_DATABASE 
+#
+# 			CREATE_EVENT
+#
+# 			CREATE_FUNCTION
+#
+# 			CREATE_INDEX
+#
+# 			CREATE_PROCEDURE
+#
+# 			CREATE_ROLE
+#
+# 			CREATE_SERVER
+#
+# 			CREATE_SPATIAL_REFERENCE_SYSTEM
+#
+# 			CREATE_TABLE
+#
+# 			CREATE_TRIGGER
+#
+# 			CREATE_VIEW
+#
+# 			DROP_DATABASE 
+#
+# 			DROP_EVENT
+#
+# 			DROP_FUNCTION
+#
+# 			DROP_INDEX
+#
+# 			DROP_PROCEDURE 
+#
+# 			DROP_ROLE
+#
+# 			DROP_SERVER
+#
+# 			DROP_SPATIAL_REFERENCE_SYSTEM
+#
+# 			DROP_TABLE
+#
+# 			DROP_TRIGGER
+#
+# 			DROP_VIEW
+#
+# 			INSTALL_PLUGIN
+#
+# 			RENAME_TABLE
+#
+# 			TRUNCATE_TABLE
+#
+# 			UNINSTALL_PLUGIN
+#
+# 			CREATE_TABLE and DROP_TABLE statements do not commit a transaction
+# 			if the TEMPORARY keyword is used.
+#
+# 			(This does not apply to other operations on temporary tables such as
+# 			ALTER_TABLE and CREATE_INDEX, which do cause a commit)
+#
+# 			However, although no implicit commit occurs, neither can the statement
+# 			be rolled back, which means that the use of such statements cause transactional
+# 			atomicity to be violated.
+#
+# 			For example, if you use CREATE_TEMPORARY_TABLE and then roll back the
+# 			transaction, the table remains in existence.
+#
+# 			The CREATE_TABLE statement in InnoDB is processed as a single transaction.
+#
+# 			This means that a ROLLBACK from the user does not undo CREATE_TABLE statements
+# 			the user made during that transaction.
+#
+# 			CREATE_TABLE_---_SELECT causes an implicit commit before and after the statement
+# 			is executed when you are creating nontemporary tables.
+#
+# 			(No commit occurs for CREATE TEMPORARY TABLE --- SELECT)
+#
+# 		) STATEMENTS THAT IMPLICITLY USE OR MODIFY TABLES IN THE mysql DATABASE.
+#
+# 			ALTER_USER
+#
+# 			CREATE_USER
+#
+# 			DROP_USER
+#
+# 			GRANT
+#
+# 			RENAME_USER
+#
+# 			REVOKE
+#
+# 			SET_PASSWORD
+#
+# 		) TRANSACTION-CONTROL AND LOCKING STATEMENTS.
+#
+# 			BEGIN
+#
+# 			LOCK_TABLES 
+#
+# 			SET autocommit = 1 (if the value is not already 1)
+#
+# 			START TRANSACTION
+#
+# 			UNLOCK TABLES
+#
+# 			UNLOCK_TABLES commits a transaction only if any tables currently
+# 			have been locked with LOCK_TABLES to acquire nontransactional table
+# 			locks.
+#
+# 			A commit does not occur for UNLOCK_TABLES following FLUSH_TABLES_WITH_READ_LOCK
+# 			because the latter statement does not acquire table-level locks.
+#
+# 			Transactions cannot be nested.
+#
+# 			This is a consequence of the IMPLICIT commit performed for any current transaction
+# 			when you issue a START_TRANSACTION statement or one of its synonyms.
+#
+# 			Statements that cause an implicit commit cannot be used in an XA transaction
+# 			while the transaction is in an ACTIVE state.
+#
+# 			The BEGIN statement differs from the use of the BEGIN keyword that starts
+# 			a BEGIN_---_END compound statement.
+#
+# 			The latter does not cause an implicit commit.
+#
+# 			See SECTION 13.6.1, "BEGIN -- END COMPOUND-STATEMENT SYNTAX"
+#
+# 		) DATA LOADING STATEMENTS
+#
+# 			LOAD_DATA_INFILE
+#
+# 			LOAD_DATA_INFILE causes an implicit commit only for tables using the NDB storage engine.
+#
+# 		) ADMINISTRATIVE STATEMENTS
+#
+# 			ANALYZE_TABLE
+#
+# 			CACHE_INDEX
+#
+# 			CHECK_TABLE
+#
+# 			FLUSH
+#
+# 			LOAD_INDEX_INTO_CACHE
+#
+# 			OPTIMIZE_TABLE
+#
+# 			REPAIR_TABLE
+#
+# 			RESET (but not RESET PERSIST)
+#
+# 		) REPLICATION CONTROL STATEMENTS
+#
+# 			START SLAVE
+#
+# 			STOP SLAVE
+#
+# 			RESET SLAVE
+#
+# 			CHANGE MASTER TO
+#
+# 13.3.4 SAVEPOINT, ROLLBACK TO SAVEPOINT, AND RELEASE SAVEPOINT SYNTAX
+#
+# 		SAVEPOINT identifier
+# 		ROLLBACK [WORK] TO [SAVEPOINT] identifier
+# 		RELEASE SAVEPOINT identifier
+#
+# InnoDB supports the SQL statements SAVEPOINT, ROLLBACK_TO_SAVEPOINT, RELEASE_SAVEPOINT
+# and the optional WORK keyword for ROLLBACK
+#
+# The SAVEPOINT statement sets a named transaction savepoint with a name of identifier.
+#
+# If the current transaction has a savepoint with the same name, the old savepoint is deleted
+# and a new one is set.
+#
+# The ROLLBACK_TO_SAVEPOINT statement rolls back a transaction to the named savepoint
+# without terminating the transaction.
+#
+# Modifications that the current transaction made to rows after the savepoint was set
+# are undone in the rollback, but InnoDB does not release the row locks that were stored
+# in memory after the savepoint.
+#
+# (For a new inserted row, the lock information is carried by the transaction ID stored in the
+# row; the lock is not separately stored in memory.
+#
+# In this case, the row lock is released in the undo)
+#
+# Savepoints that were set at a later time than the named savepoint are deleted.
+#
+# If the ROLLBACK_TO_SAVEPOINT statement returns the following error, it means that
+# no savepoint with the specified name exists:
+#
+# 		ERROR 1305 (42000): SAVEPOINT identifier does not exist
+#
+# The RELEASE_SAVEPOINT statement removes the named savepoint from the set of savepoints
+# of the current transaction.
+#
+# No commit or rollback occurs.
+#
+# It is an error if the savepoint does not exist.
+#
+# All savepoints of the current transaction are deleted if you execute a COMMIT,
+# or a ROLLBACK that does not name a savepoint.
+#
+# A new savepoint level is created when a stored function is invoked or a trigger is activated.
+#
+# The savepoints on previous levels become unavailable and thus do not conflict
+# with savepoints on the new level.
+#
+# When the function or trigger terminates, any savepoints it created are released
+# and the previous savepoint level is restored.
+#
+# 13.3.5 LOCK INSTANCE FOR BACKUP AND UNLOCK INSTANCE SYNTAX
+#
+# 		LOCK INSTANCE FOR BACKUP
+#
+# 		UNLOCK INSTANCE
+#
+# LOCK INSTANCE FOR BACKUP acquires an instance-level backup lock that permits DML during
+# an online backup while preventing operations that could result in an inconsistent snapshot.
+#
+# Executing the LOCK INSTANCE FOR BACKUP statement requires the BACKUP_ADMIN privilege.
+#
+# The BACKUP_ADMIN privilege is automatically granted to users with the RELOAD 
+# privilege when performing an in-place upgrade to MySQL 8.0 from an earlier version.
+#
+# Multiple sessions can hold a backup lock simultaneously.
+#
+# UNLOCK INSTANCE releases a backup lock held by the current session.
+#
+# A backup lock held by a session is also released if the session is terminated.
+#
+# LOCK INSTANCE FOR BACKUP prevents files from being created, renamed or removed.
+#
+# REPAIR_TABLE
+#
+# TRUNCATE TABLE
+#
+# OPTIMIZE TABLE
+#
+# and account management statements are blocked.
+#
+# See SECTION 13.7.1, "ACCOUNT MANAGEMENT STATEMENTS"
+#
+# Operations that modify InnoDB files that are not recorded in the InnoDB
+# redo log are also blocked.
+#
+# LOCK INSTANCE FOR BACKUP permits DDL operations that only affect user-created
+# temporary tables
+#
+# In effect, files that belong to user-created temporary tables can be created,
+# renamed or removed while a backup lock is held.
+#
+# Creation of binary log files is also permitted.
+#
+# A backup lock acquired by LOCK INSTANCE FOR BACKUP is independent of transactional
+# locks and locks taken by FLUSH_TABLES_tbl_name [, tbl_name] --- WITH READ LOCK,
+# and the following sequences of statements are permitted:
+#
+# 		LOCK INSTANCE FOR BACKUP;
+# 		FLUSH TABLES tbl_name [, tbl_name] --- WITH READ LOCK;
+# 		UNLOCK TABLES;
+# 		UNLOCK INSTANCE;
+#
+# 		FLUSH TABLES tbl_name [, tbl_name] --- WITH READ LOCK;
+# 		LOCK INSTANCE FOR BACKUP;
+# 		UNLOCK INSTANCE;
+# 		UNLOCK TABLES;
+#
+# The lock_wait_timeout setting defines the amount of time that a LOCK INSTANCE FOR BACKUP
+# statement waits to acquire a lock before giving up.
+#
+# 13.3.6 LOCK TABLES AND UNLOCK TABLES SYNTAX
+#
+# LOCK TABLES
+# 		tbl_name [[AS] alias] lock_type
+# 		[, tbl_name [[AS] alias] lock_type] ---
+#
+# lock_type: {
+# 		READ [LOCAL]
+# 	 | [LOW_PRIORITY] WRITE
+# }
+#
+# UNLOCK TABLES
+#
+# MySQL enables client sessions to acquire table locks explicitly for the purpose
+# of cooperating with other sessions for access to tables, or to prevent other
+# sessions from modifying tables during periods when a session requires exclusive
+# access to them.
+#
+# A session can acquire or release locks only for itself
+#
+# One session cannot acquire locks for another session or release
+# locks held by another session
+#
+# Locks may be used to emulate transactions or to get more speed when
+# updating tables.
+#
+# This is explained in more detail in TABLE-LOCKING RESTRICTIONS AND CONDITIONS
+#
+# LOCK_TABLES explicitly acquires table locks for the current client session.
+#
+# Table locks can be acquired for base tables or views.
+#
+# You must have the LOCK_TABLES privilege, and the SELECT privilege
+# for each object to be locked.
+#
+# For view locking, LOCK_TABLES adds all base tables used in the view to the
+# set of tables to be locked and locks them automatically.
+#
+# If you lock a table explicitly with LOCK TABLES, any tables used in triggers
+# are also locked implicitly, as described in LOCK TABLES AND TRIGGERS
+#
+# If you lock a table explicitly with LOCK_TABLES, any tables related by a foreign
+# key constraint are opened and locked implicitly.
+#
+# For foreign key checks, a shared read-only lock (LOCK_TABLES_READ) is taken
+# on related tables.
+#
+# For cascading updates, a shared-nothing write lock (LOCK_TABLES_WRITE) is taken
+# on related tables that are involved in the operation.
+#
+# UNLOCK_TABLES explicitly releases any table locks held by the current session.
+#
+# LOCK_TABLES implicitly releases any table locks held by the current session before
+# acquiring new locks.
+#
+# Another use for UNLOCK_TABLES is to release the global read lock acquired with 
+# the FLUSH_TABLES_WITH_READ_LOCK statement, which enables you to lock all tables
+# in all databases.
+#
+# See SECTION 13.7.7.3, "FLUSH SYNTAX" (This is a very convenient way to get backups
+# if you  have a file system such as Veritas that can take snapshots in time)
+#
+# A table lock protects only against inappropriate reads or writes by other sessions.
+#
+# A session holding a WRITE lock can perform table-level operations such as DROP_TABLE
+# or TRUNCATE_TABLE
+#
+# For sessions holding a READ lock, DROP_TABLE and TRUNCATE_TABLE operations are not permitted.
+#
+# The following discussion applies only to non-TEMPORARY tables.
+#
+# LOCK_TABLES is permitted (but ignored) for a TEMPORARY table.
+#
+# The table can be accessed freely by the session within which it was created,
+# regardless of what other locking may be in effect.
+#
+# No lock is necessary because no other session can see the table.
+#
+# 		) TABLE LOCK ACQUISITION
+#
+# 		) TABLE LOCK RELEASE
+#
+# 		) INTERACTION OF TABLE LOCKING AND TRANSACTIONS
+#
+# 		) LOCK TABLES AND TRIGGERS
+#
+# 		) TABLE-LOCKING RESTRICTIONS AND CONDITIONS
+#
+# TABLE LOCK ACQUISITION
+#
+# To acquire table locks within the current session, use the LOCK_TABLES statement,
+# which acquires metadata locks (see SECTION 8.11.4, "METADATA LOCKING")
+#
+# The following lock types are available:
+#
+# READ [LOCAL] lock:
+#
+# 		) The session that holds the lock can read the table (but not write it)
+#
+# 		) Multiple sessions can acquire a READ lock for the table at the same time
+#
+# 		) Other sessions can read the table without explicitly acquiring a READ lock
+#
+# 		) The LOCAL modifier enables nonconflicting INSERT statements (concurrent inserts)
+# 			by other sessions to execute while the lock is held.
+#
+# 			(See SECTION 8.11.3, "CONCURRENT INSERTS")
+#
+# 			However, READ LOCAL cannot be used if you are going to manipulate the database
+# 			using processes external to the server while you hold the lock.
+#
+# 			For InnoDB tables, READ LOCAL is the same as READ
+#
+# [LOW_PRIORITY] WRITE lock:
+#
+# 		) The session that holds the lock can read and write the table
+#
+# 		) Only the session that holds the lock can access the table.
+#
+# 			No other session can access it until the lock is released.
+#
+# 		) Lock requests for the table by other sessions block while the WRITE lock is held
+#
+# 		) The LOW_PRIORITY modifier has no effect.
+#
+# 			In previous versions of MySQL, it affected locking behavior, but this
+# 			is no longer true.
+#
+# 			It is now deprecated and its use produces a warning. 
+#
+# 			Use WRITE without LOW_PRIORITY instead
+#
+# WRITE locks normally have higher priority than READ locks to ensure that updates
+# are processed as soon as possible.
+#
+# This means that if one session obtains a READ lock and then another session
+# requests a WRITE lock, subsequent READ lock requests wait until the session
+# that requested the WRITE lock has obtained the lock and released it.
+#
+# (An exception to this policy can occur for small values of the max_write_lock_count
+# 	system variable; See SECTION 8.11.4, "METADATA LOCKING")
+#
+# If the LOCK_TABLES statement must wait due to locks held by other sessions on any
+# of the tables, it blocks until all locks can be acquired.
+#
+# A session taht requries locks must acquire all the locks that it needs in a single
+# LOCK_TABLES statement.
+#
+# While the locks thus obtained are held, the session can access only the locked
+# tables.
+#
+# For example, in the following sequence of statements, an error occurs for the attempt
+# to access t2 because it was not locked in the LOCK_TABLES statement:
+#
+# 		LOCK TABLES t1 READ;
+# 		SELECT COUNT(*) FROM t1;
+# 		+---------------+
+# 		| COUNT(*) 		 |
+# 		+---------------+
+# 		| 			3 		 |
+# 		+---------------+
+# 		SELECT COUNT(*) FROM t2;
+# 		ERROR 1100 (HY000): Table 't2' was not locked with LOCK TABLES
+#
+# Tables in the INFORMATION_SCHEMA database are an exception.
+#
+# they can be accessed without being locked explicitly even while a session
+# holds table locks obtained with LOCK_TABLES
+#
+# You cannot refer to a locked table multiple times in a single query using the
+# same name.
+#
+# Use aliases instead, and obtain a separate lock for the table and each alias:
+#
+# 		LOCK TABLE t WRITE, t AS t1 READ;
+# 		INSERT INTO t SELECT * FROM t;
+# 		ERROR 1100: Table 't' was not locked with LOCK TABLES
+# 		INSERT INTO t SELECT * FROM t AS t1;
+#
+# The error occurs for the first INSERT because there are two references to the same
+# name for a locked table.
+#
+# The second INSERT succeeds because the references to the table use different names.
+#
+# If your statement refer to a table by means of an alias, you must lock the table
+# using that same alias.
+#
+# It does not work to lock the table without specifying the alias:
+#
+# 		LOCK TABLE t READ;
+# 		SELECT * FROM t AS myalias;
+# 		ERROR 1100: Table 'myalias' was not locked with LOCK TABLES
+#
+# Conversely, if you lock a table using an alias, you must refer to it
+# in your statements using that alias:
+#
+# 		LOCK TABLE t AS myalias READ;
+# 		SELECT * FROM t;
+# 		ERROR 1100: Table 't' was not locked with LOCK TABLES
+# 		SELECT * FROM t AS myalias;
+#
+# NOTE:
+#
+# 		LOCK TABLES or UNLOCK TABLES, when applied to a partitioned table,
+# 		always locks or unlocks the entire table;
+#
+# 		These statements do not support partition lock pruning. See PARTITIONING AND LOCKING.
+#
+# TABLE lOCK RELEASE
+#
+# When the table locks held by a session are released, they are all released at the same time.
+#
+# A session can release its locks explicitly, or locks may be released implicitly
+# under certain conditions:
+#
+# 		) A session can release its locks explicitly with UNLOCK_TABLES
+#
+# 		) If a session issues a LOCK_TABLES statement to acquire a lock while already holding locks,
+# 			its existing locks are released implicitly before the new locks are granted.
+#
+# 		) If a session begins a transaction (for example, with START_TRANSACTION), an implicit
+# 			UNLOCK_TABLES is performed, which causes existing locks to be released.
+#
+# 			(For additional information about the interaction between table locking
+# 			and transactions, see INTERACTION OF TABLE LOCKING AND TRANSACTIONS)
+#
+# If the connection for a client session terminates, whether normally or abnormally, the server
+# implicitly releases all table locks held by the session (transactional and nontransactional)
+#
+# If the client reconnects, the locks will no longer be in effect.
+#
+# In addition, if the client had an active transaction, the server rolls back the transaction
+# upon disconnect, and if reconnect occurs, the new session begins with autocommit enabled.
+#
+# For this reason, clients may wish to disable auto-reconnect
+#
+# With auto-reconnect in effect, the client is not notified if reconnect occurs but any table
+# locks or current transaction will have been lost.
+#
+# With auto-reconnect disabled, if the connection drops, an error occurs for the next
+# statement issued.
+#
+# The client can detect the error and take appropriate action such as reacquiring the locks
+# or redoing the transaction.
+#
+# See SECTION 28.7.24, "C API AUTOMATIC RECONNECTION CONTROL"
+#
+# NOTE:
+#
+# 		If you use ALTER_TABLE on a locked table, it may become unlocked.
+#
+# 		For example, if you attempt a second ALTER_TABLE operation, the result
+# 		may be an error Table 'tbl_name' was not locked with LOCK TABLES
+#
+# 		To handle this, lock the table again prior to the second alteration
+#
+# 		See also SECTION B.6.6.1, "PROBLEMS WITH ALTER TABLE"
+#
+# INTERACTION OF TABLE LOCKING AND TRANSACTIONS
+#
+# LOCK_TABLES and UNLOCK_TABLES interact with the use of transactions as follows:
+#
+# 		) LOCK_TABLES is not transaction-safe and implicitly commits any active transaction
+# 			before attempting to lock the tables.
+#
+# 		) UNLOCK_TABLES implicitly commits any active transaction, but only if LOCK_TABLES
+# 			has been used to acquire table locks.
+#
+# 			For example, in the following set of statements, UNLOCK_TABLE releases
+# 			the global read lock but does not commit the transaction because no table
+# 			locks are in effect:
+#
+# 				FLUSH TABLES WITH READ LOCK;
+# 				START TRANSACTION;
+# 				SELECT ---;
+# 				UNLOCK TABLES;
+#
+# 		) Beginning a transaction (for example, with START_TRANSACTION) implicitly commits
+# 			any current transaction and releases existing table locks.
+#
+# 		) FLUSH_TABLES_WITH_READ_LOCK acquires a global read lock and not table locks,
+# 			so it is not subject to the same behavior as LOCK_TABLES and UNLOCK_TABLES
+# 			with respect to table locking and implicit commits.
+#
+# 			For example, START_TRANSACTION does not release the global read lock
+#
+# 			See SECTION 13.7.7.3, "FLUSH SYNTAX"
+#
+# 		) Other statements that implicitly cause transactions to be committed do not
+# 			release existing table locks.
+#
+# 			For a list of such statements, see SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT"
+#
+# 		) The correct way to use LOCK_TABLES and UNLOCK_TABLES with transactional tables, such as
+# 			InnoDB tables, is to begin a transaction with SET autocommit = 0 (not START TRANSACTION)
+# 			followed by LOCK_TABLES, and to not call UNLOCK_TABLES until you commit the
+# 			transaction explicitly.
+#
+# 			For example, if you need to write to table t1 and read from table t2, you can do this:
+#
+# 				SET autocommit=0;
+# 				LOCK TABLES t1 WRITE, t2 READ, ---;
+# 				--- Do something with tables t1 and t2 here ---
+# 				COMMIT;
+# 				UNLOCK TABLES;
+#
+# 			When you call LOCK_TABLES, InnoDB internally takes its own table lock, and MySQL
+# 			takes its own table lock.
+#
+# 			InnoDB releases its internal table lock at the next commit, but for MySQL
+# 			to release its table lock, you have to call UNLOCK_TABLES.
+#
+# 			You should not have autocommit = 1, because then InnoDB releases its internal
+# 			table lock immediately afer the call of LOCK_TABLES, and deadlocks can very easily happen.
+#
+# 			InnoDB does not acquire the internal table lock at all if autocommit = 1, to help
+# 			old applications avoid unnecessary deadlocks.
+#
+# 		) ROLLBACK does not release table locks
+#
+# LOCK TABLES AND TRIGGERS
+#
+# If you lock a table explicitly with LOCK_TABLES, any tables used in triggers are also
+# locked implicitly:
+#
+# 		) The locks are taken as the same time as those acquired explicitly with the LOCK_TABLES statement
+#
+# 		) The lock on a table used in a trigger depends on whether the table is used only for reading.
+#
+# 			If so, a read lock suffices
+#
+# 			Otherwise, a write lock is used
+#
+# 		) If a table is locked explicitly for reading with LOCK_TABLES, but needs to be locked for
+# 			writing because it might be modified within a trigger, a write lock is taken rather
+# 			than a read lock.
+#
+# 			(That is, an implicit write lock needed due to the table's appearance within a trigger
+# 				causes an explicit read lock request for the table to be converted to a write lock request)
+#
+# Suppose that you lock two tables, t1 and t2, using this statement:
+#
+# 		LOCK TABLES t1 WRITE, t2 READ;
+#
+# If t1 or t2 have any triggers, tables used within the triggers will also be locked.
+#
+# Suppose that t1 has a trigger defined like this:
+#
+# 		CREATE TRIGGER t1_a_ins AFTER INSERT ON t1 FOR EACH ROW
+# 		BEGIN
+# 			UPDATE t4 SET count = count+1
+# 				WHERE id = NEW.id AND EXISTS (SELECT a FROM t3);
+# 			INSERT INTO t2 VALUES(1, 2);
+# 		END;
+#
+# The result of the LOCK_TABLES statement is that t1 and t2 are locked because they appear
+# in the statement, and t3 and t4 are locked because they are used within the trigger:
+#
+# 		) t1 is locked for writing per the WRITE lock request
+#
+# 		) t2 is locked for writing, even though the request is for a READ lock.
+#
+# 			This occurs because t2 is inserted into within the trigger, so the READ
+# 			request is converted to a WRITE request.
+#
+# 		) t3 is locked for reading because it is only read from within the trigger
+#
+# 		) t4 is locked for writing because it might be updated within the trigger
+#
+# TABLE-LOCKING RESTRICTIONS AND CONDITIONS
+#
+# You can safely use KILL to terminate a session that is waiting for a table lock.
+#
+# See SECTION 13.7.7.4, "KILL SYNTAX"
+#
+# LOCK_TABLES and UNLOCK_TABLES cannot be used within stored programs
+#
+# Tables in the performance_schema database cannot be locked with LOCK_TABLES,
+# except the setup_xxx tables
+#
+# The following statements are prohibited while a LOCK_TABLES statement is in effect:
+#
+# 		CREATE_TABLE
+#
+# 		CREATE_TABLE_---_LIKE
+#
+# 		CREATE_VIEW
+#
+# 		DROP_VIEW
+#
+# and DDL statements on stored functions and procedures and events.
+#
+# For some operations, system tables in the mysql database must be accessed.
+#
+# For example, the HELP statement requires the contents of the server-side
+# help tables, and CONVERT_TZ() might need to read the time zone tables.
+#
+# The server implicitly locks the system tables for reading as necessary
+# so that you need not lock them explicitly.
+#
+# These tables are treated as just described:
+#
+# 		mysql.help_category
+# 		mysql.help_keyword
+#
+# 		mysql.help_relation
+# 		mysql.help_topic
+#
+# 		mysql.time_zone
+# 		mysql.time_zone_leap_second
+#
+# 		mysql.time_zone_name
+# 		mysql.time_zone_transition
+#
+# 		mysql.time_zone_transition_type
+#
+# If you want to explicitly place a WRITE lock on any of those tables with a LOCK_TABLES
+# statement, the table must be the only one locked; no other table can be locked with
+# the same statement.
+#
+# Normally, you do not need to lock tables, because all single UPDATE statements are atomic;
+# no other session can interfere with any other currently executing SQL statement.
+#
+# However, there are a few cases when locking tables may provide an advantage:
+#
+# 		) https://dev.mysql.com/doc/refman/8.0/en/lock-tables.html
+# 		
 # 					
