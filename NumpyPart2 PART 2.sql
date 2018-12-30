@@ -20306,6 +20306,2010 @@
 #
 # However, there are a few cases when locking tables may provide an advantage:
 #
-# 		) https://dev.mysql.com/doc/refman/8.0/en/lock-tables.html
+# 		) If you are going to run many operations on a set of MyISAM tables, it is much faster
+# 			to lock the tables you are going to use.
+#
+# 			Locking MyISAM tables speeds up inserting, updating or deleting on them
+# 			because MySQL does not flush the key cache for the locked tables until
+# 			UNLOCK_TABLES is called.
+#
+# 			Normally, the key cache is flushed after each SQL statement.
+#
+# 			The downside to locking the tables is that no session can update a READ-locked
+# 			table (including the one holding the lock) and no session can access
+# 			a WRITE-locked table other than the one holding the lock.
+#
+# 		) If you are using tables for a nontransactional storage engine, you must use
+# 			LOCK_TABLES if you want to ensure that no other session modifies the tables
+# 			between a SELECT and an UPDATE.
+#
+# 			The example shown here requires LOCK_TABLES to execute safely:
+#
+# 				LOCK TABLES trans READ, customer WRITE;
+# 				SELECT SUM(value) FROM trans WHERE customer_id=some_id;
+# 				UPDATE customer
+# 					SET total_value=sum_from_previous_statement
+# 					WHERE customer_id=some_id;
+# 				UNLOCK TABLES;
+#
+# 			Without LOCK_TABLES, it is possible that another session might insert
+# 			a new row in the trans table between execution of the SELECT and UPDATE statements.
+#
+# You can avoid using LOCK_TABLES in many cases by using relative updates (UPDATE customer SET value=value+new_value)
+# or the LAST_INSERT_ID() function
+#
+# You can also avoid locking tables in some cases by using the user-level advisory lock functions
+# GET_LOCK() and RELEASE_LOCK()
+#
+# These locks are saved in a hash table in the server and implemented with pthread_mutex_lock()
+# and pthread_mutex_unlock() for high speed.
+#
+# See SECTION 12.14, "LOCKING FUNCTIONS"
+#
+# See SECTION 8.11.1, "INTERNAL LOCKING METHODS", for more information on locking policy.
+#
+# 13.3.7 SET TRANSACTION SYNTAX
+#
+# 		SET [GLOBAL | SESSION] TRANSACTION
+# 			transaction_characteristic [, transaction_characteristic] ---
+#
+# 		transaction_characteristic: {
+# 			ISOLATION LEVEL level
+# 		 | access_mode
+# 		}
+#
+# 		level: {
+# 			REPEATABLE READ
+# 		 | READ COMMITTED
+# 		 | READ UNCOMMITTED
+# 		 | SERIALIZABLE
+# 		}
 # 		
+# 		access_mode: {
+# 			READ WRITE
+# 		 | READ ONLY
+# 		}
+#
+# This statement specifies transaction characteristics.
+#
+# It takes a list of one or more characteristic values separated by commas.
+#
+# Each characteristic value sets the transaction isolation level or access mode.
+#
+# The isolation level is used for operations on InnoDB tables.
+#
+# The access mode specifies whether transactions operate in read/write or 
+# read-only mode
+#
+# In addition, SET_TRANSACTION can include an optional GLOBAL or SESSION keyword
+# to indicate the scope of the statement.
+#
+# 		) TRANSACTION ISOLATION LEVELS
+#
+# 		) TRANSACTION ACCESS MODE
+#
+# 		) TRANSACTION CHARACTERISTIC SCOPE
+#
+# TRANSACTION ISOLATION LEVELS
+#
+# To set the transaction isolation level, use an ISOLATION LEVEL level clause.
+#
+# It is not permitted to specify multiple ISOLATION LEVEL clauses in the same
+# SET_TRANSACTION statement.
+#
+# The default isolation level is REPEATABLE_READ.
+#
+# Other permitted values are READ_COMMITTED, READ_UNCOMMITTED, and SERIALIZABLE
+#
+# For information about these isolation levels, see SECTION 15.7.2.1, "TRANSACTION ISOLATION LEVELS"
+#
+# TRANSACTION ACCESS MODE
+#
+# To set the transaction access mode, use a READ WRITE or READ ONLY clause.
+#
+# It is not permitted to specify multiple access-mode clauses in the same SET_TRANSACTION
+# statement.
+#
+# By default, a transaction takes place in read/write mode, with both reads and writes permitted
+# to tables used in the transaction.
+#
+# This mode may be specified explicitly using SET_TRANSACTION with an access mode of READ WRITE
+#
+# If the transaction access mode is set to READ ONLY, changes to tables are prohibited.
+#
+# This may enable storage engines to make performance improvements that are possible
+# when writes are not permitted.
+#
+# In read-only mode, it remains possible to change tables created with the TEMPORARY keyword
+# using DML statements.
+#
+# Changes made with DDL statements are not permitted, just as with permanent tables.
+#
+# The READ WRITE and READ ONLY access modes also may be specified for an individual transaction
+# using the START_TRANSACTION statement.
+#
+# TRANSACTION CHARACTERISTIC SCOPE
+#
+# You can set transaction characteristic globally, for the current session, or for the
+# next transaction only:
+#
+# 		) With the GLOBAL keyword:
+#
+# 			) The statement applies globally for all subsequent sessions
+#
+# 			) Existing sessions are unaffected
+#
+# 		) With the SESSION keyword:
+#
+# 			) The statement applies to all subsequent transactions performed within the current session.
+#
+# 			) The statement is permitted within transactions, but does not affect the current ongoing transaction
+#
+# 			) If executed between transactions, the statement overrides any preceding statement that sets the
+# 				next-transaction value of the named characteristics
+#
+# 		) Without any SESSION or GLOBAL keyword:
+#
+# 			) The statement applies only to the next single transaction performed within the session
+#
+# 			) Subsequent transactions revert to using the session value of the named characteristics
+#
+# 			) The statement is not permitted within transactions:
+#
+# 				START TRANSACTION;
+# 				Query OK, 0 rows affected (0.02 sec)
+#
+# 				SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+# 				ERROR 1568 (25001): Transaction characteristics can't be changed
+# 				while a transaction is in progress
+#
+# A change to global transaction characteristics requires the CONNECTION_ADMIN or SUPER privilege.
+#
+# Any session is free to change its session characteristics (even in the middle of a transaction),
+# or the characteristics for its next transaction (prior to the start of that transaction)
+#
+# To set the global isolation level at server startup, use the --transaction-isolation=level option
+# on the command line or in an option file.
+#
+# Values of level for this option uses dashes rather than spaces, so the permissible values are
+# READ-UNCOMMITTED, READ-COMMITTED, REPEATABLE-READ, or SERIALIZABLE
+#
+# Similarly, to set the global transaction access mode at server startup, use the --transaction-read-only
+# option
+#
+# The default is OFF (read/write mode) but the value can be set to ON for a mode of read only.
+#
+# For example, to set the isolation level to REPEATABLE READ and the access mode to READ WRITE,
+# use these lines in the [mysqld] section of an option file:
+#
+# 		[mysqld]
+# 		transaction-isolation = REPEATABLE-READ
+# 		transaction-read-only = OFF
+#
+# At runtime, characteristics at the global, session, and next-transaction scope levels
+# can be set indirectly using the SET_TRANSACTION statement, as described previously.
+#
+# They can also be set directly using the SET statement to assign values to the 
+# transaction_isolation and transaction_read_only system variables:
+#
+# 		) SET_TRANSACTION permits optional GLOBAL and SESSION keywords for setting transaction
+# 			characteristics at different scope levels.
+#
+# 		) The SET statement for assigning values to the transaction_isolation and transaction_read_only
+# 			system variables has syntaxes for setting these variables at different scope levels.
+#
+# The following tables show the characteristic scope level set by each SET_TRANSACTION
+# and variable-assignment syntax.
+#
+# TABLE 13.7 SET TRANSACTION SYNTAX FOR TRANSACTION CHARACTERISTICS
+#
+# 		SYNTAX 															AFFECTED CHARACTERISTIC SCOPE
+#
+# 	SET GLOBAL TRANSACTION transaction_characteristic 		Global
+#
+# 	SET SESSION TRANSACTION transaction_characteristic 	Session
+#
+# 	SET TRANSACTION transaction_characteristic 				Next transaction only
+#
+# TABLE 13.8 SET SYNTAX FOR TRANSACTION CHARACTERISTICS
+#
+# 		SYNTAX 															AFFECTED CHARACTERISTIC SCOPE
+#
+# 	SET GLOBAL var_name = value 									Global
+#
+# 	SET @@GLOBAL.var_name = value 								Global
+#
+# 	SET PERSIST var_name = value 									Global
+#
+# 	SET @@PERSIST.var_name = value 								Global
+#
+# 	SET PERSIST_ONLY var_name = value 							No runtime effect
+#
+# 	SET @@PERSIST_ONLY var_name = value 						No runtime effect
+#
+# 	SET SESSION var_name = value 									Session
+#
+# 	SET @@SESSION.var_name = value 								Session
+#
+# 	SET var_name = value 											Session
+#
+# 	SET @@var_name = value 											Next transaction only
+#
+# It is possible to check the global and sesion values of transaction characteristics at runtime:
+#
+# 		SELECT @@GLOBAL.transaction_isolation, @@GLOBAL.transaction_read_only;
+# 		SELECT @@SESSION.transaction_isolation, @@SESSION.transaction_read_only;
+#
+# 13.3.8 XA TRANSACTIONS
+#
+# 13.3.8.1 XA TRANSACTION SQL SYNTAX
+# 13.3.8.2 XA TRANSACTION STATES
+#
+# Support for XA transactions is available for the InnoDB storage engine.
+#
+# The MySQL XA implementation is based on the X/Open CAE document Distributed Transaction Processing: The XA specfication
+#
+# This document is published by The Open Group and available at <link>
+#
+# Limitations of the current XA implementation are described in SECTION C.6, "RESTRICTIONS ON XA TRANSACTIONS"
+#
+# On the client side, there are no special requirements. The XA interface to a MySQL server consists
+# of SQL statements that begin with the XA keyword.
+#
+# MySQL client programs must be able to send SQL statements and to understand the semantics
+# of the XA statement interface.
+#
+# They do not need be linked against a recent client library.
+#
+# Older client libraries also will work.
+#
+# Among the MySQL Connectors, MySQL Connector/J 5.0.0 and higher supports XA directly,
+# by means of a class interface that handles the XA SQL statement interface for you.
+#
+# XA supports distributed transactions, that is, the ability to permit multiple separate
+# transactional resources to participate in a global transaction.
+#
+# Transactional resources often are RDBMSs but may be other kinds of resources.
+#
+# A global transaction involves several actions that are transactional in themselves,
+# but that all must either complete successfully as a group, or all be rolled back
+# as a group.
+#
+# In essence, this extends ACID properties "up a level" so that multiple ACID transactions
+# can be executed in concert as components of a global operation that also has ACID
+# properties.
+#
+# (As with nondistributed transactions, SERIALIZABLE may be preferred if your applications
+# are sensitive to read phenomena.
+#
+# REPEATABLE_READ may not be sufficient for distributed transactions)
+#
+# Some examples of distributed transactions:
+#
+# 		) An application may act as an integration tool that combines a messaging service
+# 			with an RDBMS.
+#
+# 			The application makes sure that transactions dealing with message sending, retrieval
+# 			and processing that also involve a transactional database all happen in a global transaction.
+#
+# 			You can think of this as "transactional email"
+#
+# 		) An application performs actions that involve different database servers, such as a MySQL
+# 			server and an Oracle server (or multiple MySQL servers), where actions that involve
+# 			multiple servers must happen as part of a global transaction, rather than as separate
+# 			transactions local to each server.
+#
+# 		) A bank keeps account information in an RDBMS and distributes and receives money through
+# 			automated teller machines (ATMs) 
+#
+# 			It is necessary to ensure that ATM actions are correctly reflected in the accounts,
+# 			but this cannot be done with the RDBMS alone.
+#
+# 			A global transaction manager integrates the ATM and database resources to ensure
+# 			overall consistency of financial transactions.
+#
+# Applications that use global transactions involve one or more Resource Managers and a Transaction Manager:
+#
+# 		) A Resource Manager (RM) provides access to transactional resources.
+#
+# 			A database server is one kind of resource manager. It must be possible to either commit or roll
+# 			back transactions managed by the RM
+#
+# 		) A Transaction Manager (TM) coordinates the transactions that are part of a global transaction.
+#
+# 			It communicates with the RMs that handle each of these transactions.
+#
+# 			The individual transactions within a global transaction are "branches" of the global transaction.
+#
+# 			Global transactions and their branches are identified by a naming scheme described later.
+#
+# The MySQL implementation of XA enables a MySQL server to act as a Resource Manager that handles
+# XA transactions within a global transaction.
+#
+# A client program that connects to the MySQL server acts as the Transaction Manager
+#
+# To carry out a global transaction, it is necessary to know which components are involved,
+# and bring each component to a point when it can be committed or rolled back.
+#
+# Depending on what each component reports about its ability to succeed, they must all commit
+# or roll back as an atomic group.
+#
+# That is, either all components must commit, or all components must roll back.
+#
+# To manage a global transaction, it is necessary to take into account that any
+# component or the connecting network might ffail.
+#
+# The process for executing a global transaction uses two-phase commit (2PC)
+#
+# This takes place after the actions performed by the branches of the global transaction
+# have been executed.
+#
+# 		1. In the first phase, all branches are prepared.
+#
+# 			That is, they are told by the TM to get ready to commit.
+#
+# 			Typically, this means each RM that manages a branch records the
+# 			actions for the branch in stable storage.
+#
+# 			The branches indicate whether they are able to do this, and these
+# 			results are used for the second phase.
+#
+# 		2. In the second phase, the TM tells the RMs whether to commit or roll back.
+#
+# 			If all branches indicated when they were prepared that they will be able
+# 			to commit, all branches are told to commit.
+#
+# 			If any branch indicated when it was prepared that it will not be able to commit,
+# 			all branches are told to roll back.
+#
+# In some cases, a global transaction might use one-phase commit (1PC)
+#
+# For example, when a Transaction Manager finds a global transaction consists of only
+# one transactional resource (that is, a single branch), that resource can be told
+# to prepare and commit at the same time.
+#
+# 13.3.8.1 XA TRANSACTION SQL SYNTAX
+#
+# To perform XA transactions in MySQL, use the following statements:
+#
+# 		XA {START|BEGIN} xid [JOIN|RESUME]
+#
+# 		XA END xid [SUSPEND [FOR MIGRATE]]
+#
+# 		XA PREPARE xid
+#
+# 		XA COMMIT xid [ONE PHASE]
+#
+# 		XA ROLLBACK xid
+#
+# 		XA RECOVER [CONVERT XID]
+#
+# For XA_START, the JOIN and RESUME clauses are not supported.
+#
+# For XA_END the SUSPEND [FOR MIGRATE] clause is not supported.
+#
+# Each XA statement begins with the XA keyword, and most of them require an
+# xid value.
+#
+# An xid is an XA transaction identifier.
+#
+# It indicates which transaction the statement applies to.
+# xid values are supplied by the client, or generated by the MySQL server.
+#
+# An xid value has from one to three parts:
+#
+# 		xid: gtrid [, bqual [, formatID ]]
+#
+# gtrid is a global transaction identifier, bqual is a branch qualifier, and
+# formatID is a number that identifies the format used by the gtrid and bqual
+# values.
+#
+# As indicated by the syntax, bqual and formatID are optional.
+#
+# The default bqual value is '' if not given.
+#
+# The default formatID value is 1 if not given.
+#
+# gtrid and bqual must be string literals, each up to 64 bytes (not characters)
+# long
+#
+# gtrid and bqual can be specified in several ways
+#
+# You can use a quoted string ('ab'), hex string(X'6162', 0x6162) or bit value (b'nnnn')
+#
+# formatID is an unsigned integer
+#
+# The gtrid and bqual values are interpreted in bytes by the MySQL server's underlying
+# XA support routines.
+#
+# However, while an SQL statement containing an XA statement is being parsed,
+# the server works with some specific character set.
+#
+# To be safe, write gtrid and bqual as hex strings.
+#
+# xid values typically are generated by the Transaction Manager.
+#
+# Values generated by one TM must be different from values generated by other
+# TMs.
+#
+# A given TM must be able to recognize its own xid values in a list of values
+# returned by the XA_RECOVER statement.
+#
+# XA_START_xd starts an XA transaction with the given xid value.
+#
+# Each XA transaction must have a unique xid value, so the value must not 
+# currently be used by another XA transaction.
+#
+# Uniqueness is assessed using the gtrid and bqual values. All following XA statements
+# for the XA transaction must be specified using the same xid value as that
+# given in the XA_START statement.
+#
+# If you use any of those statements but specify an xid value that does not
+# correspond to some existing XA transaction, an error occurs.
+#
+# One or more XA transactions can be part of the same global transaction.
+#
+# All XA transactions within a given global transaction must use the same
+# gtrid value in the xid value´.
+#
+# For this reason, gtrid values must be globally unique so that there is
+# no ambiguity about which global transaction a given XA transaction is
+# part of.
+#
+# The bqual part of the xid value must be different for each XA transaction
+# within a global transaction.
+#
+# (The requirement that bqual values be different is a limitation of the
+# current MySQL XA implementation.
+#
+# It is not part of the XA specification)
+#
+# The XA_RECOVER statement returns information for those XA transactions
+# on the MySQL server that are in the PREPARED state.
+#
+# (See SECTION 13.3.8.2, "XA TRANSACTION STATES")
+#
+# The output includes a row for each such XA transaction on the server,
+# regardless of which client started it.
+#
+# XA_RECOVER requires the XA_RECOVER_ADMIN privilege.
+#
+# This privilege requirement prevents users from discovering the XID values
+# for oustanding prepared XA transactions other than their own.
+#
+# It does not affect normal commit or rollback of an XA transaction
+# because the user who started it knows its XID
+#
+# XA_RECOVER output rows look like this (for an example xid value consisting of the parts 'abc', 'def', and 7):
+#
+# 		XA RECOVER;
+# 		+----------+------------------+--------------------+-------------------+
+# 		| formatID | gtrid_length 		| bqual_length 		| data 				  |
+# 		+----------+------------------+--------------------+-------------------+
+# 		| 		7 	  | 			3 		 	| 		3 					| 	abcdef 			  |
+# 		+----------+------------------+--------------------+-------------------+
+#
+# The output columns have the following meanings:
+#
+# 		) formatID is the formatID part of the transaction xid
+#
+# 		) gtrid_length is the length in bytes of the gtrid part of the xid
+#
+# 		) bqual_length is the length in bytes of the bqual part of the xid
+#
+# 		) data is the concatenation of the gtrid and bqual parts of the xid
+#
+# XID values may contain nonprintable characters 
+#
+# XA_RECOVER permits an optional CONVERT XID clause so that clients can request
+# XID values in hexadecimal.
+#
+# 13.3.8.2 XA TRANSACTION STATES
+#
+# An XA transaction progresses through the following states:
+#
+# 		1. Use XA_START to start an XA transaction and put it in the ACTIVE state
+#
+# 		2. For an ACTIVE XA transaction, issue the SQL statements that make up the transaction,
+# 			and then issue an XA_END statement.
+#
+# 			XA_END puts the transaction in the IDLE state.
+#
+# 		3. For an IDLE XA transaction, you can issue either an XA_PREPARE statement or an
+# 			XA COMMIT --- ONE phase statement:
+#
+# 			) XA_PREPARE puts the transaction in the PREPARED state.
+#
+# 				An XA_RECOVER statement at this point will include the transaction's xid value
+# 				in its output, because XA_RECOVER lists all XA transactions that are in the 
+# 				PREPARED state
+#
+# 			) XA COMMIT --- ONE PHASE prepares and commits the transaction.
+#
+# 				The xid value will not be listed by XA_RECOVER because the transaction terminates.
+#
+# 		4. For a PREPARED XA transaction, you can issue an XA_COMMIT statement to commit and
+# 			terminate the transaction, or XA_ROLLBACK to roll back and terminate the transaction.
+#
+# Here is a simple XA transaction that inserts a row into a table as part of a global transaction:
+#
+# 		XA START 'xatest';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		INSERT INTO mytable (i) VALUES(10);
+# 		Query OK, 1 row affected (0.04 sec)
+#
+# 		XA END 'xatest';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		XA PREPARE 'xatest';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		XA COMMIT 'xatest';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# Within the context of a given client connection, XA transactions and local (non-XA) transactions
+# are mutually exclusive.
+#
+# For example, if XA_START has been issued to begin an XA transaction, a local transaction
+# cannot be started until the XA transaction has been committed or rolled back.
+#
+# Conversely, if a local transaction has been started with START_TRANSACTION,
+# no XA statements can be used until the transaction has been committed or rolled back.
+#
+# If an XA transaction is in the ACTIVE state, you cannot issue any statements that cause
+# an implicit commit.
+#
+# That would violate the XA contract because you could not roll back the XA transaction.
+#
+# You will receive the following error if you try to execute such a statement:
+#
+# 		ERROR 1399 (XAE07): XAER_RMFAIL: The command cannot be executed
+# 		when global transaction is in the ACTIVE state
+#
+# Statements to which the preceding remark applies are listed at 
+# SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT"
+#
+# 13.4 REPLICATION STATEMENTS
+#
+# 13.4.1 SQL STATEMENTS FOR CONTROLLING MASTER SERVERS
+# 13.4.2 SQL STATEMENTS FOR CONTROLLING SLAVE SERVERS
+# 13.4.3 SQL STATEMENTS FOR CONTROLLING GROUP REPLICATION
+#
+# Replication can be controlled through the SQL interface using the statements
+# described in this section.
+#
+# Statements are split into a group which controls master servers, a group
+# which controls slave servers, and a group which can be applied to any replication
+# servers.
+#
+# 13.4.1 SQL STATEMENTS FOR CONTROLLING MASTER SERVERS
+#
+# 13.4.1.1 PURGE BINARY LOGS SYNTAX
+# 13.4.1.2 RESET MASTER SYNTAX
+# 13.4.1.3 SET SQL_LOG_BIN SYNTAX
+#
+# This section discusses statements for managing master replication servers.
+#
+# SECTION 13.4.2, "SQL STATEMENTS FOR CONTROLLING SLAVE SERVERS", discusses
+# statements for managing slave servers.
+#
+# In addition to the statements described here, the following SHOW statements
+# are used with master servers in replication.
+#
+# For information about these statements, see SECTION 13.7.6, "SHOW SYNTAX"
+#
+# 		) SHOW BINARY LOGS
+#
+# 		) SHOW BINLOG EVENTS
+#
+# 		) SHOW MASTER STATUS
+#
+# 		) SHOW SLAVE HOSTS
+#
+# 13.4.1.1 PURGE BINARY LOGS SYNTAX
+#
+# 	PURGE { BINARY | MASTER } LOGS
+# 		{ TO 'log_name' | BEFORE datetime_expr }
+#
+# The binary log is a set of files that contain information about data modifications
+# made by the MySQL server.
+#
+# The log consists of a set of binary log files, plus an index file 
+# (See SECTION 5.4.4, "THE BINARY LOG")
+#
+# The PURGE_BINARY_LOGS statement deletes all the binary log files listed in the
+# log index file prior to the specified log file name or date.
+#
+# BINARY and MASTER are synonyms
+#
+# Deleted log files also are removed from the list recorded in the index file, so that
+# the given log file becomes the first in the list.
+#
+# This statement has no effect if the server was not started with the --log-bin
+# option to enable binary logging.
+#
+# Examples:
+#
+# 		PURGE BINARY LOGS TO 'mysql-bin.010';
+# 		PURGE BINARY LOGS BEFORE '2008-04-02 22:46:26';
+#
+# The BEFORE variant's datetime_expr argument should evaluate to a DATETIME value
+# (a value in 'YYYY-MM-DD hh:mm:ss' format)
+#
+# This statement is safe to run while slaves are replicating.
+#
+# You need not stop them. If you have an active slave that currently is reading
+# one of the log files you are trying to delete, this statement does not delete
+# the log file that is in use or any log files later than that one, but it deletes
+# any earlier log files.
+#
+# A warning message is issued in this situation.
+#
+# However, if a slave is not connected and you happen to purge one of the log files
+# it has yet to read, the slave will be unable to replicate after it reconnects.
+#
+# To safely purge binary log files, follow this procedure:
+#
+# 		1. On each slave server, use SHOW_SLAVE_STATUS to check which log file it is reading.
+#
+# 		2. Obtain a listing of the binary log files on the master server with SHOW_BINARY_LOGS
+#
+# 		3. Determine the earliest log file among all the slaves.
+#
+# 			This is the target file. If all the slaves are up to date, this is the last log file
+# 			on the list.
+#
+# 		4. Make a backup of all the log files you are about to delete (optional)
+#
+# 		5. Purge all log files up to but not including the target file
+#
+# PURGE BINARY LOGS TO and PURGE BINARY LOGS BEFORE both fail with an error when binary
+# log files listed in the .index file had been removed from the system by some other means
+# (such as using rm on Linux)
+#
+# (Bug #18199, Bug #18453) 
+#
+# To handle such errors, edit the .index file (which is a simple text file) manually
+# to ensure that it lists only the binary log files that are actually present, then
+# run again the PURGE_BINARY_LOGS statement that failed.
+#
+# Binary log files are automatically removed after the server's binary log expiration
+# period.
+#
+# Removal of the files can take place at startup and when the binary log is flushed.
+#
+# The default binary log expiration period is 30 days.
+#
+# You can specify an alternative expiration period using the binlog_expire_logs_seconds
+# system variable.
+#
+# If you are using replication, you should specify an expiration period that is no lower
+# than the maximum amount of time your slaves might lag behind the master.
+#
+# 13.4.1.2 RESET MASTER SYNTAX
+#
+# 		RESET MASTER [TO binary_log_file_number]
+#
+# RESET MASTER enables you to delete any binary log files and their related binary log
+# index file, returning the master to its state before binary logging was started.
+#
+# WARNING:
+#
+# 		Use this statement with caution to ensure you do not lose binary log file data
+#
+# Issuing RESET MASTER without the optional TO clause deletes all binary log files listed
+# in the index file, resets the binary log index file to be empty, and creates a new
+# binary log file starting at 1.
+#
+# Use the optional TO clause to start the binary log file index from a number other than
+# 1 after the reset.
+#
+# Issuing RESET MASTER also clears the values of the gtid_purged system variable and the
+# gtid_executed system variable; that is, issuing this statement sets each of these
+# values to an empty string ('')
+#
+# This statement also clears the mysql.gtid_executed table (see MYSQL.GTID_EXECUTED TABLE)
+#
+# Using RESET MASTER with the TO clause to specify a binary log file index number to start
+# from simplifies failover by providing a single statement alternative to the FLUSH_BINARY_LOGS
+# and PURGE_BINARY_LOGS_TO statements.
+#
+# The following example demonstrates TO clause usage:
+#
+# 		RESET MASTER TO 1234;
+#
+# 		SHOW BINARY LOGS;
+# 		+-----------------------------+---------------+
+# 		| Log_name 							| File_size 	 |
+# 		+-----------------------------+---------------+
+# 		| master-bin.001234 			   | 154 			 |
+# 		+-----------------------------+---------------+
+#
+# IMPORTANT:
+#
+# 		The effects of RESET_MASTER without the TO clause differ from those of
+# 		PURGE_BINARY_LOGS in 2 key ways:
+#
+# 			1. RESET_MASTER removes all binary log files that are listed in the index file,
+# 				leaving only a single, empty binary log file with a numeric suffix of
+# 				.000001, whereas the numbering is not reset by PURGE_BINARY_LOGS
+#
+# 			2. RESET_MASTER is not intended to be used while any replication slaves
+# 				are running.
+#
+# 				The behavior of RESET_MASTER when used while slaves are running
+# 				is undefined (and thus unsupported), whereas PURGE_BINARY_LOGS
+# 				may be safely used while replication slaves are running.
+#
+# 		See also SECTION 13.4.1.1, "PURGE BINARY LOGS SYNTAX"
+#
+# RESET_MASTER without the TO clause can prove useful when you first set up
+# the master and the slave, so that you can verify the setup as follows:
+#
+# 		1. Start the master and slave, and start replication (see SECTION 17.1.2, "SETTING UP BINARY LOG FILE POSITION BASED REPLICATION")
+#
+# 		2. Execute a few test queries on the master
+#
+# 		3. Check that the queries were replicated to the slave
+#
+# 		4. When replication is running correctly, issue STOP_SLAVE followed by
+# 			RESET_SLAVE on the slave, then verify that no unwanted data from the
+# 			test queries exists on the slave.
+#
+# 		5. Issue RESET_MASTER on the master to clean up the test queries
+#
+# After verifying the setup, resetting the master and slave and ensuring that no unwanted
+# data or binary log files generated by testing remain on the master or slave, you can
+# start the slave and begin replicating.
+#
+# 13.4.1.3 SET SQL_LOG_BIN_SYNTAX
+#
+# 		SET sql_log_bin = {OFF|ON}
+#
+# The sql_log_bin variable controls whether logging to the binary log is enabled
+# for the current session (assuming that the binary log itself is enabled)
+#
+# The default value is ON
+#
+# To disable or enable binary logging for the current session, set the session
+# sql_log_bin variable to OFF or ON
+#
+# Set this variable to OFF for a session to temporarily disable binary logging
+# while making changes to the master you do not want replicated to the slave.
+#
+# Setting the session value of this system variable is a restricted operation
+#
+# The session user must have privileges sufficient to set restricted session
+# variables.
+#
+# See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# It is not possible to set the session value of sql_log_bin within
+# a transaction or subquery
+#
+# Setting this variable to OFF prevents GTIDs from being assigned to transactions
+# in the binary log.
+#
+# If you are using GTIDs for replication, this means that even when binary logging
+# is later enabled again, the GTIDs written into the log from this point do not
+# account for any transactions that occurred in the meantime, so in effect those
+# transactions are lost.
+#
+# 13.4.2 SQL STATEMENTS FOR CONTROLLING SLAVE SERVERS
+#
+# 13.4.2.1 CHANGE MASTER TO SYNTAX
+# 13.4.2.2 CHANGE REPLICATION FILTER SYNTAX
+#
+# 13.4.2.3 MASTER_POS_WAIT() SYNTAX
+# 13.4.2.4 RESET SLAVE SYNTAX
+#
+# 13.4.2.5 SET GLOBAL SQL_SLAVE_SKIP_COUNTER SYNTAX
+# 13.4.2.6 START SLAVE SYNTAX
+#
+# 13.4.2.7 STOP SLAVE SYNTAX
+#
+# This section discusses statements for managing slave replication servers.
+#
+# SECTION 13.4.1, "SQL STATEMENTS FOR CONTROLLING MASTER SERVERS", discusses statements
+# for managing master servers.
+#
+# In addition to the statements described here, SHOW_SLAVE_STATUS and SHOW_RELAYLOG_EVENTS
+# are also used with replicaiton slaves.
+#
+# For information about these statements, see SECTION 13.7.6.34, "SHOW SLAVE STATUS SYNTAX"
+# and SECTION 13.7.6.32, "SHOW RELAYLOG EVENTS SYNTAX"
+#
+# 13.4.2.1 CHANGE MASTER TO SYNTAX
+#
+# 	CHANGE MASTER TO option [, option] --- [ channel_option ]
+#
+# 	option:
+# 		MASTER_BIND = 'interface_name'
+#   | MASTER_HOST = 'host_name'
+#   | MASTER_USER = 'user_name'
+#   | MASTER_PASSWORD = 'password'
+#   | MASTER_PORT = port_num
+#   | MASTER_CONNECT_RETRY = interval
+#   | MASTER_RETRY_COUNT = count
+#   | MASTER_DELAY = interval
+#
+#   | MASTER_HEARTBEAT_PERIOD = interval
+# 	 | MASTER_LOG_FILE = 'master_log_name'
+#   | MASTER_LOG_POS = master_log_pos
+#   | MASTER_AUTO_POSITION = {0|1}
+#   | RELAY_LOG_FILE = 'relay_log_name'
+# 	 | RELAY_LOG_POS = relay_log_pos
+#
+# 	 | MASTER_SSL = {0|1}
+# 	 | MASTER_SSL_CA = 'ca_file_name'
+#   | MASTER_SSL_CAPATH = 'ca_directory_name'
+# 	 | MASTER_SSL_CERT = 'cert_file_name'
+# 	 | MASTER_SSL_CRT = 'crl_file_name'
+# 	 | MASTER_SSL_CRLPATH = 'crl_directory_name'
+#   | MASTER_SSL_KEY = 'key_file_name'
+#   | MASTER_SSL_CIPHER = 'cipher_list'
+#   | MASTER_SSL_VERIFY_SERVER_CERT = {0|1}
+#   | MASTER_TLS_VERSION = 'protocol_list'
+#   | MASTER_PUBLIC_KEY_PATH = 'key_file_name'
+#   | GET_MASTER_PUBLIC_KEY = {0|1}
+#   | IGNORE_SERVER_IDS = (server_id_list)
+#
+# 	channel_option:
+# 		FOR CHANNEL channel
+#
+# 	server_id_list:
+# 		[server_id [, server_id] --- ]
+#
+# CHANGE_MASTER_TO changes the parameters that the slave server uses for
+# connecting to the master server, for reading the master binary log and
+# reading the slave relay log.
+#
+# It also updates the contents of the master info and relay log info repositories
+# (see SECTION 17.2.4, "REPLICATION RELAY AND STATUS LOGS")
+#
+# CHANGE_MASTER_TO requires the REPLICATION_SLAVE_ADMIN or SUPER privilege
+#
+# You can issue CHANGE MASTER TO statements on a running slave without first
+# stopping it, depending on the states of the slave SQL thread and slave I/O
+# thread.
+#
+# The rules governing such use are provided later in this section
+#
+# When using a multithreaded slave (in other words slave_parallel_workers is greater
+# than 0), stopping the slave can cause "gaps" in the sequence of transactions that
+# have been executed from the relay log, regardless of whether the slave was stopped
+# intentionally or otherwise.
+#
+# When such gaps exist, issuing CHANGE_MASTER_TO fails
+#
+# The solution in this situation is to issue START_SLAVE_UNTIL_SQL_AFTER_MTS_GAPS
+# which ensures that the gaps are closed.
+#
+# The optional FOR CHANNEL channel clause enables you to name which replication
+# channel the statement applies to.
+#
+# Providing a FOR CHANNEL channel clause applies the CHANGE MASTER to statement
+# to a specific replication channel, and is used to add a new channel or modify
+# an existing channel.
+#
+# For example, to add a new channel called channel2:
+#
+# 		CHANGE MASTER TO MASTER_HOST=host1, MASTER_PORT=3002 FOR CHANNEL 'channel2'
+#
+# If no clause is named and no extra channels exist, the statement applies to the
+# default channel.
+#
+# When using multiple replication channels, if a CHANGE MASTER TO statement does not
+# name a channel using a FOR CHANNEL channel clause, an error occurs.
+#
+# See SECTION 17.2.3, "REPLICATION CHANNELS" for more information.
+#
+# Options not specified retain their value, except as indicated in the following discussion.
+#
+# Thus, in most cases, there is no need to specify options that do not change.
+#
+# MASTER_HOST, MASTER_USER, MASTER_PASSWORD and MASTER_PORT provide information
+# to the slave about how to connect to its master:
+#
+# 		) MASTER_HOST and MASTER_PORT are the host name (or IP address) of the master host and its TCP/IP port
+#
+# 			NOTE:
+#
+# 				Replication channel use UNIX socket files.
+#
+# 				You must be able to connect to the master MySQL server using TCP/IP
+#
+# 			If you specify the MASTER_HOST or MASTER_PORT option, the slave assumes that the master
+# 			server is different from before (even if the option value is the same as its current value)
+#
+# 			In this case, the old values for the master binary log file name and position are considered
+# 			no longer applicable, so if you do not specify MASTER_LOG_FILE and MASTER_lOG_POS in the
+# 			statement, MASTER_LOG_FILE='' and MASTER_LOG_POS=4 are silently appended to it.
+#
+# 			Setting MASTER_HOST='' (that is, setting its value explicitly to an empty string) is not
+# 			the same as not setting MASTER_HOST at all.
+#
+# 			Trying to set MASTER_HOT to an empty string fails with an error.
+#
+# 			Values used for MASTER_HOST and other CHANGE MASTER TO options are checked for
+# 			linefeed (\n or 0x0A) characters; the presence of such characters in these values
+# 			causes the statement to fail with ER_MASTER_INFO.
+#
+# 			(Bug #11758581, Bug #50801)
+#
+# 		) MASTER_USER and MASTER_PASSWORD are the user name and password of the account to use
+# 			for connecting to the master.
+#
+# 			MASTER_USER cannot be made empty; setting MASTER_USER = '' or leaving it unset when
+# 			setting a value for MASTER_PASSWORD causes an error (Bug #13427949)
+#
+# 			The password used for a MySQL Replication slave account in a CHANGE MASTER TO
+# 			statement is limited to 32 characters in length;
+#
+# 			Trying to use a password of more than 32 characters causes CHANGE MASTER TO to fail
+#
+# 			The text of a running CHANGE_MASTER_TO statement, including values for MASTER_USER and
+# 			MASTER_PASSWORD, can be seen in the output of a concurrent SHOW_PROCESSLIST statement.
+#
+# 			(The complete text of a START_SLAVE statement is also visible to SHOW_PROCESSLIST)
+#
+# The MASTER_SSL_xxx options, and the MASTER_TLS_VERSION option, specify how the slave uses
+# encryption and ciphers to secure the replication connection.
+#
+# These options can be changed even on slaves that are compiled without SSL support.
+#
+# They are saved to the master info repository, but are ignored if the slave does not
+# have SSL support enabled.
+#
+# The MASTER_SSL_xxx options perform the same functions as the --ssl-xxx options described
+# in SECTION 6.4.2, "COMMAND OPTIONS FOR ENCRYPTED CONNECTIONS"
+#
+# The correspondence between the two sets of options, and the use of the MASTER_SSL_xxx
+# and MASTER_TLS_VERSION options to set up a secure connection, is explained in
+# SECTION 17.3.9, "SETTING UP REPLICATION TO USE ENCRYPTED CONNECTIONS"
+#
+# 		IMPORTANT:
+#
+# 			To connect to the replication master using a user account that authenticates
+# 			with the caching_sha2_password plugin, you must either set up a secure
+# 			connection as described in SECTION 17.3.9, "SETTING UP REPLICATION TO USE ENCRYPTED CONNECTIONS",
+# 			or enable the unencrypted connection to support password exchange using an
+# 			RSA key pair.
+#
+# 			The caching_sha2_password authentication plugin is the default for new users
+# 			created from MySQL 8.0 (for details, see SECTION 6.5.1.3, "CACHING SHA-2 PLUGGABLE AUTHENTICATION")
+#
+# 			If the user account that you create or use for replication (as specified by the
+# 			MASTER_USER option) uses this authentication plugin, and you are not using a
+# 			secure connection, you must enable RSA key pair-based password exchange for a 
+# 			successful connection.
+#
+# To enable RSA key pair-based password exchange, specify either the MASTER_PUBLIC_KEY_PATH
+# or the GET_MASTER_PUBLIC_KEY=1 option
+#
+# Either of these options provides the RSA public key to the slave:
+#
+# 		) MASTER_PUBLIC_KEY_PATH indicates the path name to a file containing a slave-side
+# 			copy of the public key required by the master for RSA key pair-based password
+# 			exchange.
+#
+# 			The file must be in PEM format.
+#
+# 			This option applies to slaves that authenticate with the sha256_password
+# 			or caching_sha2_password authentication plugin.
+#
+# 			(For sha256_password, MASTER_PUBLIC_KEY_PATH can be used only if MySQL
+# 			was built using OpenSSL)
+#
+# 		) GET_MASTER_PUBLIC_KEY indicates whether to request from the master the public key
+# 			required for RSA key pair-based password exchange.
+#
+# 			This option applies to slaves that authenticate with the caching_sha2_password
+# 			authentication plugin.
+#
+# 			For connections by accounts that authenticate using this plugin, the master
+# 			does not send the public key unless requested, so it must be requested or
+# 			specified in the client.
+#
+# 			If MASTER_PUBLIC_KEY_PATH is given and specifies a valid public key file,
+# 			it takes precedence over GET_MASTER_PUBLIC_KEY
+#
+# The MASTER_HEARTBEAT_PERIOD, MASTER_CONNECT_RETRY and MASTER_RETRY_COUNT options
+# control how the slave recognizes that the connection to the master has been
+# lost and makes attempts to reconnect.
+#
+# 		) The slave_net_timeout system variable specifies the number of seconds that
+# 			 the slave waits for either more data or a heartbeat signal from the master,
+# 			before the slave considers the connection broken, aborts the read, and tries
+# 			to reconnect.
+#
+# 			The default value is 60 seconds (one minute)
+#
+# 		) The heartbeat interval, which stops the connection timeout occurring in the
+# 			absence of data if the connection is still good, is controlled by the 
+# 			MASTER_HEARTBEAT_PERIOD option.
+#
+# 			A heartbeat signal is sent to the slave after that number of seconds, and the
+# 			waiting period is reset whenever the master's binary log is updated
+# 			with an event.
+#
+# 			Heartbeats are therefore sent by the master only if there are no unset events
+# 			in the binary log file for a period longer than this.
+#
+# 			The heartbeat interval interval is a decimal value having the range 0 to 4294967
+# 			seconds and a resolution in milliseconds; the smallest nonzero value is 0.001
+#
+# 			Setting interval to 0 disables heartbeats altogether.
+#
+# 			The heartbeat interval defaults to half the value of the slave_net_timeout
+# 			system variable.
+#
+# 			It is recorded in the master info log and shown in the replication_connection_configuration
+# 			Performance Schema table.
+#
+# 			Issuing RESET_SLAVE resets the heartbeat interval to the default value.
+#
+# 			Note that a change to the value or default setting of slave_net_timeout does not
+# 			automatically change the heartbeat interval, whether that has been set
+# 			explicitly or is using a previously calculated default.
+#
+# 			A warning is issued if you set @@GLOBAL.slave_net_timeout to a value less than
+# 			that of the current heartbeat interval.
+#
+# 			If slave_net_timeout is changed, you must also issue CHANGE_MASTER_TO to adjust
+# 			the heartbeat interval to an appropriate value so that the heartbeat signal occurs before
+# 			the connection timeout.
+#
+# 			If you do not do this, the heartbeat signal has no effect, and if no data is received
+# 			from the master, the slave can make repeated reconnection attempts, creating zombie
+# 			dump threads.
+#
+# 		) If the slave does need to reconnect, the first retry occurs immediately after the timeout.
+#
+# 			MASTER_CONNECT_RETRY specifies the interval between reconnection attempts, and MASTER_RETRY_COUNT
+# 			limits the number of reconnection attempts.
+#
+# 			If both the default settings are used, the slave waits 60 seconds between reconnection attempts
+# 			(MASTER_CONNECT_RETRY=60), and keeps attempting to reconnect at this rate for 24 hours
+# 			(MASTER_RETRY_COUNT=86400)
+#
+# 			These values are recorded in the master info log and shown in the replication_connection_configuration
+# 			Performance Schema table.
+#
+# 			MASTER_RETRY_COUNT supersedes the --master-retry-count server startup option.
+#
+# MASTER_DELAY specifies how many seconds behind the master the slave must lag.
+#
+# An event received from the master is not executed until at least interval seconds later
+# than its execution on the master.
+#
+# The default is 0.
+#
+# An error occurs if interval is not a nonnegative integer in teh range from 0 to 2^31-1
+#
+# For more information, see SECTION 17.3.12, "DELAYED REPLICATION"
+#
+# A CHANGE MASER TO statement employing the MASTER_DELAY option can be executed on a running
+# slave when the slave SQL thread is stopped.
+#
+# MASTER_BIND is for use on replication slaves having multiple network interfaces, and determines
+# which of the slave's network interfaces is chosen for connecting to the master.
+#
+# The address configured with this option, if any, can be seen in the Master_Bind column
+# of the output from SHOW_SLAVE_STATUS
+#
+# In the master info repository table mysql.slave_master_info, the value can be seen
+# as the Master_bind column.
+#
+# The ability to bind a replicaiton slave to a specific network interface is also supported
+# by NDB Cluster.
+#
+# MASTER_lOG_FILE and MASTER_LOG_POS are the coordinates at which the slave I/O thread should
+# begin reading from the master the next time the thread starts.
+#
+# RELAY_LOG_FILE and RELAY_LOG_POS are the coordinates at which the slave SQL thread should
+# begin reading from teh relay log the next time the thread starts.
+#
+# If you specify either of MASTER_LOG_FILE or MASTER_LOG_POS, you cannot specify RELAY_LOG_FILE
+# or RELAY_LOG_POS
+#
+# If you specify either of MASTER_LOG_FILE or MASTER_LOG_POS, you also cannot specify MASTER_AUTO_POSITION = 1
+# (described later in this section)
+#
+# If neither of MASTER_LOG_FILE or MASTER_LOG_POS is specified, the slave uses the last coordinates
+# of the slave SQL thread before CHANGE_MASTER_TO was issued.
+#
+# This ensures that there is no discontinuity in replication, even if the slave SQL thread was
+# late compared to the slave I/O thread, when you merely want to change, say, the PW.
+#
+# A CHANGE MASTER TO statement employing RELAY_LOG_FILE, RELAY_LOG_POS or both options
+# can be executed on a running slave when the slave SQL thread is stopped.
+#
+# Relay logs are preserved if at least one of the slave SQL thread and the slave I/O
+# thread is running; if both threads are stopped, all relay log files are deleted
+# unless at least one of RELAY_LOG_FILE or RELAY_LOG_POS is specified.
+#
+# RELAY_LOG_FILE can use either an absolute or relative path, and uses teh same base name
+# as MASTER_LOG_FILE
+#
+# When MASTER_AUTO_POSITION = 1 is used with CHANGE MASTER TO, the slave attempts to connect
+# to the master using the GTID-based replication protocol.
+#
+# This option can be used with CHANGE MASTER TO only if both the slave SQL and slave I/O
+# threads are stopped.
+#
+# Both the slave and the master must have GTIDs enabled (GTID MODE=ON, ON_PERMISSIVE or OFF_PERMISSIVE
+# on the slave, and GTID_MODE=ON on the master)
+#
+# Auto-positioning is used for the connection, so the coordinates represented by MASTER_LOG_FILE
+# and MASTER_LOG_POS are not used, and the use of either or both of these options together with
+# MASTER_AUTO_POSITION = 1 causes an error.
+#
+# If multi-source replication is enabled on the slave, you need to set the MASTER_AUTO_POSITION = 1
+# option for each applicable replication channel.
+#
+# With MASTER_AUTO_POSITION = 1 set, in the initial connection handshake, the slave sends a 
+# GTID set containing the transactions that it has already received, committed, or both.
+#
+# The master responds by sending all transactions recorded in its binary log whose GTID
+# is not included in the GTID set sent by the slave.
+#
+# This exchange ensures that the master only sends the transactions with a GTID that the slave
+# has not already recorded or committed.
+#
+# If the slave receives transactions from more than one master, as in the case of a 
+# diamond topology, the auto-skip function ensures that the transactions are not applied twice.
+#
+# For details of how the GTID set sent by the slave is computed, see SECTION 17.1.3.3,
+# "GTID AUTO-POSITIONING"
+#
+# If any of the transactions that should be sent by the master have been purged from the
+# master's binary log, or added to the set of GTIDs in the gtid_purged system variable
+# by another method, the master sends the error:
+#
+# 		ER_MASTER_HAS_PURGED_REQUIRED_GTIDS
+#
+# to the slave, and replication does not start.
+#
+# The GTIDs of the missing purged transactions are identified and listed in the master's
+# error log in the warning message:
+#
+# 		ER_FOUND_MISSING_GTIDS
+#
+# Also, if during the exchange of transactions it is found that the slave has recorded
+# or committed transactions with the master's UUID in the GTID, but the master itself
+# has not committed them, the master sends the error:
+#
+# 		ER_SLAVE_HAS_MORE_GTIDS_THAN_MASTER
+#
+# to the slave and replication does not start.
+#
+# For information on how to handle these situations, see SECTION 17.1.3.3,
+# "GTID AUTO-POSITIONING"
+#
+# You can see whether replication is running with auto-positoning enabled
+# by checking the Performance Schema replication_connection_status table
+# or the output of SHOW_SLAVE_STATUS
+#
+# Disabling the MASTER_AUTO_POSITION option again makes the slave revert
+# to file-based replication, in which case you must also specify one or both
+# of the MASTER_LOG_FILE or MASTER_LOG_POS options.
+#
+# IGNORE_SERVER_IDS takes a comma-separated list of 0 or more server IDs.
+#
+# Events originating from the corresponding servers are ignored, with the 
+# exception of log rotation and deletion events, which are still recorded
+# in the relay log.
+#
+# In circular replication, the originating server normally acts as the terminator
+# of its own events, so that they are not applied more than once.
+#
+# Thus, this option is useful in circular replication when one of the servers
+# in the circle is removed.
+#
+# Suppose that you have a circular replication setup with 4 servers,
+# having server IDs 1, 2, 3 and 4 and server 3 fails.
+#
+# When bridging the gap by starting replication from server 2 to server
+# 4, you can include IGNORE_SERVER_IDS = (3) in the CHANGE_MASTER_TO
+# statement that you issue on server 4 to tell it to use server 2 as its
+# master instead of server 3.
+#
+# Doing so causes it to ignore and not to propagate any statements
+# that originated with the server that is no longer in use.
+#
+# if IGNORE_SERVER_IDS contains the server's own ID and the server was
+# started with the --replicate-same-server-id option enabled, an error results.
+#
+# NOTE:
+#
+# 		When global transaction identifiers (GTIDs) are used for replication,
+# 		transactions that have already been applied are automatically ignored,
+# 		so the IGNORE_SERVER_IDS function is not required and is deprecated.
+#
+# 		If gtid_mode=ON is set for the server, a deprecation warning is issued
+# 		if you include the IGNORE_SERVER_IDS option in a CHANGE_MASTER_TO 
+# 		statement.
+#
+# The master info repository and the output of SHOW_SLAVE_STATUS provide the list
+# of servers that are currently ignored.
+#
+# For more information, see SECTION 17.2.4.2, "SLAVE STATUS lOGS" and
+# SECTION 13.7.6.34, "SHOW SLAVE STATUS SYNTAX"
+#
+# If a CHANGE_MASTER_TO statement is issued without any IGNORE_SERVER_IDS
+# option, any existing list is preserved.
+#
+# To clear the list of ignored servers, it is necessary to use the option
+# with an empty list:
+#
+# 		CHANGE MASTER TO IGNORE_SERVER_IDS = ();
+#
+# RESET SLAVE ALL clears IGNORE_SERVER_IDS
+#
+# NOTE:
+#
+# 		A deprecation warning is issued if SET GTID_MODE=ON is issued
+# 		when any channel has existing server IDs set with IGNORE_SERVER_IDS
+#
+# 		Before starting GTID-based replication, check for and clear all ignored
+# 		server ID lists on the servers involved.
+#
+# 		The SHOW_SLAVE_STATUS statement displays the list of ignore IDs,
+# 		if there is one.
+#
+# 		If you do receive the deprecation warning, you can still clear a 
+# 		list after gtid_mode=ON is set by issuing a CHANGE_MASTER_TO statement
+# 		containing the IGNORE_SERVER_IDS option with an empty list.
+#
+# Invoking CHANGE_MASTER_TO causes the previous values for MASTER_HOST, MASTER_PORT,
+# MASTER_LOG_FILE and MASTER_LOG_POS to be written to the error log, along with
+# other information about the slave's state prior to execution.
+#
+# CHANGE MASTER TO causes an implicit commit of an ongoing transaction.
+#
+# See SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT"
+#
+# From MySQL 5.7, the strict requirements to execute STOP_SLAVE prior to issuing
+# any CHANGE_MASTER_TO statement (and START_SLAVE afterward) is removed.
+#
+# Instead of depending on whether the slave is stopped, the behavior of CHANGE MASTER TO
+# depends on the states of the slave SQL thread and slave I/O threads; which of these
+# threads is stopped or running now determines the options that can or cannot be used
+# with a CHANGE MASTER TO statement at a given point in time.
+#
+# The rules for making this determinaiton are listed here:
+#
+# 		) If hte SQL thread is stopped, you can execute CHANGE MASTER TO using
+# 			any combination that is otherwise allowed of RELAY_LOG_FILE, RELAY_LOG_POS,
+# 			and MASTER_DELAY options, even if the slave I/O thread is running.
+#
+# 			No other options may be used with this statement when the I/O thread
+# 			is running.
+#
+# 		) If the I/O thread is stopped, you can execute CHANGE MASTER TO using any
+# 			of the options for this statement (in any allowed combination) except:
+#
+# 				RELAY_LOG_FILE
+#
+# 				RELAY_LOG_POS
+#
+# 				MASTER_DELAY
+#
+# 			even when the SQL thread is running.
+#
+# 			These three options may not be used when the I/O thread is running.
+#
+# 		) Both the SQL thread and the I/O thread must be stopped before issuing a 
+# 			CHANGE MASTER TO statement that employs MASTER_AUTO_POSITION = 1
+#
+# You can check the current state of the slave SQL and I/O threads using SHOW_SLAVE_STATUS
+#
+# For more information, see SECTION 17.3.8, "SWITCHING MASTERS DURING FAILOVER"
+#
+# If you are using statement-based replication and temporary tables, it is possible
+# for a CHANGE MASTER TO statement following a STOP SLAVE statement to leave behind
+# temporary tables on the slave.
+#
+# A warning (ER_WARN_OPEN_TEMP_TABLES_MUST_BE_ZERO) is now issued whenever this occurs.
+#
+# You can avoid this in such cases by making sure that the value of the SLAVE_OPEN_TEMP_TABLES
+# system status variable is equal to 0 prior to executing such a CHANGE MASTER TO statement.
+#
+# CHANGE_MASTER_TO is useful for setting up a slave when you have the snapshot of the master
+# and have recorded the master binary log coordinates corresponding to the time of hte
+# snapshot.
+#
+# After loading the snapshot into the slave to synchronize it with the master, you can run
+# CHANGE MASTER TO MASTER_LOG_FILE='log_name', MASTER_LOG_POS=log_pos on the slave to specify
+# the coordinates at which the slave should begin reading the master binary log.
+#
+# The following example changes the master server the slave uses and establishes the master
+# binary log coordinates from which the slave begins reading.
+#
+# This is used when you want to set up the slave to replicate the master:
+#
+# 		CHANGE MASTER TO
+# 			MASTER_HOST='master2.example.com',
+# 			MASTER_USER='replication',
+# 			MASTER_PASSWORD='password',
+# 			MASTER_PORT=3306,
+# 			MASTER_LOG_FILE='master2-bin.001',
+# 			MASTER_LOG_POS=4,
+# 			MASTER_CONNECT_RETRY=10;
+#
+# The next example shows an operation that is less frequently employed.
+#
+# It is used when the slave has relay log files that you want it to execute
+# again for some reason.
+#
+# To do this, the master need not be reachable.
+#
+# You need only use CHANGE_MASTER_TO and start the SQL thread (START SLAVE SQL_THREAD):
+#
+# 		CHANGE MASTER TO
+# 			RELAY_LOG_FILE='slave-relay-bin.006',
+# 			RELAY_LOG_POS=4025;
+#
+# The following table shows the maximum permissible length for hte string-valued options.
+#
+# OPTION 			MAX LENGTH
+# 
+# MASTER_HOST 			60
 # 					
+# MASTER_USER 			96
+#
+# MASTER_PASSWORD 	32
+#
+# MASTER_LOG_FILE 	511
+#
+# RELAY_LOG_FILE 		511
+#
+# MASTER_SSL_CA 		511
+#
+# MASTER_SSL_CAPATH 	511
+#
+# MASTER_SSL_CERT 	511
+#
+# MASTER_SSL_CRL 		511
+#
+# MASTER_SSL_CRLPATH 511
+#
+# MASTER_SSL_KEY 		511
+#
+# MASTER_SSL_CIPHER 	511
+#
+# MASTER_TLS_VERSION 511
+#
+# MASTER_PUBLIC_KEY_PATH 511
+#
+# 13.4.2.2 CHANGE REPLICATION FILTER SYNTAX
+#
+# CHANGE REPLICATION FILTER filter[, filter]
+# 		[, ---] [FOR CHANNEL channel]
+#
+# filter:
+# 		REPLICATE_DO_DB = (db_list)
+#   | REPLICATE_IGNORE_DB = (db_list)
+#   | REPLICATE_DO_TABLE = (tbl_list)
+#   | REPLICATE_IGNORE_TABLE = (tbl_list)
+#   | REPLICATE_WILD_DO_TABLE = (wild_tbl_list)
+# 	 | REPLICATE_WILD_IGNORE_TABLE = (wild_tbl_list)
+#   | REPLICATE_REWRITE_DB = (db_pair_list)
+#
+# db_list:
+# 		db_name[, db_name][, ---]
+#
+# tbl_list:
+# 		db_name.table_name[, db_name.table_name[, ---]
+# wild_tbl_list:
+# 		'db_pattern.table_pattern'[, 'db_pattern.table_pattern'][, ---]
+#
+# db_pair_list:
+# 		(db_pair)[, (db_pair)][, ---]
+#
+# db_pair:
+# 		from_db, to_db
+#
+# CHANGE REPLICATION FILTER sets one or more replicaiton filtering rules on the
+# slave in teh same way as starting the slave mysqld with replication filtering
+# options such as:
+#
+# 		--replicate-do-db
+#
+# 		or
+#
+# 		--replicate-wild-ignore-table
+#
+# Unlike the case with the server options, this statement does not require
+# restarting the server to take effect, only that the slave SQL thread
+# be stopped using STOP_SLAVE_SQL_THREAD first (and restarted with START_SLAVE_SQL_THREAD afterwards).
+#
+# CHANGE_REPLICATION_FILTER requires the REPLICATION_SLAVE_ADMIN or SUPER privilege
+#
+# Use the FOR CHANNEL channel clause to make a replicaiton filter specific to a replication
+# channel, for example on a multi-source replication slave.
+#
+# Filters applied without a specific FOR CHANNEL clause are considered global filters,
+# meaning that they are applied to all replication channels.
+#
+# 	NOTE:
+#
+# 		Global replication filters cannot be set on a MySQL server instance that is configured
+# 		for Group Replication, because filtering transactions on some servers would make the group
+# 		unable to reach agreement on a consistent state.
+#
+# 		Channel specific replication filters can be set on replication channels that are not
+# 		directly involved with Group Replication, such as where a group member also acts
+# 		as a replication slave to a master that is outside the group.
+#
+# 		They cannot be set on the group_replication_applier or group_replication_recovery channels
+#
+# The following list shows the CHANGE REPLICATION FILTER options and how they relate to 
+# --replicate-* server options:
+#
+# 		) REPLICATE_DO_DB: Include updates based on database name. Equivalent to --replicate-do-db
+#
+# 		) REPLICATE_IGNORE_DB: Exclude updates based on database name. Equivalent to --replicate-ignore-db
+#
+# 		) REPLICATE_DO_TABLE: Include updates based on table name. Equivalent to --replicate-do-table
+#
+# 		) REPLICATE_IGNORE_TABLE: Exclude updates based on table name. Equivalent to --replicate-ignore-table
+#
+# 		) REPLICATE_WILD_DO_TABLE: Include updates based on wildcard pattern matching table name. Equivalent to --replicate-wild-do-table
+#
+# 		) REPLICATE_WILD_IGNORE_TABLE: Exclude updates based on wildcard pattern matching table name. Equivalent to --replicate-wild-ignore-table
+#
+# 		) REPLICATE_REWRITE_DB: Perform updates on slave after substituting new name on slave for specified database on master.
+#
+# 											Equivalent to --replicate-rewrite-db
+#
+# The precise effects of REPLICATE_DO_DB and REPLICATE_IGNORE_DB filters are dependent on whether statement-based
+# or row-based replication is in effect.
+#
+# See SECTION 17.2.5, "HOW SERVERS EVALUATE REPLICATION FILTERING RULES", for more information.
+#
+# Multiple replication filtering rules can be created in a single CHANGE REPLICATION FILTER statement
+# by separating the rules with commas, as shown here:
+#
+# 		CHANGE REPLICATION FILTER
+# 			REPLICATE_DO_DB = (d1), REPLICATE_IGNORE_DB = (d2);
+#
+# Issuing the statement just shown is equivalent to starting the slave mysqld with the options
+# --replicate-do-db=d1 --replicate-ignore-db=d2
+#
+# On a multi-score replicaiton slave, which uses multiple replicaiton channels to process transaction
+# from different sources, use the FOR CHANNEL channel clause to set a replication filter on
+# a replication channel:
+#
+# 		CHANGE REPLICATION FILTER REPLICATE_DO_DB = (d1) FOR CHANNEL channel_1;
+#
+# This enables you to create a channel specific replication filter to filter out selected
+# data from a source.
+#
+# When a FOR CHANNEL clause is provided, the replication filter statement acts
+# on that slave replication channel removing any existing replication filter which
+# has the same filter type as the specified replication filters, and replacing them
+# with the specified filter.
+#
+# Filter types not explicitly listed in the statement are not modified
+#
+# If issued against a slave replication channel which is not configured,
+# the statement fails with an ER_SLAVE_CONFIGURATION error
+#
+# If issued against Group Replication channels, the statement fails with an
+# ER_SLAVE_CHANNEL_OPERATION_NOT_ALLOWED error
+#
+# On a replication slave with multiple replicaiton channels configured, issuing
+# CHANGE_REPLICATION_FILTER with no FOR CHANNEL clause configures the replication
+# filter for every configured slave replication channel, and for the global replication filters.
+#
+# For every filter type, if the filter type is listed in the statement, then any existing
+# filter rules of that type are replaced by the filter rules specified in the most recently
+# issued statement, otherwise the old value of the filter type is retained.
+#
+# For more information see SECTION 17.2.5.4, "REPLICATION CHANNEL BASED FILTERS"
+#
+# If the same filtering rule is specified multiple times, only the last such rule
+# is actually used.
+#
+# For example, the two statements shown here have exactly the same effect,
+# because the first REPLICATE_DO_DB rule in the first statement is ignored:
+#
+# 		CHANGE REPLICATION FILTER
+# 			REPLICATE_DO_DB = (db1, db2), REPLICATE_DO_DB = (db3, db4);
+#
+# 		CHANGE REPLICATION FILTER
+# 			REPLICATE_DO_DB = (db3, db4);
+#
+# CAUTION:
+#
+# 		This behavior differs from that of the --replicate-* filter options
+# 		where specifying the same option multiple times causes the
+# 		creation of multiple filter rules.
+#
+# Names of tables and database not containing any special characters need
+# not be quoted.
+#
+# Values used with REPLICATION_WILD_TABLE and REPLICATION_WILD_IGNORE_TABLE
+# are string expressions, possibly containing (special) wildard characters,
+# and so must be quoted.
+#
+# This is shown in the following example statements:
+#
+# 		CHANGE REPLICATION FILTER
+# 			REPLICATE_WILD_DO_TABLE = ('db1.old%');
+#
+# 		CHANGE REPLICATION FILTER
+# 			REPLICATE_WILD_IGNORE_TABLE = ('db1.new%', 'db2.new%');
+#
+# Values used with REPLICATE_REWRITE_DB represents pairs of database names;
+#
+# Each such value must be enclosed in parentheses.
+#
+# The following statement rewrites statements occurring on database db1
+# on the master to database db2 on the slave:
+#
+# 		CHANGE REPLICATION FILTER REPLICATE_REWRITE_DB = ((db1, db2));
+#
+# The statement just shown contains two sets of parentheses, one enclosing the pair
+# of database names, and the other enclosing the entire list.
+#
+# This is perhaps more easily seen in the following example, which creates two
+# rewrite-db rules, one rewriting database dbA to dbB, and one rewriting database dbC to dbD:
+#
+# 		CHANGE REPLICATION FILTER
+# 			REPLICATE_REWRITE_DB = ((dbA, dbB), (dbC, dbD));
+#
+# The CHANGE_REPLICATION_FILTER statement replaces replication filtering rules only
+# for the filter types and replication channels affected by the statement, and leaves
+# other rules and channels unchanged.
+#
+# If you want to unset all filters of a given type, set the filter's value to an
+# explicitly empty list, as shown in this example, which removes all existing
+# REPLICATE_DO_DB and REPLICATE_IGNORE_DB rules:
+#
+# 		CHANGE REPLICATION FILTER
+# 			REPLICATE_DO_DB = (), REPLICATE_IGNORE_DB = ();
+#
+# Setting a filter to empty in this way removes all existing rules, does not create
+# any new ones, and does not restore any rules set at mysqld startup using --replicate-*
+# options on the command line or in the configuration file.
+#
+# The RESET_SLAVE_ALL statement removes channel specific replication filters that were
+# set on channels deleted by the statement.
+#
+# When the deleted channel or channels are recreated, any global replication filters
+# specified for the slave are copied to them, and no channel specific replication
+# filters are applied.
+#
+# For more information, see SECTION 17.2.5, "HOW SERVERS EVALUATE REPLICATION FILTERING RULES"
+#
+# 13.4.2.3 MASTER_POS_WAIT() SYNTAX
+#
+# 		SELECT MASTER_POS_WAIT('master_log_file', master_log_pos [, timeout][, channel])
+#
+# This is actually a function, not a statement.
+#
+# It is used to ensure that the slave has read and executed events up to a given position
+# in the master's binary log.
+#
+# See SECTION 12.23, "MISCELLANEOUS FUNCTIONS", for a full description.
+#
+# 13.4.2.4 RESET SLAVE SYNTAX
+#
+# 		RESET SLAVE [ALL] [channel_option]
+#
+# 		channel_option:
+# 			FOR CHANNEL channel
+#
+# RESET_SLAVE makes the slave forget its replication channel position in the master's binary log.
+#
+# This statement is meant to be used for a clean start:
+#
+# 		it clears the master info and relay log info repositories, deletes all the relay
+# 		log files, and starts a new relay log file.
+#
+# It also resets to 0 the applicaiton delay specified with the MASTER_DELAY option to
+# CHANGE MASTER TO RESET_SLAVE does not change the values of gtid_executed or gtid_purged.
+#
+# NOTE:
+#
+# 		All relay log files are deleted, even if they have not been completely executed by the
+# 		slave SQL thread.
+#
+# 		(This is a condition likely to exist on a replication slave if you have issued
+# 		a STOP_SLAVE statement or if hte slave is highly loaded)
+#
+# To use RESET_SLAVE, the slave replication threads must be stopped, so on a running slave
+# use STOP_SLAVE before issuing RESET_SLAVE
+#
+# To use RESET_SLAVE on a Group Replication group member, the member status must be 
+# OFFLINE, meaning that the plugin is loaded but the member does not currently belong
+# to any group.
+#
+# A group member can be taken offline by using a STOP_GROUP_REPLICATION statement.
+#
+# The optional FOR CHANNEL channel clause enables you to name which replication channel
+# the statement applies to.
+#
+# Providing a FOR CHANNEL channel clause applies the RESET SLAVE statement to a specific
+# replication channel.
+#
+# Combining a FOR CHANNEL channel clause with the ALL option deletes the specified
+# channel.
+#
+# If no channel is named and no extra channels exist, the statement applies to the
+# default channel.
+#
+# Issuing a RESET_SLAVE_ALL statement without a FOR CHANNEL channel clause when
+# multiple replication channels exist deletes all replication channels and recreates
+# only the default channel.
+#
+# See SECTION 17.2.3, "REPLICATION CHANNELS" for more information.
+#
+# RESET_SLAVE does not change any replication connection parameters such as
+# master host, master port, master user or master password.
+#
+# 		) From MySQL 8.0.13, when master_info_repository=TABLE is set on the server
+# 			(which is the default from MySQL 8.0), replication connection parameters
+# 			are preserved in the crash-safe InnoDB table mysql.slave_master_info as
+# 			part of the RESET_SLAVE operation.
+#
+# 			They are also retained in memory.
+#
+# 			In the event of a server crash or deliberate restart after issuing
+# 			RESET_SLAVE but before issuing START_SLAVE, the replication connection
+# 			parameters are retrieved from the table and reused for the new connection.
+#
+# 		) When master_info_repository=FILE is set on the server, replication connection
+# 			parameters are only retained in memory.
+#
+# 			If the slave mysqld is restarted immediately after issuing RESET_SLAVE due
+# 			to a server crash or deliberate restart, the connection parameters are lost.
+#
+# 			In that case, you must issue a CHANGE_MASTER_TO statement after the server
+# 			start to respecify the connection parameters before issuing START_SLAVE
+#
+# If you want to reset the connection parameters intentionally, you need to use RESET_SLAVE_ALL,
+# which clears the connection parameters.
+#
+# In that case, you must issue a CHANGE_MASTER_TO statement after the server start to
+# specify the new connection parameters.
+#
+# RESET SLAVE ALL clears the IGNORE_SERVER_IDS list set by CHANGE_MASTER_TO
+#
+# RESET_SLAVE does not change any replication filter settings (such as --replicate-ignore-table)
+# for channels affected by the statement.
+#
+# However, RESET SLAVE ALL removes the replication filters that were set on the channels
+# deleted by the statement.
+#
+# When the deleted channel or channels are recreated, any global replication filters
+# specified for the slave are copied to them, and no channel specific replication filters
+# are applied.
+#
+# For more information, see SECTION 17.2.5.4, "REPLICATION CHANNEL BASED FILTERS"
+#
+# RESET SLAVE causes an implicit commit of an ongoing transaction.
+#
+# See SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT"
+#
+# If the slave SQL thread was in the middle of replicating temporary tables when it was
+# stopped, and RESET_SLAVE is issued, these replicated temporary tables are deleted on
+# the slave.
+#
+# RESET SLAVE does not reset the heartbeat period (Slave_heartbeat_period) or SSL_VERIFY_SERVER_CERT
+#
+# NOTE:
+#
+# 		When used on an NDB Cluster replication slave SQL node, RESET SLAVE clears the mysql.ndb_apply_status
+# 		table.
+#
+# 		You should keep in mind when using this statement that ndb_apply_status uses the NDB storage engine
+# 		and so is shared by all SQL nodes attached to the slave cluster.
+#
+# 		You can override this behavior by issuing SET GLOBAL @@ndb_clear_apply_status=OFF prior to executing
+# 		RESET SLAVE, which keeps the slave from purging the ndb_apply_status table in such cases.
+#
+# 13.4.2.5 SET GLOBAL SQL_SLAVE_SKIP_COUNTER_SYNTAX
+#
+# 		SET GLOBAL sql_slave_skip_counter = N
+#
+# This statement skips the next N events from the master.
+#
+# This is useful for recovering from replication stops caused by a statement.
+#
+# When using this statement, it is important to understand that the binary log is actually
+# organized as a sequence of groups known as event groups.
+#
+# Each event group consists of a sequence of events.
+#
+# 		) For transactional tables, an event group corresponds to a transaction
+#
+# 		) For nontransactional tables, an event group corresponds to a single SQL statement
+#
+# NOTE:
+#
+# 		A single transaction can contain changes to both transactional and nontransactional tables
+#
+# When you use SET_GLOBAL_sql_slave_skip_counter to skip events and the result is in the middle
+# of a group, the slave continues to skip events until it reaches the end of the group.
+#
+# Execution then starts with the next event group
+#
+# 13.4.2.6 START SLAVE SYNTAX
+#
+# 		START SLAVE [thread_types] [until_option] [connection_options] [channel_option]
+#
+# 		thread_types:
+# 			[thread_type [, thread_type] ---]
+#
+# 		thread_type:
+# 			IO_THREAD | SQL_THREAD
+#
+# 		until_option:
+# 			UNTIL { 	{SQL_BEFORE_GTIDS | SQL_AFTER_GTIDS} = gtid_set
+# 					|  MASTER_LOG_FILE = 'log_name', MASTER_LOG_POS = log_pos
+# 					|  RELAY_LOG_FILE = 'log_name', RELAY_LOG_POS = log_pos
+# 					|  SQL_AFTER_MTS_GAPS }
+#
+# 		connection_options:
+# 			[USER='user_name'] [PASSWORD='user_pass'] [DEFAULT_AUTH='plugin_name'] [PLUGIN_DIR='plugin_dir']
+#
+# 		channel_option:
+# 			FOR CHANNEL channel
+#
+# 		gtid_set:
+# 			uuid_set [, uuid_set] ---
+# 			| ''
+#
+# 		uuid_set:
+# 			uuid:interval[:interval]---
+#
+# 		uuid:
+# 			hhhhhhhh-hhhh-hhhh-hhhh-hhhhhhhh
+#
+# 		h:
+# 			[0-9,A-F]
+#
+# 		interval:
+# 			n[-n]
+# 		
+# 			(n >= 1)
+#
+# START_SLAVE with no thread_type options starts both of the slave threads.
+#
+# The I/O thread reads events from the master server and stores them in the relay
+# log.
+#
+# The SQL thread reads events from the relay log and executes them.
+#
+# START_SLAVE requires the REPLICATION_SLAVE_ADMIN or SUPER privilege.
+#
+# If START_SLAVE succeeds in starting the slave threads, it returns without any
+# error.
+#
+# However, even in that case, it might be that the slave threads start and then
+# later stop (for example, because they do not manage to connect to the master or read its
+# binary log, or some other problem)
+#
+# START_SLAVE does not warn you about this.
+#
+# You must check the slave's error log for error messages generated by the slave threads,
+# or check that they are running satisfactorally with SHOW_SLAVE_STATUS
+#
+# START SLAVE causes an implicit commit of an ongoing transaction.
+#
+# See SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT"
+#
+# gtid_next must be set to AUTOMATIC before issuing this statement.
+#
+# The optional FOR CHANNEL channel clause enables you to name which replication
+# channel the statement applies to.
+#
+# Providing a FOR CHANNEL channel clause applies the START SLAVE statement to a 
+# specific replication channel.
+#
+# If no clause is named and no extra channels exist, the statement applies to the
+# default channel.
+#
+# If a START SLAVE statement does not have a channel defined when using multiple
+# channels, this statement starts the specified threads for all channels.
+#
+# This statement is disallowed for the group_replication_recovery channel
+#
+# See SECTION 17.2.3, "REPLICATION CHANNELS" for more information
+#
+# MySQL supports pluggable user-password authentication with START SLAVE
+# with the USER, PASSWORD, DEFAULT_AUTH and PLUGIN_DIR options, as described
+# in the following list:
+#
+# 		) USER: User name. Cannot be set to an empty or null string, or left unset if PASSWORD is used
+#
+# 		) PASSWORD: Password
+#
+# 		) DEFAULT_AUTH: Name of plugin; default is MySQL native authentication
+#
+# 		) PLUGIN_DIR: Location of plugin
+#
+# You cannot use the SQL_THREAD option when specifying any of USER, PASSWORD,
+# DEFAULT_AUTH or PLUGIN_DIR, unless the IO_THREAD option is also provided.
+#
+# See SECTION 6.3.10, "PLUGGABLE AUTHENTICATION" for more information
+#
+# If an insecure connection is used with any of these options, the server issues the warning:
+#
+# 		SENDING PASSWORDS IN PLAIN TEXT WITHOUT SSL/TLS IS EXTREMELY INSECURE
+#
+# START_SLAVE_---_UNTIL supports two additional options for use with global transaction
+# identifiers (GTIDs) (see SECTION 17.1.3, "REPLICATION WITH GLOBAL TRANSACTION IDENTIFIERS")
+#
+# Each of these takes a set of one or more global transaction identifiers gtid_set
+# as an argument (see GTID Sets, for more information)
+#
+# When no thread_type is specified, START SLAVE UNTIL SQL_BEFORE_GTIDS causes the slave
+# SQL thread to process transactions until it has reached the first transaction whose
+# GTID is listed in the gtid_set.
+#
+# START SLAVE UNTIL SQL_AFTER_GTIDS causes the slave threads to process all transactions
+# until the last transaction in the gtid_set has been processed by both threads.
+#
+# In other words, START SLAVE UNTIL SQL_BEFORE_GTIDS causes the slave SQL thread to process
+# all transactions occurring before the first GTID in the gtid_set is reached, and 
+# START SLAVE UNTIL SQL_AFTER_GTIDS causes the slave threads to handle all transactions,
+# including those whose GTIDs are found in gtid_set, until each has encountered a transaction
+# whose GTID is not part of the set.
+#
+# SQL_BEFORE_GTIDS and SQL_AFTER_GTIDS each support the SQL_THREAD and IO_THREAD options,
+# although using IO_THREAD with them currently has no effect.
+#
+# For example, START SLAVE SQL THREAD UNTIL SQL_BEFORE_GTIDS = <value> causes the salve
+# SQL thread to process all transactions originating from the master whose server_uuid is
+# <value> until it encounters the transaction having <sequence number>.
+#
+# It then stops without processing this transaction.
+#
+# In other words, all transactions up to and including the transaction with sequence
+# number 10 are processed.
+#
+# Executing START SLAVE SQL_THREAD UNTIL SQL_AFTER_GTIDS = <Value>:<range>
+#
+# on the other hand, would cause the salve SQL thread to obtain all transactions just
+# mentioned from the master, including all of the transactions having the sequence
+# numbers of the range - and then stop without processing any additional transactions;
+#
+# that is, the transaction having sequence number equal to the last one in the range,
+# would be the last transaction fetched by the slave SQL thread.
+#
+# When using a multithreaded slave with slave_preserve_commit_order=0 set, there is a 
+# chance of gaps in the sequence of transactions that have been executed from the
+# relay log in the following cases:
+#
+# 		) Killing the coordinator thread
+#
+# 		) After an error occurs in the applier threads
+#
+# 		) mysqld shuts down unexpectedly
+#
+# Use the START_SLAVE_UNTIL_SQL_AFTER_MTS_GAPS statement to cause a multithreaded
+# slave's worker threads to only run until no more gaps are found in the relay log,
+# and then to stop.
+#
+# This statement can take an SQL_THREAD option, but the effects of the statement
+# remain unchanged.
+#
+# It has no effect on the slave I/O thread (and cannot be used with the IO_THREAD option)
+#
+# Issuing START_SLAVE on a multithreaded slave with gaps in the sequence of transactions
+# executed from the relay log generates a warning.
+#
+# In such a situation, the solution is to use START_SLAVE_UNTIL_SQL_AFTER_MTS_GAPS,
+# then issue RESET_SLAVE to remove any remaining relay logs.
+#
+# See SECTION 17.4.1.34, "REPLICATION AND TRANSACTION INCONSISTENCIES" for more information.
+#
+# To change a failed multithreaded slave to single-threaded mode, you can issue the following
+# series of statements, in the order shown:
+#
+# 		START SLAVE UNTIL SQL_AFTER_MTS_GAPS;
+#
+# 		SET @@GLOBAL.slave_parallel_workers = 0;
+#
+# 		START SLAVE SQL_THREAD;
+#
+# NOTE:
+#
+# 		It is possible to view the entire text of a running START SLAVE --- statement,
+# 		including any USER or PASSWORD values used, in the output of SHOW PROCESSLIST.
+#
+# 		This is also true for the text of a running CHANGE_MASTER_TO statement, including
+# 		any values it employs for MASTER_USER or MASTER_PASSWORD
+#
+# START_SLAVE sends an acknowledgement to the user after both the I/O thread and the SQL
+# thread have started.
+#
+# However, the I/O thread may not yet have connected.
+#
+# For this reason, a successful START_SLAVE causes SHOW_SLAVE_STATUS to show Slave_SQL_Running=Yes,
+# but it does not guarantee that Slave_IO_Running=Yes (because Slave_IO_Running=Yes only if the
+# I/O thread is running and connected)
+#
+# For more information, see SECTION 13.7.6.34, "SHOW SLAVE STATUS SYNTAX", and SECTION 17.1.7.1, "CHECKING REPLICATION STATUS"
+#
+# You can add IO_THREAD and SQL_THREAD options to the statement to name which of the threads to start.
+#
+# The SQL_THREAD option is disallowed when specifying any of USER, PASSWORD, DEFAULT_AUTH or
+# PLUGIN_DIR, unless the IO_THREAD option is also provided.
+#
+# An UNTIL clause (until_option, in the preceding grammar) may be added to specify that the slave
+# should start and run until the SQL thread reaches a given point in the master binary log,
+# specified by the MASTER_LOG_POS and MASTER_LOG_FILE options, or a given point in the slave
+# relay log, indicated with the RELAY_LOG_POS and RELAY_LOG_FILE options.
+#
+# When the SQL thread reaches the point specified, it stops.
+#
+# If the SQL_THREAD option is specified in the statement, it starts only the SQL thread
+#
+# Otherwise, it starts both slave threads.
+#
+# If the SQL thread is running, the UNTIL clause is ignored and a warning is issued.
+#
+# You cannot use an UNTIL clause with the IO_THREAD option
+#
+# It is also possible with START SLAVE UNTIL to specify a stop point relative to a given GTID
+# or set of GTIDs using one of the options SQL_BEFORE_GTIDS or SQL_AFTER_GTIDS, as explained
+# previously here.
+#
+# When using one of these options, you can specify SQL_THREAD, IO_THREAD - both of these -
+# or neither of them.
+#
+# If you specify only SQL_THREAD, then only the slave SQL thread is affected by the statement;
+#
+# if only IO_THREAD is used, then only the slave I/O is affected
+#
+# If both SQL_THREAD and IO_THREAD are used, or if neither of them is used, then both the
+# SQL and I/O threads are affected by the statement.
+#
+# For an UNTIL clause, you must specify any of the following:
+#
+# 		) Both a log file name and a position in that file
+#
+# 		) Either of SQL_BEFORE_GTIDS or SQL_AFTER_GTIDS
+#
+# 		) SQL_AFTER_MTS_GAPS
+#
+# Do not mix master and relay log options. Do not mix log file options with GTID options.
+#
+# The UNTIL clause is not supported for multithreaded slaves except when also using
+# SQL_AFTER_MTS_GAPS
+#
+# If UNTIL is used on a multithreaded slave without SQL_AFTER_MTS_GAPS, the slave operates
+# in single-threaded (sequential) mode for replication until the point specified by
+# the UNTIL clause is reached.
+#
+# Any UNTIL condition is reset by a subsequent STOP_SLAVE statement, a START_SLAVE statement
+# that includes no UNTIL clause, or a server restart.
+#
+# When specifying a log file and position, you can use the IO_THREAD option with START SLAVE --- UNTIL
+# even though only the SQL thread is affected by this statement.
+#
+# The IO_THREAD option is ignored in such cases.
+#
+# The preceding restriction does not apply when using one of the GTID options
+# (SQL_BEFORE_GTIDS and SQL_AFTER_GTIDS); the GTID options support both SQL_THREAD
+# and IO_THREAD, as explained previously in this section.
+#
+# The UNTIL clause can be useful for debugging replication, or to cause replication
+# to proceed until just before the point where you want to avoid having the slave
+# replicate an event.
+#
+# For example, if an unwise DROP_TABLE statement was executed on the master, you acn
+# use UNTIL to tell the slave to execute up to that point but no farther.
+#
+# To find what the event is, use mysqlbinlog with the master binary log or slave relay
+# log, or by using a SHOW_BINLOG_EVENTS statement.
+#
+# https://dev.mysql.com/doc/refman/8.0/en/start-slave.html 
+# 		
