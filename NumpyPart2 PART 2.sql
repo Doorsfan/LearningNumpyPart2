@@ -22311,5 +22311,2022 @@
 # To find what the event is, use mysqlbinlog with the master binary log or slave relay
 # log, or by using a SHOW_BINLOG_EVENTS statement.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/start-slave.html 
+# If you are using UNTIL to have the slave process replicated queries in sections,
+# it is recommended that you start the slave with the --skip-slave-start option to prevent
+# the SQL thread from running when the slave server starts.
+#
+# It is probably best to use this option in an option file rather than on the
+# command line, so that an unexpected server restart does not cause it to be forgotten.
+#
+# The SHOW_SLAVE_STATUS statement includes output fields that display the current values
+# of the UNTIL condition.
+#
+# In very old versions of MySQL (before 4.0.5), this statement was called SLAVE START.
+# That syntax now produces an error.
+#
+# 13.4.2.7 STOP SLAVE SYNTAX
+#
+# 		STOP SLAVE [thread_types]
+#
+# 		thread_types:
+# 			[thread_type [, thread_type] ---]
+#
+# 		thread_type: IO_THREAD | SQL_THREAD
+#
+# 		channel_option:
+# 			FOR CHANNEL channel
+#
+# Stops the slave threads.
+#
+# STOP_SLAVE requires the REPLICATION_SLAVE_ADMIN or SUPER privilege.
+#
+# Recommended best practice is to execute STOP SLAVE on the slave before
+# stopping the slave server (see SECTION 5.1.17, "THE SERVER SHUTDOWN PROCESS", for more information)
+#
+# When using the row-based logging format:
+#
+# 	You should execute STOP SLAVE or STOP SLAVE SQL_THREAD on the slave prior to shutting down
+# 	the slave server if you are replicating any tables that use a nontransactional storage engine
+# 	(see the Note later in this section)
+#
+# Like START_SLAVE, this statement may be used with the IO_THREAD and SQL_THREAD options to
+# name the thread or threads to be stopped.
+#
+# STOP SLAVE causes an implicit commit of an ongoing transaction.
+#
+# See SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT"
+#
+# gtid_next must be set to AUTOMATIC before issuing this statement.
+#
+# You can control how long STOP SLAVE waits before timing out by setting the rpl_stop_slave_timeout
+# system variable.
+#
+# This can be used to avoid deadlocks between STOP SLAVE and other slave SQL statements using
+# different client connections to the slave.
+#
+# When the timeout value is reached, the issuing client returns an error message and
+# stops waiting, but the STOP SLAVE intstruction remains in effect.
+#
+# Once the slave threads are no longer busy, the STOP SLAVE statement is executed and 
+# the slave stops.
+#
+# Some CHANGE MASTER TO statements are allowed while the slave is running, depending on
+# the states of the slave SQL and I/O threads.
+#
+# However, using STOP SLAVE prior to executing CHANGE MASTER TO in such cases is still
+# supported.
+#
+# See SECTION 13.4.2.1,"CHANGE MASTER TO SYNTAX", and SECTION 17.3.8, "SWITCHING MASTERS DURING FAILOVER",
+# for more information.
+#
+# The optional FOR CHANNEL channel clause enables you to name which replication channel the statement
+# applies to.
+#
+# Providing a FOR CHANNEL channel clause applies the STOP SLAVE statement to a specific replication
+# channel.
+#
+# If no channel is named and no extra channels exist, the statement applies to the default channel.
+#
+# If a STOP SLAVE statement does not name a channel when using multiple channels, this statement stops the
+# specified threads for all channels..
+#
+# This statement cannot be used with the group_replication_recovery channel.
+#
+# See SECTION 17.2.3, "REPLICATION CHANNELS" for more information.
+#
+# When using statement-based replication:
+#
+# 		changing the master while it has open temporary tables is potentially unsafe.
+#
+# 		This is one of the reasons why statement-based replication of temporary tables
+# 		is not recommended.
+#
+# 		You can find out whether there are any temporary tables on the slave by checking
+# 		the value of Slave_open_temp_tables; when using statement-based replication, this value
+# 		should be 0 before executing CHANGE MASTER TO.
+#
+# If there are any temporary tables open on the slave, issuing a CHANGE MASTER TO statement
+# after issuing a STOP SLAVE causes an ER_WARN_OPEN_TEMP_TABLES_MUST_BE_ZERO warning.
+#
+# When using a multithreaded slave (slave_parallel_workers is a nonzero value), any gaps in the
+# sequence of transactions executed from the relay log are closed as part of stopping the
+# worker threads.
+#
+# If the slave is stopped unexpectedly (for example due to an error in a worker thread,
+# or another thread issuing KILL), while a STOP_SLAVE statement is executing, the sequence
+# of executed transactions from the relay log may become inconsistent.
+#
+# See SECTION 17.4.1.34, "REPLICATION AND TRANSACTION INCONSISTENCIES" for more information.
+#
+# If the current replication event group has modified one or more nontransactional tables,
+# STOP SLAVE waits for up to 60 seconds for the event grop to complete, unless you issue
+# a KILL_QUERY or KILL_CONNECTION statement for the slave SQL thread.
+#
+# If the event group remains incomplete after the timeout, an error message is logged.
+#
+# 13.4.3 SQL STATEMENTS FOR CONTROLLING GROUP REPLICATION
+#
+# 13.4.3.1 START GROUP_REPLICATION SYNTAX
+# 13.4.3.2 STOP GROUP_REPLICATION SYNTAX
+#
+# 13.4.3.3 FUNCTION WHICH CONFIGURES GROUP REPLICATION PRIMARY
+# 13.4.3.4 FUNCTIONS WHICH CONFIGURE THE GROUP REPLICATION MODE
+#
+# 13.4.3.5 FUNCTIONS TO INSPECT AND CONFIGURE THE MAXIMUM CONSENSUS INSTANCES OF A GROUP
+#
+# This section provides information about the statements used for controlling group replication.
+#
+# 13.4.3.1 START GROUP_REPLICATION SYNTAX
+#
+# 		START GROUP_REPLICATION
+#
+# Starts group replication.
+#
+# This statement requires the GROUP_REPLICATION_ADMIN or SUPER privilege.
+#
+# If super_read_only=ON and the member should join as a primary, super_read_only
+# is set to OFF once Group Replication successfully starts.
+#
+# 13.4.3.2 STOP GROUP_REPLICATION SYNTAX
+#
+# 		STOP GROUP_REPLICATION
+#
+# Stops Group Replication.
+#
+# This statement requires the GROUP_REPLICATION_ADMIN or SUPER privilege.
+#
+# As soon as you issue STOP_GROUP_REPLICATION the member is set to super_read_only=ON,
+# which ensures that no writes can be made to the member while Group Replication stops.
+#
+# Any other replication channels running on the member are also stopped.
+#
+# 		WARNING:
+#
+# 			Use this statement with extreme caution because it removes the server
+# 			instance from the group, meaning it is no longer protected by Group
+# 			Replication's consistency guarantee mechanisms.
+#
+# 			To be completely safe, ensure that your applications can no longer
+# 			connect to the instance before issuing this statement to avoid
+# 			any chance of stale reads.
+#
+# 13.4.3.3 FUNCTION WHICH CONFIGURES GROUP REPLICATION PRIMARY
+#
+# The following funciton enables you to configure which member of a single-primary
+# replication group is the primary.
+#
+# 		) group_replication_set_as_primary()
+#
+# 			Appoints a specific member of the group as the new primary,
+# 			overriding any election process.
+#
+# 			Pass in member_uuid which is the server_uuid of the member that you
+# 			want to become the new primary.
+#
+# 			Must be issued on a member of a replication group running in single-primary
+# 			mode.
+#
+# 			Syntax:
+#
+# 				STRING group_replication_set_as_primary(member_uuid)
+#
+# 			Return value:
+#
+# 			A string containing the result of the operation, for example whether it was 
+# 			successful or not.
+#
+# 			Example:
+#
+# 				SELECT group_replication_set_as_primary(member_uuid)
+#
+# 			For more information, see SECTION 18.4.2.1, "CHANGING A GROUP'S PRIMARY MEMBER"
+#
+# 13.4.3.4 FUNCTIONS WHICH CONFIGURE THE GROUP REPLICATION MODE
+#
+# The following functions enable you to control the mode which a replication group is running in,
+# either single-primary or multi-primary mode.
+#
+# 		) group_replication_switch_to_single_primary_mode()
+#
+# 			Changes a group running in multi-primary mode to single-primary mode, without the need to stop
+# 			Group Replication.
+#
+# 			Must be issued on a member of a replication group running in multi-primary mode.
+#
+# 			Syntax:
+#
+# 				STRING group_replication_switch_to_single_primary_mode([str])
+#
+# 			Arguments:
+#
+# 				str: A string containing the UUID of a member of the group which should become the
+# 						new single primary.
+#
+# 						Other members of the group become secondaries.
+#
+# 			Return value:
+#
+# 			A string containing the result of the operation, for example whether it was successful or not.
+#
+# 			Example:
+#
+# 				SELECT group_replication_switch_to_single_primary_mode(member_uuid);
+#
+# 			For more information, see SECTION 18.4.2.2, "CHANGING A GROUP'S MODE"
+#
+# 		) group_replication_switch_to_multi_primary_mode()
+#
+# 			Changes a group running in single-primary mode to multi-primary mode.
+#
+# 			Must be issued on a member of a replication group running in single-primary mode.
+#
+# 			Syntax:
+#
+# 				STRING group_replication_switch_to_multi_primary_mode()
+#
+# 			This function has no parameters
+#
+# 			Return value:
+#
+# 			A string containing the result of the operation, for example whether it was successful or not.
+#
+# 			Example:
+#
+# 				SELECT group_replication_switch_to_multi_primary_mode()
+#
+# 			All members which belong to the group becomes primaries.
+#
+# 			For more information, see SECTION 18.4.2.2, "CHANGING A GROUP'S MODE"
+#
+# 13.4.3.5 FUNCTIONS TO INSPECT AND CONFIGURE THE MAXIMUM CONSENSUS INSTANCES OF A GROUP
+#
+# The following functions enable you to inspect and configure the maximum number of consensus
+# instances that a group can execute in parallel.
+#
+# 		) group_replication_get_write_concurrency()
+#
+# 			Check the maximum number of consensus instances that a group can execute in parallel.
+#
+# 			Syntax:
+#
+# 				STRING group_replication_get_write_concurrency()
+#
+# 			This function has no parameters.
+#
+# 			Return value:
+#
+# 			Any resulting error as a string
+#
+# 			Example:
+#
+# 				SELECT group_replication_get_write_concurrency()
+#
+# 			For more information, see SECTION 18.4.2.3, "USING GROUP REPLICATION GROUP WRITE CONSENSUS"
+#
+# 		) group_replication_set_write_concurrency()
+#
+# 			Configures the maximum number of consensus instances that a group can execute in parallel.
+#
+# 			Syntax:
+#
+# 				STRING group_replication_set_write_concurrency(instances)
+#
+# 			Arguments:
+#
+# 				) members: Sets the maximum number of consensus instances that a group can execute
+# 								in parallel.
+#
+# 								Default value is 10, valid values are integers in the range of 10 to 200
+#
+# 			Return value:
+#
+# 			Any resulting error as a string.
+#
+# 			Example:
+#
+# 				SELECT group_replication_set_write_concurrency(instances);
+#
+# 			For more information, see SECTION 18.4.2.3, "USING GROUP REPLICATION GROUP WRITE CONSENSUS"
+#
+# 13.5 PREPARED SQL STATEMENT SYNTAX
+#
+# 13.5.1 PREPARE SYNTAX
+# 13.5.2 EXECUTE SYNTAX
+# 13.5.3 DEALLOCATE PREPARE SYNTAX
+#
+# MySQL 8.0 provides support for server-side prepared statements.
+#
+# This support takes advantage of the efficient client/server binary protocol.
+#
+# Using prepared statements with placeholders for parameter values has the following benefits:
+#
+# 		) Less overhead for parsing the statement each time it is executed.
+#
+# 			Typically, database applications process large volumes of almost-identical
+# 			statements, with only changes to literal or variables values in clauses such as
+# 			WHERE for queries and deletes, SET for updates, and VALUES for inserts.
+#
+# 		) Protection against SQL injection attacks. The parameter values can contain unescaped
+# 			SQL quote and delimiter characters.
+#
+# PREPARED STATEMENTS IN APPLICATION PROGRAMS
+#
+# You can use server-side prepared statements through client programming interfaces, including
+# the MySQL C API CLIENT LIBRARY or MySQL CONNECTOR/C for C programs, MySQL Connector/J for
+# java programs, and MySQL Connector/NET for programs using .NET tech.
+#
+# For example, the C API provides a set of function calls that make up its prepared statement
+# API.
+#
+# See SECTION 28.7.8, "C API PREPARED STATEMENTS"
+#
+# Other language interfaces can provide support for prepared statements that use the binary
+# protocol by linking in the C client library, one example being the mysqli extension, available
+# in PHP 5.0 and later.
+#
+# PREPARED STATEMENTS IN SQL SCRIPTS
+#
+# An alternative SQL interface to prepared statements is available.
+#
+# This interface is not as efficient as using the binary protocol through a prepared
+# statement API, but requires no programming because it is available directly at the SQL level:
+#
+# 		) You can use it when no programming interface is available to you
+#
+# 		) You can use it from any program that can send SQL statements to the server to be executed,
+# 			such as the mysql client program.
+#
+# 		) You can use it even if the client is using an old version of the client library, as long
+# 			as you connect to a server running MySQL 4.1 or higher
+#
+# SQL syntax for prepared statements is intended to be used for situations such as these:
+#
+# 		) To test how prepared statements work in your application before coding it
+#
+# 		) To use prepared statements when you do not have access to a programming API that supports them
+#
+# 		) To interactively troubleshoot application issues with prepared statements.
+#
+# 		) To create a test case that reproduces a problem with prepared statements, so that you can file a bug report
+#
+# PREPARE, EXECUTE, AND DEALLOCATE PREPARE STATEMENTS
+#
+# SQL syntax for prepared statements is based on three SQL statements:
+#
+# 		) PREPARE prepares a statement for execution (see SECTION 13.5.1, "PREPARE SYNTAX")
+#
+# 		) EXECUTE executes a prepared statement (see SECTION 13.5.2, "EXECUTE SYNTAX")
+#
+# 		) DEALLOCATE_PREPARE releases a prepared statement (see SECTION 13.5.3, "DEALLOCATE PREPARE SYNTAX")
+#
+# The following examples show two equivalent ways of preparing a statement that computes the 
+# hypotenuse of a triangle given the lengths of the two sides.
+#
+# The first example shows how to create a prepared statement by using a string literal to supply
+# the text of the statement:
+#
+# 		PREPARE stmt1 FROM 'SELECT SQRT(POW(?,2) + POW(?,2)) AS hypotenuse';
+# 		SET @a = 3;
+# 		SET @b = 4;
+# 		EXECUTE stmt1 USING @a, @b;
+# 		+---------------------+
+# 		| hypotenuse 		    |
+# 		+---------------------+
+# 		| 		 5 				 |
+# 		+---------------------+
+# 		DEALLOCATE PREPARE stmt1;
+#
+# The second example is similar, but supplies the text of the statement as a user variable:
+#
+# 		SET @s = 'SELECT SQRT(POW(?,2) + POW(?,2)) AS hypotenuse';
+# 		PREPARE stmt2 FFROM @s;
+# 		SET @a = 6;
+# 		SET @b = 8;
+# 		EXECUTE stmt2 USING @a, @b;
+# 		+------------------+
+# 		| hypotenuse 		 |
+# 		+------------------+
+# 		| 		10 			 |
+# 		+------------------+
+# 		DEALLOCATE PREPARE stmt2;
+#
+# Here is an additional example that demonstrates how to choose the table on which
+# to perform a query at runtime, by storing the name of the table as a user variable:
+#
+# 		USE test;
+# 		CREATE TABLE t1 (a INT NOT NULL);
+# 		INSERT INTO t1 VALUES (4), (8), (11), (32), (80);
+#
+# 		SET @table = 't1';
+# 		SET @s = CONCAT('SELECT * FROM ', @table);
+# 
+# 		PREPARE stmt3 FROM @s;
+# 		EXECUTE stmt3;
+# 		+------+
+# 		| a 	 |
+# 		+------+
+# 		| 4 	 |
+# 		| 8 	 |
+# 		| 11   |
+# 		| 32 	 |
+# 		| 80   |
+# 		+------+
+#
+# 		DEALLOCATE PREPARE stmt3;
+#
+# A prepared statement is specific to the session in which it was created.
+#
+# If you terminate a session without deallocating a previously prepared statement,
+# the server deallocates it automatically.
+#
+# A prepared statement is also global to the session. If you create a prepared statement
+# within a stored routine, it is not deallocated when the stored routine ends.
+#
+# To guard against too many prepared statements being created simultaneously, set the
+# max_prepared_stmt_count system variable.
+#
+# To prevent the use of prepared statements, set the value to 0.
+#
+# SQL SYNTAX ALLOWED IN PREPARED STATEMENTS
+#
+# The following SQL statements can be used as prepared statements:
+#
+# 		ALTER TABLE
+# 		ALTER USER
+# 		ANALYZE TABLE
+#
+# 		CACHE INDEX
+# 		CALL
+# 		CHANGE MASTER
+#
+# 		CHECKSUM {TABLE | TABLES}
+# 		COMMIT
+# 		{CREATE | DROP} INDEX
+#
+# 		{CREATE | RENAME | DROP} DATABASE
+# 		{CREATE | DROP} TABLE
+# 		{CREATE | RENAME | DROP} USER
+#
+# 		{CREATE | DROP} VIEW
+# 		DELETE
+# 		DO
+#
+# 		FLUSH {TABLE | TABLES | TABLES WITH READ LOCK | HOSTS | PRIVILEGES
+# 			| LOGS | STATUS | MASTER | SLAVE | USER_RESOURCES}
+# 		GRANT
+# 		INSERT
+#
+# 		INSTALL PLUGIN
+# 		KILL
+# 		LOAD INDEX INTO CACHE
+#
+# 		OPTIMIZE TABLE
+# 		RENAME TABLE
+# 		REPAIR TABLE
+#
+#  	REPLACE
+# 		RESET {MASTER | SLAVE}
+# 		REVOKE
+#
+# 		SELECT
+# 		SET
+# 		SHOW {WARNINGS | ERRORS}
+#
+# 		SHOW BINLOG EVENTS
+# 		SHOW CREATE {PROCEDURE | FUNCTION | EVENT | TABLE | VIEW}
+# 		SHOW {MASTER | BINARY} LOGS
+# 
+# 		SHOW {MASTER | SLAVE} STATUS
+# 		SLAVE {START | STOP}
+# 		TRUNCATE TABLE
+#
+# 		UNINSTALL PLUGIN
+# 		UPDATE
+#
+# For compliance with the SQL standard, which states that diagnostics statements are not preparable,
+# MySQL does not support the following as prepared statements:
+#
+# 		) SHOW WARNINGS, SHOW COUNT(*) WARNINGS
+#
+# 		) SHOW ERRORS, SHOW COUNT(*) ERRORS
+#
+# 		) Statements containing any reference to the warning_count or error_count system variable.
+#
+# Other statements are not supported in MySQL 8.0
+#
+# Generally, statements not permitted in SQL preapred statements are also not permitted in stored
+# programs.
+#
+# Exceptions are noted in SECTION C.1, "RESTRICTIONS ON STORED PROGRAMS"
+#
+# Metadata changes to tables or views referred to by prepared statements are detected
+# and cause automatic repreparation of the statement when it is next executed.
+#
+# For more information, see SECTION 8.10.3, "CACHING OF PREPARED STATEMENTS AND STORED PROGRAMS"
+#
+# Placeholders can be used for the arguments of the LIMIT clause when using prepared statements.
+#
+# See SECTION 13.2.10, "SELECT SYNTAX"
+#
+# In prepared CALL statements used with PREPARE and EXECUTE, placeholder support for OUT and
+# INOUT parameters is available beginning with MySQL 8.0
+#
+# See SECTION 13.2.1, "CALL SYNTAX", for an example and a workaround for earlier versions.
+#
+# Placeholders can be used for IN parameters regardless of version.
+#
+# SQL syntax for prepared statements cannot be used in nested fashion. That is, a statement
+# passed to PREPARE cannot itself be a PREPARE, EXECUTE or DEALLOCATE_PREPARE statement.
+#
+# SQL syntax for prepared statements is distinct from using prepared statement API calls.
+#
+# For example, you cannot use the mysql_stmt_prepare() C API function to prepare a
+# PREPARE, EXECUTE or DEALLOCATE_PREPARE statement.
+#
+# SQL syntax for prepared statements can be used within stored procedures, but not
+# in stored functions or triggers.
+#
+# However, a cursor cannot be used for a dynamic statement that is prepared and
+# executed with PREPARE and EXECUTE.
+#
+# The statement for a cursor is checked at cursor creation time, so the statement
+# cannot be dynamic.
+#
+# SQL syntax for prepared statements does not support multi-statements (that is,
+# multiple statements within a single string separated by ; characters)
+#
+# To write C programs that use the CALL SQL statement to execute stored procedures
+# that contain prepared statements, the CLIENT_MULTI_RESULTS flag must be enabled.
+#
+# This is because each CALL returns a result to indicate the call status, in addition
+# to any result sets that might be returned by statements executed within the procedure.
+#
+# CLIENT_MULTI_RESULTS can be enabled when you call mysql_real_connect(), either
+# explicitly by passing the CLIENT_MULTI_RESULTS flag itself, or implicitly by
+# passing CLIENT_MULTI_STATEMENTS (which also enables CLIENT_MULTI_RESULTS)
+#
+# For additional information, see SECTION 13.2.1, "CALL SYNTAX"
+#
+# 13.5.1 PREPARE SYNTAX
+#
+# 		PREPARE stmt_name FROM preparable_stmt
+#
+# The PREPARE statement prepares a SQL statement and assigns it a name, stmt_name, by which
+# to refer to the statement later.
+#
+# The prepared statement is executed with EXECUTE and released with DEALLOCATE_PREPARE
+#
+# For examples, see SECTION 13.5, "PREPARED SQL STATEMENT SYNTAX"
+#
+# Statement names are not case-sensitive. preparable_stmt is either a string literal or
+# a user variable that contains the text of the SQL statement.
+#
+# The text must represent a single statement, not multiple statements.
+#
+# Within the statement, ? characters can be used as parameter markers to indicate
+# where data values are to be bound to the query later when you execute it.
+#
+# The ? characters should not be enclosed within quotation marks, even if you
+# intend to bind them to string values.
+#
+# Parameter markers can be used only where data values should appear, not for
+# SQL keywords, identifiers, and so forth.
+#
+# If a prepared statement with the given name already exists. It is deallocated implicitly
+# before the new statement is prepared.
+#
+# This means that if the new statement contains an error and cannot be prepared,
+# an error is returned and no statement with the given name exists.
+#
+# The scope of a prepared statement is the session within which it is created,
+# which as several implications:
+#
+# 		) A prepared statement created in one session is not available to other sessions
+#
+# 		) When a session ends, whether normally or abnormally, its prepared statements
+# 			no longer exist.
+#
+# 			If auto-reconnect is enabled, the client is not notified that the connection
+# 			was lost.
+#
+# 			For this reason, clients may wish to disable auto-reconnect
+#
+# 			See SECTION 28.7.24, "C API AUTOMATIC RECONNECTION CONTROL"
+#
+# 		) A prepared statement created within a stored program continues to exist
+# 			after the program finishes executing and can be executed outside the 
+# 			program later.
+#
+# 		) A statement prepared in stored program context cannot refer to stored procedure
+# 			or function parameters or local variables because they go out of scope when the
+# 			program ends and would be unavailable were the statement to be executed later outside
+# 			the program.
+#
+# 			As a workaround, refer instead to user-defined variables, which also have
+# 			session scope;
+#
+# 			See SECTION 9.4, "USER-DEFINED VARIABLES"
+#
+# 13.5.2 EXECUTE SYNTAX
+#
+# 		EXECUTE stmt_name
+# 			[USING @var_name [, @var_name] ---]
+#
+# After preparing a statement with PREPARE, you execute it with an EXECUTE statement
+# that refers to the prepared statement name.
+#
+# If the prepared statement contains any parameter markers, you must supply a USING
+# clause that lists user variables containing the values to be bound to the parameters.
+#
+# Parameter values can be supplied only by user variables, and the USING clause must
+# name exactly as many variables as the number of parameter markers in the statement.
+#
+# You can execute a given prepared statement multiple times, passing different variables
+# to it or setting the variables to different values before each execution.
+#
+# For examples, see SECTION 13.5, "PREPARED SQL STATEMENT SYNTAX"
+#
+# 13.5.3 DEALLOCATE PREPARE SYNTAX
+#
+# 		{DEALLOCATE | DROP} PREPARE stmt_name
+#
+# To deallocate a prepared statement produced with PREPARE, use a DEALLOCATE_PREPARE
+# statement that refers to the prepared statement name.
+#
+# Attempting to execute a prepared statement after deallocating it results in an
+# error.
+#
+# If too many prepared statements are created and not deallocated by either the
+# DEALLOCATE PREPARE statement or the end of the session, you might encounter
+# the upper limit enforced by the max_prepared_stmt_count system variable.
+#
+# For examples, see SECTION 13.5, "PREPARED SQL STATEMENT SYNTAX"
+#
+# 13.6 COMPOUND-STATEMENT SYNTAX
+#
+# 		13.6.1 BEGIN --- END COMPOUND-STATEMENT SYNTAX
+# 		13.6.2 STATEMENT LABEL SYNTAX
+# 
+# 		13.6.3 DECLARE SYNTAX
+# 		13.6.4 VARIABLES IN STORED PROGRAMS
+#
+# 		13.6.5 FLOW CONTROL STATEMENTS
+# 		13.6.6 CURSORS
+# 	
+# 		13.6.7 CONDITION HANDLING
+#
+# This section desccribes the syntax for the BEGIN_---_END compound statement and other
+# statements that can be used in the body of stored programs:
+#
+# 		Stored procedures and functions, triggers, and events.
+#
+# These objects are defined in terms of SQL code that is stored on the server
+# for later invocation
+#
+# (See CHAPTER 24, STORED PROGRAMS AND VIEWS)
+#
+# A compound statement is a block that can contain other blocks; declarations
+# for variables, condition handlers and cursors; and flow control constructs 
+# such as loops and conditional tests.
+#
+# 13.6.1 BEGIN --- END COMPOUND-STATEMENT SYNTAX
+#
+# 		[begin_label:] BEGIN
+# 			[statement_list]
+# 		END [end_label]
+#
+# BEGIN_---_END syntax is used for writing compound statements, which can appear
+# within stored programs (stored procedures and functions, triggers and events)
+#
+# A compound statement can contain multiple statements, enclosed by the BEGIN 
+# and END keywords.
+#
+# statement_list represents a list of one or more statements, each terminated
+# by a semicolon (;) statement delimiter.
+#
+# The statement_list itself is optional, so the empty compound statement
+# (BEGIN END) is legal.
+#
+# BEGIN_---_END blocks can be nested.
+#
+# Use of multiple statements requires that a client is able to send statement
+# strings containing the ; statement delimiter.
+#
+# In the mysql command-line client, this is handled with the delimiter command.
+#
+# Changing the ; end-of-statement delimiter (for example, to //) permit ; to
+# be used in a program body.
+#
+# For an example, see SECTION 24.1, "DEFINING STORED PROGRAMS"
+#
+# A BEGIN_---_END block can be labeled. See SECTION 13.6.2, "STATEMENT LABEL SYNTAX"
+#
+# The optional [NOT] ATOMIC clause is not supported.
+#
+# This means that no transactional savepoint is set at the start of the instruction
+# block and the BEGIN clause used in this context has no effect on the current transaction.
+#
+# NOTE:
+#
+# 		Within all stored programs, the parser treats BEGIN_[WORK] as the beginning of a 
+# 		BEGIN_---_END block.
+#
+# 		To begin a transaction in this context, use START_TRANSACTION instead.
+#
+# 13.6.2 STATEMENT LABEL SYNTAX
+#
+# 		[begin_label:] BEGIN
+# 			[statement_list]
+# 		END [end_label]
+#
+# 		[begin_label:] LOOP
+# 			statement_list
+# 		END LOOP [end_label]
+#
+# 		[begin_label:] REPEAT
+# 			statement_list
+# 		UNTIL search_condition
+# 		END REPEAT [end_label]
+#
+# 		[begin_label:] WHILE search_condition DO
+# 			statement_list
+# 		END WHILE [end_label]
+#
+# Labels are permitted for BEGIN_---_END blocks and for the LOOP, REPEAT and WHILE statements.
+#
+# Label use for those statements follows these rules:
+#
+# 		) begin_label must be followed by a colon
+#
+# 		) begin_label can be given without end_label.
+#
+# 			If end_label is present, it must be the same as begin_label
+#
+# 		) end_label cannot be given without begin_label
+#
+# 		) Labels at the same nesting level must be distinct.
+#
+# 		) Labels can be up to 16 characters long
+#
+# To refer to a label within the labeled construct, use an ITERATE 
+# or LEAVE statement.
+#
+# The following example uses those statements to continue iterating or
+# terminate the loop:
+#
+# 		CREATE PROCEDURE doiterate(p1 INT)
+# 		BEGIN
+# 			label1: LOOP
+# 				SET p1 = p1 + 1;
+# 				IF p1 < 10 THEN ITERATE label1; END IF;
+# 				LEAVE label1;
+# 			END LOOP label1;
+# 		END;
+#
+# The scope of a block label does not include the code for handlers declared within the
+# block.
+#
+# For details, see SECTION 13.6.7.2, "DECLARE --- HANDLER SYNTAX"
+#
+# 13.6.3 DECLARE SYNTAX
+#
+# The DECLARE statement is used to define various items local to a program:
+#
+# 		) Local variables. See SECTION 13.6.4, "VARIABLES IN STORED PROGRAMS"
+#
+# 		) Conditions and handlers. See SECTION 13.6.7, "CONDITION HANDLING"
+#
+# 		) Cursors. See SECTION 13.6.6, "CURSORS"
+#
+# DECLARE is permitted only inside a BEGIN_---_END compound statement and must be
+# at its start, before any other statements.
+#
+# Declarations must follow a certain order.
+#
+# Cursor declarations must appear before handler declarations.
+#
+# Variable and condition declarations must appear before cursor or
+# handler declarations.
+#
+# 13.6.4 VARIABLES IN STORED PROGRAMS
+#
+# 13.6.4.1 LOCAL VARIABLE DECLARE SYNTAX
+# 13.6.4.2 LOCAL VARIABLE SCOPE AND RESOLUTION
+#
+# System variables and user-defined variables can be used in stored programs, just as they can be used
+# outside stored-program context.
+#
+# In addition, stored programs can use DECLARE to define local variables, and stored routines
+# (procedures and functions) can be declared to take parameters that communicate
+# values between the routine and its caller.
+#
+# 		) To declare local variables, use the DECLARE statement, as described in SECTION 13.6.4.1, "LOCAL VARIABLE DECLARE SYNTAX"
+#
+# 		) Variables can be set directly with the SET statement. See SECTION 13.7.5.1, "SET SYNTAX FOR VARIABLE ASSIGNMENT"
+#
+# 		) Results from queries can be retrieved into local variables using SELECT_---_INTO_var_list or by opening a cursor
+# 			and using FETCH_---_INTO_var_list
+#
+# 			See SECTION 13.2.10.1, "SELECT --- INTO SYNTAX", and SECTION 13.6.6, "CURSORS"
+#
+# For information about the scope of local variables and how MySQL resolves ambiguous names, see SECTION 13.6.4.2,
+# "LOCAL VARIABLE SCOPE AND RESOLUTION"
+#
+# It is not permitted to assign the value DEFAULT to stored procedure or function parameters or stored
+# program local variables (for example with a SET var_name = DEFAULT statement)
+#
+# In MySQL 8.0, this results in a syntax error
+#
+# 13.6.4.1 LOCAL VARIABLE DECLARE SYNTAX
+#
+# 		DECLARE var_name [, var_name] --- type [DEFAULT value]
+#
+# This statement declares local variables within stored programs.
+#
+# To provide a default value for a variable, include a DEFAULT clause.
+#
+# The value can be specified as an expression; it need not be a constant.
+#
+# If the DEFAULT clause is missing, the initial value is NULL
+#
+# Local variables are treated like stored routine parameters with respect to data
+# type and overflow checking.
+#
+# See SECTION 13.1.17, "CREATE PROCEDURE AND CREATE FUNCTION SYNTAX"
+#
+# Variable declarations must appear before cursor or handler declarations
+#
+# Local variable names are not case-sensitive. Permissible characters and quoting rules
+# are the same as for other identifiers, as described in SECTION 9.2, "SCHEMA OBJECT NAMES"
+#
+# The scope of a local variable is the BEGIN_---_END block within which it is declared.
+#
+# The variable can be referred to in blocks nested within the declaring block, except
+# those blocks that declare a variable with the same name.
+#
+# For examples of variable declarations, see SECTION 13.6.4.2, "LOCAL VARIABLE SCOPE AND RESOLUTION"
+#
+# 13.6.4.2 LOCAL VARIABLE SCOPE AND RESOLUTION
+#
+# The scope of a local variable is the BEGIN_---_END block within which it is declared.
+#
+# The variable can be referred to in blocks nested within the declaring block, except
+# those blocks that declare a variable with the same name.
+#
+# Because local variables are in scope only during stored program execution, references
+# to them are not permitted in prepared statements created within a stored program.
+#
+# Prepared statement scope is the current session, not the stored program, so the
+# statement could be executed after the program ends, at which point the variables
+# would no longer be in scope.
+#
+# For example, SELECT --- INTO local_var cannot be used as a prepared statement.
+#
+# This restriction also applies to stored procedure and function parameters.
+#
+# See SECTION 13.5.1, "PREPARE SYNTAX"
+#
+# A local variable should not have the same name as a table column.
+#
+# If an SQL statement, such as SELECT_---_INTO statement, contains a reference
+# to a column and a declared local variable with the same name, MySQL currently
+# interprets the reference as the name of a variable.
+#
+# Consider the following procedure definition:
+#
+# 		CREATE PROCEDURE sp1 (x VARCHAR(5))
+# 		BEGIN
+# 			DECLARE xname VARCHAR(5) DEFAULT 'bob';
+# 			DECLARE newname VARCHAR(5);
+# 			DECLARE xid INT;
+#
+# 			SELECT xname, id INTO newname, xid
+# 				FROM table1 WHERE xname = xname;
+# 			SELECT newname;
+# 		END;
+#
+# MySQL interprets xname in the SELECT statement as a reference to the 
+# xname variable rather than the xname column.
+#
+# Consequently, when the procedure sp1() is called, the newname variable
+# returns the value 'bob' regardless of the value of the table1.xname
+# column.
+#
+# Similarly, the cursor definition in the following procedure contains a SELECT
+# statement that refers to xname.
+#
+# MySQL interprets this as a reference to the variable of that name rather
+# than a column reference.
+#
+# 		CREATE PROCEDURE sp2 (x VARCHAR(5))
+# 		BEGIN
+# 			DECLARE xname VARCHAR(5) DEFAULT 'bob';
+# 			DECLARE newname VARCHAR(5);
+# 			DECLARE xid INT;
+# 			DECLARE done TINYINT DEFAULT 0;
+# 			DECLARE cur1 CURSOR FOR SELECT xname, id FROM table1;
+# 			DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+#
+# 			OPEN cur1;
+# 			read_loop: LOOP
+# 				FETCH FROM cur1 INTO newname, xid;
+# 				IF done THEN LEAVE read_loop; END IF
+# 				SELECT newname;
+# 			END LOOP;
+# 			CLOSE cur1;
+# 		END;
+#
+# See also SECTION C.1, "RESTRICTIONS ON STORED PROGRAMS"
+#
+# 13.6.5 FLOW CONTROL STATEMENTS
+#
+# 13.6.5.1 CASE SYNTAX
+# 13.6.5.2 IF SYNTAX
+#
+# 13.6.5.3 ITERATE SYNTAX
+# 13.6.5.4 LEAVE SYNTAX
+#
+# 13.6.5.5 LOOP SYNTAX
+# 13.6.5.6 REPEAT SYNTAX
+#
+# 13.6.5.7 RETURN SYNTAX
+# 13.6.5.8 WHILE SYNTAX
+#
+# MySQL supports the IF, CASE, ITERATE, LEAVE LOOP, WHILE and REPEAT constructs for flow control
+# within stored programs.
+#
+# It also supports RETURN within stored functions.
+#
+# Many of these constructs contain other statements, as indicated by the grammar specifications
+# in the following sections.
+#
+# Such constructs may be nested.
+#
+# For example, an IF statement might contain a WHILE loop, which itself contains a CASE statement.
+#
+# MySQL does not support FOR Loops.
+#
+# 13.6.5.1 CASE SYNTAX
+#
+# 		CASE case_value
+# 			WHEN when_value THEN statement_list
+# 			[WHEN when_value THEN statement_list]
+# 			[ELSE statement_list]
+# 		END CASE
+#
+# Or:
+#
+# 		CASE
+# 			WHEN search_condition THEN statement_list
+# 			[WHEN search_condition THEN statement_list]
+# 			[ELSE statement_list]
+# 		END CASE
+#
+# The CASE statement for stored programs implements a complex conditional construct.
+#
+# NOTE:
+#
+# 		There is also a CASE expression, which differs from the CASE statement described here.
+#
+# 		See SECTION 12.4, "CONTROL FLOW FUNCTIONS"
+#
+# 		The CASE statement cannot have an ELSE NULL clause, and it is terminated with 
+# 		END CASE instead of END
+#
+# For the first syntax, case_value is an expression.
+#
+# This value is compared to the when_value expression in each WHEN clause until one of them
+# is equal.
+#
+# When an equal when_value is found, the corresponding THEN clause statement_list executes.
+#
+# If no when_value is equal, the ELSE clause statement_list executes, if there is one.
+#
+# This syntax cannot be used to test for equalit with NULL because NULL = NULL is false.
+#
+# See SECTION 3.3.4.6, "WORKING WITH NULL VALUES"
+#
+# For the second syntax, each WHEN clause search_condition expression is evaluated until one
+# is true, at which point its corresponding THEN clause statement_list executes.
+#
+# If no search_condition is equal, the ELSE clause statement_list executes, if there is one.
+#
+# If no when_value or search_condition matches the value tested and the CASE statement contains
+# no ELSE clause, a:
+#
+# 		Case not found for CASE statement
+#
+# error results.
+#
+# Each statement_list consists of one or more SQL statements; an empty statement_list
+# is not permitted.
+#
+# To handle situations where no value is matched by any WHEN clause, use an ELSE containing
+# an empty BEGIN_---_END block, as shown in this example.
+#
+# (The indentation used here in the ELSE clause is for purposes of clarity only,
+# and is not otherwise significant)
+#
+# DELIMITER |
+#
+# CREATE PROCEDURE p()
+# 		BEGIN
+# 			DECLARE v INT DEFAULT 1;
+#
+# 			CASE v
+# 				WHEN 2 THEN SELECT v;
+# 				WHEN 3 THEN SELECT 0;
+# 				ELSE
+# 					BEGIN
+# 					END;
+# 			END CASE;
+# 		END;
+# 		|
+#
+# 13.6.5.2 IF SYNTAX
+#
+# IF search_condition THEN statement_list
+# 		[ELSEIF search_condition THEN statement_list] ---
+# 		[ELSE statement_list]
+# END IF
+#
+# The IF statement for stored programs implements a basic conditional construct.
+#
+# NOTE:
+#
+# 		There is also an IF() funciton, which differs from the IF statement described here.
+#
+# 		See SECTION 12.4, "CONTROL FLOW FUNCTIONS"
+#
+# 		The IF statement can have THEN, ELSE and ELSEIF clauses, and it is
+# 		terminated with END IF.
+#
+# If the search_condition evaluates to true, the corresponding THEN or ELSEIF clause
+# statement_list executes.
+#
+# If no search_condition matches, the ELSE clause statement_list executes.
+#
+# Each statement_list consists of one or more SQL statements; an empty statement_list is
+# not permitted.
+#
+# An IF --- END IF block, like all other flow-control blocks used within stored programs,
+# must be terminated with a semicolon, as shown in this example:
+#
+# 		DELIMITER //
+#
+# 		CREATE FUNCTION SimpleCompare(n INT, m INT)
+# 			RETURNS VARCHAR(20)
+#
+# 			BEGIN
+# 				DECLARE s VARCHAR(20);
+#
+# 				IF n > m THEN SET s = '>';
+# 				ELSEIF n = m THEN SET s = '=';
+# 				ELSE SET s = '<';
+# 				END IF;
+#
+# 				SET s = CONCAT(n, ' ', s, ' ', m);
+#
+# 				RETURN s;
+# 			END //
+#
+# 		DELIMITER;
+#
+# AS with other flow-control constructs, IF --- END IF blocks may be nested within other
+# flow-control constructs, including other IF statements.
+#
+# Each IF must be terminated by its own END IF followed by a semicolon.
+#
+# You can use indentation to make nested flow-control blocks more easily readable
+# by humans (although this is not required by MySQL), as shown here:
+#
+# 		DELIMITER //
+#
+# 		CREATE FUNCTION VerboseCompare (n INT, m INT)
+# 			RETURNS VARCHAR(50)
+#
+# 			BEGIN
+# 				DECLARE s VARCHAR(50);
+#
+# 				IF n = m THEN SET s = 'equals';
+# 				ELSE
+# 					IF n > m THEN SET s = 'greater';
+# 					ELSE SET s = 'less';
+# 					END IF;
+#
+# 					SET s = CONCAT('is', s, ' than');
+# 				END IF;
+#
+# 				SET s = CONCAT(n, ' ', s, ' ', m, '.');
+#
+# 				RETURN s;
+# 			END //
+#
+# 		DELIMITER ;
+#
+# In this example, the inner IF is evaluated only if n is not equal to m
+#
+# 13.6.5.3 ITERATE SYNTAX
+#
+# 		ITERATE label
+#
+# ITERATE can appear only within LOOP, REPEAT, and WHILE statements.
+#
+# ITERATE means "start the loop again"
+#
+# For an example, see SECTION 13.6.5.5, "LOOP SYNTAX"
+#
+# 13.6.5.4 LEAVE SYNTAX
+#
+# 		LEAVE label
+#
+# This statement is used to exit the flow control construct that has the given label.
+#
+# If the label is for the outermost stored program block, LEAVE exits the program
+#
+# LEAVE can be used within BEGIN_---_END or loop constructs (LOOP, REPEAT, WHILE)
+#
+# For an example, see SECTION 13.6.5.5, "LOOP SYNTAX"
+#
+# 13.6.5.5 LOOP SYNTAX
+#
+# 		[begin_label:] LOOP
+# 			statement_list
+# 		END LOOP [end_label]
+#
+# LOOP implements a simple loop construct, enabling repeated execution of the statement
+# list, which consists of one or more statements, each terminated by a semicolon (;) 
+# statement delimiter.
+#
+# The statements within the loop are repeated until the loop is terminated.
+#
+# Usually, this is accomplished with a LEAVE statement.
+#
+# Within a stored function, RETURN can also be used, which exits the function entirely
+#
+# Neglecting to include a loop-termination statement results in an infinite loop
+#
+# A LOOP statement can be labeled. For the rules regarding label use, see SECTION 13.6.2, "STATEMENT LABEL SYNTAX"
+#
+# Example:
+#
+# 		CREATE PROCEDURE doiterate(p1 INT)
+# 		BEGIN
+# 			label1: LOOP
+# 				SET p1 = p1 + 1;
+# 				IF p1 < 10 THEN
+# 					ITERATE label1;
+# 				END IF;
+# 				LEAVE label1;
+# 			END LOOP label1;
+# 			SET @x = p1;
+# 		END;
+#
+# 13.6.5.6 REPEAT SYNTAX
+#
+# 	[begin_label:] REPEAT
+# 		statement_list
+# 	UNTIL search_condition
+# 	END REPEAT [end_label]
+#
+# The statement list within a REPEAT statement is repeated until the search_condition expression
+# is true.
+#
+# Thus, a REPEAT always enters the loop at least once.
+#
+# statement_list consists of one or more statements, each terminated by a semicolon (;) statement delimiter
+#
+# A REPEAT statement can be labeled. For the rules regarding label use, see SECTION 13.6.2,
+# "STATEMENT LABEL SYNTAX"
+#
+# Example:
+#
+# 		delimiter //
+#
+# 		CREATE PROCEDURE dorepeat(p1 INT)
+# 		BEGIN
+# 			SET @x = 0;
+# 			REPEAT
+# 				SET @x = @x + 1;
+# 			UNTIL @x > p1 END REPEAT;
+# 		END
+# 		//
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		CALL dorepeat(1000)//
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		SELECT @x//
+# 		+---------+
+# 		| @x 	    |
+# 		+---------+
+# 		| 1001 	 |
+# 		+---------+
+# 		1 row in set (0.00 sec)
+#
+# 13.6.5.7 RETURN SYNTAX
+#
+# 		RETURN expr
+#
+# The RETURN statement terminates execution of a stored function and returns the value expr to
+# the function caller.
+#
+# There must be at least one RETURN statement in a stored function.
+#
+# There may be more than one if the function has multiple exit points.
+#
+# This statement is not used in stored procedures, triggers, or events.
+#
+# The LEAVE statement can be used to exit a stored program of those types.
+#
+# 13.6.5.8 WHILE SYNTAX
+#
+# 		[begin_label:] WHILE search_condition DO
+# 			statement_list
+# 		END WHILE [end_label]
+#
+# The statement list within a WHILE statement is repeated as long as the search_condition
+# expression is true.
+#
+# statement_list consists of one or more SQL statements, each terminated by a semicolon
+# (;) statement delimiter.
+#
+# A WHILE statement can be labeled. For the rules regarding label use,
+# see SECTION 13.6.2, "STATEMENT LABEL SYNTAX"
+#
+# Example:
+#
+# 		CREATE PROCEDURE dowhile()
+# 		BEGIN
+# 			DECLARE v1 INT DEFAULT 5;
+#
+# 			WHILE v1 > 0 DO
+# 				---
+# 				SET v1 = v1 - 1;
+# 			END WHILE;
+# 		END;
+#
+# 13.6.6 CURSORS
+#
+# 13.6.6.1 CURSOR CLOSE SYNTAX
+# 13.6.6.2 CURSOR DECLARE SYNTAX
+# 13.6.6.3 CURSOR FETCH SYNTAX
+# 13.6.6.4 CURSOR OPEN SYNTAX
+#
+# MySQL supports cursors inside stored programs.
+#
+# The syntax is as in embedded SQL. Cursors have these properties:
+#
+# 		) Asensitive: The server may or may not make a copy of its result table
+#
+# 		) Read only: Not updatable
+#
+# 		) Nonscrollable: Can be traversed only in one direction and cannot skip rows
+#
+# Cursor declarations must appear before handler declarations and after variable and condition
+# declarations.
+#
+# Example:
+#
+# 		CREATE PROCEDURE curdemo()
+# 		BEGIN
+# 			DECLARE done INT DEFAULT FALSE;
+# 			DECLARE a CHAR(16);
+# 			DECLARE b, c INT;
+# 			DECLARE cur1 CURSOR FOR SELECT id, data FROM test.t1;
+# 			DECLARE cur2 CURSOR FOR SELECT i FROM test.t2;
+# 			DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+#
+# 			OPEN cur1;
+# 			OPEN cur2;
+#
+# 			read_loop: LOOP
+# 				FETCH cur1 INTO a, b;
+# 				FETCH cur2 INTO c;
+# 				IF done THEN
+# 					LEAVE read_loop;
+# 				END IF;
+# 				IF b < c THEN
+# 					INSERT INTO test.t3 VALUES (a,b);
+# 				ELSE
+# 					INSERT INTO test.t3 VALUES (a,c);
+# 				END IF;
+# 			END LOOP;
+#
+# 			CLOSE cur1;
+# 			CLOSE cur2;
+# 		END;
+#
+# 13.6.6.1 CURSOR CLOSE SYNTAX
+#
+# 		CLOSE cursor_name
+#
+# This statement closes a previously opened cursor.
+#
+# For an example, see SECTION 13.6.6, "CURSORS"
+#
+# An error occurs if the cursor is not open.
+#
+# If not closed explicitly, a cursor is closed at the end of the
+# BEGIN_---_END block in which it was declared.
+#
+# 13.6.6.2 CURSOR DECLARE SYNTAX
+#
+# 		DECLARE cursor_name CURSOR FOR select_statement
+#
+# This statement declares a cursor and associates it with a SELECT statement that
+# retrieves the rows to be traversed by the cursor.
+#
+# To fetch the rows later, use a FETCH statement.
+#
+# The number of columns retrieved by the SELECT statement must match the number
+# of output variables specified in the FETCH statement.
+#
+# The SELECT statement cannot have an INTO clause.
+#
+# Cursor declarations must appear before handler declarations and after variable
+# and condition declarations.
+#
+# A stored program may contain multiple cursor declarations, but each cursor declared
+# in a given block must have a unique name.
+#
+# For an example, see SECTION 13.6.6, "CURSORS"
+#
+# For information available through SHOW statements, it is possible in many cases
+# to obtain equivalent information by using a cursor with an INFORMATION_SCHEMA table.
+#
+# 13.6.6.3 CURSOR FETCH SYNTAX
+#
+# 		FETCH [[NEXT] FROM] cursor_name INTO var_name [, var_name] ---
+#
+# This statement fetches the next row for the SELECT statement associated with the
+# specified cursor (which must be open), and advances the cursor pointer.
+#
+# If a row exists, the fetched columns are stored in the named variables.
+#
+# The number of columns retrieved by the SELECT statement must match the number
+# of output variables specified in the FETCH statement.
+#
+# If no more rows are available, a No Data condition occurs with SQLSTATE
+# value '02000'
+#
+# To detect this condition, you can set up a handler for it (or for a NOT FOUND condition)
+# 
+# For an example, see SECTION 13.6.6, "CURSORS"
+#
+# Be aware that another operation, such as a SELECT or another FETCH, may also cause
+# the handler to execute by raising the same condition.
+#
+# If it is necessary to distinguish which operation raised the condition,
+# place the operation within its own BEGIN_---_END block so that it can be
+# associated with its own handler.
+#
+# 13.6.6.4 CURSOR OPEN SYNTAX
+#
+# 		OPEN cursor_name
+#
+# This statement opens a previously declared cursor. For an example, see SECTION 13.6.6, "CURSORS"
+#
+# 13.6.7 CONDITION HANDLING
+#
+# 13.6.7.1 DECLARE --- CONDITION SYNTAX
+# 13.6.7.2 DECLARE --- HANDLER SYNTAX
+#
+# 13.6.7.3 GET DIAGNOSTICS SYNTAX
+# 13.6.7.4 RESIGNAL SYNTAX
+#
+# 13.6.7.5 SIGNAL SYNTAX
+# 13.6.7.6 SCOPE RULES FOR HANDLERS
+#
+# 13.6.7.7 THE MYSQL DIAGNOSTICS AREA
+# 13.6.7.8 CONDITION HANDLING AND OUT OR INOUT PARAMETERS
+#
+# Conditions may arise during stored program execution that require special handling,
+# such as exiting the current program block or continuing execution.
+#
+# Handlers can be defined for general conditions such as warnings or exceptions,
+# or for specific conditions such as particular error code.
+#
+# Specific conditions can be assigned names and referred to that way in handlers.
+#
+# To name a condition, use the DECLARE_---_CONDITION statement.
+#
+# To declare a handler, use the DECLARE_---_HANDLER statement.
+#
+# See SECTION 13.6.7.1, "DECLARE --- CONDITION SYNTAX", and SECTION 13.6.7.2, "DECLARE_---_HANDLER SYNTAX"
+#
+# For information about how the server chooses handlers when a condition occurs,
+# see SECTION 13.6.7.6, "SCOPE RULES FOR HANDLERS"
+#
+# To raise a condition, use the SIGNAL statement. To modify condition information within
+# a condition handler, use RESIGNAL.
+#
+# See SECTION 13.6.7.1, "DECLARE --- CONDITION SYNTAX", and SECTION 13.6.7.2, "DECLARE --- HANDLER SYNTAX"
+#
+# To retrieve information from the diagnostics area, use the GET_DIAGNOSTICS statement (see SECTION 13.6.7.3,
+# "GET DIAGNOSTICS SYNTAX")
+#
+# For information about the diagnostics area, see SECTION 13.6.7.7, "THE MYSQL DIAGNOSTICS AREA"
+#
+# 13.6.7.1 DECLARE --- CONDITION SYNTAX
+#
+# DECLARE condition_name CONDITION FOR condition_value
+#
+# condition_value: {
+# 		mysql_error_code
+# 	 | SQLSTATE [VALUE] sqlstate_value
+# }
+#
+# The DECLARE_---_CONDITION statement declares a named error condition, associating
+# a name with a condition that needs specific handling.
+#
+# The name can be referred to in a subsequent DECLARE_---_HANDLER statement (see SECTION 13.6.7.2, "DECLARE_---_HANDLER SYNTAX")
+#
+# Condition declarations must appear before cursor or handler declarations.
+#
+# The condition_value for DECLARE_---_CONDITION indicates the specific condition or class of conditions
+# to associate with the condition name.
+#
+# It can take the following forms:
+#
+# 		) mysql_error_code: An integer literal indicating a MySQL error code.
+#
+# 			Do not use MySQL error code 0 because that indicates success rather than an error
+# 			condition.
+#
+# 			For a list of MySQL error codes, see SECTION B.3, "SERVER ERROR MESSAGE REFERENCE"
+#
+# 		) SQLSTATE[VALUE] sqlstate_value: A 5-character string literal indicating an SQLSTATE value.
+#
+# 			Do not use SQLSTATE values that begin with '00' because those indicate success rather
+# 			than an error condition.
+#
+# 			For a list of SQLSTATE values, see SECTION B.3, "SERVER ERROR MESSAGE REFERENCE"
+#
+# Condition names referred to in SIGNAL or use RESIGNAL statements must be associated with
+# SQLSTATE values, not MySQL error codes.
+#
+# Using names for conditions can help make stored program code clearer.
+#
+# For example, this handler applies to attempts to drop a nonexistent table,
+# but that is apparent only if you know that 1051 is the MySQL error code for "unknown table":
+#
+# 		DECLARE CONTINUE HANDLER FOR 1051
+# 			BEGIN
+# 				-- body of handler
+# 			END;
+#
+# By declaring a name for the condition, the purpose of the handler is more readily seen:
+#
+# 		DECLARE no_such_table CONDITION FOR 1051;
+# 		DECLARE CONTINUE HANDLER FOR no_such_table
+# 			BEGIN
+# 				-- body of handler
+# 			END;
+#
+# Here is a named condition for the same condition, but based on the corresponding
+# SQLSTATE value rather than the MySQL error code:
+#
+# 		DECLARE no_such_table CONDITION FOR SQLSTATE '42S02';
+# 		DECLARE CONTINUE HANDLER FOR no_such_table
+# 			BEGIN
+# 				-- body of handler
+# 			END;
+#
+# 13.6.7.2 DECLARE --- HANDLER SYNTAX
+#
+# 	DECLARE handler_action HANDLER
+# 		FOR condition_value [, condition_value]
+# 		statement
+#
+# 	handler_action: {
+# 		CONTINUE
+# 	 | EXIT
+#   | UNDO
+# 	}
+#
+# 	condition_value: {
+# 		mysql_error_code
+#   | SQLSTATE [VALUE] sqlstate_value
+# 	 | condition_name
+# 	 | SQLWARNING
+# 	 | NOT FOUND
+#   | SQLEXCEPTION
+#  }
+#
+# The DECLARE_---_HANDLER statement specifies a handler that deals with one or more
+# conditions.
+#
+# If one of these conditions occurs, the specified statement executes.
+#
+# statement can be a simple statement such as SET var_name = value, or a compound statement
+# written using BEGIN and END (see SECTION 13.6.1, "BEGIN --- END COMPOUND-STATEMENT SYNTAX")
+#
+# Handler declarations must appear after variable or condition declarations.
+#
+# The handler_action value indicates what action the handler takes after execution
+# of the handler statement:
+#
+# 		) CONTINUE: Execution of the current program continues
+#
+# 		) EXIT: Execution terminates for the BEGIN_---_END compound statement in which the handler
+# 			is declared.
+#
+# 			This is true even if the condition occurs in an inner block.
+#
+# 		) UNDO: Not supported.
+#
+# The condition_value for DECLARE_---_HANDLER indicates the specific condition or class
+# of conditions that activates the handler.
+#
+# It can take the following forms:
+#
+# 		) mysql_error_code: An integer literal indicating a MySQL error code, such as 1051 to specify "Unknown table":
+#
+# 			DECLARE CONTINUE HANDLER FOR 1051
+# 				BEGIN
+# 					-- body of handler
+# 				END;
+#
+# 			Do not use MySQL error code 0 because that indicates success rather than an error condition.
+#
+# 			For a list of MySQL error codes, see SECTION B.3, "SERVER ERROR MESSAGE REFERENCE"
+#
+# 		) SQLSTATE[VALUE] sqlstate_value: A 5-character string literal indicating an SQLSTATE value,
+# 			such as '42S01' to specify "unknown table":
+#
+# 				DECLARE CONTINUE HANDLER FOR SQLSTATE '42S02'
+# 					BEGIN
+# 						-- body of handler
+# 					END;
+#
+# 			Do not use SQLSTATE values that begin with '00' because those indicate success
+# 			rather than an error condition.
+#
+# 			For a list of SQLSTATE values, see SECTION B.3, "SERVER ERROR MESSAGE REFERENCE"
+#
+# 		) condition_name: A condition name previously specified with DECLARE_---_CONDITION
+#
+# 			A condition name can be associated with a MySQL error code or SQLSTATE value.
+#
+# 			See SECTION 13.6.7.1, "DECLARE --- CONDITION SYNTAX"
+#
+# 		) SQLWARNING: Shorthand for the class of SQLSTATE values that begin with '01'
+#
+# 			DECLARE CONTINUE HANDLER FOR SQLWARNING
+# 				BEGIN
+# 					--- body of handler
+# 				END;
+#
+# 		) NOT FOUND:
+#
+# 			Shorthand for the class of SQLSTATE values that begin with '02'
+#
+# 			This is relevant within the context of cursors and is used to control
+# 			what happens when a cursor reaches the end of a data set.
+#
+# 			If no more rows are available, a No Data condition occurs with SQLSTATE 
+# 			value '02000'
+#
+# 			To detect this condition, you can set up a handler for it or for a NOT FOUND
+# 			condition.
+#
+# 				DECLARE CONTINUE HANDLER FOR NOT FOUND
+# 					BEGIN
+# 						-- body of handler
+# 					END;
+#
+# 			For another example, see SECTION 13.6.6, "CURSORS"
+#
+# 			The NOT FOUND condition also occurs for SELECT --- INTO var_list statements
+# 			that retrieve no rows.
+#
+# 		) SQLEXCEPTION:
+#
+# 			Shorthand for the class of SQLSTATE values that do not begin with 
+# 			'00', '01', or '02'
+#
+# 				DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
+# 					BEGIN
+# 						-- body of handler
+# 					END;
+#
+# For information about how the server chooses handlers when a condition occurs,
+# see SECTION 13.6.7.6, "SCOPE RULES FOR HANDLERS"
+#
+# If a condition occurs for which no handler has been declared, the action taken
+# depends on the condition class:
+#
+# 		) For SQLEXCEPTION conditions, the stored program terminates at the statement
+# 			that raised the condition, as if there were an EXIT handler.
+#
+# 			If the program was called by another stored program, the calling program
+# 			handles the condition using the handler selection rules applied to
+# 			its own handlers.
+#
+# 		) For SQLWARNING conditions, the program continues executing, as if there were a CONTINUE handler.
+#
+# 		) For NOT FOUND conditions, if the condition was raised normally, the action is CONTINUE.
+#
+# 			If it was raised by SIGNAL or RESIGNAL, the action is EXIT.
+#
+# The following example uses a handler for SQLSTATE '23000', which occurs for a 
+# duplicate-key error:
+#
+# 		CREATE TABLE test.t (s1 INT, PRIMARY KEY (s1));
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		delimiter //
+#
+# 		CREATE PROCEDURE handlerdemo ()
+# 		BEGIN
+# 			DECLARE CONTINUE HANDLER FOR SQLSTATE '23000' SET @x2 = 1;
+# 			SET @x = 1;
+# 			INSERT INTO test.t VALUES (1);
+# 			SET @x = 2;
+# 			INSERT INTO test.t VALUES (1);
+# 			SET @x = 3;
+# 		END;
+# 		//
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		CALL handlerdemo()//
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		SELECT @x//
+# 		+------------+
+# 		| @x 			 |
+# 		+------------+
+# 		| 3 			 |
+# 		+------------+
+# 		1 row in set (0.00 sec)
+#
+# Notice that @x is 3 after the procedure executes, which shows that execution continued
+# to the end of the procedure after the error occurred.
+#
+# If the DECLARE_---_HANDLER statement had not been present, MySQL would have taken the
+# default action (EXIT) after the second INSERT failed due to the PRIMARY KEY constraint,
+# and SELECT @x would have returned 2.
+#
+# To ignore a condition, declare a CONTINUE handler for it and associate it with an empty block.
+#
+# For example:
+#
+# 		DECLARE CONTINUE HANDLER FOR SQLWARNING BEGIN END;
+#
+# The scope of a block label does not include the code for handlers declared within the block.
+#
+# Therefore, the statement associated with a handler cannot use ITERATE or LEAVE to refer
+# to labels for blocks that enclose the handler declaration.
+#
+# Consider the following example, where the REPEAT block has a label of retry:
+#
+# 		CREATE PROCEDURE p ()
+# 		BEGIN
+# 			DECLARE i INT DEFAULT 3;
+# 			retry:
+# 				REPEAT
+# 					BEGIN
+# 						DECLARE CONTINUE HANDLER FOR SQLWARNING
+# 							BEGIN
+# 								ITERATE retry; #Illegal
+# 							END;
+# 						IF i < 0 THEN
+# 							LEAVE retry; #legal
+# 						END IF;
+# 						SET i = i - 1;
+# 					END;
+# 				UNTIL FALSE END REPEAT;
+# 		END;
+#
+# The retry label is in scope for the IF statement within the block.
+#
+# It is not in scope for the CONTINUE handler, so the reference there is invalid
+# and results in an error:
+#
+# 		ERROR 1308 (42000): LEAVE with no matching label: retry
+#
+# To avoid references to outer labels in handlers, use one of these strategies:
+#
+# 		) To leave the block, use an EXIT handler. If no block cleanup is required, the
+# 			BEGIN_---_END handler body can be empty:
+#
+# 				DECLARE EXIT HANDLER FOR SQLWARNING BEGIN END;
+#
+# 			Otherwise, put the cleanup statements in the handler body:
+#
+# 				DECLARE EXIT HANDLER FOR SQLWARNING
+# 					BEGIN
+# 						block cleanup statements
+# 					END;
+#
+# 		) To continue execution, set a status variable in a CONTINUE handler that can be checked
+# 			in the enclosing block to determine whether the handler was invoked.
+#
+# 			The following example uses the variable done for this purpose:
+#
+# 				CREATE PROCEDURE p ()
+# 				BEGIN
+# 					DECLARE i INT DEFAULT 3;
+# 					DECLARE done INT DEFAULT FALSE;
+# 					retry:
+# 						REPEAT
+# 							BEGIN
+# 								DECLARE CONTINUE HANDLER FOR SQLWARNING
+# 									BEGIN
+# 										SET done = TRUE;
+# 									END;
+# 								IF done OR i < 0 THEN
+# 									LEAVE retry;
+# 								END IF;
+# 								SET i = i - 1;
+# 							END;
+# 						UNTIL FALSE END REPEAT;
+# 				END; 
+#
+# 13.6.7.3 GET DIAGNOSTICS SYNTAX
+#
+# 		GET [CURRENT | STACKED] DIAGNOSTICS
+# 		{
+# 			statement_information_item
+# 			[, statement_information_item] ---
+# 		 | CONDITION condition_number
+# 			condition_information_item
+# 		 	[, condition_information_item] ---
+# 		}
+#
+# 		statement_information_item:
+# 			target = statement_information_item_name
+#
+# 		condition_information_item:
+# 			target = condition_information_item_name
+#
+# 		statement_information_item_name:
+# 			NUMBER
+# 		 | ROW_COUNT
+#
+# 		condition_information_item_name: {
+# 			CLASS_ORIGIN
+# 		 | SUBCLASS_ORIGIN
+# 		 | RETURNED_SQLSTATE
+# 		 | MESSAGE_TEXT
+# 		 | MYSQL_ERRNO
+# 		 | CONSTRAINT_CATALOG
+# 		 | CONSTRAINT_SCHEMA
+# 		 | CONSTRAINT_NAME
+# 		 | CATALOG_NAME
+# 		 | SCHEMA_NAME
+# 		 | TABLE_NAME
+# 		 | COLUMN_NAME
+# 		 | CURSOR_NAME
+# 		}
+#
+# 		condition_number, target:
+# 			(see following discussion)
+#
+# SQL statements produce diagnostic information that populates the diagnostics area.
+#
+# The GET_DIAGNOSTICS statement enables applications to inspect this information.
+#
+# (You can also use SHOW_WARNINGS or SHOW_ERRORS to see conditions or errors)
+#
+# No special privileges are required to execute GET_DIAGNOSTICS
+#
+# The keyword CURRENT means to retrieve information from the current diagnostics area.
+#
+# The keyword STACKED means to retrieve information from the second diagnostics
+# area, which is available only if the current context is a condition handler.
+#
+# If neither keyword is given, the default is to use the current diagnostics area.
+#
+# The GET_DIAGNOSTICS statement is typically used in a handler within a stored program.
+#
+# It is a MySQL extension that GET_[CURRENT]_DIAGNOSTICS is permitted outside
+# handler context to check the execution of any SQL statement.
+#
+# For example, if you invoke the mysql client program, you can enter these statements
+# at the prompt:
+#
+# 		DROP TABLE test.no_such_table;
+# 		ERROR 1051 (42S02): Unknown table 'test.no_such_table'
+# 		GET DIAGNOSTICS CONDITION 1
+# 			@p1 = RETURNED_SQLSTATE, @p2 = MESSSAGE_TEXT;
+# 		SELECT @p1, @p2;
+# 		+-------+------------------------------------+
+# 		| @p1   | @p2 									      |
+# 		+-------+------------------------------------+
+# 		| 42S02 | Unknown table 'test.no_such_table' |
+# 		+-------+------------------------------------+
+#
+# This extension applies only to the current diagnostics area.
+#
+# It does not apply to the second diagnostics area because GET STACKED DIAGNOSTICS
+# is permitted only if the current context is a condition handler.
+#
+# If that is not the case, a:
+#
+# 	 GET STACKED DIAGNOSTICS when handler not active
+#
+# error occurs
+#
+# For a description of the diagnostics area, see SECTION 13.6.7.7, "THE MySQL DIAGNOSTICS AREA"
+#
+# Briefly, it contains two kinds of information:
+#
+# 		) Statement information, such as the number of conditions that occurred or the affected-rows count
+#
+# 		) Condition information, such as the error code and message.
+#
+# 			If a statement raises multiple conditions, this part of the diagnostics area has
+# 			a condition area for each one.
+#
+# 			If a statement raises no conditions, this part of the diagnostics area is empty.
+#
+# For a statement that produces three conditions, the diagnostics area contains statement
+# and condition information like this:
+#
+# 		Statement information:
+# 			row count
+# 			--- other statement information items ---
+# 		Condition area list:
+# 			Condition area 1:
+# 				error code for condition 1
+# 				error message for condition 1
+# 				--- other condition information items ---
+# 			Condition area 2:
+# 				error code for condition 2:
+# 				error message for condition 2
+# 				--- other condition information items ---
+# 			Condition area 3:
+# 				error code for condition 3
+# 				error message for condition 3
+# 				--- other condition information items --
+#
+# GET_DIAGNOSTICS can obtain either statement or condition information, but not
+# both in the same statement:
+#
+# 		) To obtain statement information, retrieve the desired statement items into target
+# 			variables.
+#
+# 			This instance of GET_DIAGNOSTICS assigns the number of available conditions
+# 			and the rows-affected count to the user variables @p1 and @p2:
+#
+# 				GET DIAGNOSTICS @p1 = NUMBER, @p2 = ROW_COUNT;
+#
+# 		) To obtain condition information, specify the condition number and retrieve the desired
+# 			condition items into target variables.
+#
+# 			This instance of GET_DIAGNOSTICS assigns the SQLSTATE value and error message
+# 			to the user variables @p3 and @p4:
+#
+# 				GET DIAGNOSTICS CONDITION 1
+# 					@p3 = RETURNED_SQLSTATE, @p4 = MESSAGE_TEXT;
+#
+# The retreival list specifies one or more target = item_name assignments, separated by commas.
+#
+# Each assignment names a target variable and either a statement_information_item_name or
+# condition_information_item_name designator, depending on whether the statement retrieves
+# statement or condition information.
+#
+# Valid target designators for storing item information can be stored procedure or
+# function parameters, stored program local variables declared with DECLARE,
+# or user-defined variables.
+#
+# Valid condition_number designators can be stored procedure or function parameters,
+# stored program local variables declared with DECLARE, user-defined variables,
+# system variables, or literals.
+#
+# A character literal may include a _charset introducer.
+#
+# A warning occurs if the condition number is not in the range from 1 to the
+# number of condition areas that have information.
+#
+# In this case, the warning is added to the diagnostics area without clearing it.
+#
+# When a condition occurs, MySQL does not populate all condition items recognized
+# by GET_DIAGNOSTICS.
+#
+# For example:
+#
+# 		GET DIAGNOSTICS CONDITION 1
+# 			@p5 = SCHEMA_NAME, @p6 = TABLE_NAME;
+# 		SELECT @p5, @p6;
+# 		+------+-----------+
+# 		| @p5  | @p6 		 |
+# 		+------+-----------+
+# 		|  	 | 			 |
+# 		+------+-----------+
+#
+# In standard SQL, if there are multiple conditions, the first condition relates
+# to the SQLSTATE value returned for the previous SQL statement.
+#
+# In MySQL, this is not guaranteed.
+#
+# To get the main error, you cannot do this:
+#
+# 		GET DIAGNOSTICS CONDITION 1 @errno = MYSQL_ERRNO;
+#
+# Instead, retrieve the condition count first, then use it to specify
+# which condition number to inspect:
+#
+# 		GET DIAGNOSTICS @cno = NUMBER;
+# 		GET DIAGNOSTICS CONDITION @cno @errno = MYSQL_ERRNO;
+#
+# For information about permissible statement and condition information items,
+# and which ones are populated when a condition occurs, see DIAGNOSTICS AREA INFORMATION ITEMS
+#
+# Here is an example that uses GET_DIAGNOSTICS and an exception handler in stored procedure
+# context to assess the outcome of an insert operation.
+#
+# If the insert was successful, the procedure uses GET_DIAGNOSTICS to get the rows-affected
+# count.
+#
+# This shows that you can use GET_DIAGNOSTICS multiple times to retrieve information about
+# a statement as long as the current diagnostics area has not been cleared.
+#
+# 		CREATE PROCEDURE do_insert(value INT)
+# 		BEGIN
+# 			--- DECLARE variables to hold diagnostics area information
+# 			DECLARE code CHAR(5) DEFAULT '00000';
+# 			DECLARE msg TEXT;
+# 			DECLARE rows INT;
+# 			DECLARE result TEXT;
+# 			-- Declare exception handler for failed insert
+# 			DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
+# 				BEGIN
+# 					GET DIAGNOSTICS CONDITION 1
+# 						code = RETURNED_SQLSTATE, msg = MESSAGE_TEXT;
+# 				END;
+#
+# 			-- Perform the insert
+# 			INSERT INTO t1 (int_col) VALUES(value);
+# 			-- Check whether the insert was successful
+# 			IF code = '00000' THEN
+# 				GET DIAGNOSTICS rows = ROW_COUNT;
+# 				SET result = CONCAT('insert succeeded, row count = ',rows);
+# 			ELSE
+# 				SET result = CONCAT('insert failed, error = ',code,', message = ',msg);
+# 			END IF;
+# 			-- Say what happened
+# 			SELECT result;
+# 		END;
+#
+# Suppose that t1.int_col is an integer column that is declared as NOT NULL.
+#
+# The procedure produces these results when invoked to insert non-NULL and
+# NULL values, respectively:
+#
+# 		CALL do_insert(1);
+# 		+---------------------------------+
+# 		| result 							    |
+# 		+---------------------------------+
+# 		| insert succeeded, row count = 1 |
+# 		+---------------------------------+
+#
+# 		CALL do_insert(NULL);
+# 		+-------------------------------------------------------------------------+
+# 		| result 																					  |
+# 		+-------------------------------------------------------------------------+
+# 		| insert failed, error = 23000, message = Column 'int_col' cannot be null |
+# 		+-------------------------------------------------------------------------+
+#
+# When a condition handler activates, a push to the diagnostics area stack occurs:
+#
+# 		) The first (current) diagnostics area becomes the second (stacked) diagnostics area
+# 			and a new current diagnostics area is created as a copy of it.
+#
+# 		) GET_[CURRENT]_DIAGNOSTICS and GET_STACKED_DIAGNOSTICS can be used within the handler
+# 			to access the contents of the current and stacked diagnostics areas.
+#
+# 		) Initially, both diagnostics areas return the same result, so it is possible to get
+# 			information from the current diagnostics area about the condition that activated
+# 			the handler, as long as you execute no statements within the handler that change
+# 			its current diagnostics area.
+#
+# 		) However, statements executing within the handler can modify the current diagnostics area,
+# 			clearing and setting its contents according to the normal rules (see HOW THE DIAGNOSTICS AREA IS CLEARED AND POPULATED)
+#
+# 			A more reliable way to obtain information about the handler-activating condition is to use the
+# 			stacked diagnostics area, which cannot be modified by statements executing within the handler
+# 			except RESINGAL.
+#
+# 			For information about when the current diagnostics area is set and cleared, see
+# 			SECTION 13.6.7.7, "THE MYSQL DIAGNOSTICS AREA"
+#
+# The next example shows how GET STACKED DIAGNOSTICS can be used within a handler to obtain
+# information about the handled exception, even after the current diagnostics area has been
+# modified by handler statements.
+#
+# Within a stored procedure p(), we attempt to insert two values into a table that contains a
+# TEXT NOT NULL column.
+#
+# The first value is a non-NULL string and the second is NULL
+#
+# The column prohibits NULL values, so the first insert succeeds but the
+# second causes an exception.
+#
+# The procedure includes an exception handler that maps attempts to insert
+# NULL into inserts of the empty string:
+#
+# 		https://dev.mysql.com/doc/refman/8.0/en/get-diagnostics.html
 # 		
