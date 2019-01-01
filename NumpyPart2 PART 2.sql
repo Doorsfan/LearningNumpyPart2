@@ -24328,5 +24328,2007 @@
 # The procedure includes an exception handler that maps attempts to insert
 # NULL into inserts of the empty string:
 #
-# 		https://dev.mysql.com/doc/refman/8.0/en/get-diagnostics.html
-# 		
+# 		DROP TABLE IF EXISTS t1;
+# 		CREATE TABLE t1 (c1 TEXT NOT NULL);
+# 		DROP PROCEDURE IF EXISTS p;
+# 		delimiter //
+# 		CREATE PROCEDURE p ()
+# 		BEGIN
+# 			-- Declare variables to hold diagnostics area information
+# 			DECLARE errcount INT;
+# 			DECLARE errno INT;
+# 			DECLARE msg TEXT;
+# 			DECLARE EXIT HANDLER FOR SQLEXCEPTIOn
+# 			BEGIN
+# 				-- Here the current DA is nonempty because no prior statements
+# 				-- executing within the handler have cleared it
+# 				GET CURRENT DIAGNOSTICS CONDITION 1
+# 					errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+# 				SELECT 'current DA before mapped insert' AS op, errno, msg;
+# 				GET STACKED DIAGNOSTICS CONDITION 1
+# 					errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+# 				SELECT 'stacked DA before mapped insert' AS op, errno, msg;
+#
+# 				-- Map attempted NULL insert to empty string insert
+# 				INSERT INTO t1 (c1) VALUES('');
+#
+# 				-- Here the current DA should be empty (if the INSERT succeeded),
+# 				-- so check whether there are conditions before attempting to
+# 				-- obtain condition information
+# 				GET CURRENT DIAGNOSTICS errcount = NUMBER;
+# 				IF errcount = 0
+# 				THEN
+# 					SELECT 'mapped insert succeeded, current DA is empty' AS op;
+# 				ELSE
+# 					GET CURRENT DIAGNOSTICS CONDITION 1
+# 						errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+# 					SELECT 'current DA after mapped insert' AS op, errno, msg;
+# 				END IF ;
+# 				GET STACKED DIAGNOSTICS CONDITION 1
+# 					errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+# 				SELECT 'stacked DA after mapped insert' AS op, errno, msg;
+# 			END;
+# 			INSERT INTO t1 (c1) VALUES('string 1');
+# 			INSERT INTO t1 (c1) VALUES(NULL);
+# 		END;
+# 		//
+# 		delimiter ;
+# 		CALL p();
+# 		SELECT * FROM t1;
+#
+# When the handler activates, a copy of the current diagnostics area is pushed to the
+# diagnostics area stack.
+#
+# The handler first displays the contents of the current and stacked diagnostics areas,
+# which are both the same initially:
+#
+# 		+-------------------------------------------+-----------+-------------------------------------+
+# 		| op 													  | errno 	  | msg 											 |
+# 		+-------------------------------------------+-----------+-------------------------------------+
+# 		| current DA before mapped insert 			  | 1048 	  | Column 'c1' cannot be null 			 |
+# 		+-------------------------------------------+-----------+-------------------------------------+
+#
+# 		+-------------------------------------------+-----------+-------------------------------------+
+# 		| op 													  | errno 	  | msg 											 |
+# 		+-------------------------------------------+-----------+-------------------------------------+
+# 		| stacked DA before mapped insert 			  | 1048 	  | Column 'c1' cannot be null 			 |
+# 		+-------------------------------------------+-----------+-------------------------------------+
+#
+# Statements executing after the GET_DIAGNOSTICS statements may reset the current diagnostics area.
+#
+# Statements may reset the current diagnostics area.
+#
+# For example, the handler maps the NULL insert to an empty string insert and displays the result.
+#
+# The new insert succeeds and clears the current diagnostics area, but the stacked diagnostics
+# area remains unchanged and still contains information about the condition that activated the handler:
+#
+# 		+-----------------------------------------------+
+# 		| op 															|
+# 		+-----------------------------------------------+
+# 		| mapped insert succeeded, current DA is empty  |
+# 		+-----------------------------------------------+
+#
+# 		+-----------------------------------------------+---------+--------------------------------+
+# 		| op 															| errno 	 | msg 									 |
+# 		+-----------------------------------------------+---------+--------------------------------+
+# 		| stacked DA after mapped insert 					| 1048 	 | Column 'c1' cannot be null     |
+# 		+-----------------------------------------------+---------+--------------------------------+
+#
+# When the condition handler ends, its current diagnostics area is popped from the stack and the stacked
+# diagnostics area becomes the current diagnostics area in the stored procedure.
+#
+# After the procedure returns, the table contains two rows.
+#
+# The empty row results from the attempt to insert NULL that was mapped to an empty string insert:
+#
+# 		+---------------+
+# 		| c1 				 |
+# 		+---------------+
+# 		| string 1 		 |
+# 		| 					 |
+# 		+---------------+
+#
+# In the preceding example, the first two GET_DIAGNOSTICS statements within the condition handler
+# that retrieve information from the current and stacked diagnostics areas return the same values.
+#
+# This will not be the case if statements that reset the current diagnostics area execute earlier
+# within the handler.
+#
+# Suppose that p() is rewritten to place the DECLARE statements within the handler definition
+# rather than preceding it:
+#
+# 		CREATE PROCEDURE p ()
+# 		BEGIN
+# 			DECLARE EXIT HANDLER FOR SQLEXCEPTION
+# 			BEGIN
+# 				-- Declare variables to hold diagnostics area information
+# 				DECLARE errcount INT;
+# 				DECLARE errno INT;
+# 				DECLARE msg TEXT;
+# 				GET CURRENT DIAGNOSTICS CONDITION 1
+# 					errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+# 				SELECT 'current DA before mapped insert' AS op, errno, msg;
+# 				GET STACKED DIAGNOSTICS CONDITION 1
+# 					errno = MYSQL_ERRNO, msg = MESSAGE_TEXT;
+# 				SELECT 'stacked DA before mapped insert' AS op, errno, msg;
+# 		---
+#
+# In this case, the result is version dependent:
+#
+# 		) Before MySQL 5.7.2, DECLARE does not change the current diagnostics area, so the first two
+# 			GET_DIAGNOSTICS statements return the same result, just as in the original version of p()
+#
+# 			In MySQL 5.7.2, work was done to ensure that all nondiagnostic statements populate the
+# 			diagnostics area, per the SQL standard.
+#
+# 			DECLARE is one of them, so in 5.7.2 and higher, DECLARE statements executing at the 
+# 			beginning of the handler clear the current diagnostics area and the GET_DIAGNOSTICS
+# 			statements produce different results:
+#
+# 				+-----------------------------------+-----------+-----------+
+# 				| op 											| errno 	   | msg 		|
+# 				+-----------------------------------+-----------+-----------+
+# 				| current DA before mapped insert   | NULL 		| NULL 		|
+# 				+-----------------------------------+-----------+-----------+
+#
+# 				+-----------------------------------+-----------+---------------------------------------+
+# 				| op 											| errno 	   | msg 											 |
+# 				+-----------------------------------+-----------+---------------------------------------+
+# 				| stacked DA before mapped insert   | 1048 		| Column 'c1' cannot be null 				 |
+# 				+-----------------------------------+-----------+---------------------------------------+
+#
+# To avoid this issue within a condition handler when seeking to obtain information about the condition
+# that activated the handler, be sure to access the stacked diagnostics area, not the current
+# diagnostics area.
+#
+# 13.6.7.4 RESIGNAL SYNTAX
+#
+# 		RESIGNAL [condition_value]
+# 			[SET signal_information_item
+# 			[, signal_information_item] ---]
+#
+# 		condition_value: {
+# 			SQLSTATE [VALUE] sqlstate_value
+# 		 | condition_name
+# 		}
+#
+# 		signal_information_item:
+# 			condition_information_item_name = simple_value_specification
+#
+# 		condition_information_item_name: {
+# 			CLASS_ORIGIN
+# 		 | SUBCLASS_ORIGIN
+# 		 | MESSAGE_TEXT
+# 		 | MYSQL_ERRNO
+# 		 | CONSTRAINT_CATALOG
+# 		 | CONSTRAINT_SCHEMA
+# 		 | CONSTRAINT_NAME
+# 		 | CATALOG_NAME
+# 		 | SCHEMA_NAME
+# 		 | TABLE_NAME
+# 		 | COLUMN_NAME
+# 		 | CURSOR_NAME
+# 		}
+#
+# 		condition_name, simple_value_specification:
+# 			(see following discussion)
+#
+# RESIGNAL passes on the error condition information that is available during
+# execution of a condition handler within a compound statement inside a stored
+# procedure or function, trigger, or event.
+#
+# RESIGNAL may change some or all information before passing it on.
+#
+# RESIGNAL is related to SIGNAL, but instead of originating a condition
+# as SIGNAL does, RESIGNAL relays existing condition information, possibly
+# after modifying it.
+#
+# RESIGNAL makes it possible to both handle an error and return the error information.
+#
+# Otherwise, by executing an SQL statement within the handler, information that caused
+# the handler's activation is destroyed.
+#
+# RESIGNAL also can make some procedures shorter if a given handler can handle part
+# of a situation, then pass the condition "up the line" to another handler.
+#
+# No privileges are required to execute the RESIGNAL statement.
+#
+# All forms of RESIGNAL require that the current context be a condition handler.
+#
+# Otherwise, RESIGNAL is illegal and a:
+#
+# 		RESIGNAL when handler not active
+#
+# error occurs.
+#
+# To retrieve information from the diagnostics area, use the GET_DIAGNOSTICS
+# statement (see SECTION 13.6.7.3, "GET DIAGNOSTICS SYNTAX")
+#
+# FOr information about the diagnostics area, see SECTION 13.6.7.7,
+# "THE MYSQL DIAGNOSTICS AREA"
+#
+# 		) RESIGNAL OVERVIEW
+#
+# 		) RESIGNAL ALONE
+#
+# 		) RESIGNAL WITH NEW SIGNAL INFORMATION
+#
+# 		) RESIGNAL WITH A CONDITION VALUE AND OPTIONAL NEW SIGNAL INFORMATION
+#
+# 		) RESIGNAL REQUIRES CONDITION HANDLER CONTEXT
+#
+# RESIGNAL OVERVIEW
+#
+# For condition_value and signal_information_item, the definitions and rules are the same
+# for RESIGNAL as for SIGNAL.
+#
+# For example, the condition_value can be an SQLSTATE value, and the value can indicate errors,
+# warnings, or "not found".
+#
+# For additional information, see SECTION 13.6.7.5, "SIGNAL SYNTAX"
+#
+# The RESIGNAL statement takes condition_value and SET clauses, both of which are optional.
+#
+# This leads to several possible uses:
+#
+# 		) RESIGNAL alone:
+#
+# 			RESIGNAL;
+#
+# 		) RESIGNAL with new signal information:
+#
+# 			RESIGNAL SET signal_information_item [, signal_information_item] ---;
+#
+# 		) RESIGNAL with a condition value and possibly new signal information:
+#
+# 			RESIGNAL condition_value
+# 				[SET signal_information_item [, signal_information_item] ---];
+#
+# These use cases all cause changes to the diagnostics and condition areas:
+#
+# 		) A diagnostics area contains one or more condition areas.
+#
+# 		) A condition area contains condition information items, such as the SQLSTATE value, MYSQL_ERRNO,
+# 			or MESSAGE_TEXT
+#
+# There is a stack of diagnostics areas.
+#
+# When a handler takes control, it pushes a diagnostics area to the top of the stack, so there
+# are two diagnostics areas during handler execution:
+#
+# 		) The first (current) diagnostics area, which starts as a copy of the last diagnostics area,
+# 			but will be overwritten by the first statement in the handler that changes the current
+# 			diagnostics area.
+#
+# 		) The last (stacked) diagnostics area, which has the condition areas that were set up before the handler
+# 			took control.
+#
+# The maximum number of condition areas in a diagnostics area is determined by the value of the max_error_count
+# system variable.
+#
+# See DIAGNOSTICS AREA-RELATED SYSTEM VARIABLES
+#
+# RESIGNAL ALONE
+#
+# A simple RESIGNAL alone means "pass on the error with no change."
+#
+# It restores the last diagnostics area and makes it the current diagnostics area.
+#
+# That is, it "Pops" the diagnostics area stack.
+#
+# Within a condition handler that catches a condition, one use for RESIGNAL alone is to
+# perform some other actions, and then pass on without change the original condition
+# information (the information that existed before entry into the handler)
+#
+# Example:
+#
+# 		DROP TABLE IF EXISTS xx;
+# 		delimiter //
+# 		CREATE PROCEDURE p ()
+# 		BEGIN
+# 			DECLARE EXIT HANDLER FOR SQLEXCEPTION
+# 			BEGIN
+# 				SET @error_count = @error_count + 1;
+# 				IF @a = 0 THEN RESIGNAL; END IF;
+# 			END;
+# 			DROP TABLE xx;
+# 		END//
+# 		delimiter ;
+# 		SET @error_count = 0;
+# 		SET @a = 0;
+# 		CALL p();
+#
+# Suppose that the DROP TABLE xx statement fails. The diagnostics area stack looks like this:
+#
+# 		DA 1. ERROR 1051 (42S02): Unknown table 'xx'
+#
+# Then execution enters the EXIT handler. It starts by pushing a diagnostics area to the top of
+# the stack, which now looks like this:
+#
+# 		DA 1. ERROR 1051 (42S02): Unknown table 'xx'
+# 		DA 2. ERROR 1051 (42S02): Unknown table 'xx'
+#
+# At this point, the contents of the first (current) and second (stacked) diagnostics areas are
+# teh same.
+#
+# The first diagnostics area may be modified by statements executing subsequently within
+# the handler.
+#
+# Usually a procedure statement clears the first diagnostics area.
+#
+# BEGIN is an exception, it does not clear, it does nothing.
+#
+# SET is not an exception, it clears,performs the operation, and produces a result of
+# "success"
+#
+# The diagnostics area stack now looks like this:
+#
+# 		DA 1. ERROR 0000 (00000): Successful operation
+# 		DA 2. ERROR 1051 (42S02): Unknown table 'xx'
+#
+# At this point, if @a = 0, RESIGNAL pops the diagnostics area stack, which now looks
+# like this:
+#
+# 		DA 1. ERROR 1051 (42S02): Unknown table 'xx'
+#
+# And that is what the caller sees.
+#
+# If @a is not 0, the handler simply ends, which means that there is no more use for the
+# current diagnostics area (it has been "handled"), so it can be thrown away, causing
+# the stacked diagnostics area to become the current diagnostics area again.
+#
+# The diagnostics area stack looks like this:
+#
+# 		DA 1. ERROR 0000 (00000): Successful operation
+#
+# The details make it look complex, but the end result is quite useful:
+#
+# 		Handlers can execute without destroying information about the condition
+# 		that caused activation of the handler.
+#
+# RESIGNAL WITH NEW SIGNAL INFORMATION
+#
+# RESIGNAL with a SET clause provides new signal information, so the statement means
+# "pass on the error with changes"
+#
+# 		RESIGNAL SET signal_information_item [, signal_information_item] ---;
+#
+# As with RESIGNAL alone the idea is to pop the diagnostics area stack so that
+# the original information will go out.
+#
+# Unlike RESIGNAL alone, anything specified in the SET clause changes.
+#
+# Example:
+#
+# 		DROP TABLE IF EXISTS xx;
+# 		delimiter //
+# 		CREATE PROCEDURE p ()
+# 		BEGIN
+# 			DECLARE EXIT HANDLER FOR SQLEXCEPTION
+# 			BEGIN
+# 				SET @error_count = @error_count + 1;
+# 				IF @a = 0 THEN RESIGNAL SET MYSQL_ERRNO = 5; END IF;
+# 			END;
+# 			DROP TABLE xx;
+# 		END//
+# 		delimiter ;
+# 		SET @error_count = 0;
+# 		SET @a = 0;
+# 		CALL p();
+#
+# Remember from the previous discussion that RESIGNAL alone results in a diagnostics
+# area stack like this:
+#
+# 		DA 1. ERROR 1051 (42S02): Unknown table 'xx'
+#
+# The RESIGNAL SET MYSQL_ERRNO = 5 statement results in this stack instead, which is what the caller sees:
+#
+# 		DA 1. ERROR 5 (42S02): Unknown table 'xx'
+#
+# In other words, it changes the error number, and nothing else.
+#
+# The RESIGNAL statement can change any or all of the signal information items, making
+# the first condition area of the diagnostics area look quite different.
+#
+# RESIGNAL WITH A CONDITION VALUE AND OPTIONAL NEW SIGNAL INFORMATION
+#
+# RESIGNAL with a condition value means "push a condition into the current diagnostics area"
+#
+# If the SET clause is present, it also changes the error information.
+#
+# 		RESIGNAL condition_value
+# 			[SET signal_information_item [, signal_information_item] ---];
+#
+# This form of RESIGNAL restores the last diagnostics area and makes it the current
+# diagnostics area.
+#
+# That is, it "pops" the diagnostics area stack, which is the same as what a simple
+# RESIGNAL alone would do.
+#
+# However, it also changes the diagnostics area depending on the condition value or
+# signal information.
+#
+# Example:
+#
+# 		DROP TABLE IF EXISTS xx;
+# 		delimiter //
+# 		CREATE PROCEDURE p ()
+# 		BEGIN
+# 			DECLARE EXIT HANDLER FOR SQLEXCEPTION
+# 			BEGIN
+# 				SET @error_count = @error_count + 1;
+# 				IF @a = 0 THEN RESIGNAL SQLSTATE '45000' SET MYSQL_ERRNO=5; END IF;
+# 			END;
+# 			DROP TABLE xx;
+# 		END//
+# 		delimiter ;
+# 		SET @error_count = 0;
+# 		SET @a = 0;
+# 		SET @@max_error_count = 2;
+# 		CALL p();
+# 		SHOW ERRORS;
+#
+# This is similar to the previous example, and the effects are the same, except that if
+# RESIGNAL happens, the current condition area looks different at the end.
+#
+# (The reason the condition adds to rather than replaces the existing condition is the
+# use of a condition value)
+#
+# The RESIGNAL statement includes a condition value (SQLSTATE '45000'), so it adds a new
+# condition area, resulting in a diagnostics area stack that looks like this:
+#
+# 		DA 1. (condition 2) ERROR 1051 (42S02): Unknown table 'xx'
+# 				(condition 1) ERROR 5 (45000) Unknown table 'xx'
+#
+# The result of CALL_p() and SHOW_ERRORS for this example is:
+#
+# 		CALL p();
+# 		ERROR 5 (45000): Unknown table 'xx'
+# 		SHOW ERRORS;
+# 		+--------+---------+--------------------------------------------------+
+# 		| Level  | Code    | Message 														 |
+# 		+--------+---------+--------------------------------------------------+
+# 		| Error  | 1051 	 | Unknown table 'xx' 										 |
+# 		| Error  | 5 		 | Unknown table 'xx' 										 |
+# 		+--------+---------+--------------------------------------------------+
+#
+# RESIGNAL REQUIRES CONDITION HANDLER CONTEXT
+#
+# All forms of RESIGNAL require that the current context be a condition handler.
+#
+# Otherwise, RESIGNAL is illegal and a RESIGNAL when handler not active error
+# occurs.
+#
+# For example:
+#
+# 		CREATE PROCEDURE p () RESIGNAL;
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		CALL p();
+# 		ERROR 1645 (0K000): RESIGNAL when handler not active
+#
+# Here is a more dificult example:
+#
+# 		delimiter //
+# 		CREATE FUNCTION f () RETURNS INT
+# 		BEGIN
+# 			RESIGNAL;
+# 			RETURN 5;
+# 		END//
+# 		CREATE PROCEDURE p ()
+# 		BEGIN
+# 			DECLARE EXIT HANDLER FOR SQLEXCEPTION SET @a=f();
+# 			SIGNAL SQLSTATE '55555';
+# 		END//
+# 		delimiter ;
+# 		CALL p();
+#
+# RESIGNAL occurs within the stored function f()
+#
+# Although f() itself is invoked within the context of the EXIT handler, execution
+# within f() has its own context, which is not handler context.
+#
+# Thus, RESIGNAL within f() results in a "handler not active" error.
+#
+# 13.6.7.5 SIGNAL SYNTAX
+#
+# 		SIGNAL condition_value
+# 			[SET signal_information_item
+# 			[, signal_information_item] ---]
+#
+# 		condition_value: {
+# 			SQLSTATE [VALUE] sqlstate_value
+# 		 | condition_name
+# 		}
+#
+# 		signal_information_item:
+# 			condition_information_item_name = simple_value_specification
+#
+# 		condition_information_item_name: {
+# 			CLASS_ORIGIN
+# 		 | SUBCLASS_ORIGIN
+# 		 | MESSAGE_TEXT
+# 		 | MYSQL_ERRNO
+# 		 | CONSTRAINT_CATALOG
+# 		 | CONSTRAINT_SCHEMA
+# 		 | CONSTRAINT_NAME
+# 		 | CATALOG_NAME
+# 		 | SCHEMA_NAME
+# 		 | TABLE_NAME
+# 		 | COLUMN_NAME
+# 		 | CURSOR_NAME
+# 		}
+#
+# 		condition_name, simple_value_specification:
+# 			(see following discussion)
+#
+# SIGNAL is the way to "return" an error.
+#
+# SIGNAL provides error information to a handler, to an outer portion
+# of the application, or to the client.
+#
+# Also, it provides control over the error's characteristics (error number,
+# SQLSTATE value, message)
+#
+# Without SIGNAL, it is necessary to resort to workarounds such as deliberately
+# referring to a nonexistent table to cause a routine to return an error.
+#
+# No privileges are required to execute the SIGNAL statement.
+#
+# To retrieve information from the diagnostics area, use the GET_DIAGNOSTICS
+# statement (see SECTION 13.6.7.3, "GET DIAGNOSTICS SYNTAX")
+#
+# For information about the diagnostics area, see SECTION 13.6.7.7, "THE MYSQL DIAGNOSTICS AREA"
+#
+# 		) SIGNAL OVERVIEW
+#
+# 		) SIGNAL CONDITION INFORMATION ITEMS
+#
+# 		) EFFECT OF SIGNALS ON HANDLERS, CURSORS AND STATEMENTS
+#
+# SIGNAL OVERVIEW
+#
+# The condition_value in a SIGNAL statement indicates the error value to be returned.
+#
+# It can be an SQLSTATE value (a 5-character string literal) or a condition_name
+# that refers to a named condition previously defined with DECLARE_---_CONDITION
+# (See SECTION 13.6.7.1, "DECLARE --- CONDITION SYNTAX")
+#
+# An SQLSTATE value can indicate errors, warnings, or "not found"
+#
+# The first two characters of the value indicates its error class, as discussed
+# in SIGNAL CONDITION INFORMATION ITEMS.
+#
+# Some signal values cause statement termination: see EFFECT OF SIGNALS ON HANDLERS, CURSORS AND STATEMENTS
+#
+# The SQLSTATE value for a SIGNAL statement should not start with '00' because such values
+# indicate success and are not valid for signaling an error.
+#
+# This is true whether the SQLSTATE value is specified directly in the SIGNAL statement or in
+# a named condition referred to in the statement.
+#
+# If the value is invalid, a BAD SQLSTATE error occurs.
+#
+# To signal a generic SQLSTATE value, use '45000', which means "unhandled user-defined exception"
+#
+# The SIGNAL statement optionally includes a SET clause that contains multiple signal items,
+# in a list of condition_information_item_name = simple_value_specification assignments,
+# separated by commas.
+#
+# Each condition_information_item_name may be specified only once in the SET clause.
+#
+# Otherwise, a Duplicate condition information item error occurs.
+#
+# Valid simple_value_specification designators can be specified using stored procedure
+# or function parameters, stored program local variables declared with DECLARE,
+# user-defined variables, system variables, or literals.
+#
+# A character literal may include a _charset introducer.
+#
+# For information about permissible condition_information_item_name values, see SIGNAL CONDITION INFORMATION ITEMS
+#
+# The following procedure signals an error or warning depending on the value of pval, its
+# input parameter:
+#
+# 		CREATE PROCEDURE p (pval INT)
+# 		BEGIN
+# 			DECLARE speciality CONDITION FOR SQLSTATE '45000';
+# 			IF pval = 0 THEN
+# 				SIGNAL SQLSTATE '01000';
+# 			ELSEIF pval = 1 THEN
+# 				SIGNAL SQLSTATE '45000'
+# 					SET MESSAGE_TEXT = 'An error occurred';
+# 			ELSEIF pval = 2 THEN
+# 				SIGNAL speciality
+# 					SET MESSAGE_TEXT = 'An error occurred';
+# 			ELSE
+# 				SIGNAL SQLSTATE '01000'
+# 					SET MESSAGE_TEXT = 'A warning occurred', MYSQL_ERRNO = 1000;
+# 				SIGNAL SQLSTATE '45000'
+# 					SET MESSAGE_TEXT = 'An error occurred', MYSQL_ERRNO = 1001;
+# 			END IF;
+# 		END;
+#
+# If pval is 0, p() signals a warning because SQLSTATE values that begin with '01' are signals
+# in the warning class.
+#
+# The warning does not terminate the procedure, and can be seen with SHOW_WARNINGS after the
+# procedure returns.
+#
+# If pval is 1, p() signals an error and sets the MESSAGE_TEXT condition information item.
+#
+# The error terminates the procedure, and the text is returned with the error information.
+#
+# If pval is 2, the same error is signaled, although the SQLSTATE value is specified using
+# a named condition in this case.
+#
+# If pval is anything else, p() first signals a warning and sets the message text and error
+# number condition information items.
+#
+# This warning does not terminate the procedure, so execution continues and p() then signals
+# an error.
+#
+# The error does terminate the procedure. The message text and error number set by the warning
+# are replaced by the values set by the error, which are returned with the error information.
+#
+# SIGNAL is typically used within stored programs, but it is a MySQL extension that it is permitted
+# outside handler context.
+#
+# For example, if you invoke the mysql client program, you can enter any of these statements
+# at the prompt:
+#
+# 		SIGNAL SQLSTATE '77777';
+#
+# 		CREATE TRIGGER t_bi BEFORE INSERT ON t
+# 			FOR EACH ROW SIGNAL SQLSTATE '77777';
+#
+# 		CREATE EVENT e ON SCHEDULE EVERY 1 SECOND
+# 			DO SIGNAL SQLSTATE '77777';
+#
+# SIGNAL executes according to the following rules:
+#
+# 	If the SIGNAL statement indicates a particular SQLSTATE value, that value is used to
+# 	signal the condition specified.
+#
+# Example:
+#
+# 		CREATE PROCEDURE p (divisor INT)
+# 		BEGIN
+# 			IF divisor = 0 THEN
+# 				SIGNAL SQLSTATE '22012';
+# 			END IF;
+# 		END;
+#
+# If the SIGNAL statement uses a named condition, the condition must be declared in some
+# scope that applies to the SIGNAL statement, and must be defined using an SQLSTATE value,
+# not a MySQL error number.
+#
+# Example:
+#
+# 		CREATE PROCEDURE p (divisor INT)
+# 		BEGIN
+# 			DECLARE divide_by_zero CONDITION FOR SQLSTATE '22012';
+#			IF divisor = 0 THEN
+# 				SIGNAL divide_by_zero;
+# 			END IF;
+# 		END;
+#
+# If the named condition does not exist in the scope of the SIGNAL statement, an 
+# Undefined CONDITION error occurs.
+#
+# If SIGNAL refers to a named condition that is defined with a MySQL error number rather
+# than an SQLSTATE value, a:
+#
+# 	 SIGNAL/RESIGNAL can only use a CONDITION defined with SQLSTATE error
+#
+# occurs.
+#
+# The following statements cause that error because the named condition is associated
+# with a MySQL error number:
+#
+# 		DECLARE no_such_table CONDITION FOR 1051;
+# 		SIGNAL no_such_table;
+#
+# If a condition with a given name is declared multiple times in different scopes,
+# the declaration with the most local scope applies.
+#
+# Consider the following procedure:
+#
+# 		CREATE PROCEDURE p (divisor INT)
+# 		BEGIN
+# 			DECLARE my_error CONDITION FOR SQLSTATE '45000';
+# 			IF divisor = 0 THEN
+# 				BEGIN
+# 					DECLARE my_error CONDITION FOR SQLSTATE '22012';
+# 					SIGNAL my_error;
+# 				END;
+# 			END IF;
+# 			SIGNAL my_error;
+# 		END;
+#
+# If divisor is 0, the first SIGNAL statement executes.
+#
+# The innermost my_error condition declaration applies, raising SQLSTATE '22012'
+#
+# If divisor is not 0, the second SIGNAL statement executes. The outermost my_error
+# condition declaration applies, raising SQLSTATE '45000'
+#
+# For information about how the server chooses handlers when a condition occurs,
+# see SECTION 13.6.7.6, "SCOPE RULES FOR HANDLERS"
+#
+# Signals can be raised within exception handlers:
+#
+# 		CREATE PROCEDURE p ()
+# 		BEGIN
+# 			DECLARE EXIT HANDLER FOR SQLEXCEPTION
+# 			BEGIN
+# 				SIGNAL SQLSTATE VALUE '99999'
+# 					SET MESSAGE_TEXT = 'An error occurred';
+# 			END;
+# 			DROP TABLE no_such_table;
+# 		END;
+#
+# CALL p() reaches the DROP_TABLE statement.
+#
+# There is no table named no_such_table, so the error handler is activated.
+#
+# The error handler destroys the original error ("No such table") and makes a
+# new error with SQLSTATE '99999' and message An error occurred.
+#
+# SIGNAL CONDITION INFORMATION ITEMS
+#
+# The following table lists the names of diagnostics area condition information items
+# that can be set in a SIGNAL (or RESIGNAL) statement.
+#
+# All items are standard SQL except MYSQL_ERRNO, which is a MySQL extension.
+#
+# For more information about these items see SECTION 13.6.7.7, "THE MYSQL DIAGNOSTICS AREA"
+#
+# 		Item Name 					Definition
+# 		---------- 					----------
+# 		CLASS_ORIGIN 				VARCHAR(64)
+# 		SUBCLASS_ORIGIN 			VARCHAR(64)
+#
+# 		CONSTRAINT_CATALOG 		VARCHAR(64)
+# 		CONSTRAINT_SCHEMA 		VARCHAR(64)
+#
+# 		CONSTRAINT_NAME 			VARCHAR(64)
+# 		CATALOG_NAME 				VARCHAR(64)
+#
+# 		SCHEMA_NAME 				VARCHAR(64)
+# 		TABLE_NAME 					VARCHAR(64)
+#
+# 		COLUMN_NAME 				VARCHAR(64)
+# 		CURSOR_NAME 				VARCHAR(64)
+#
+# 		MESSAGE_TEXT 				VARCHAR(128)
+# 		MYSQL_ERRNO 				SMALLINT UNSIGNED
+#
+# The character set of character items is UTF-8
+#
+# It is illegal to assign NULL to a condition information item in a SIGNAL statement.
+#
+# A SIGNAL statement always specifies an SQLSTATE value, either directly, or indirectly
+# by referring to a named condition defined with an SQLSTATE value.
+#
+# The first two characters of an SQLSTATE value are its class, and the class
+# determines the default value for the condition information items:
+#
+# 		) Class = '00' (success)
+#
+# 			Illegal. SQLSTATE values that begin with '00' indicate success and are not valid for SIGNAL
+#
+# 		) Class = '01' (warning)
+#
+# 			MESSAGE_TEXT = 'Unhandled user-defined warning condition';
+# 			MYSQL_ERRNO = ER_SIGNAL_WARN
+#
+# 		) Class = '02' (not found)
+#
+# 			MESSAGE_TEXT = 'Unhandled user-defined not found condition';
+# 			MYSQL_ERRNO = ER_SIGNAL_NOT_FOUND
+#
+# 		) Class > '02' (exception)
+#
+# 			MESSAGE_TEXT = 'Unhandled user-defined exception condition';
+# 			MYSQL_ERRNO = ER_SIGNAL_EXCEPTION
+#
+# For legal classes, the other condition information items are set as follows:
+#
+# 		CLASS_ORIGIN = SUBCLASS_ORIGIN = '';
+# 		CONSTRAINT_CATALOG = CONSTRAINT_SCHEMA = CONSTRAINT_NAME = '';
+# 		CATALOG_NAME = SCHEMA_NAME = TABLE_NAME = COLUMN_NAME = '';
+# 		CURSOR_NAME = '';
+#
+# The error values that are accessible after SIGNAL executes are the SQLSTATE value
+# raised by the SIGNAL statement and the MESSAGE_TEXT and MySQL_ERRNO items.
+#
+# These values are available from the C API:
+#
+# 		) mysql_sqlstate() returns the SQLSTATE value
+#
+# 		) mysql_errno() returns the MYSQL_ERRNO value
+#
+# 		) mysql_error() returns the MESSAGE_TEXT value
+#
+# At the SQL level, the output from SHOW_WARNINGS and SHOW_ERRORS indicates the MYSQL_ERRNO
+# and MESSAGE_TEXT values in the Code and Message columns.
+#
+# To retrieve information from the diagnostics area, use the GET_DIAGNOSTICS statement
+# (see SECTION 13.6.7.3, "GET DIAGNOSTICS SYNTAX")
+#
+# For information about the diagnostics area, see SECTION 13.6.7.7, "THE MYSQL DIAGNOSTICS AREA"
+#
+# EFFECT OF SIGNALS ON HANDLERS, CURSORS, AND STATEMENTS
+#
+# Signals have different effects on statement execution depending on the signal class.
+#
+# The class determines how severe an error is. MySQL ignores the value of the sql_mode
+# system variable; in particular, strict SQL mode does not matter.
+#
+# MySQL also ignores IGNORE: The intent of SIGNAL is to raise a user-generated error
+# explicitly, so a signal is never ignored.
+#
+# In the following descriptions, "unhandled" means that no handler for the signaled
+# SQLSTATE value has been defined with DECLARE_---_HANDLER
+#
+# 		) Class = '00' (success)
+#
+# 			Illegal. SQLSTATE values that begin with '00' indicates success and are not valid for SIGNAL
+#
+# 		) Class = '01' (warning)
+#
+# 			The value of the warning_count system variable goes up.
+#
+# 			SHOW_WARNINGS shows the signal. SQLWARNING handlers catch the signal.
+#
+# 			Warnings cannot be returned from stored functions because the RETURN statement that causes
+# 			the function to return clears the diagnostic area.
+#
+# 			The statement thus clears any warnings that may have been present there 
+# 			(and resets warning_count to 0)
+#
+# 		) Class = '02' (not found)
+#
+# 			NOT FOUND handlers catch the signal.
+#
+# 			There is no effect on cursors. If the signal is unhandled in a stored function,
+# 			statements end.
+#
+# 		) Class > '02' (exception)
+#
+# 			SQLEXCEPTION handlers catch the signal.
+#
+# 			if the signal is unhandled in a stored function, statements end.
+#
+# 		) Class = '40'
+#
+# 			Treated as an ordinary exception
+#
+# 13.6.7.6 SCOPE RULES FOR HANDLERS
+#
+# A stored program may include handlers to be invoked when certain conditions occur within
+# the program.
+#
+# The applicability of each handler depends on its location within the program definition
+# and on the condition or conditions that it handles:
+#
+# 		) A handler declared in a BEGIN_---_END block is in scope only for the SQL statements
+# 			following the handler declarations in the block.
+#
+# 			If the handler itself raises a condition, it cannot handle that condition, nor 
+# 			can any other handlers declared in the block.
+#
+# 			In the following example, handlers H1 and H2 are in scope for conditions
+# 			raised by statements stmt1 and stmt2.
+#
+# 			But neither H1 nor H2 are in scope for conditions raised in the body of H1 or H2.
+#
+# 				BEGIN -- outer block
+# 					DECLARE EXIT HANDLER FOR ---; --- handler H1
+# 					DECLARE EXIT HANDLER FOR ---; --- handler H2
+# 					stmt1;
+# 					stmt2;
+# 				END;
+#
+# 		) A handler is in scope only for the block in which it is declared, and cannot be
+# 			activated for conditions occurring outside that block.
+#
+# 			In the following example, handler H1 is in scope for stmt1 in the inner block,
+# 			but not for stmt2 in the outer block:
+#
+# 				BEGIN -- outer block
+# 					BEGIN -- inner block
+# 						DECLARE EXIT HANDLER FOR ---; --- handler H1
+# 						stmt1;
+# 					END;
+# 					stmt2;
+# 				END;
+#
+# 		) A handler can be specific or general.
+#
+# 			A specific handler is for a MySQL error code, SQLSTATE value, or condition name.
+#
+# 			A general handler is for a condition in the SQLWARNING, SQLEXCEPTION, or NOT FOUND
+# 			class.
+#
+# 			Condition specificity is related to condition precedence, as described later.
+#
+# Multiple handlers can be declared in different scopes and with different specifities.
+#
+# For example, there might be a specific MySQL error code handler in an outer block,
+# and a general SQLWARNING handler in an inner block.
+#
+# Or there might be handlers for a specific MySQL error code and the general SQLWARNING
+# class in the same block.
+#
+# Whether a handler is activated depends not only on its own scope and condition value,
+# but on what other handlers are present.
+#
+# When a condition occurs in a stored program, the server searches for applicable handlers
+# in the current scope (current BEGIN_---_END block)
+#
+# If there are no applicable handlers, the search continues outward with the handlers
+# in each successive containing scope (block).
+#
+# When the server finds one or more applicable handlers at a given scope, it chooses
+# among them based on condition precdence:
+#
+# 		) A MySQL error code handler takes precedence over an SQLSTATE value handler
+#
+# 		) An SQLSTATE value handler takes precedence over general SQLWARNING, SQLEXCEPTION,
+# 			or NOT FOUND handlers.
+#
+# 		) An SQLEXCEPTION handler takes precedence over an SQLWARNING handler
+#
+# 		) It is possible to have several applicable handlers with the same precedence.
+#
+# 			For example, a statement could generate multiple warnings with different#
+# 			error codes, for each of which an error-specific handler exists.
+#
+# 			In this case, the choice of which handler the server activates is
+# 			nondeterministic, and may change depending on the circumstances under which
+# 			the condition occurs.
+#
+# One implication of the handler selection rules is that if multiple applicable handlers
+# occur in different scopes, handlers with the most local scope take precedence
+# over handlers in outer scopes, even over those for more specific conditions.
+#
+# If there is no appropriate handler when a condition occurs, the action taken depends
+# on the class of the condition:
+#
+# 		) For SQLEXCEPTION conditions, the stored program terminates at the statement that
+# 			raised the condition, as if there were an EXIT handler.
+#
+# 			If the program was called by another stored program, the calling program handles
+# 			the condition using the handler selection rules applied to its own handlers.
+#
+# 		) For SQLWARNING conditions, the program continues executing, as if there were a CONTINUE handler
+#
+# 		) For NOT FOUND conditions, if the condition was raised normally, the action is CONTINUE.
+#
+# 			If it was raised by SIGNAL or RESIGNAL, the action is EXIT.
+#
+# The following examples demonstrate how MySQL applies the handler selection rules.
+#
+# This procedure contains two handlers, one for the specific SQLSTATE value ('42S02')
+# that occurs for attempts to drop a nonexistent table, and one for the general
+# SQLEXCEPTION class:
+#
+# 		CREATE PROCEDURE p1()
+# 		BEGIN
+# 			DECLARE CONTINUE HANDLER FOR SQLSTATE '42S02'
+# 				SELECT 'SQLSTATE handler was activated' AS msg;
+# 			DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
+# 				SELECT 'SQLEXCEPTION handler was activated' AS msg;
+#
+# 			DROP TABLE test.t;
+# 		END;
+#
+# Both handlers are declared in the same block and have the same scope.
+#
+# However, SQLSTATE handlers take precedence over SQLEXCEPTION handlers,
+# so if the table t is nonexistent, the DROP_TABLE statement raises a condition
+# that activates the SQLSTATE handler:
+#
+# 		CALL p1();
+# 		+--------------------------------------+
+# 		| msg 										   |
+# 		+--------------------------------------+
+# 		| SQLSTATE handler was activated 		|
+# 		+--------------------------------------+
+#
+# This procedure contains the same two handlers. But this time, the DROP_TABLE statement
+# and SQLEXCEPTION handler are in an inner block relative to the SQLSTATE handler:
+#
+# 		CREATE PROCEDURE p2()
+# 		BEGIN -- outer block
+# 				DECLARE CONTINUE HANDLER FOR SQLSTATE '42S02'
+# 					SELECT 'SQLSTATE handler was activated' AS msg;
+# 			BEGIN -- inner block
+# 				DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
+# 					SELECT 'SQLEXCEPTION handler was activated' AS msg;
+#
+# 				DROP TABLE test.t; -- occurs within inner block
+# 			END;
+# 		END;
+#
+# In this case, the handler that is more local to where the condition occurs
+# takes precedence.
+#
+# The SQLEXCEPTION handler activates, even though it is more general than the
+# SQLSTATE handler:
+#
+# 		CALL p2();
+# 		+-------------------------------------------------+
+# 		| msg 														  |
+# 		+-------------------------------------------------+
+# 		| SQLEXCEPTION handler was activated 				  |
+# 		+-------------------------------------------------+
+#
+# In this procedure, one of the handlers is declared in a block inner to the scope of the
+# DROP_TABLE statement:
+#
+# 		CREATE PROCEDURE p3()
+# 		BEGIN -- outer block
+# 			DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
+# 				SELECT 'SQLEXCEPTION handler was activated' AS msg;
+# 			BEGIN -- inner block
+# 				DECLARE CONTINUE HANDLER FOR SQLSTATE '42S02'
+# 					SELECT 'SQLSTATE handler was activated' AS msg;
+# 			END;
+#
+# 			DROP TABLE test.t; -- occurs within outer block
+# 		END;
+#
+# Only the SQLEXCEPTION handler applies because the other one is not in scope
+# for the condition raised by the DROP_TABLE:
+#
+# 		CALL p3();
+# 		+------------------------------------------+
+# 		| msg 												 |
+# 		+------------------------------------------+
+# 		| SQLEXCEPTION handler was activated 		 |
+# 		+------------------------------------------+
+#
+# In this procedure, both handlers are declared in a block inner to the scope of the
+# DROP_TABLE statement:
+#
+# 		CREATE PROCEDURE p4()
+# 		BEGIN -- Outer block
+# 			BEGIN -- Inner block
+# 				DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
+# 					SELECT 'SQLEXCEPTION handler was activated' AS msg;
+# 				DECLARE CONTINUE HANDLER FOR SQLSTATE '42S02'
+# 					SELECT 'SQLSTATE handler was activated' AS msg;
+# 			END;
+#
+# 			DROP TABLE test.t -- Occurs within outer block
+# 		END;
+#
+# Neither handler applies because they are not in scope for the DROP_TABLE 
+#
+# The condition raised by the statement goes unhandled and terminates the procedure
+# with an error:
+#
+# 		CALL p4();
+# 		ERROR 1051 (42S02): UNKNOWN TABLE 'test.t'
+#
+# 13.6.7.7 THE MYSQL DIAGNOSTICS AREA
+#
+# SQL statements produce diagnostic information that populates the diagnostics area.
+#
+# Standard SQL has a diagnostics area stack, containing a diagnostics area for each
+# nested execution context.
+#
+# Standard SQL also supports GET_STACKED_DIAGNOSTICS syntax for referring to the
+# second diagnostics area during condition handler execution.
+#
+# The following discussion describes the structure of the diagnostics area in MySQL,
+# the information items recognized by MySQL, how statements clear and set the
+# diagnostics area, and how diagnostics areas are pushed to and popped from the stack.
+#
+# 		) DIAGNOSTICS AREA STRUCTURE
+#
+# 		) DIAGNOSTICS AREA INFORMATION ITEMS
+#
+# 		) HOW THE DIAGNOSTICS AREA IS CLEARED AND POPULATED
+#
+# 		) HOW THE DIAGNOSTICS AREA STACK WORKS
+#
+# 		) DIAGNOSTICS AREA-RELATED SYSTEM VARIABLES
+#
+# DIAGNOSTICS AREA STRUCTURE
+#
+# The diagnostics area contains two kinds of information:
+#
+# 		) Statement information, such as the number of conditions that occurred or the affected-rows
+# 			count.
+#
+# 		) Condition information, such as the error code and message.
+#
+# 			If a statement raises multiple conditions, this part of the diagnostics area has
+# 			a condition area for each one.
+#
+# 			If a statement raises no conditions, this part of the diagnostics area is empty.
+#
+# For a statement that produces three conditions, the diagnostics area contains statement
+# and condition information like this:
+#
+# 		Statement information:
+# 			row count
+# 			--- other statement information items ---
+# 		Condition area list:
+# 			Condition area 1:
+# 				error code for condition 1
+# 				error message for condition 1
+# 				--- other condition information items ---
+# 			Condition area 2:
+# 				error code for condition 2:
+# 				error message for condition 2
+# 				--- other condition information items ---
+# 			Condition area 3:
+# 				error code for condition 3
+# 				error message for condition 3
+# 				--- other condition information items ---
+#
+# DIAGNOSTICS AREA INFORMATION ITEMS
+#
+# The diagnostics area contains statement and condition information items.
+#
+# Numeric items are integers.
+#
+# The character set for character items is UTF-8. No item can be NULL.
+#
+# If a statement or condition item is not set by a statement that populates
+# the diagnostics area, its value is 0 or the empty string, depending on the
+# item data type.
+#
+# The statement information part of the diagnostics area contains these items:
+#
+# 		) NUMBER: An integer indicating the number of condition areas that have information
+#
+# 		) ROW_COUNT: An integer indicating the number of rows affected by the statement 
+#
+# 			ROW_COUNT has the same value as the ROW_COUNT() function (see SECTION 12.15,
+# 			"INFORMATION FUNCTIONS")
+#
+# The condition information part of the diagnostics area contains a condition area for
+# each condition.
+#
+# Condition areas are numbered from 1 to the value of the NUMBER statement condition
+# item
+#
+# If NUMBER is 0, there are no condition areas
+#
+# Each condition area contains the items in the following list.
+#
+# All items are standard SQL except MySQL_ERRNO, which is a MySQL extension.
+#
+# The definitions apply for conditions generated other than by a signal (that is,
+# by a SIGNAL or RESIGNAL statement)
+#
+# For nonsignal conditions, MySQL populates only those condition items not
+# described as always empty.
+#
+# The effects of signals on the condition area are described later.
+#
+# 		) CLASS_ORIGIN: A string containing the class of the RETURNED_SQLSTATE value.
+#
+# 			If the RETURNED_SQLSTATE value begins with a class value defined in SQL
+# 			standards document ISO 9075-2 (SECTION 24.1, SQLSTATE), CLASS_ORIGIN is 'ISO 9075'
+#
+# 			Otherwise, CLASS_ORIGIN is 'MySQL'
+#
+# 		) SUBCLASS_ORIGIN: A string containing the subclass of the RETURNED_SQLSTATE value.
+#
+# 			If CLASS_ORIGIN is 'ISO 9075' or RETURNED_SQLSTATE ends with '000'
+#
+# 			SUBCLASS_ORIGIN is 'ISO 9075'. Otherwise, SUBCLASS_ORIGIN is 'MySQL'
+#
+# 		) RETURNED_SQLSTATE: A string that indicates the SQLSTATE value for the condition
+#
+# 		) MESSAGE_TEXT: A string that indicates the error message for the condition
+#
+# 		) MYSQL_ERRNO: An integer that indicates the MySQL error code for the condition
+#
+# 		) CONSTRAINT_CATALOG, CONSTRAINT_SCHEMA, CONSTRAINT_NAME: Strings that indicate the catalog,
+# 			schema, and name for a violated constraint.
+#
+# 			They are always empty.
+#
+# 		) CATALOG_NAME, SCHEMA_NAME, TABLE_NAME, COLUMN_NAME: Strings that indicate the catalog, schema, table,
+# 			and column related to the condition.
+#
+# 			They are always empty.
+#
+# 		) CURSOR_NAME: A string that indicates the cursor name. This is always empty
+#
+# For the RETURNED_SQLSTATE, MESSAGE_TEXT and MYSQL_ERRNO values for particular errors,
+# see SECTION B.3, "SERVER ERROR MESSAGE REFERENCE"
+#
+# If a SIGNAL (or RESIGNAL) statement populates the diagnostics area, its SET clause can
+# assign to any condition information item except RETURNED_SQLSTATE any value that is
+# legal for the item data type.
+#
+# SIGNAL also sets the RETURNED_SQLSTATE value, but not directly in its SET clause.
+#
+# That value comes from the SIGNAL statement SQLSTATE argument.
+#
+# SIGNAL also sets statement information items. It sets NUMBER to 1.
+#
+# It sets ROW_COUNT to -1 for errors and 0 otherwise.
+#
+# HOW THE DIAGNOSTICS AREA IS CLEARED AND POPULATED
+#
+# Nondiagnostic SQL statements populate the diagnostics area automatically,
+# and its contents can be set explicitly with the SIGNAL and RESIGNAL statements.
+#
+# The diagnostics area can be examined with GET_DIAGNOSTICS to extract specific
+# items, or with SHOW_WARNINGS or SHOW_ERRORS to see conditions of errors.
+#
+# SQL statements clear and set the diagnostics area as follows:
+#
+# 		) When the server starts executing a statement after parsing it, it clears the diagnostics
+# 			area for nondiagnostic statements.
+#
+# 			Diagnostic statements do not clear the diagnostics area.
+#
+# 			These statements are diagnostic:
+#
+# 				) GET_DIAGNOSTICS
+#
+# 				) SHOW_ERRORS
+#
+# 				) SHOW_WARNINGS
+#
+# 		) If a statement raises a condition, the diagnostics area is cleared of conditions
+# 			that belong to earlier statements.
+#
+# 			The exception is that conditions raised by GET DIAGNOSTICS and RESIGNAL
+# 			are added to the diagnostics area without clearing it.
+#
+# Thus, even a statement that does not normally clear the diagnostics area when it begins
+# executing clears it if the statement raises a condition.
+#
+# The following example shows the effect of various statements on the diagnostics area,
+# using SHOW_WARNINGS to display information about conditions stored there.
+#
+# This DROP_TABLE statement clears the diagnostics area and populates it when the condition occurs:
+#
+# 		DROP TABLE IF EXISTS test.no_such_table;
+# 		Query OK, 0 rows affected, 1 warning (0.01 sec)
+#
+# 		SHOW WARNINGS;
+# 		+--------+-----------+----------------------------------------+
+# 		| Level  | Code 		| Message 										  |
+# 		+--------+-----------+----------------------------------------+
+# 		| note   | 1051 		| Unknown table 'test.no_such_table' 	  |
+# 		+--------+-----------+----------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# This SET statement generates an error, so it clears and populates the
+# diagnostics area:
+#
+# 		SET @x = @@x;
+# 		ERROR 1193 (HY000): Unknown system variable 'x'
+#
+# 		SHOW WARNINGS;
+# 		+--------+---------+-------------------------------------------+
+# 		| Level  | Code 	 | Message 												|
+# 		+--------+---------+-------------------------------------------+
+# 		| Error  | 1193 	 | Unknown system variable 'x' 					|
+# 		+--------+---------+-------------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# The previous SET statement produced a single condition, so 1 is the only valid
+# condition number for GET_DIAGNOSTICS at this point.
+#
+# The following statement uses a condition number of 2, which produces a warning
+# that is added to the diagnostics area without clearing it:
+#
+# 		GET DIAGNOSTICS CONDITION 2 @p = MESSAGE_TEXT;
+# 		Query OK, 0 rows affected, 1 warning (0.00 sec)
+#
+# 		SHOW WARNINGS;
+# 		+-------+-----------+----------------------------------------+
+# 		| Level | Code 	  | Message 										 |
+# 		+-------+-----------+----------------------------------------+
+# 		| Error | 1193 	  | Unknown system variable 'xx' 			 |
+# 		| Error | 1753 	  | Invalid condition number 					 |
+# 		+-------+-----------+----------------------------------------+
+# 		2 rows in set (0.00 sec)
+#
+# Now there are two conditions in the diagnostics area, so the same 
+# GET_DIAGNOSTICS statement succeeds:
+#
+# 		GET DIAGNOSTICS CONDITION 2 @p = MESSAGE_TEXT;
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		SELECT @p;
+# 		+-------------------------------------+
+# 		| @p 											  |
+# 		+-------------------------------------+
+# 		| Invalid condition number 			  |
+# 		+-------------------------------------+
+# 		1 row in set (0.01 sec)
+#
+# HOW THE DIAGNOSTICS AREA STACK WORKS
+#
+# When a push to the diagnostics area stack occurs, the first (current) diagnostics area
+# becomes the second (stacked) diagnostics area and a new current diagnostics area
+# is created as a copy of it.
+#
+# Diagnostics areas are pushed to and popped from the stack under the following circumstances:
+#
+# 		) Execution of a stored program
+#
+# 			A push occurs before the program executes and a pop occurs afterward.
+#
+# 			If the stored program ends while handlers are executing, there can be more than
+# 			one diagnostics area to pop; this occurs due to an exception for which there
+# 			are no appropriate handlers or due to RETURN in the handler.
+#
+# 			Any warning or error conditions in the popped diagnostics areas then are added to the
+# 			current diagnostics area, except that, for triggers, only errors are added.
+#
+# 			When the stored program ends, the caller sees these conditions in its current
+# 			diagnostics area.
+#
+# 		) Execution of a condition handler within a stored program
+#
+# 			When a push occurs as a result of condition handler activation, the stacked
+# 			diagnostics area is the area that was current within the stored program
+# 			prior to the push.
+#
+# 			The new now-current diagnostics area is the handler's current diagnostics area.
+#
+# 			GET_[CURRENT]_DIAGNOSTICS and GET_STACKED_DIAGNOSTICS can be used within the
+# 			handler to access the contents of the current (handler) and stacked (stored program)
+# 			diagnostics areas.
+#
+# 			Initially, they return the same result, but statements executing within the
+# 			handler modify the current diagnostics area, clearing and setting its contents
+# 			according to the normal rules (see HOW THE DIAGNOSTICS AREA IS CLEARED AND POPULATED)
+#
+# 			The stacked diagnostics area cannot be modified by statements executing within the
+# 			handler except RESIGNAL.
+#
+# 			If the handler executes successfully, the current (handler) diagnostics area is popped
+# 			and the stacked (stored program) diagnostics area again becomes the current diagnostics area.
+#
+# 			Conditions added to the handler diagnostics area during handler execution are added to the
+# 			current diagnostics area.
+#
+# 		) Execution of RESIGNAL
+#
+# 			The RESIGNAL statement passes on the error condition information that is available during
+# 			execution of a condition handler within a compound statement inside a stored program.
+#
+# 			RESIGNAL may change some or all information before passing it on, modifying the diagnostics
+# 			stack as described in SECTION 13.6.7.4, "RESIGNAL SYNTAX"
+#
+# DIAGNOSTICS AREA-RELATED SYSTEM VARIABLES
+#
+# Certain system variables control or are related to some aspects of the diagnostics area:
+#
+# 		) max_error_count controls the number of condition areas in the diagnostics area.
+#
+# 			If more conditions than this occur, MySQL silently discards information for the excess
+# 			conditions.
+#
+# 			(Conditions added by RESIGNAL are always added, with older conditions being discarded
+# 			as necessary to make room)
+#
+# 		) warning_count indicates the number of conditions that occurred.
+#
+# 			This includes errors, warnings, and notes.
+#
+# 			Normally, NUMBER and warning_count are teh same.
+#
+# 			However, as the number of conditions generated exceeds max_error_count,
+# 			the value of warning_count continues to rise whereas NUMBER remains capped
+# 			at max_error_count because no additional conditions are stored in the
+# 			diagnostics area.
+#
+# 		) error_count indicates the number of errors that occurred.
+#
+# 			This value includes "not found" and exception conditions, but excludes
+# 			warnings and notes.
+#
+# 			Like warning_count, its value can exceed max_error_count
+#
+# 		) If the sql_notes system variable is set to 0, notes are not stored and do
+# 			not increment warning_count
+#
+# Example:
+#
+# 		If max_error_count is 10, the diagnostics area can contain a maximum of 10 condition areas.
+#
+# 		Suppose that a statement raises 20 conditions, 12 of which are errors.
+#
+# 		In that case, the diagnostics area contains the first 10 conditions, NUMBER
+# 		is 10, warning_count is 20 and error_count is 12.
+#
+# Changes to the value of max_error_count have no effect until the next attempt to
+# modify the diagnostics area.
+#
+# If the diagnostics area contains 10 condition areas and max_error_count is set
+# to 5, that has no immediate effect on the size or content of the diagnostics area.
+#
+# 13.6.7.8 CONDITION HANDLING AND OUT OR INOUT PARAMETERS
+#
+# If a stored procedure exits with an unhandled exception, modified values of OUT and
+# INOUT parameters are not propogated back to the caller.
+#
+# If an exception is handled by a CONTINUE or EXIT handler that contains a RESIGNAL
+# statement, execution of RESIGNAL pops the Diagnostics Area stack, thus signalling the
+# exception (that is, the information that existed before entry into the handler)
+#
+# If the exception is an error, the values of OUT and INOUT parameters are not propogated
+# back to the caller.
+#
+# 13.7 DATABASE ADMINISTRATION STATEMENTS
+#
+# 13.7.1 ACCOUNT MANAGEMENT STATEMENTS
+# 13.7.2 RESOURCE GROUP MANAGEMENT STATEMENTS
+#
+# 13.7.3 TABLE MAINTENANCE STATEMENTS
+# 13.7.4 COMPONENT, PLUGIN, AND USER-DEFINED FUNCTION STATEMENTS
+#
+# 13.7.5 SET SYNTAX
+# 13.7.6 SHOW SYNTAX
+#
+# 13.7.7 OTHER ADMINISTRATIVE STATEMENTS
+#
+# 13.7.1 ACCOUNT MANAGEMENT STATEMENTS
+#
+# 13.7.1.1 ALTER USER SYNTAX
+# 13.7.1.2 CREATE ROLE SYNTAX
+#
+# 13.7.1.3 CREATE USER SYNTAX
+# 13.7.1.4 DROP ROLE SYNTAX
+#
+# 13.7.1.5 DROP USER SYNTAX
+# 13.7.1.6 GRANT SYNTAX
+#
+# 13.7.1.7 RENAME USER SYNTAX
+# 13.7.1.8 REVOKE SYNTAX
+#
+# 13.7.1.9 SET DEFAULT ROLE SYNTAX
+# 13.7.1.10 SET PASSWORD SYNTAX
+#
+# 13.7.1.11 SET ROLE SYNTAX
+#
+# MySQL account information is stored in teh tables of the mysql system database.
+#
+# This database and the access control system are discussed extensively in
+# CHAPTER 5, MYSQL SERVER ADMINISTRATION, which you should consult for additional details.
+#
+# IMPORTANT:
+#
+# 		Some MySQL releases introduce changes to the grant tables to add new privileges
+# 		or features.
+#
+# 		To make sure that you can take advantage of any new capabilities, update your
+# 		grant tables to the current structure whenever you upgrade MySQL.
+#
+# 		See SECTION 4.4.5, "MYSQL_UPGRADE -- CHECK AND UPGRADE MYSQL TABLES"
+#
+# When the read_only system variable is enabled, account-management statements
+# require the CONNECTION_ADMIN or SUPER privilege, in addition to any other
+# required privileges.
+#
+# This is because they modify tables in the mysql system database
+#
+# Account management statements are atomic and crash safe.
+#
+# For more information, see SECTION 13.1.1, "ATOMIC DATA DEFINITION STATEMENT SUPPORT"
+#
+# 13.7.1.1 ALTER USER SYNTAX
+#
+# 	ALTER USER [IF EXISTS]
+# 		user [auth_option] [, user [auth_option]] ---
+# 		[REQUIRE {NONE | tls_option [[AND] tls_option] ---}]
+# 		[WITH resource_option [resource_option] ---]
+# 		[password_option | lock_option] ---
+#
+# 	ALTER USER [IF EXISTS] USER() user_func_auth_option
+#
+# 	ALTER USER [IF EXISTS]
+# 		user DEFAULT ROLE
+# 		{NONE | ALL | role [, role ] ---}
+#
+# 	user:
+# 		(see Section 6.2.4, "Specifying Account Names")
+#
+# 	auth_option: {
+# 		IDENTIFIED BY 'auth_string'
+# 			[REPLACE 'current_auth_string']
+# 			[RETAIN CURRENT_PASSWORD]
+# 	 | IDENTIFIED WITH auth_plugin
+# 	 | IDENTIFIED WITH auth_plugin BY 'auth_string'
+# 			[REPLACE 'current_auth_string']
+# 			[RETAIN CURRENT PASSWORD]
+# 	 | IDENTIFIED WITH auth_plugin AS 'hash_string'
+# 	 | DISCARD OLD PASSWORD
+# }
+#
+# user_func_auth_option: {
+# 		IDENTIFIED BY 'auth_string'
+# 			[REPLACE 'current_auth_string']
+# 			[RETAIN CURRENT PASSWORD]
+# 	 | DISCARD OLD PASSWORD
+# }
+#
+# tls_option: {
+# 	 SSL
+# | X509
+# | CIPHER 'cipher'
+# | ISSUER 'issuer'
+# | SUBJECT 'subject'
+# }
+#
+# resource_option: {
+# 		MAX_QUERIES_PER_HOUR count
+#   | MAX_UPDATES_PER_HOUR count
+#   | MAX_CONNECTIONS_PER_HOUR count
+# 	 | MAX_USER_CONNECTIONS count
+# }
+#
+# password_option: {
+# 		PASSWORD EXPIRE [DEFAULT | NEVER | INTERVAL N DAY]
+# 	 | PASSWORD HISTORY {DEFAULT | N}
+#   | PASSWORD REUSE INTERVAL {DEFAULT | N DAY}
+#   | PASSWORD REQUIRE CURRENT [DEFAULT | OPTIONAL]
+# }
+#
+# lock_option: {
+# 		ACCOUNT LOCK
+#   | ACCOUNT UNLOCK
+# }
+#
+# The ALTER_USER statement modifies MySQL accounts.
+#
+# It enables authentication, role, SSL/TLS, resource-limit and password-management
+# properties to be modified for existing accounts.
+#
+# It can also be used to lock and unlock accounts.
+#
+# In most cases, ALTER_USER requires the global CREATE_USER privilege, or the UPDATE
+# privilege for the mysql system database.
+#
+# The exceptions are:
+#
+# 		) Any client who connects to the server using a nonanonymous account can change the password
+# 			for that account.
+#
+# 			(In particular, you can change your own password)
+#
+# 			To see which account the server authenticated you as, invoke the CURRENT_USER() function:
+#
+# 				SELECT CURRENT_USER();
+#
+# 		) For DEFAULT ROLE syntax, ALTER_USER requires these privileges:
+#
+# 			) Setting the default roles for another user requires the global CREATE_USER
+# 				privilege, or the UPDATE privilege for the mysql.default_roles system table.
+#
+# 			) Setting the default roles for yourself requires no special privileges, as long 
+# 				as the roles you want as the default have been granted to you.
+#
+# 		) Statements that modify secondary passwords require these privileges:
+#
+# 			) The APPLICATION_PASSWORD_ADMIN privilege is required to use the RETAIN CURRENT PASSWORD
+# 				or DISCARD OLD PASSWORD clause for ALTER_USER statements that apply to your own account.
+#
+# 				The privilege is required to manipulate your own secondary password because most users
+# 				require only one password.
+#
+# 			) If an account is to be permitted to manipulate secondary passwords for all accounts,
+# 				it should be granted the CREATE_USER privilege rather than APPLICATION_PASSWORD_ADMIN
+#
+# When the read_only system variable is enabled, ALTER_USER additionally requires the CONNECTION_ADMIN
+# or SUPER privilege.
+#
+# By default, an error occurs if you try to modify a user that does not exist.
+#
+# If the IF EXISTS clause is given, the statement produces a warning for each named user that
+# does not exist, rather than an error.
+#
+# 	IMPORTANT:
+#
+# 		Under some circumstances, ALTER_USER may be recorded in server logs or on the client
+# 		side in a history file such as ~/.mysql_history, which means that cleartext passwords
+# 		may be read by anyone having read access to that information.
+#
+# 		For information about the conditions under which this occurs for the server logs
+# 		and how to control it, see SECTION 6.1.2.3, "PASSWORDS AND LOGGING"
+#
+# 		For similar information about client-side logging, see SECTION 4.5.1.3, "MYSQL CLIENT LOGGING"
+#
+# There are several aspects to the ALTER_USER statement, described under the following topics:
+#
+# 		) ALTER USER OVERVIEW
+#
+# 		) ALTER USER AUTHENTICATION OPTIONS
+#
+# 		) ALTER USER ROLE OPTIONS
+#
+# 		) ALTER USER SSL/TLS OPTIONS
+#
+# 		) ALTER USER RESOURCE-LIMIT OPTIONS
+#
+# 		) ALTER USER PASSWORD-MANAGEMENT OPTIONS
+#
+# 		) ALTER USER ACCOUNT-LOCKING OPTIONS
+#
+# 		) ALTER USER BINARY LOGGING
+#
+# ALTER USER OVERVIEW
+#
+# For each affected account, ALTER_USER modifies the corresponding row in the mysql.user
+# system table to reflect the properties specified in the statement.
+#
+# Unspecified properties retain their current values.
+#
+# Each account name uses the format described in SECTION 6.2.4, "SPECIFYING ACCOUNT NAMES"
+#
+# The host name part of the account name, if omitted, defaults to '%'
+#
+# It is also possible to specify CURRENT_USER or CURRENT_USER() to refer to the account
+# associated with the current session.
+#
+# For one syntax only, the account may be specified with the USER() function:
+#
+# 		ALTER USER USER() IDENTIFIED BY 'auth_string';
+#
+# This syntax enables changing your own password without naming your account literally.
+#
+# (The syntax also supports the REPLICATE RETAIN CURRENT PASSWORD, and DISCARD OLD PASSWORD
+# clauses described at ALTER USER AUTHENTICATION OPTIONS)
+#
+# For ALTER_USER syntaxes that permit an auth_option value to follow a user value,
+# auth_option indicates how the account authenticates by specifying an account authentication
+# plugin, credentials (for example, a password), or both.
+#
+# Each auth_option value applies only to the account named immediately preceding it.
+#
+# Following the user specifications, the statement may include options for SSL/TLS,
+# resource-limit, password-management, and locking properties.
+#
+# All such options are global to the statement and apply to all accounts named
+# in the statement.
+#
+# Example:
+#
+# 		Change an account's password and expire it. As a result, the user must connect with
+# 		the named password and choose a new one at the next connection:
+#
+# 			ALTER USER 'jeffrey'@'localhost'
+# 				IDENTIFIED BY 'new_password' PASSWORD EXPIRE;
+#
+# Example:
+#
+# 		Modify an account to use the sha256_password authentication plugin and the given
+# 		password.
+#
+# 		Require that a new password be chosen every 180 days:
+#
+# 			ALTER USER 'jeffrey'@'localhost'
+# 				IDENTIFIED WITH sha256_password BY 'new_password'
+# 				PASSWORD EXPIRE INTERVAL 180 DAY;
+#
+# Example:
+#
+# 		Lock or unlock an account
+#
+# 			ALTER USER 'jeffrey'@'localhost' ACCOUNT LOCK;
+# 			ALTER USER 'jeffrey'@'localhost' ACCOUNT UNLOCK;
+#
+# Example:
+#
+# 		Require an account to connect using SSL and establish a limit of 20 connections per hour:
+#
+# 			ALTER USER 'jeffrey'@'localhost'
+# 				REQUIRE SSL WITH MAX_CONNECTIONS_PER_HOUR 20;
+#
+# Example:
+#
+# 		Alter multiple accounts, specifying some per-account properties and some global properties:
+#
+# 			ALTER USER
+# 				'jeffrey'@'localhost'
+# 					IDENTIFIED BY 'jeffrey_new_password',
+# 				'jeanne'@'localhost',
+# 				'josh'@'localhost'
+# 					IDENTIFIED BY 'josh_new_password'
+# 					REPLACE 'josh_current_password'
+# 					RETAIN CURRENT PASSWORD
+# 				REQUIRE SSL WITH MAX_USER_CONNECTIONS 2
+# 				PASSWORD HISTORY 5;
+#
+# The IDENTIFIED BY value following jeffrey applies only to its immediately preceeding
+# account, so it changes the password to 'jeffrey_new_password' only for jeffrey.
+#
+# For jeanne, there is no per-account value (thus leaving the password unchanged)
+#
+# For josh, IDENTIFIED BY establishes a new password ('josh_new_password'), REPLACE
+# is specified to verify that hte user issuing the ALTER_USER statement knows the
+# current password ('josh_current_password'), and that current password is also retained
+# as the account secondary password.
+#
+# (As a result, josh can connect with either the primary or secondary password)
+#
+# The remaining properties apply globally to all accounts named in the statement,
+# so for both accounts:
+#
+# 		) Connections are required to use SSL
+#
+# 		) The account can be used for a maximum of two simultaneous connections
+#
+# 		) Password changes cannot reuse any of the five most recent PWs
+#
+# Example:
+#
+# 		Discard the secondary password for josh, leaving the account with only
+# 		its primary password:
+#
+# 			ALTER USER 'josh'@'localhost' DISCARD OLD PASSWORD;
+#
+# In the absence of a particular type of option, the account remains unchanged
+# in that respect.
+#
+# FOr example, with no locking option, the locking state of the account is not
+# changed.
+#
+# ALTER USER AUTHENTICATION OPTIONS
+#
+# An account name may be followed by an auth_option authentication option that specifies
+# the account authentication plugin, credentials or both.
+#
+# It may also include a password-verification clause that specifies the account current password
+# to be replaced, and clauses that manage whether an account has a seondary password.
+#
+# NOTE:
+#
+# 		Clauses for password verification and secondary passwords apply only to accounts that
+# 		store credentials internally in the mysql.user system table
+#
+# 		(mysql_native_password, sha256_password, or caching_sha2_password)
+#
+# 		For accounts that use plugins that perform authentication against an
+# 		external credential system, password management must be handled externally
+# 		against the system as well.
+#
+# 	) auth_plugin names an authentication plugin.
+#
+# 		The plugin name can be a quoted string literal or an unquoted name.
+#
+# 		Plugin names are stored in the plugin column of the mysql.user system system table.
+#
+# 		For auth_option syntaxes that do not specify an authentication plugin, the default
+# 		plugin is indicated by the value of the default_authentication_plugin system
+# 		variable.
+#
+# 		For descriptions of each plugin, see SECTION 6.5.1, "AUTHENTICATION PLUGINS"
+#
+# 	) Credentials are stored in the mysql.user system table.
+#
+# 		An 'auth_string' or 'hash_string' value specifies account credentials, either
+# 		as a cleartext (unencrypted) string or hashed in the format except by the
+# 		authentication plugin associated with the account, respectively:
+#
+# 			) For syntaxes that use 'auth_string', the string is cleartext and is passed
+# 				to the authentication plugin for possible hashing.
+#
+# 				The result returned by the plugin is stored in the mysql.user table
+#
+# 				A plugin may use the value as specified, in which case no hashing occurs.
+#
+# 			) For syntaxes that use 'hash_string', the string is assumed to be already
+# 				hashed in the format required by the authentication plugin.
+#
+# 				If the hash format is inappropriate for the plugin, it will not be usable
+# 				and correct authentication of client connections will not occur.
+#
+# 	) The REPLACE 'current_auth_string' clause is available as of MySQL 8.0.13
+#
+# 		If given:
+#
+# 			) REPLACE specifies the account current password to be replaced, as a cleartext (unencrypted) string
+#
+# 			) The clause must be given if password changes for the are required to specify the current password,
+# 				as verification that the user attempting to make the change actually knows the current PW.
+#
+# 			) THe clause is optional if password changes for the account may but need not specify the current password
+#
+# 			) The statement fails if the clause is given but does not match the current password, even if the clause is optional
+#
+# 			) REPLACE can be specified only when changing the account password for the current user
+#
+# 		For more information about password verification by specifying the current password, see SECTION 6.3.8, "PASSWORD MANAGEMENT"
+#
+# 	) The RETAIN CURRENT PASSWORD and DISCARD OLD PASSWORD clauses implement dual-password capability
+# 		and are available as of MySQL 8.0.14
+#
+# 		Both are optional, but if given, have the following effects:
+#
+# 			) RETAIN CURRENT PASSWORD retains an account current password as its secondary password,
+# 				replacing any existing secondary password.
+#
+# 				The new password becomes the primary password, but clients can use the account to connect
+# 				to the server using either the primary or secondary password.
+#
+# 				(Exception: if the new password specified by the ALTER_USER statement is empty, the secondary
+# 					password becomes empty as well, even if RETAIN CURRENT PASSWORD is given)
+#
+# 			) If you specify RETAIN CURRENT PASSWORD for an account that has an empty primary password, the statement fails
+#
+# 			) If an account has a secondary password and you change its primary password without specifying
+# 				RETAIN CURRENT PASSWORD, the secondary password remains unchanged.
+#
+# 			) If you change the authentication plugin assigned to the account, the secondary password is discarded.
+#
+# 				If you change the authentication plugin and also specify RETAIN CURRENT PASSWORD, the statement fails.
+#
+# 			) DISCARD OLD PASSWORD discards the secondary password, if one exists.
+#
+# 				The account retains only its primary password, and clients can use the account
+# 				to connect to the server only with the primary password.
+#
+# 		FOr more information about use of dual passwords, see SECTION 6.3.8, "PASSWORD MANAGEMENT"
+#
+# ALTER_USER permits these auth_option syntaxes:
+#
+# 		) IDENTIFIED BY 'auth_string' [REPLACE 'current_auth_string'] [RETAIN CURRENT PASSWORD]
+#
+# 			Sets the account authentication plugin to the default plugin, passes the cleartext 
+# 			'auth_string' value to the plugin for hashing, and stores the result in the account
+# 			row in the mysql.user system table.
+#
+# 			The REPLACE clause, if given, specifies the account current password, as described
+# 			previously in this section.
+#
+# 			The RETAIN CURRENT PASSWORD clause, if given, causes the account current password 
+# 			to be retained as its secondary password, as described previously in this section.
+#
+# 		) IDENTIFIED WITH auth_plugin
+#
+# 			Sets the account authentication plugin to auth_plugin, clears the credentials
+# 			to the empty string (the credentials are associated with the old authentication
+# 			plugin, not the new one), and stores the result in the account row in the mysql.user
+# 			system table
+#
+# 			In addition, the password is marked expired.
+#
+# 			the user must choose a new one when next connecting
+#
+# 		) IDENTIFIED WITH auth_plugin BY 'auth_string' [REPLACE 'current_auth_string'] [RETAIN CURRENT PASSWORD]
+#
+# 			Sets the account authentication plugin to auth_plugin, passes the cleartext 'auth_string'
+# 			value to the plugin for hashing, and stores the result in the account row
+# 			in the mysql.user system table
+#
+# 			The REPLACE clause, if given, specifies the account current password, as described
+# 			previously in this section
+#
+# 			The RETAIN CURRENT PASSWORD clause, if given, causes the account current password
+# 			to be retained as its secondary password, as described previously in this section.
+#
+# 		) IDENTIFIED WITH auth_plugin AS 'hash_string'
+#
+# 			Sets the account authentication plugin to auth_plugin and stores the hashed
+# 			'hash_string' value as in the mysql.user account row.
+#
+# 			The string is assumed to be already hashed in the format required by the plugin
+#
+# 		) DISCARD OLD PASSWORD
+#
+# 			Discards the account secondary password, if there is one, as described previously
+#
+# Example:
+#
+# 		Specify the password as cleartext; the default plugin is used:
+#
+# 			ALTER USER 'jeffrey'@'localhost'
+# 				IDENTIFIED BY 'password';
+#
+# Example:
+#
+# 		Specify the authentication plugin, along with a cleartext password value:
+#
+# 			ALTER USER 'jeffrey'@'localhost'
+# 				IDENTIFIED WITH mysql_native_password
+# 								BY 'password';
+#
+# Example:
+#
+# 		Like the preceding example, but in addition, specify the current password as a cleartext
+# 		value to satisfy any account requirement that the user making the change knows that password:
+#
+# 			ALTER USER 'jeffrey'@'localhost'
+# 				IDENTIFIED WITH mysql_native_password
+# 								BY 'password'
+# 								REPLACE 'current_password';
+#
+# 		The preceding statement fails unless the current user is jeffrey because REPLACE is permitted
+# 		only for changes to the current user's password.
+#
+# Example:
+#
+# 		Establish a new primary password and retain the existing password as the secondary password:
+#
+# 			ALTER USER 'jeffrey'@'localhost'
+# 				IDENTIFIED BY 'new_password'
+# 				RETAIN CURRENT PASSWORD;
+#
+# Example:
+#
+# 		Discard the secondary password, leaving the account with only its primary password:
+#
+# 			ALTER USER 'jeffrey'@'localhost' DISCARD OLD PASSWORD;
+#
+# Example:
+#
+# 		Specify the authentication plugin, along with a hashed password value:
+#
+# 			ALTER USER 'jeffrey'@'localhost'
+# 				IDENTIFIED WITH mysql_native_password
+# 					AS '<value>';
+#
+# For additional information about setting passwords and authentication plugins,
+# see SECTION 6.3.7, "ASSIGNING ACCOUNT PASSWORDS" and SECTION 6.3.10, "PLUGGABLE AUTHENTICATION"
+#
+# ALTER USER ROLE OPTIONS
+#
+# ALTER_USER_---_DEFAULT_ROLE defines which roles become active when the user connects to the server
+# and authenticates, or when the user executes the SET_ROLE_DEFAULT statement during a session.
+#
+# ALTER_USER_---_DEFAULT_ROLE is alternative syntax for SET_DEFAULT_ROLE (see SECTION 13.7.1.9, "SET DEFAULT ROLE SYNTAX")
+#
+# However, ALTER_USER can set the default for only a single user, whereas SET_DEFAULT_ROLE can set the
+# default for multiple users.
+#
+# On the other hand, you can specify CURRENT_USER as the user name for the
+# ALTER_USER statement, whereas you cannot for SET_DEFAULT_ROLE
+#
+# Each user account name uses the format described previously.
+#
+# Each role name uses the format described in SECTION 6.2.5, "SPECIFYING ROLE NAMES"
+#
+# For example:
+#
+# 		ALTER USER 'joe'@'10.0.0.1' DEFAULT ROLE administrator, developer;
+#
+# The host name part of the role name, if omitted, defaults to '%'
+#
+# The clause following the DEFAULT ROLE keywords permites these values:
+#
+# 		) NONE: Set the default to NONE (no roles)
+#
+# 		) ALL: Set the default to all roles granted to the account
+#
+# 		) role [, role] ---. Set the default to the named roles, which must exist
+# 			and be granted to the account at the time ALTER_USER_---_DEFAULT_ROLE
+# 			is executed.
+#
+# ALTER USER SSL/TLS OPTIONS
+#
+# MySQL can check X.509 cert attributes in addition to the usual authentication
+# that is based on the user name and credentials.
+#
+# For background information on the use of SSL/TLS with MySQL, see SECTION 6.4, "USING ENCRYPTED CONNECTIONS"
+#
+# To specify SSL/TLS-related options for a MySQL account, use a REQUIRE clause that specifies
+# one or more tls_option values.
+#
+# Order of REQUIRE options does not matter, but no option can be specified twice.
+#
+# The AND keyword is optional between REQUIRE options.
+#
+# ALTER_USER permits these tls_option values:
+#
+# 		) https://dev.mysql.com/doc/refman/8.0/en/alter-user.html
+# 
