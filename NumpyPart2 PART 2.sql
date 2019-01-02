@@ -26330,5 +26330,2015 @@
 #
 # ALTER_USER permits these tls_option values:
 #
-# 		) https://dev.mysql.com/doc/refman/8.0/en/alter-user.html
-# 
+# 		) NONE:
+#
+# 			Indicates that all accounts named by the statement have no SSL or X.509 requirements.
+#
+# 			Unencrypted connections are permitted if the user name and password are valid.
+#
+# 			Encrypted connections can be used, at the client's option, if the client has the proper
+# 			certificate and key files.
+#
+# 				ALTER USER 'jeffrey'@'localhost' REQUIRE NONE;
+#
+# 			Clients attempt to establish a secure connection by default.
+#
+# 			For clients that have REQUIRE NONE, the connection attempt falls back to
+# 			an unencrypted connection if a secure connection cannot be established.
+#
+# 			To require an encrypted connection, a client need specify only the --ssl-mode=REQUIRED
+# 			option; the connection attempt fails if a secure connection cannot be established.
+#
+# 		) SSL:
+#
+# 			Tells the server to permit only encrypted connections for all accounts named by the
+# 			statement.
+#
+# 				ALTER USER 'jeffrey'@'localhost' REQUIRE SSL;
+#
+# 			Clients attempt to establish a secure connection by default. For accounts that have
+# 			REQUIRE SSL, the connection attempt fails if a secure connection cannot be
+# 			established.
+#
+# 		) X509
+#
+# 			For all accounts named by the statement, requires that clients present a valid certificate,
+# 			but the exact certificate, issuer and subject do not matter.
+#
+# 			The only requirement is that it should be possible to verify its signature with one of
+# 			the CA certificates.
+#
+# 			Use of X.509 certificates always implies encryption, so the SSL option is unnecessary
+# 			in this case.
+#
+# 				ALTER USER 'jeffrey'@'localhost' REQUIRE X509;
+#
+# 			For accounts with REQUIRE X509, clients must specify the --ssl-key and --ssl-cert
+# 			options to connect.
+#
+# 			(It is recommended but not required that --ssl-ca also be specified so that the
+# 			public certificate provided by the server can be verified)
+#
+# 			This is true for ISSUER and SUBJECT as well because those REQUIRE options imply the
+# 			requirements of X509
+#
+# 		) ISSUER 'issuer'
+#
+# 			For all accounts named by the statement, requires that clients present a valid X.509
+# 			certificate issued by CA 'issuer'.
+#
+# 			If a client presents a certificate that is valid but has a different issuer;
+# 			the server rejects the connection.
+#
+# 			Use of X.509 certificates always implies encryption, so the SSL option is
+# 			unnecessary in this case.
+#
+# 				ALTER USER 'jeffrey'@'localhost'
+# 					REQUIRE ISSUER '/C=SE/ST=Stockholm/L=Stockholm/
+# 						0=MySQL/CN=CA/emailAddress=ca@example.com';
+#
+# 			Because ISSUER implies the requirements of X509, clients must specify
+# 			the --ssl-key and --ssl-cert options to connect.
+#
+# 			(It is recommended but not required that --ssl-ca also be specified
+# 			so that the public certificate provided by the server can be verified)
+#
+# 		) SUBJECT 'subject'
+#
+# 			For all accounts named by the statement, requires that clients present a valid
+# 			X.509 certificate containing the subject subject.
+#
+# 			If a client presents a certificate that is valid but has a different subject,
+# 			the server rejects the connection.
+#
+# 			Use of X.509 certificates always implies encryption, so the SSL option is unnecessary
+# 			in this case.
+#
+# 				ALTER USER 'jeffrey'@'localhost'
+# 					REQUIRE SUBJECT '/C=SE/ST=Stockholm/L=Stockholm/
+# 						0=MySQL demo client certificate/
+# 						CN=client/emailAddress=client@example.com';
+#
+# 			MySQL does a simple string comparison of the 'subject' value to the value
+# 			in the certificate, so lettercase and component ordering must be given
+# 			exactly as present in the certificate.
+#
+# 			Because SUBJECT implies the requirements of X509, clients must specify the
+# 			--ssl-key and --ssl-cert options to connect.
+#
+# 			(It is recommended but not required that --ssl-ca also be specified so that
+# 			the public certificate provided by the server can be verified.)
+#
+# 		) CIPHER 'cipher'
+#
+# 			For all accounts named by the statement, requires a specific cipher method
+# 			for encrypting connections.
+#
+# 			This option is needed to ensure that ciphers and key lengths of sufficient
+# 			strength are used.
+#
+# 			Encryption can be weak if old algorithms using short encryption keys are used.
+#
+# 				ALTER USER 'jeffrey'@'localhost'
+# 					REQUIRE CIPHER 'EDH-RSA-DES-CBC3-SHA';
+#
+# 			The SUBJECT, ISSUER and CIPHER options can be combined in the REQUIRE clause:
+#
+# 				ALTER USER 'jeffrey'@'localhost'
+# 					REQUIRE SUBJECT '/C=SE/ST=Stockholm/L=Stockholm/
+# 						0=MySQL demo client certificate/
+# 						CN=client/emailAddress=client@example.com'
+# 					AND ISSUER '/C=SE/ST=Stockholm/L=Stockholm/
+# 						0=MySQL/CN=CA/emailAddress=ca@example.com'
+# 					AND CIPHER 'EDH-RSA-DES-CBC3-SHA';
+#
+# ALTER USER RESOURCE-LIMIT OPTIONS
+#
+# It is possible to place limits on use of server resources by an account, as discussed
+# in SECTION 6.3.6, "SETTING ACCOUNT RESOURCE LIMITS"
+#
+# To do so, use a WITH clause that specifies one or more resource_option values.
+#
+# Order of WITH options does not matter, except that if a given resource limit is
+# specified multiple times, the last instance takes precedence.
+#
+# ALTER_USER permits these resource_option values:
+#
+# 		) MAX_QUERIES_PER_HOUR count, MAX_UPDATES_PER_HOUR count, MAX_CONNECTIONS_PER_HOUR count
+#
+# 			For all accounts named by the statement, these options restrict how many queries,
+# 			updates and connections to the server are permitted to each account during any
+# 			given one-hour period.
+#
+# 			If count is 0 (the default), this means that there is no limitation for the account.
+#
+# 		) MAX_USER_CONNECTIONS count
+#
+# 			For all accounts named by the statement, restricts the maximum number of simultaneous
+# 			connections to the server by each account.
+#
+# 			A nonzero count specifies the limit for the account explicitly.
+#
+# 			If count is 0 (the default), the server determines the number of simultaneous
+# 			connections for the account from the global value of the max_user_connections
+# 			system variable.
+#
+# 			If max_user_connections is also zero, there is no limit for the account.
+#
+# 			Example:
+#
+# 				ALTER USER 'jeffrey'@'localhost'
+# 					WITH MAX_QUERIES_PER_HOUR 500 MAX_UPDATES_PER_HOUR 100;
+#
+# ALTER USER PASSWORD-MANAGEMENT OPTIONS
+#
+# ALTER_USER supports several password_option values for password management:
+#
+# 		) Password expiration options: You can expire an account password manually and establish
+# 			its password expiration policy.
+#
+# 			Policy options do not expire the password.
+#
+# 			Instead, they determine how the server applies automatic expiration to the
+# 			account based on password age, which is assessed from the date and time of
+# 			the most recent account password change.
+#
+# 		) Password reuse options: You can restrict password reuse based on number of password
+# 			changes, time elapsed or both.
+#
+# 		) Password verification-required options: You can indicate whether attempts to change an
+# 			account password must specify the current password, as verification that the
+# 			user attempting to make the change actually knows the current password.
+#
+# This section describes the syntax for password-management options. For information about
+# establishing policy for password management, see SECTION 6.3.8, "PASSWORD MANAGEMENT"
+#
+# If multiple password-management options of a given type (PASSWORD EXPIRE, PASSWORD HISTORY,
+# PASSWORD REUSE INTERVAL, PASSWORD REQUIRE) are specified, the last one takes precedence.
+#
+# 		NOTE:
+#
+# 			Password-management options apply only to accounts that store credentials internally
+# 			in the mysql.user system table (mysql_native_password, sha256_password,
+# 			or caching_sha2_password)
+#
+# 			For accounts that use plugins that perform authentication against an external
+# 			credential system, password management must be handled externally against that
+# 			system as well.
+#
+# A client has an expired password if the account password was expired manually or the password
+# age is considered greater than its permitted lifetime per the automatic expiration policy.
+#
+# In this case, the server either disconnects the client or restricts the operations permitted
+# to it (see SECTION 6.3.9, "SERVER HANDLING OF EXPIRED PASSWORDS")
+#
+# Operations performed by a restricted client result in an error until the user establishes
+# a new account password.
+#
+# NOTE:
+#
+# 		It is possible to "reset" a password by setting it to its current value.
+#
+# 		As a matter of good policy, it is preferable to choose a different password.
+#
+# 		DBAs can enforce non-reuse by establishing an appropriate password-reuse policy.
+#
+# 		See PASSWORD REUSE POLICY
+#
+# ALTER_USER permits these password_option values for controlling password expiration:
+#
+# 		) PASSWORD EXPIRE
+#
+# 			Immediately marks the password expired for all accounts named by the statement.
+#
+# 				ALTER USER 'jeffrey'@'localhost' PASSWORD EXPIRE;
+#
+# 		) PASSWORD EXPIRE DEFAULT
+#
+# 			Sets all accounts named by the statement so that the global expiration
+# 			policy applies, as specified by the default_password_lifetime system variable.
+#
+# 				ALTER USER 'jeffrey'@'localhost' PASSWORD EXPIRE DEFAULT;
+#
+# 		) PASSWORD EXPIRE NEVER
+#
+# 			This expiration option overrides the global policy for all accounts named by the
+# 			statement.
+#
+# 			For each, it disables password expiration so that the password never expires.
+#
+# 				ALTER USER 'jeffrey'@'localhost' PASSWORD EXPIRE NEVER;
+#
+# 		) PASSWORD EXPIRE INTERVAL N DAY
+#
+# 			This expiration option overrides the global policy for all accounts named
+# 			by the statement.
+#
+# 			For each, it sets the password lifetime to N days.
+#
+# 			The following statement requires the password to be changed every 180 days:
+#
+# 				ALTER USER 'jeffrey'@'localhost' PASSWORD EXPIRE INTERVAL 180 DAY;
+#
+# ALTER_USER permits these password_option values for controlling reuse of previous passwords
+# based on required minimum number of password changes:
+#
+# 		) PASSWORD HISTORY DEFAULT
+#
+# 			Sets all acounts named by the statement so that the global policy about password
+# 			history length applies, to prohibit reuse of passwords before the number of
+# 			changes specified by the password_history system variable.
+#
+# 				ALTER USER 'jeffrey'@'localhost' PASSWORD HISTORY DEFAULT;
+#
+# 		) PASSWORD HISTORY N
+#
+# 			This history-length option overrides the global policy for all accounts
+# 			named by the statement.
+#
+# 			For each, it sets the password history length to N passwords, to prohibit
+# 			reusing any of the N most recently chosen passwords.
+#
+# 			The following statement prohibits reuse of any of the previous 6 passwords:
+#
+# 				ALTER USER 'jeffrey'@'localhost' PASSWORD HISTORY 6;
+#
+# ALTER_USER permits these password_option values for controlling reuse of previous
+# passwords based on time elapsed:
+#
+# 		) PASSWORD REUSE INTERVAL DEFAULT
+#
+# 			Sets all statements named by the account so that the global policy about time
+# 			elapsed applies, to prohibit reuse of passwords newer than the number of days
+# 			specified by the password_reuse_interval system variable.
+#
+# 				ALTER USER 'jeffrey'@'localhost' PASSWORD REUSE INTERVAL DEFAULT;
+#
+# 		) PASSWORD REUSE INTERVAL N DAY
+#
+# 			This time-elapsed option overrides the global policy for all accounts named
+# 			by the statement.
+#
+# 			For each, it sets the password reuse interval to N days, to prohibit reuse
+# 			of passwords newer than that many days.
+#
+# 			The following statement prohibits password reuse for 360 days:
+#
+# 				ALTER USER 'jeffrey'@'localhost' PASSWORD REUSE INTERVAL 360 DAY;
+#
+# ALTER_USER permits these password_option values for controlling whether attempts to
+# change an account password must specify the current password, as verification
+# that the user attempting to make the change actually knows the current password:
+#
+# 		) PASSWORD REQUIRE CURRENT
+#
+# 			This verification option overrides the global policy for all accounts named
+# 			by the statement.
+#
+# 			For each, it requires that password changes specify the current password.
+#
+# 				ALTER USER 'jeffrey'@'localhost' PASSWORD REQUIRE CURRENT;
+#
+# 		) PASSWORD REQUIRE CURRENT OPTIONAL
+#
+# 			This verification option overrides the global policy for all accounts named by
+# 			the statement.
+#
+# 			For each, it does not require that password changes specify the current
+# 			password.
+#
+# 			(The current password may but need not be given)
+#
+# 				ALTER USER 'jeffrey'@'localhost' PASSWORD REQUIRE CURRENT OPTIONAL;
+#
+# 		) PASSWORD REQUIRE CURRENT DEFAULT
+#
+# 			Sets all statements named by the account so that the global policy
+# 			about password verification applies, as specified by the password_require_current
+# 			system variable.
+#
+# 				ALTER USER 'jeffrey'@'localhost' PASSWORD REQUIRE CURRENT DEFAULT;
+#
+# ALTER USER ACCOUNT-LOCKING OPTIONS
+#
+# MySQL supports account locking and unlocking using the ACCOUNT LOCK and ACCOUNT UNLOCK
+# options, which specify the locking state for an account.
+#
+# For additional discussion, see SECTION 6.3.12, "USER ACCOUNT LOCKING"
+#
+# If multiple account-locking options are specified, the last one takes precedence.
+#
+# ALTER USER BINARY LOGGING
+#
+# ALTER_USER is written to the binary log if it succeeds, but not if it fails; in that
+# case, rollback occurs and no changes are made.
+#
+# A statement written to the binary log includes all named users.
+#
+# If the IF EXISTS clause is given, this includes even users that do not exist
+# and were not altered.
+#
+# If the original statement changes the credentials for a user, the statement
+# written to the binary log specifies the applicable authentication plugin for
+# that user, determined as follows:
+#
+# 		) The plugin named in the original statement, if one was specified.
+#
+# 		) Otherwise, the plugin associated with the user account if the user exists,
+# 			or the default authentication plugin if the user does not exist.
+#
+# 			(If the statement written to the binary log must specify a particular
+# 			authentication plugin for a user, include it in the original statement)
+#
+# If the server adds the default authentication plugin for any users in the statement
+# written to the binary log, it writes a warning to the error log naming those users.
+#
+# 13.7.1.2 CREATE ROLE SYNTAX
+#
+# 		CREATE ROLE [IF NOT EXISTS] role [, role] ---
+#
+# CREATE_ROLE creates one or more roles, which are named collections of privileges.
+#
+# To use this statement, you must have the global CREATE_ROLE or CREATE_USER privilege.
+#
+# When the read_only system variable is enabled, CREATE_ROLE additionally requires the
+# CONNECTION_ADMIN or SUPER privilege.
+#
+# A role when created is locked, has no passwords, and is assigned the default authentication plugin.
+#
+# CREATE_ROLE either succeeds for all named roles or rolls back and has no effect if any error
+# occurs.
+#
+# By default, an error occurs if you try to create a role that already exists.
+#
+# If the IF NOT EXISTS clause is given, the statement produces a warning for each named
+# role that already exists, rather than an error.
+#
+# The statement is written to the binary log if it succeeds, but not if it fails; in that case,
+# rollback occurs and no changes are made.
+#
+# A statement written to the binary log includes all named roles.
+#
+# If the IF NOT EXISTS clause is given, this includes even roles that already
+# exist and were not created.
+#
+# Each role name uses the format described in SECTION 6.2.5, "SPECIFYING ROLE NAMES"
+#
+# For example:
+#
+# 		CREATE ROLE 'administrator', 'developer';
+# 		CREATE ROLE 'webapp'@'localhost';
+#
+# The host name part of the role name, if omitted, defaults to '%'
+#
+# For role usage examples, see SECTION 6.3.4, "USING ROLES"
+#
+# 13.7.1.3 CREATE USER SYNTAX
+#
+# 		CREATE USER [IF NOT EXISTS]
+# 			user [auth_option] [, user [auth_option]] ---
+# 			DEFAULT ROLE role [, role ] ---
+# 			[REQUIRE {NONE | tls_option [[AND] tls_option] ---}]
+# 			[WITH resource_option [resource_option] ---]
+# 			[password_option | lock_option] ---
+#
+# 		user:
+# 			(see Section 6.2.4, "SPECIFYING ACCOUNT NAMES")
+#
+# 		auth_option: {
+# 			IDENTIFIED BY 'auth_string'
+# 		 | IDENTIFIED WITH auth_plugin
+# 		 | IDENTIFIED WITH auth_plugin BY 'auth_string'
+# 		 | IDENTIFIED WITH auth_plugin AS 'hash_string'
+# 		}
+#
+# 		tls_option: {
+# 			SSL
+# 		 | X509
+# 		 | CIPHER 'cipher'
+# 		 | ISSUER 'issuer'
+# 		 | SUBJECT 'subject'
+# 		}
+#
+# 		resource_option: {
+# 			MAX_QUERIES_PER_HOUR count
+# 		 | MAX_UPDATES_PER_HOUR count
+# 		 | MAX_CONNECTIONS_PER_HOUR count
+# 		 | MAX_USER_CONNECTIONS count
+# 		}
+#
+# 		password_option: {
+# 			PASSWORD EXPIRE [DEFAULT | NEVER | INTERVAL N DAY]
+# 		 | PASSWORD HISTORY {DEFAULT | N}
+# 		 | PASSWORD REUSE INTERVAL {DEFAULT | N DAY}
+# 		 | PASSWORD REQUIRE CURRENT [DEFAULT | OPTIONAL]
+# 		}
+#
+# 		lock_option: {
+# 			ACCOUNT LOCK
+# 		 | ACCOUNT UNLOCK
+# 		}
+#
+# The CREATE_USER statement creates new MySQL accounts.
+#
+# It enables authentication, role, SSL/TLS, resource-limit, and password-management
+# properties to be established for new accounts.
+#
+# It also controls whether accounts are initially locked or unlocked.
+#
+# To use CREATE_USER, you must have the global CREATE_USER privilege, or the
+# INSERT privilege for the mysql system database.
+#
+# When the read_only system variable is enabled, CREATE_USER additionally requires
+# the CONNECTION_ADMIN or SUPER privilege.
+#
+# CREATE_USER either succeeds for all named users or rolls back and has no effect
+# if any error occurs.
+#
+# By default, an error occurs if you try to create a user that already exists.
+#
+# If the IF NOT EXISTS clause is given, the statement produces a warning for each
+# named user that already exists, rather than an error.
+#
+# iMPORTANT:
+#
+# 		Under some circumstances,  CREATE_USER may be recorded in server logs or on the
+# 		client side in a history file such as ~/.mysql_history, which means that cleartext
+# 		passwords may be read by anyone having read access to that information.
+#
+# 		For information about the conditions under which this occurs for the server
+# 		logs and how to control it, see SECTION 6.1.2.3, "PASSWORDS AND LOGGING"
+#
+# 		For similar information about client-side logging, see SECTION 4.5.1.3,
+# 		"MYSQL CLIENT LOGGING"
+#
+# There are several aspects to the CREATE_USER statement, described under the following
+# topics:
+#
+# 		) CREATE USER OVERVIEW
+#
+# 		) CREATE USER AUTHENTICATION OPTIONS
+#
+# 		) CREATE USER ROLE OPTIONS
+#
+# 		) CREATE USER SSL/TLS OPTIONS
+#
+# 		) CREATE USER RESOURCE-LIMIT OPTIONS
+#
+# 		) CREATE USER PASSWORD-MANAGEMENT OPTIONS
+#
+# 		) CREATE USER ACCOUNT-LOCKING OPTIONS
+#
+# 		) CREATE USER BINARY LOGGING
+#
+# CREATE USER OVERVIEW
+#
+# For each account, CREATE_USER creates a new row in the mysql.user system table.
+#
+# The account row reflects the properties specified in the statement.
+#
+# Unspecified properties are set to their default values:
+#
+# 		) Authentication: The authentication plugin defined by the default_authentication_plugin
+# 			system variable, and empty credentials.
+#
+# 		) Default role: NONE
+#
+# 		) SSL/TLS: NONE
+#
+# 		) Resource limits: Unlimited
+#
+# 		) Password management: PASSWORD EXPIRE DEFAULT PASSWORD HISTORY DEFAULT PASSWORD REUSE INTERVAL DEFAULT 
+# 			PASSWORD REQUIRE CURRENT DEFAULT
+#
+# 		) Account locking: ACCOUNT UNLOCK
+#
+# An account when first created has no privileges and a default role of NONE.
+#
+# To assign privileges or roles, use the GRANT statement.
+#
+# Each account name uses the format described in SECTION 6.2.4, "SPECIFYING ACCOUNT NAMES"
+#
+# For example:
+#
+# 		CREATE USER 'jeffrey'@'localhost' IDENTIFIED BY 'password';
+#
+# The host name part of the account name, if omitted, defaults to '%'
+#
+# Each user value naming an account may be followed by an optional auth_option value
+# that indicates how the account authenticates.
+#
+# These values enable account authentication plugins and credentials (for example, a password)
+# to be specified.
+#
+# Each auth_option value applies only to the account named immediately preceding it.
+#
+# Following the user specifications, the statement may include options for SSL/TLS, resource-limit,
+# password-management, and locking properties.
+#
+# All such options are global to the statement and apply to all accounts named in the statement.
+#
+# Example:
+#
+# 		Create an account that uses the default authentication plugin and the given password.
+#
+# 		Mark the password expired so that the user must choose a new one at the first
+# 		connection to the server:
+#
+# 			CREATE USER 'jeffrey'@'localhost'
+# 				IDENTIFIED BY 'new_password' PASSWORD EXPIRE;
+#
+# Example:
+#
+# 		Create an account that uses the sha256_password authentication plugin and
+# 		the given password.
+#
+# 		Require that a new password be chosen every 180 days:
+#
+# 			CREATE USER 'jeffrey'@'localhost'
+# 				IDENTIFIED WITH sha256_password BY 'new_password'
+# 				PASSWORD EXPIRE INTERVAL 180 DAY;
+#
+# Example:
+#
+# 		Create multiple accounts, specifying some per-account properties
+# 		and some global properties:
+#
+# 			CREATE USER
+# 				'jeffrey'@'localhost' IDENTIFIED WITH mysql_native_password
+# 															BY 'new_password1',
+# 				'jeanne'@'localhost' IDENTIFIED WITH sha256_password
+# 															BY 'new_password2'
+# 				REQUIRE X509 WITH MAX_QUERIES_PER_HOUR 60
+# 				PASSWORD HISTORY 5
+# 				ACCOUNT LOCK;
+#
+# Each auth_option value (IDENTIFIED WITH --- BY in this case) applies only
+# to the account named immediately preceding it, so each account uses
+# the immediately following authentication plugin and password.
+#
+# The remaining properties apply globally to all accounts named in the statement,
+# so for both accounts:
+#
+# 		) Connections must be made using a valid X.509 certificate
+#
+# 		) Up to 60 queries per hour are permitted.
+#
+# 		) Password changes cannot reuse any of the five most recent passwords
+#
+# 		) The account is locked initially, so effectively it is a placeholder and
+# 			cannot be used until an administrator unlocks it.
+#
+# CREATE USER AUTHENTICATION OPTIONS
+#
+# An account name may be followed by an auth_option authentication option that
+# specifies the account authentication plugin, credentials, or both:
+#
+# 		) auth_plugin names an authentication plugin. The plugin name can be a quoted
+# 			string literal or an unquoted name.
+#
+# 			Plugin names are stored in the plugin column of the mysql.user system table
+#
+# 			For auth_option syntaxes that do not specify an authentication plugin,
+# 			the default plugin is indicated by the value of the default_authentication_plugin
+# 			system variable.
+#
+# 			For descriptions of each plugin, see SECTION 6.5.1, "AUTHENTICATION PLUGINS"
+#
+# 		) Credentials are stored in the mysql.user system table.
+#
+# 			An 'auth_string' or 'hash_string' value specifies account credentials,
+# 			either as a cleartext (unencrypted) string or hashed in the format
+# 			expected by the authentication plugin associated with the account, respectively:
+#
+# 				) For syntaxes that use 'auth_string', the string is cleartext and is passed
+# 					to the authentication plugin for possible hashing.
+#
+# 					The result returned by the plugin is stored in the mysql.user
+# 					table.
+#
+# 					plugin may use the value as specified, in which case no hashing occurs.
+#
+# 				) For syntaxes that use 'hash_string', the string is assumed to be already
+# 					hashed in the format required by the authentication plugin.
+#
+# 					If the hash format is inappropriate for the plugin, it will not be usable
+# 					and correct authentication of client connections will not occur.
+#
+# CREATE_USER permits these auth_option syntaxes:
+#
+# 		) IDENTIFIED BY 'auth_string'
+#
+# 			Sets the account authentication plugin to the default plugin, passes the cleartext
+# 			'auth_string' value to the plugin for hashing, and stores the result in the account
+# 			row in the mysql.user system table
+#
+# 		) IDENTIFIED WITH auth_plugin
+#
+# 			Sets the account authentication plugin to auth_plugin, clears the credentials
+# 			to the empty string, and stores the result in the account row in the mysql.user
+# 			system table.
+#
+# 		) IDENTIFIED WITH auth_plugin BY 'auth_string'
+#
+# 			Sets the account authentication plugin to auth_plugin, passes the cleartext
+# 			'auth_string' value to the plugin for hashing, and stores the result in the
+# 			account row in the mysql.user system table
+#
+# 		) IDENTIFIED WITH auth_plugin AS 'hash_string'
+#
+# 			Sets the account authentication plugin to auth_plugin and stores the hashed
+# 			'hash_string' value as is in the mysql.user account row
+#
+# 			The string is assumed to be already hashed in the format required by the plugin
+#
+# Example:
+#
+# 		Specify the password as cleartext; the default plugin is used:
+#
+# 			CREATE USER 'jeffrey'@'localhost'
+# 				IDENTIFIED BY 'password';
+#
+# Example:
+#
+# 		Specify the authentication plugin, along with a cleartext password value:
+#
+# 			CREATE USER 'jeffrey'@'localhost'
+# 				IDENTIFIED WITH mysql_native_password BY 'password';
+#
+# In each case, the password value stored in the account row is the cleartext value
+# 'password' after it has been hashed by the authentication plugin associated with
+# the account.
+#
+# For additional information about setting passwords and authentication plugins,
+# see SECTION 6.3.7, "ASSIGNING ACCOUNT PASSWORDS", and SECTION 6.3.10, "PLUGGABLE AUTHENTICATION"
+#
+# CREATE USER ROLE OPTIONS
+#
+# The DEFAULT ROLE clause defines which roles become active when the user connects to the server
+# and authenticates, or when the user executes the SET_ROLE_DEFAULT statement during a session.
+#
+# Each role name uses the format described in SECTION 6.2.5, "SPECIFYING ROLE NAMES"
+#
+# For example:
+#
+# 		CREATE USER 'joe'@'10.0.0.1' DEFAULT ROLE administrator, developer;
+#
+# The host name part of the role name, if omitted, defaults to '%'
+#
+# The DEFAULT ROLE clause permits a list of one or more comma-separated role names.
+#
+# These roles need not exist at the time CREATE_USER is executed
+#
+# CREATE USER SSL/TLS OPTIONS
+#
+# MySQL can check X.509 certificate attributes in addition to the usual authentication
+# that is based on the user name and credentials.
+#
+# For background information on the use of SSL/TLS with MySQL, see SECTION 6.4, "USING ENCRYPTED CONNECTIONS"
+#
+# To specify SSL/TLS-related options for a MySQL account, use a REQUIRE clause that specifies
+# one or more tls_option values.
+#
+# Order of REQUIRE options does not matter, but no option can be specified twice.
+#
+# The AND keyword is optional between REQUIRE options.
+#
+# CREATE_USER permits these tls_option values:
+#
+# 		) NONE
+#
+# 			Indicates that all accounts named by the statement have no SSL or X.509
+# 			requirements.
+#
+# 			Unencrypted connections are permitted if the user name and password are
+# 			valid.
+#
+# 			Encrypted connections can be used, at the client's option, if the client
+# 			has the proper certificate and key files.
+#
+# 				CREATE USER 'jeffrey'@'localhost' REQUIRE NONE;
+#
+# 			Clients attempt to establish a secure connection by default.
+#
+# 			For clients that have REQUIRE NONE, the connection attempt falls
+# 			back to an unencrypted connection if a secure connection cannot be
+# 			established.
+#
+# 			To require an encrypted connection, a client need specify only the
+# 			--ssl-mode=REQUIRED option; the connection attempt fails if a secure
+# 			connection cannot be established.
+#
+# 			NONE is the default if no SSL-related REQUIRE options are specified
+#
+# 		) SSL
+#
+# 			Tells the server to permit only encrypted connections for all accounts
+# 			named by the statement.
+#
+# 				CREATE USER 'jeffrey'@'localhost' REQUIRE SSL;
+#
+# 			Clients attempt to establish a secure connection by default.
+#
+# 			For accounts that have REQUIRE SSL, the connection attempt fails
+# 			if a secure connection cannot be established.
+#
+# 		) X509
+#
+# 			For all accounts named by the statement, requires that clients present
+# 			a valid certificate, but the exact certificate, issuer, and subject do
+# 			not matter.
+#
+# 			The only requirement is that it be possible to verify its signature
+# 			with one of the CA certificates.
+#
+# 			Use of X.509 certificates always implies encryption, so the SSL
+# 			option is unnecessary in this case.
+#
+# 				CREATE USER 'jeffrey'@'localhost' REQUIRE X509;
+#
+# 			For accounts with REQUIRE X509, clients must specify the --ssl-key
+# 			and --ssl-cert options to connect.
+#
+# 			(It is recommended but not required that --ssl-ca also be specified
+# 			so that the public certificate provided by the server can be verified)
+#
+# 			This is true for ISSUER and SUBJECT as well because those REQUIRE
+# 			options imply the requirements of X509.
+#
+# 		) ISSUER 'issuer'
+#
+# 			For all accounts named by the statement, requires that clients present a valid
+# 			X.509 certificate issued by CA 'issuer'
+#
+# 			If a client presents a certificate that is valid but has a different
+# 			issuer, the server rejects the connection.
+#
+# 			Use of X.509 certificates always implies encryption, so the SSL option
+# 			is unnecessary in this case.
+#
+# 				CREATE USER 'jeffrey'@'localhost'
+# 					REQUIRE ISSUER '/C=SE/ST=Stockholm/L=Stockholm/
+# 						0=MySQL/CN=CA/emailAddress=ca@example.com';
+#
+# 			Because ISSUER implies the requirements of X509, clients must specify
+# 			the --ssl-key and --ssl-cert options to connect.
+#
+# 			(It is recommended but not required that --ssl-ca also be specified
+# 				so that the public certificate provided by teh server can be verified)
+#
+# 		) SUBJECT 'subject'
+#
+# 			For all accounts named by the statement, requires that clients present a valid
+# 			X.509 certificate containing the subject subject.
+#
+# 			If a client presents a certificate that is valid but has a different subject,
+# 			the server rejects teh connection.
+#
+# 			Use of X.509 certificates always implies encryption, so the SSL option is 
+# 			unnecessary in this case.
+#
+# 				CREATE USER 'jeffrey'@'localhost'
+# 					REQUIRE SUBJECT '/C=SE/ST=Stockholm/L=Stockholm/
+# 						0=MySQL demo client certificate/
+# 						CN=client/emailAddress=client@example.com';
+#
+# 			MySQL does a simple string comparison of the 'subject' value to the value
+# 			in the certificate, so lettercase and component ordering must be given exactly
+# 			as present in the certificate.
+#
+# 			Because SUBJECT implies the requirements of X509, clients must specify the
+# 			--ssl-key and --ssl-cert options to connect.
+#
+# 			(It is recommended but not required that --ssl-ca also be specified so that hte public
+# 			certificate provided by the server can be verified)
+#
+# 		) CIPHER 'cipher'
+#
+# 			For all accounts named by the statement, requires a specific cipher method for encrypting
+# 			connections.
+#
+# 			This option is needed to ensure that ciphers and key lengths of sufficient
+# 			strength are used.
+#
+# 			Encryption can be weak if old algorithms using short encryption keys are used.
+#
+# 				CREATE USER 'jeffrey'@'localhost'
+# 					REQUIRE CIPHER 'EDH-RSA-DES-CBC3-SHA';
+#
+# The SUBJECT, ISSUER and CIPHER options can be combined in the REQUIRE clause:
+#
+# 		CREATE USER 'jeffrey'@'localhost'
+# 			REQUIRE SUBJECT '/C=SE/ST=Stockholm/L=Stockholm/
+# 				0=MySQL demo client certificate/
+# 				CN=client/emailAddress=client@example.com'
+# 			AND ISSUER '/C=SE/ST=Stockholm/L=Stockholm/
+# 				0=MySQL/CN=CA/emailAddress=ca@example.com'
+# 			AND CIPHER 'EDH-RSA-DES-CBC3-SHA';
+#
+# CREATE USER RESOURCE-LIMIT OPTIONS
+#
+# It is possible to place limits on use of server resources by an account, as discussed
+# in SECTION 6.3.6, "SETTING ACCOUNT RESOURCE LIMITS"
+#
+# To do so, use a WITH clause that specifies one or more resource_option values.
+#
+# Order of WITH options does not matter, except that if a given resource limit is specified
+# multiple times, the last instance takes precedence.
+#
+# CREATE_USER permits these resource_option values:
+#
+# 		) MAX_QUERIES_PER_HOUR count, MAX_UPDATES_PER_HOUR count, MAX_CONNECTIONS_PER_HOUR count
+#
+# 			For all accounts named by the statement, these options restrict how many queries, updates
+# 			and connections to the server are permitted to each account during any given one-hour
+# 			period.
+#
+# 			If count is 0 (the default), this means that there is no limitation for the account
+#
+# 		) MAX_USER_CONNECTIONS count
+#
+# 			For all accounts named by the statement, restricts the maximum number of simultaneous
+# 			connections to the server by each account.
+#
+# 			A nonzero count specifies the limit for the account explicitly.
+#
+# 			If count is 0 (the default), the server determines the number of simultaneous
+# 			connections for the account from the global value of the max_user_connections
+# 			system variable.
+#
+# 			If max_user_connections is also zero, there is no limit for the account
+#
+# Example:
+#
+# 		CREATE USER 'jeffrey'@'localhost'
+# 			WITH MAX_QUERIES_PER_HOUR 500 MAX_UPDATES_PER_HOUR 100;
+#
+# CREATE USER PASSWORD-MANAGEMENT OPTIONS
+#
+# CREATE_USER supports several password_option values for password management:
+#
+# 		) Password expiration options:
+#
+# 			You can expire an account password manually and establish its password
+# 			expiration policy.
+#
+# 			Policy options do not expire the password.
+#
+# 			Instead, they determine how the server applies automatic expiration
+# 			to the account based on password age, which is assessed from the date
+# 			and time of the most recent account password change.
+#
+# 		) Password reuse options: You can restrict password reuse based on number
+# 			of password changes, time elapsed, or both.
+#
+# 		) Password verification-required options: You can indicate whether attempts to change
+# 			an account password must specify the current password, as verification that the
+# 			user attempting to make the change actually knows the current password.
+#
+# This section describes the syntax for password-management options.
+#
+# For information about establishing policy for password management, see
+# SECTION 6.3.8, "PASSWORD MANAGEMENT"
+#
+# If multiple password-management options of a given type (PASSWORD EXPIRE,
+# PASSWORD HISTORY, PASSWORD REUSE INTERVAL, PASSWORD REQUIRE) are specified,
+# the last one takes precedence.
+#
+# NOTE:
+#
+# 		Password-management options apply only to accounts that store credentials
+# 		internally in the mysql.user system table (mysql_native_password,
+# 		sha256_password, or caching_sha2_password)
+#
+# 		For accounts that use plugins that perform authentication against an
+# 		external credential system, password management must be handled
+# 		externally against that system as well.
+#
+# A client has an expired password if the account password was expired manually
+# or the password age is considered greater than its permitted lifetime per
+# the automatic expiration policy.
+#
+# In this case, the server either disconnects the client or restricts the operations
+# permitted to it (see SECTION 6.3.9, "SERVER HANDLING OF EXPIRED PASSWORDS")
+#
+# Operations performed by a restricted client result in an error until the user
+# establishes a new account password.
+#
+# CREATE_USER permits these password_option values for controlling password expiration:
+#
+# 		) PASSWORD EXPIRE
+#
+# 			Immediately marks the password expired for all accounts named by the statement
+#
+# 				CREATE USER 'jeffrey'@'localhost' PASSWORD EXPIRE;
+#
+# 		) PASSWORD EXPIRE DEFAULT
+#
+# 			Sets all accounts named by the statement so that the global expiration policy
+# 			applies, as specified by the default_password_lifetime system variable.
+#
+# 				CREATE USER 'jeffrey'@'localhost' PASSWORD EXPIRE DEFAULT;
+#
+# 		) PASSWORD EXPIRE NEVER
+#
+# 			This expiration option overrides the global policy for all accounts named by the
+# 			statement.
+#
+# 			For each, it disables password expiration so that the password never expires.
+#
+# 				CREATE USER 'jeffrey'@'localhost' PASSWORD EXPIRE NEVER;
+#
+# 		) PASSWORD EXPIRE INTERVAL N DAY
+#
+# 			This expiration option overrides the global policy for all accounts named by the
+# 			statement.
+#
+# 			For each, it sets the password lifetime to N days.
+#
+# 			The following statement requires the password to be changed every 180 days:
+#
+# 				CREATE USER 'jeffrey'@'localhost' PASSWORD EXPIRE INTERVAL 180 DAY;
+#
+# CREATE_USER permits these password_option values for controlling reuse of previous passwords
+# based on required minimum number of password changes:
+#
+# 		) PASSWORD HISTORY DEFAULT
+#
+# 			Sets all accounts named by the statement so that the global policy about password
+# 			history length applies, to prohibit reuse of passwords before the number of
+# 			changes specified by the password_history system variable.
+#
+# 				CREATE USER 'jeffrey'@'localhost' PASSWORD HISTORY DEFAULT;
+#
+# 		) PASSWORD HISTORY N
+#
+# 			This history-length option overrides the global policy for all accounts named by
+# 			the statement.
+#
+# 			For each, it sets the password history length to N passwords, to prohibit
+# 			reusing any of the N most recently chosen passwords.
+#
+# 			The following statement prohibits reuse of any of the previous 6 passwords:
+#
+# 				CREATE USER 'jeffrey'@'localhost' PASSWORD HISTORY 6;
+#
+# CREATE_USER permits these password_option values for controlling reuse of previous
+# passwords based on time elapsed:
+#
+# 		) PASSWORD REUSE INTERVAL DEFAULT
+#
+# 			Sets all statements named by the account so that the global policy about time
+# 			elapsed applies, to prohibit reuse of passwords newer than the number of days
+# 			specified by the password_reuse_interval system variable.
+#
+# 				CREATE USER 'jeffrey'@'localhost' PASSWORD REUSE INTERVAL DEFAULT;
+#
+# 		) PASSWORD REUSE INTERVAL N DAY
+#
+# 			This time-elapsed option overrides the global policy for all accounts
+# 			named by the statement.
+#
+# 			For each, it sets the password reuse interval to N days, to prohibit
+# 			reuse of passwords newer than that many days.
+#
+# 			The following statement prohibits password reuse for 360 days:
+#
+# 				CREATE USER 'jeffrey'@'localhost' PASSWORD REUSE INTERVAL 360 DAY;
+#
+# CREATE_USER permits these password_option values for controlling whether attempts
+# to change an account password must specify the current password, as verification
+# that hte user attempting to make the change actually knows the current PW:
+#
+# 		) PASSWORD REQUIRE CURRENT
+#
+# 			This verification option overrides the global policy for all accounts named
+# 			by the statement.
+#
+# 			For each, it requires that password changes specify the current password.
+#
+# 				CREATE USER 'jeffrey'@'localhost' PASSWORD REQUIRE CURRENT;
+#
+# 		) PASSWORD REQUIRE CURRENT OPTIONAL
+#
+# 			This verification option overrides the global policy for all accounts
+# 			named by the statement.
+#
+# 			For each, it does not require that password changes specify the current
+# 			password.
+#
+# 			(The current password may but need not be given)
+#
+# 				CREATE USER 'jeffrey'@'localhost' PASSWORD REQUIRE CURRENT OPTIONAL;
+#
+# 		) PASSWORD REQUIRE CURRENT DEFAULT
+#
+# 			Sets all statements named by the account so that the global policy about
+# 			password verification applies, as specified by the password_require_current
+# 			system variable.
+#
+# 				CREATE USER 'jeffrey'@'localhost' PASSWORD REQUIRE CURRENT DEFAULT;
+#
+# CREATE USER ACCOUNT-LOCKING OPTIONS
+#
+# MySQL supports account locking and unlocking using the ACCOUNT LOCK and ACCOUNT UNLOCK
+# options, which specify the locking state for an account.
+#
+# For additional discussion, see SECTION 6.3.12, "USER ACCOUNT LOCKING"
+#
+# If multiple account-locking options are specified, the last one takes
+# precedence.
+#
+# CREATE USER BINARY LOGGING
+#
+# CREATE_USER is written to the binary log if it succeeds, but not if it fails; in that case,
+# rollback occurs and no changes are made.
+#
+# A statement written to the binary log includes all named users.
+#
+# If the IF NOT EXISTS clause is given, this includes even users that already exist
+# and were not created.
+#
+# The statement written to the binary log specifies an authentication plugin for each
+# user, determined as follows:
+#
+# 		) The plugin named in the original statement, if one was specified
+#
+# 		) Otherwise, the default authentication plugin.
+#
+# 			In particular, if a user u1 already exists and uses a nondefault authentication
+# 			plugin, the statement written to the binary log for CREATE USER IF NOT EXISTS u1
+# 			names the default authentication plugin.
+#
+# 			(If the statement written to the binary log must specify a nondefault authentication
+# 			plugin for a user, include it in the original statement)
+#
+# If the server adds the default authentication plugin for any nonexisting users in the
+# statement written to the binary log, it writes a warning to the error log naming those
+# users.
+#
+# 13.7.1.4 DROP ROLE SYNTAX
+#
+# 		DROP ROLE [IF EXISTS] role [, role ] ---
+#
+# DROP_ROLE removes one or more roles (named collections of privileges)
+#
+# To use this statement, you must have the global DROP_ROLE or CREATE_USER
+# privilege.
+#
+# When the read_only system variable is enabled, DROP_ROLE additionally requires
+# the CONNECTION_ADMIN or SUPER privilege.
+#
+# Roles named in the mandatory_roles system variable value cannot be dropped.
+#
+# DROP_ROLE either succeeds for all named roles or rolls back and has no effect
+# if any error occurs.
+#
+# By default, an error occurs if you try to drop a role that does not exist.
+#
+# If the IF EXISTS clause is given, the statement produces a warning for each named
+# role that does not exist, rather than an error.
+#
+# The statement is written to the binary log if it succeeds, but not if it fails;
+# in that case, rollback occurs and no changes are made.
+#
+# A statement written to the binary log includes all named roles.
+#
+# If the IF EXISTS clause is given, this includes even roles that do not exist
+# and were not dropped.
+#
+# Each role name uses the format described in SECTION 6.2.5, "SPECIFYING ROLE NAMES"
+#
+# For example:
+#
+# 		DROP ROLE 'administrator', 'developer';
+# 		DROP ROLE 'webapp'@'localhost';
+#
+# The host name part of the role name, if omitted, defaults to '%'
+#
+# A dropped role is automatically revoked from any user account (or role)
+# to which the role was granted.
+#
+# Within any current session for such an account, its privileges are adjusted
+# for the next statement executed.
+#
+# 13.7.1.5 DROP USER SYNTAX
+#
+# 		DROP USER [IF EXISTS] user [, user] ---
+#
+# The DROP_USER statement removes one or more MySQL accounts and their privileges.
+#
+# It removes privilege rows for the account from all grant tables.
+#
+# Roles named in the mandatory_roles system variable value cannot be dropped.
+#
+# To use DROP_USER, you must have the global CREATE_USER privilege, or the
+# DELETE privilege for the mysql system database.
+#
+# When the read_only system variable is enabled, DROP_USER additionally
+# requires the CONNECTION_ADMIN or SUPER privilege.
+#
+# DROP_USER either succeeds for all named users or rolls back and has no effect
+# if any error occurs.
+#
+# By default, an error occurs if you try to drop a user that does not exist.
+#
+# If the IF EXISTS clause is given, the statement produces a warning for each
+# named user that does not exist, rather than an error.
+#
+# The statement is written to the binary log if it succeeds, but not if it fails;
+# in that case, rollback occurs and no changes are made.
+#
+# A statement written to the binary log includes all named users.
+#
+# If the IF EXISTS clause is given, this includes even users that do not exist
+# and were not dropped.
+#
+# Each account name uses the format described in SECTION 6.2.4, "SPECIFYING ACCOUNT NAMES"
+#
+# For example:
+#
+# 		DROP USER 'jeffrey'@'localhost';
+#
+# The host name part of the account name, if omitted, defaults to '%'
+#
+# IMPORTANT:
+#
+# 		DROP_USER does not automatically close any open user sessions.
+#
+# 		Rather, in the event that a user with an open session is dropped,
+# 		the statement does not take effect until that user's session is closed.
+#
+#		Once the session is closed, the user is dropped, and that user's next
+# 		attempt to log in will fail.
+#
+# 		This is by design.
+#
+# DROP_USER does not automatically drop or invalidate databases or objects
+# within them that the old user created.
+#
+# This includes stored programs or views for which the DEFINER attribute names
+# the dropped user.
+#
+# Attempts to access such objects may produce an error if they execute in definer
+# security context.
+#
+# (For information about security context, see SECTION 24.6, "ACCESS CONTROL FOR STORED
+# PROGRAMS AND VIEWS")
+#
+# 13.7.1.6 GRANT SYNTAX
+#
+# 		GRANT
+# 			priv_type [(column_list)]
+# 				[, priv_type [(column_list)]] ---
+# 			ON [object_type] priv_level
+# 			TO user_or_role [, user_or_role] ---
+# 			[WITH GRANT OPTION]
+#
+# 		GRANT PROXY ON user_or_role
+# 			TO user_or_role [, user_or_role] ---
+# 			[WITH GRANT OPTION]
+#
+# 		GRANT role [, role] ---
+# 			TO user_or_role [, user_or_role] ---
+# 			[WITH ADMIN OPTION]
+#
+# 		object_type: {
+# 			TABLE
+# 		 | FUNCTION
+# 		 | PROCEDURE
+# 		}
+#
+# 		priv_level: {
+# 			*
+# 		 | *.*
+# 		 | db_name.*
+# 		 | db_name.tbl_name
+# 		 | tbl_name
+# 		 | db_name.routine_name
+# 		}
+#
+# 		user_or_role: {
+# 			user
+# 		 | role
+# 		}
+#
+# 		user:
+# 			(see Section 6.2.4, "Specifying Account Names")
+#
+# 		role:
+# 			(see Section 6.2.5, "Specifying Role Names")
+#
+# The GRANT statement assigns privileges and roles to MySQL user accounts and roles.
+#
+# There are several aspects to the GRANT statement, described under the following
+# topics:
+#
+# 		) GRANT GENERAL OVERVIEW
+#
+# 		) OBJECT QUOTING GUIDELINES
+#
+# 		) ACCOUNT NAMES
+#
+# 		) PRIVILEGES SUPPORTED BY MYSQL
+#
+# 		) GLOBAL PRIVILEGES
+#
+# 		) DATABASE PRIVILEGES
+#
+# 		) TABLE PRIVILEGES
+#
+# 		) COLUMN PRIVILEGES
+#
+# 		) STORED ROUTINE PRIVILEGES
+#
+# 		) PROXY USER PRIVILEGES
+#
+# 		) GRANTING ROLES
+#
+# 		) OTHER ACCOUNT CHARACTERISTICS 
+#
+# 		) MYSQL AND STANDARD SQL VERSIONS OF GRANT
+#
+# GRANT GENERAL OVERVIEW
+#
+# The GRANT statement enables system administrators to grant privileges and roles,
+# which can be granted to user accounts and roles.
+#
+# These syntax restrictions apply: 
+#
+# 		) GRANT cannot mix granting both privileges and roles in the same statement.
+#
+# 			A given GRANT statement must grant either privileges or roles.
+#
+# 		) The ON clause distinguishes whether the statement grants privileges or roles:
+#
+# 			) With ON, the statement grants privileges.
+#
+# 			) Without ON, the statement grants roles
+#
+# 			) It is permitted to assign both privileges and roles to an account, but you
+# 				must use separate GRANT statements, each with syntax appropriate to what is
+# 				to be granted.
+#
+# For more information about roles, see SECTION 6.3.4, "USING ROLES"
+#
+# To use GRANT, you must have the GRANT_OPTION privilege, and you must have the
+# privileges that you are granting.
+#
+# When the read_only system variable is enabled, GRANT additionally requires the
+# CONNECTION_ADMIN or SUPER privilege.
+#
+# GRANT either succeeds for all named users and roles or rolls back and has no
+# effect if any error occurs.
+#
+# The statement is written to the binary log only if it succeeds for all
+# named users and roles.
+#
+# The REVOKE statement is related to GRANT and enables administrators to remove
+# account privileges.
+#
+# See SECTION 13.7.1.8, "REVOKE SYNTAX"
+#
+# Each account name uses the format described in SECTION 6.2.4, "SPECIFYING ACCOUNT NAMES"
+#
+# Each role name uses the format described in SECTION 6.2.5, "SPECIFYING ROLE NAMES"
+#
+# For example:
+#
+# 		GRANT ALL ON db1.* TO 'jeffrey'@'localhost';
+# 		GRANT 'role1', 'role2' TO 'user1'@'localhost', 'user2'@'localhost';
+# 		GRANT SELECT ON world.* TO 'role3';
+#
+# The host name part of the account or role name, if omitted, defaults to '%'
+#
+# Normally, a database administrator first uses CREATE_USER to create an account
+# and define its nonprivilege characteristics such as its password, whether it uses
+# secure connections, and limits on access to server resources, then uses GRANT
+# to define its privileges.
+#
+# ALTER_USER may be used to change the nonprivilege characteristics of existing accounts.
+#
+# For example:
+#
+# 		CREATE USER 'jeffrey'@'localhost' IDENTIFIED BY 'password';
+# 		GRANT ALL ON db1.* TO 'jeffrey'@'localhost';
+# 		GRANT SELECT ON db2.invoice TO 'jeffrey'@'localhost';
+# 		ALTER USER 'jeffrey'@'localhost' WITH MAX_QUERIES_PER_HOUR 90;
+#
+# From the mysql program, GRANT responds with Query OK, 0 rows affected when executed
+# successfully.
+#
+# To determine what privileges result from the operation, use SHOW_GRANTS
+#
+# See SECTION 13.7.6.21, "SHOW GRANTS SYNTAX"
+#
+# 	IMPORTANT:
+#
+# 		Under some circumstances, GRANT may be recorded in server logs or on the
+# 		client side in a history file such as ~/.mysql_history, which means that 
+# 		cleartext passwords may be read by anyone having read access to that
+# 		information.
+#
+# 		For information about the conditions under which this occurs for the
+# 		server logs and how to control it, see SECTION 6.1.2.3, "PASSWORDS AND LOGGING"
+#
+# 		For similar information about client-side logging, see SECTION 4.5.1.3,
+# 		"MYSQL CLIENT LOGGING"
+#
+# GRANT supports host names up to 60 characters long.
+#
+# User names can be up to 32 characters. Database, table, column and routine names
+# can be up to 64 characters.
+#
+# 		WARNING:
+#
+# 			Do not attempt to change the permissible length for user names by altering
+# 			the mysql.user system table.
+#
+# 			Doing so results in unpredictable behavior which may even make it impossible
+# 			for users to log into the MySQL server.
+#
+# 			Never alter the structure of tables in the mysql system database in any manner
+# 			except by means of the procedure described in SECTION 4.4.5, "MYSQL_UPGRADE --- CHECK AND UPGRADE MYSQL TABLES"
+#
+# OBJECT QUOTING GUIDELINES
+#
+# Several objects within GRANT statements are subject to quoting, although quoting is optional
+# in many cases:
+#
+# 		Account, role, database, table, column and routine names.
+#
+# For example, if a user_name or host_name value in an account name is legal as an unquoted
+# identifier, you need not quote it.
+#
+# However, quotation marks are necessary to specify a user_name string containing special characters
+# (such as -), or a host_name string containing special characters or wildcard characters
+# (such as %); for example, 'test-user'@'%.com'
+#
+# Quote the user name and host name separately
+#
+# To specify quoted values:
+#
+# 		) Quote database, table, column and routine names as identifiers
+#
+# 		) Quote user names, and host names as identifiers or as strings
+#
+# 		) Quote passwords as strings
+#
+# For string-quoting and identifier-quoting guidelines, see SECTION 9.1.1, "STRING LITERALS",
+# and SECTION 9.2, "SCHEMA OBJECT NAMES"
+#
+# The _ and % wildcards are permitted when specifying database names in GRANT statements
+# that grant privileges at the database level (GRANT --- ON db_name.*)
+#
+# This means, for example, that to use a _ character as part of a database name
+# specify it as \_ in the GRANT statement, to prevent the user from being able
+# to access additional databases matching the wildcard pattern;
+#
+# For example, GRANT --- ON `foo\_bar`.* TO ---
+#
+# When a database name not is used to grant privileges at the database level, but as
+# a qualifier for granting privileges to some other objects such as a table
+# or routine (for example, GRANT --- ON db_name.tbl_name), wildcard characters
+# are treated as normal characters.
+#
+# ACCOUNT NAMES
+#
+# A user value in a GRANT statement indicates a MySQL account to which the statement
+# applies.
+#
+# To accommodate granting rights to users from arbitrary hosts, MySQL supports
+# specifying the user value in the form 'user_name'@'host_name'
+#
+# You can specify wildcards in the host name. For example, 'user_name'@'%.example.com'
+# applies to user_name for any host in the example.com domain, and 'user_name'@'198.51.100.%'
+# applies to user_name for any host in the 198.51.100 class C subnet.
+#
+# The simple form 'user_name' is a synonym for 'user_name'@'%'
+#
+# MySQL does not support wildcards in user names.
+#
+# To refer to an anonymous user, specify an account with an empty user name
+# with the GRANT statement:
+#
+# 		GRANT ALL ON test.* TO ''@'localhost' ---;
+#
+# In this case, any user who connects from the local host with the correct password
+# for the anonymous user will be permitted access, with the privileges associated
+# with the anonymous-user account.
+#
+# For additional information about user name and host name values in account names,
+# see SECTION 6.2.4, "SPECIFYING ACCOUNT NAMES"
+#
+# WARNING:
+#
+# 		If you permit local anonymous users to connect to the MySQL server, you should
+# 		also grant privileges to all local users as 'user_name'@'localhost'
+#
+# 		Otherwise, the anonymous user account for localhost in the mysql.user system
+# 		table is used when named users try to log in to the MySQL server from the local
+# 		machine.
+#
+# 		For details, see SECTION 6.2.6, "ACCESS CONTROL, STAGE 1: CONNECTION VERIFICATION"
+#
+# 		To determine whether this issue applies to you, execute the following query, which
+# 		lists any anonymous users:
+#
+# 			SELECT host, User FROM mysql.user WHERE User='';
+#
+# 		To avoid the problem just described, delete the local anonymous user account
+# 		using this statement:
+#
+# 			DROP USER ''@'localhost';
+#
+# PRIVILEGES SUPPORTED BY MYSQL
+#
+# The following tables summarize the permissible static and dynamic priv_type privilege types
+# that can be specified for the GRANT and REVOKE statements, and the levels at which each
+# privilege can be granted.
+#
+# For additional information about each privilege, see SECTION 6.2.1, "PRIVILEGES PROVIDED BY MYSQL"
+#
+# For information about the differences between static and dynamic privileges,
+# see SECTION 6.2.2, "STATIC VERSUS DYNAMIC PRIVILEGES"
+#
+# TABLE 13.9 PERMISSIBLE STATIC PRIVILEGES FOR GRANT AND REVOKE
+#
+# PRIVILEGE 					MEANING AND GRANTABLE LEVELS
+#
+# ALL_[PRIVILEGES] 			Grant all privileges at specified access level except GRANT_OPTION and PROXY
+#
+# ALTER 							Enable use of ALTER_TABLE. Levels: Global, database, table
+#
+# ALTER_ROUTINE 				Enable stored routines to be altered or dropped. Levels: Global, database, routine
+#
+# CREATE 						Enable database and table creation. levels: Global, database, table
+#
+# CREATE_ROLE 					Enable role creation. Level: Global
+#
+# CREATE_ROUTINE 				Enable stored routine creation. Levels: Global, database
+#
+# CREATE_TABLESPACE 			Enable tablespaces and log file groups to be created, altered, or dropped. Level: Global
+#
+# CREATE_TEMPORARY_TABLES	Enable use of CREATE_TEMPORARY_TABLE. Levels: Global, database
+#
+# CREATE_USER 					Enable use of CREATE_USER, DROP_USER, RENAME_USER, and REVOKE_ALL_PRIVILEGES. Level: Global
+#
+# CREATE_VIEW 					Enable views to be created or altered. Levels: Global, database, table
+#
+# DELETE 						Enable use of DELETE. Level: Global, database, table
+#
+# DROP 							Enable databases, tables, and views to be dropped. Levels: Global, database, table
+#
+# DROP_ROLE 					Enable roles to be dropped. Level: Global
+#
+# EVENT 							Enable use of events for the Event Scheduler. levels: Global, database
+#
+# EXECUTE 						Enable the user to execute stored routines. Levels: Global, database, routine
+#
+# FILE 							Enable the user to cause the server to read or write files. Level: Global
+#
+# GRANT_OPTION 				Enables privileges to be granted to or removed from other accounts. Levels: Global, database, table, routine, proxy
+#
+# INDEX 							Enables indexes to be created or dropped. Levels: Global, database, table
+#
+# INSERT 						Enable use of INSERT. Levels: Global, database, table, column
+#
+# LOCK_TABLES 					Enable use of LOCK_TABLES on tables for which you have the SELECT privilege. Levels: Global, database
+#
+# PROCESS 						Enable the user to see all processes with SHOW_PROCESSLIST. Level: Global
+#
+# PROXY 							Enable user proxying. Level: From user to user
+#
+# REFERENCES 					Enable foreign key creation. Levels: Global, database, table, column
+#
+# RELOAD 						Enable use of FLUSH operations. Level: Global
+#
+# REPLICATION_CLIENT 		Enable the user to ask where master or slave servers are. Level: Global
+#
+# REPLICATION_SLAVE 			Enable replication slaves to read binary log events from the master. Level: Global
+#
+# SELECT 						Enable use of SELECT. Levels: Global, database, table, column
+#
+# SHOW_DATABASES 				Enable SHOW_DATABASES to show all databases. Level: Global
+#
+# SHOW_VIEW 					Enable use of SHOW_CREATE_VIEW. Levels: Global, database, table
+#
+# SHUTDOWN 						Enable use of mysqladmin shutdown. Level: Global
+#
+# SUPER 							Enable use of other administrative operations such as CHANGE_MASTER_TO,
+# 									KILL, PURGE_BINARY_LOGS, SET_GLOBAL and mysqladmin debug command. Level: Global
+#
+# TRIGGER 						Enable trigger operations. Levels: Global, database, table
+#
+# UPDATE 						Enable use of UPDATE. Levels: Global, database, table, column
+#
+# USAGE 							Synonym for "no privileges"
+#
+# TABLE 13.10 PERMISSIBLE DYNAMIC PRIVILEGES FOR GRANT AND REVOKE
+#
+# PRIVILEGE 							Meaning and Grantable Levels
+#
+# APPLICATION_PASSWORD_ADMIN		Enable dual password administration. Level: Global
+#
+# AUDIT_ADMIN 							Enable audit log configuration. Level: Global
+#
+# BACKUP_ADMIN 						Enable backup administration. level: Global
+#
+# BINLOG_ADMIN 						Enable binary log control. Level: Global
+#
+# BINLOG_ENCRYPTION_ADMIN 			Enable activation and deactivation of binary log encryption. Level: Global
+#
+# CONNECTION_ADMIN 					Enable connection limit/restriction control. Level: Global
+#
+# ENCRYPTION_KEY_ADMIN 				Enable InnoDB key rotation. Level: Global
+#
+# FIREWALL_ADMIN 						Enable firewall rule administration, any user. Level: GLobal
+#
+# FIREWALL_USER 						Enable firewall rule administration, self. Level: Global
+#
+# GROUP_REPLICATION_ADMIN 			Enable Group Replication control. level: Global
+#
+# PERSIST_RO_VARIABLES_ADMIN 		Enable persisting read-only system variables. Level: Global
+#
+# REPLICATION_SLAVE_ADMIN 			Enable regular replication control. Level: GLobal
+#
+# RESOURCE_GROUP_ADMIN 				Enable resource group administration. Level: Global
+#
+# RESOURCE_GROUP_USER 				Enable resource group administration. Level: Global
+#
+# ROLE_ADMIN 							Enable use of WITH ADMIN OPTION. Level: GLobal
+#
+# SESSION_VARIABLES_ADMIN 			Enable setting restricted session system variables. Level: Global
+#
+# SET_USER_ID 							Enable setting non-self DEFINER values. Level: Global
+#
+# SYSTEM_VARIABLES_ADMIN 			Enable modifying or persisting global system variables. Level: Global
+#
+# VERSION_TOKEN_ADMIN 				Enable use of Version Tokens UDFs. Level: Global
+#
+# XA_RECOVER_ADMIN 					Enable XA_RECOVER execution. Level: Global
+#
+# A trigger is associated with a table. To create or drop a trigger, you must have the TRIGGER privilege
+# for the table, not the trigger.
+#
+# In GRANT statements, the ALL_[PRIVILEGES] or PROXY privilege must be named by itself
+# and cannot be specified along with other privileges.
+#
+# ALL_[PRIVILEGES] stands for all privileges available for the level at which privileges
+# are to be granted except for the GRANT_OPTION and PROXY privileges.
+#
+# MySQL account information is stored in the tables of the mysql system database.
+#
+# For additional details, consult SECTION 6.2, "THE MYSQL ACCESS PRIVILEGE SYSTEM",
+# which discusses the mysql system database and the access control system extensively.
+#
+# If the grant tables hold privilege rows that contain mixed-case database or table
+# names and the lower_case_table_names system variable is set to a nonzero value,
+# REVOKE cannot be used to revoke these privileges.
+#
+# It will be necessary to manipulate the grant tables directly.
+#
+# (GRANT will not create such rows when lower_case_table_names is
+# set, but such rows might have been created prior to setting that variable.
+#
+# The lower_case_table_names setting can only be configured at server startup)
+#
+# Privileges can be granted at several levels, depending on the syntax used
+# for the ON clause.
+#
+# For REVOKE, the same ON syntax specifies which privileges to remove.
+#
+# For the global, database, table and routine levels, GRANT_ALL assigns only
+# the privileges that exist at the level you are granting.
+#
+# For example, GRANT ALL ON db_name.* is a database-level statement,
+# so it does not grant any global-only privileges such as FILE.
+#
+# Granting ALL does not assign the GRANT_OPTION or PROXY privilege.
+#
+# The object_type clause, if present, should be specified as TABLE FUNCTION,
+# or PROCEDURE when the following object is a table, a stored function,
+# or a stored procedure.
+#
+# The privileges that a user holds for a database, table, column, or routine
+# are formed additively as the logical OR of the account privileges at each
+# of the privilege levels.
+#
+# FOr example, if a user has a global SELECT privilege, the privilege cannot be
+# denied by an absence of the privilege at the database, table, or column level.
+#
+# Details of the privilege-checking procedure are presented in SECTION 6.2.7,
+# "ACCESS CONTROL, STAGE 2: REQUEST VERIFICATION"
+#
+# If you are using table, column, or routine privileges for even one user,
+# the server examines table, column, and routine privileges for all users
+# and this slows down MySQL a bit.
+#
+# Similarly, if you limit the number of queries, updates or connections
+# for any users, the server must monitor these values.
+#
+# MySQL enables you to grant privileges on databases or tables that do not
+# exist.
+#
+# For tables, the privileges to be granted must include the CREATE privilege.
+#
+# This behavior is by design, and is intended to enable the DB admin to prepare
+# user accounts and privileges for databases or tables that are to be 
+# created at a later time.
+#
+# IMPORTANT:
+#
+# 		MySQL does not automatically revoke any privileges when you drop
+# 		a database or table.
+#
+# 		However, if you drop a routine, any routine-level privileges granted
+# 		for that routine are revoked.
+#
+# GLOBAL PRIVILEGES
+#
+# Global privileges are administrative or apply to all databases on a given
+# server.
+#
+# To assign global privileges, use ON *.* syntax:
+#
+# 		GRANT ALL ON *.* TO 'someuser'@'somehost';
+# 		GRANT SELECT, INSERT ON *.* TO 'someuser'@'somehost';
+#
+# The CREATE_TABLESPACE, CREATE_USER, FILE, PROCESS, RELOAD, REPLICATION_CLIENT,
+# REPLICATION_SLAVE, SHOW_DATABASES, SHUTDOWN and SUPER static privileges are
+# administrative and can only be granted globally.
+#
+# Dynamic privileges are all global and can only be granted globally.
+#
+# Other privileges can be granted globally or at more specific levels.
+#
+# The effect of GRANT_OPTION granted at the global level differs for static
+# and dynamic privileges:
+#
+# 		) GRANT_OPTION granted for any static global privilege applies to all static global privileges
+#
+# 		) GRANT_OPTION granted for any dynamic privilege applies only to that dynamic privilege
+#
+# GRANT ALL at the global level grants all static global privileges and all currently registered
+# dynamic privileges.
+#
+# A dynamic privilege registered subsequent to execution of the GRANT statement is not granted
+# retroactively to any account.
+#
+# MySQL stores global privileges in the mysql.user system table
+#
+# DATABASE PRIVILEGES
+#
+# Database privileges apply to all objects in a given database. To assign database-level
+# privileges, use ON db_name.* syntax:
+#
+# 		GRANT ALL ON mydb.* TO 'someuser'@'somehost';
+# 		GRANT SELECT, INSERT ON mydb.* TO 'someuser'@'somehost';
+#
+# If you use ON * syntax (rather than ON *.*), privileges are assigned at the database
+# level for the default database.
+#
+# An error occurs if there is no default database.
+#
+# The CREATE, DROP, EVENT, GRANT_OPTION, LOCK_TABLES and REFERENCES privileges can be
+# specified at the database level.
+#
+# Table or routine privileges also can be specified at the database level, in which
+# case they apply to all tables or routines in the database.
+#
+# MySQL stores database privileges in the mysql.db system table
+#
+# TABLE PRIVILEGES
+#
+# Table privileges apply to all columns in a given table. To assign table-level privileges,
+# use ON db_name.tbl_name syntax:
+#
+# 		GRANT ALL ON mydb.mytbl TO 'someuser'@'somehost';
+# 		GRANT SELECT, INSERT ON mydb.mytbl TO 'someuser'@'somehost';
+#
+# If you specify tbl_name rather than db_name.tbl_name, the statement applies to tbl_name
+# in the default database.
+#
+# An error occurs if there is no default database.
+#
+# The permissible priv_type values at the table level are ALTER, CREATE_VIEW, CREATE,
+# DELETE, DROP, GRANT_OPTION, INDEX, INSERT, REFERENCES, SELECT, SHOW_VIEW, TRIGGER
+# and UPDATE.
+#
+# Table-level privileges apply to base tables and views.
+#
+# They do not apply to tables created with CREATE_TEMPORARY_TABLE, even if
+# the table names match.
+#
+# For information about TEMPORARY table privileges, see SECTION 13.1.20.3, "CREATE TEMPORARY TABLE SYNTAX"
+#
+# MySQL stores table privileges in the mysql.tables_priv system table
+#
+# COLUMN PRIVILEGES
+#
+# Column privileges apply to single columns in a given table.
+#
+# Each privilege to be granted at the column level must be followed by the column
+# or columns, enclosed within parentheses.
+#
+# 		GRANT SELECT (col1), INSERT (col1, col2) ON mydb.mytbl TO 'someuser'@'somehost';
+#
+# The permissible priv_type values for a column (that is, when you use a column_list clause)
+# are INSERT, REFERENCES, SELECT, and UPDATE.
+#
+# MySQL stores column privileges in the mysql.columns_priv system table.
+#
+# STORED ROUTINE PRIVILEGES
+#
+# The ALTER_ROUTINE, CREATE_ROUTINE, EXECUTE and GRANT_OPTION privileges apply to
+# stored routines (procedures and functions).
+#
+# They can be granted at the global and database levels.
+#
+# Except for CREATE_ROUTINE, these privileges can be granted at the routine level
+# for individual routines.
+#
+# 		GRANT CREATE ROUTINE ON mydb.* TO 'someuser'@'somehost';
+# 		GRANT EXECUTE ON PROCEDURE mydb.myproc TO 'someuser'@'somehost';
+#
+# The permissible priv_type values at the routine level are ALTER_ROUTINE, EXECUTE
+# and GRANT_OPTION
+#
+# CREATE_ROUTINE is not a routine-level privilege because you must have the privilege
+# at the global or database level to create a routine in the first place.
+#
+# MySQL stores routine-level privileges in the mysql.procs_priv system table
+#
+# PROXY USER PRIVILEGES
+#
+# The PROXY privilege enables one user to be a proxy for another.
+#
+# The proxy user impersonates or takes the identity of the proxied user;
+# that is, it assumes the privileges of the proxied user.
+#
+# 		GRANT PROXY ON 'localuser'@'localhost' TO 'externaluser'@'somehost';
+#
+# When PROXY is granted, it must be the only privilege named in the GRANT
+# statement, and the only permitted WITH option is WITH GRANT OPTION.
+#
+# Proxying requires that the proxy user authenticate through a plugin that
+# returns the name of the proxied user ot the server when the proxy
+# user connects, and that the proxy user have the PROXY privilege for the
+# proxied user.
+#
+# For details and examples, see SECTION 6.3.11, "PROXY USERS"
+#
+# MySQL stores proxy privileges in the mysql.proxies_priv system table
+#
+# GRANTING ROLES
+#
+# GRANT syntax without an ON clause grants roles rather than individual privileges.
+#
+# A role is a named collection of privileges; See SECTION 6.3.4, "USING ROLES"
+#
+# For example:
+#
+# 		GRANT 'role1', 'role2' TO 'user1'@'localhost', 'user2'@'localhost';
+#
+# Each role to be granted must exist, as well as each user account or role
+# to which it is to be granted.
+#
+# If the GRANT statement includes the WITH ADMIN OPTION clause, each named user
+# becomes able to grant the named roles to other users or roles, or revoke
+# them from other users or roles.
+#
+# This includes the ability to use WITH ADMIN OPTION itself
+#
+# It is possible to create circular references with GRANT. For example:
+#
+# 		CREATE USER 'u1', 'u2';
+# 		CREATE ROLE 'r1', 'r2';
+#
+# 		GRANT 'u1' TO 'u1'; -- SImple loop: u1 => u1
+# 		GRANT 'r1' TO 'r1'; -- simple loop: r1 => r1
+#
+# 		GRANT 'r2' TO 'u2'; 
+# 		GRANT 'u2' TO 'r2'; -- mixed user/role loop: u2 => r2 => u2
+#
+# Circular grant references are permitted, but add no new privileges or roles to the grantee
+# because a user or role already has its privileges and roles.
+#
+# OTHER ACCOUNT CHARACTERISTICS 
+#
+# The optional WITH clause is used to enable a user to grant privileges to other users.
+#
+# The WITH GRANT OPTION clause gives the user the ability to give to other users
+# any privileges the user has at the specified privilege level.
+#
+# To grant the GRANT_OPTION privilege to an account without otherwise changing its 
+# privileges, do this:
+#
+# 		GRANT USAGE ON *.* TO 'someuser'@'somehost' WITH GRANT OPTION;
+#
+# Be careful to whom you give the GRANT_OPTION privilege because two users with
+# different privileges may be able to combine privileges.
+#
+# You cannot grant another user a privilege which you yourself do not have; the GRANT_OPTION
+# privilege enables you to assign only those privileges which you yourself possess.
+#
+# Be aware that when you grant a user the GRANT_OPTION privilege at a particular privilege level,
+# any privileges that user possesses (or may be given in the future) at that level, 
+# can also be granted by that user to other users.
+#
+# Suppose that you grant a user the INSERT privilege on a database.
+#
+# If you then grant the SELECT privilege on the database and specify WITH GRANT OPTION,
+# that user can give to other users not only the SELECT privilege, but also INSERT.
+#
+# If oyu then grant the UPDATE privilege to the user on the database,
+# the user can grant INSERT, SELECT and UPDATE.
+#
+# For a nonadminsitrative user, you should not grant the ALTER privilege globally
+# or for the mysql system database.
+#
+# If you do that,the user can try to subvert the privilege system by renaming tables.
+#
+# FOr additional information about security risks associated with a particular privileges,
+# See SECTION 6.2.1, "PRIVILEGES PROVIDED BY MYSQL"
+#
+# MYSQL AND STANDARD SQL VERSIONS OF GRANT
+#
+# The biggest differences between the MySQL and standard SQL versions of GRANT are:
+#
+# 		) MySQL associates privileges with the combination of a host name and user name
+# 			and not with only a user name.
+#
+# 		) Standard SQL does not have global or database-level privileges, nor does it support
+# 			all the privilege types that MySQL supports.
+#
+# 		) MySQL does not support the standard SQL UNDER privilege
+#
+# 		) Standard SQL privileges are structured in a hierarchial manner.
+#
+# 			If you remove a user, all privileges the user has been granted are revoked.
+#
+# 			This is also true in MySQL, if you use DROP_USER.
+#
+# 			See SECTION 13.7.1.5, "DROP USER SYNTAX"
+#
+# 		) In standard SQL, when you drop a table, all privileges for the table are revoked.
+#
+# 			In standard SQL, when you revoke a privilege, all privileges that were granted based
+# 			on that privilege are also revoked.
+#
+# 			In MySQL, privileges can be dropped with DROP_USER or REVOKE statements.
+#
+# 		) In MySQL, it is possible to have the INSERT privilege for only some of the
+# 			columns in a table.
+#
+# 			In this case, you can still execute INSERT statements on the table, provided
+# 			that you insert values only for those columns for which you have the INSERT privilege.
+#
+# 			The omitted columns are set to their implicit default values if strict SQL mode
+# 			is not enabled.
+#
+# 			In strict mode, the statement is rejected if any of the omitted columns have no
+# 			default value.
+#
+# 			(Standard SQL requires you to have the INSERT privilege on all columns)
+#
+# 			For information about strict SQL mode and implicit default values, see SECTION 5.1.11,
+# 			"SERVER SQL MODES" and SECTION 11.7, "DATA TYPE DEFAULT VALUES"
+#
+# 13.7.1.7 RENAME USER SYNTAX
+#
+# 		RENAME USER old_user TO new_user
+# 			[, old_user TO new_user] ---
+#
+# The RENAME_USER statement renames existing MySQL accounts.
+#
+# An error occurs for old accounts that do not exist or new accounts that already exist.
+#
+# To use RENAME_USER, you must have the global CREATE_USER privilege, or the UPDATE
+# privilege for the mysql system database.
+#
+# When the read_only system variable is enabled, RENAME_USER additionally
+# requires the CONNECTION_ADMIN or SUPER privilege.
+#
+# Each account name uses the format described in SECTION 6.2.4, "SPECIFYING ACCOUNT NAMES"
+#
+# For example:
+#
+# 		RENAME USER 'jeffrey'@'localhost' TO 'jeff'@'127.0.0.1';
+#
+# The host name part of the account name, if omitted, defaults ot '%'
+#
+# RENAME_USER causes the privileges held by the old user to be those held by the
+# new user.
+#
+# However, RENAME_USER does not automatically drop or invalidate databases or
+# objects within them that the old user created.
+#
+# This includes stored programs or views for which the DEFINER attribute names
+# the old user.
+#
+# Attempts to access such objects may produce an error if they execute in definer
+# security context.
+#
+# (For information about security context, see SECTION 24.6, "ACCESS CONTROL FOR STORED PROGRAMS AND VIEWS")
+#
+# The privilege changes take effect as indicated in SECTION 6.2.8, "WHEN PRIVILEGE CHANGES TAKE EFFECT"
+#
+# 13.7.1.8 REVOKE SYNTAX
+#
+# REVOKE
+# 		priv_type [(column_list)]
+# 			[, priv_type [(column_list)] ---
+# 		ON [object_type] priv_leveL
+# 		FROM user_or_role [, user_or_role] ---
+#
+# REVOKE ALL [PRIVILEGES], GRANT OPTION
+# 		FROM user_or_role [, user_or_role] ---
+#
+# REVOKE PROXY ON user_or_role
+# 		FROM user_or_role [, user_or_role] ---
+#
+# REVOKE role [, role ] ---
+# 		FROM user_or_role [, user_or_role ] ---
+#
+# user_or_role: {
+# 		user
+# 	 | role
+# }
+#
+# user:
+# 		(see SECTION 6.2.4, "SPECIFYING ACCOUNT NAMES")
+#
+# role:
+# 		(see SECTION 6.2.5, "SPECIFYING ROLE NAMES")
+#
+# The REVOKE statment enables system administrators to revoke privileges
+# and roles, which can be revoked from user accounts and roles.
+#
+# For information about roles, see SECTION 6.3.4, "USING ROLES"
+#
+# When the read_only system variable is enabled, REVOKE requires the CONNECTION_ADMIN
+# or SUPER privilege in addition to any other required privileges described in the
+# following discussion.
+#
+# REVOKE either succeeds for all named users and roles or rolls back and has no effect
+# if any error occurs.
+#
+# The statement is written to the binary log only if it succeeds for all named users
+# and roles.
+#
+# Each account name uses the format described in SECTION 6.2.4, "SPECIFYING ACCOUNT NAMES"
+#
+# Each role name uses the format described in SECTION 6.2.5, "SPECIFYING ROLE NAMES"
+#
+# For example:
+#
+# 		REVOKE INSERT ON *.* FROM 'jeffrey'@'localhost';
+# 		REVOKE 'role1', 'role2' FROM 'user1'@'localhost', 'user2'@'localhost';
+# 		REVOKE SELECT ON world.* FROM 'role3';
+#
+# The host name part of the account or role name, if omitted, defaults to '%'
+#
+# https://dev.mysql.com/doc/refman/8.0/en/revoke.html
