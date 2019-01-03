@@ -28341,4 +28341,1476 @@
 #
 # The host name part of the account or role name, if omitted, defaults to '%'
 #
-# https://dev.mysql.com/doc/refman/8.0/en/revoke.html
+# For details on the levels at which privileges exist, the permissible priv_type,
+# priv_level and object_type values, and the syntax for specifying users and
+# passwords, see SECTION 13.7.1.6, "GRANT SYNTAX"
+#
+# To use the first REVOKE syntax, you must have the GRANT_OPTION privilege,
+# and you must have the privileges that you are revoking.
+#
+# To revoke all privileges, use the second syntax, which drops all global,
+# database, table, column and routine privileges for the named users or roles:
+#
+# 		REVOKE ALL PRIVILEGES, GRANT OPTION
+# 			FROM user_or_role [, user_or_role] ---
+#
+# REVOKE ALL PRIVILEGES, GRANT OPTION does not revoke any roles.
+#
+# To use this REVOKE syntax, you must have the global CREATE_USER privilege,
+# or the UPDATE privilege for the mysql system database.
+#
+# The syntax for which the REVOKE keyword is followed by one or more role names
+# takes a FROM clause indicating one or more users or roles from which to revoke
+# the roles.
+#
+# Roles named in the mandatory_roles system variable value cannot be revoked.
+#
+# A revoked role immediately affects any user account from which it was revoked,
+# such that within any current session for the account, its privileges are adjusted
+# for the next statement executed.
+#
+# Revoking a role revokes the role itself, not the privileges that it represents.
+#
+# If an account is granted a role that includes a given privilege, and is also granted
+# the privilege explicitly or another role that includes the privilege, the account still
+# is granted that privilege after the first role is revoked.
+#
+# For example, if an account is granted two roles that each include SELECT, the account
+# still can select after either role is revoked.
+#
+# REVOKE ALL ON *.* (at the global level) revokes all granted static global privileges
+# and all granted dynamic privileges.
+#
+# User accounts and roles from which privileges and roles are to be revoked must exist,
+# but the roles to be revoked need not be currently granted to them.
+#
+# REVOKE removes privileges, but does not drop mysql.user system table entries.
+#
+# To remove a user account entirely, use DROP_USER. See SECTION 13.7.1.5, "DROP USER SYNTAX"
+#
+# If the grant tables hold privilege rows that contain mixed-case database or table names
+# and the lower_case_table_names system variable is set to a nonzero value, REVOKE cannot
+# be used to revoke these privileges.
+#
+# It will be necessary to manipulate the grant tables directly.
+#
+# (GRANT will not create such rows when lower_case_table_names is set, but such
+# rows might have been created prior to setting the variable.
+#
+# The lower_case_table_names setting  can only be configured when initializing the server)
+#
+# When successfully executed from the mysql program, REVOKE responds with Query OK, 0 rows affected.
+#
+# To determine what privileges remain after the operation, use SHOW_GRANTS.
+#
+# See SECTION 13.7.6.21, "SHOW GRANTS SYNTAX"
+#
+# 13.7.1.9 SET DEFAULT ROLE SYNTAX
+#
+# 		SET DEFAULT ROLE
+# 			{NONE | ALL | role [, role ] ---}
+# 			TO user [, user ] ---
+#
+# For each user named immediately after the TO keyword, this statement defines which
+# roles become active when the user connects to the server and authenticates, or when
+# the user executes the SET_ROLE_DEFAULT statement during a session.
+#
+# SET_DEFAULT_ROLE is alternative syntax for ALTER_USER_---_DEFAULT_ROLE
+# (See SECTION 13.7.1.1, "ALTER USER SYNAX")
+#
+# However, ALTER_USER can set the default for only a single user, whereas SET_DEFAULT_ROLE
+# can set the default for multiple users.
+#
+# On the other hand, you can specify CURRENT_USER as the user name for the ALTER_USER
+# statement, whereas you cannot for SET_DEFAULT_ROLE
+#
+# SET_DEFAULT_ROLE requires these privileges:
+#
+# 		) Setting the default roles for another user requires the global CREATE_USER privilege,
+# 			or the UPDATE privilege for the mysql.default_roles system table.
+#
+# 		) Setting the default roles for yourself requires no special privileges, as long as the
+# 			roles you want as the default have been granted to you.
+#
+# Each role name uses the format described in SECTION 6.2.5, "SPECIFYING ROLE NAMES"
+#
+# For example:
+#
+# 		SET DEFAULT ROLE administrator, developer TO 'joe'@'10.0.0.1';
+#
+# The host name part of the role name, if omitted, defaults to '%'
+#
+# The clause following the DEFAULT ROLE keywords permits these values:
+#
+# 		) NONE: Set the default to NONE (no roles)
+#
+# 		) ALL: Set the default to all roles granted to the account
+#
+# 		) role [, role ] ---: Set the default to the named roles, which must exist and be granted
+# 			to the account at the time SET_DEFAULT_ROLE is executed.
+#
+# NOTE:
+#
+# 		SET_DEFAULT_ROLE and SET_ROLE_DEFAULT are different statements:
+#
+# 			) SET_DEFAULT_ROLE defines which account roles to activate by default within account sessions.
+#
+# 			) SET_ROLE_DEFAULT sets the active roles within the current session to the current account default roles.
+#
+# 13.7.1.10 SET PASSWORD SYNTAX
+#
+# 		SET PASSWORD [FOR user] = 'auth_string'
+# 			[REPLACE 'current_auth_string']
+# 			[RETAIN CURRENT PASSWORD]
+#
+# The SET_PASSWORD statement assigns a password to a MySQL user account.
+#
+# It may also include a password-verification clause that specifies the account
+# current password to be replaced, and a clause that manages whether an account
+# has a secondary password.
+#
+# 'auth_string' and 'current_auth_string' each represents a cleartext (unencrypted) password.
+#
+# NOTE:
+#
+# 		Clauses for password verification and secondary passwords apply only to accounts
+# 		that store credentials interally in the mysql.user system table (mysql_native_password, sha256_password,
+# 		or caching_sha2_password)
+#
+# 		For accounts that use plugins that perform authentication against an external
+# 		credential system, password management must be handled externally against that
+# 		system as well.
+#
+# The REPLACE 'current_auth_string' clause is available as of MySQL 8.0.13.
+#
+# If given:
+#
+# 		) REPLACE specifies the account current password to be replaced, as a cleartext (unencrypted) string
+#
+# 		) The clause must be given if password changes for the account are required to specify
+# 			the current password, as verification that the user attempting to make the change
+# 			actually knows the current password.
+#
+# 		) The clause is optional if password changes for the account may but need not specify the current password
+#
+# 		) The statement fails if the clause is given but does not match the current password, even if the clause is optional
+#
+# 		) REPLACE can be specified only when changing the account password for the current user
+#
+# For more information about password verification by specifying the current password, see SECTION 6.3.8,
+# "PASSWORD MANAGEMENT"
+#
+# The RETAIN CURRENT PASSWORD clause implements dual-password capability and is available
+# as of MySQL 8.0.14.
+#
+# If given:
+#
+# 		) RETAIN CURRENT PASSWORD retains an account current password as its secondary password,
+# 			replacing any existing secondary password.
+#
+# 			The new password becomes the primary password, but clients can use the account to
+# 			connect to the server using either the primary or secondary password.
+#
+# 			(Exception:
+#
+# 				If the new password specified by the SET_PASSWORD statement is empty,
+# 				the secondary password becomes empty as well, even if RETAIN CURRENT PASSWORD
+# 				is given)
+#
+# 		) If you specify RETAIN CURRENT PASSWORD for an account that has an empty primary password, the statement fails
+#
+# 		) If an account has a secondary password and you change its primary password without specifying
+# 			RETAIN CURRENT PASSWORD, the secondary password remains unchanged.
+#
+# For more information about use of dual passwords, see SECTION 6.3.8, "PASSWORD MANAGEMENT"
+#
+# NOTE:
+#
+# 		Rather than using SET_PASSWORD_---_=_'auth_string' syntax, ALTER_USER syntax is the preferred
+# 		statement for account alterations, including assigning passwords.
+#
+# 		For example:
+#
+# 			ALTER USER user IDENTIFIED BY 'auth_string';
+#
+# IMPORTANT:
+#
+# 		Under some circumstances, SET_PASSWORD may be recorded in server logs or on the client
+# 		side in a history file such as ~/.mysql_history, which means that cleartext passwords
+# 		may be read by anyone having read access t othat information.
+#
+# 		For information about the conditions under which this occurs for the server logs
+# 		and how to control it, see SECTION 6.1.2.3, "PASSWORDS AND LOGGING"
+#
+# 		For similar information about client-side logging, see SECTION 4.5.1.3, "MYSQL CLIENT LOGGING"
+#
+# SET_PASSWORD can be used with or without a FOR clause that explicitly names a user account:
+#
+# 		) With a FOR user clause, the statement sets the password for the named account, which must exist:
+#
+# 			SET PASSWORD FOR 'jeffrey'@'localhost' = 'auth_string';
+#
+# 		) With no FOR user clause, the statement sets the password for the current user:
+#
+# 				SET PASSWORD = 'auth_string';
+#
+# 			Any client who connects to the server using a nonanonymous account can change the
+# 			password for that account.
+#
+# 			(In particular, you can change your own password)
+#
+# 			To see which account the server authenticated you as, invoke the CURRENT_USER()
+# 			function:
+#
+# 				SELECT CURRENT_USER();
+#
+# If a FOR user clause is given, the account name uses the format described in SECTION 6.2.4,
+# SPECIFYING ACCOUNT NAMES".
+#
+# For example:
+#
+# 		SET PASSWORD FOR 'bob'@'%.example.org' = 'auth_string';
+#
+# The host name part of the account name, if omitted, defaults to '%'
+#
+# SET_PASSWORD interprets the string as a cleartext string, passes it to the
+# authentication plugin associated with the account, and stores the result 
+# returned by the plugin in the account row in the mysql.user system table.
+#
+# (The plugin is given the opportunity to hash the value into the encryption
+# format it expects.
+#
+# The plugin may use the value as specified, in which case no hashing occurs)
+#
+# Setting the password for a named account (with a FOR clause) requires the
+# UPDATE privilege for the mysql system database.
+#
+# Setting the password for yourself (for a nonanonymous account with no 
+# FOR clause) requires no special privileges.
+#
+# Statements that modify secondary passwords require these privileges:
+#
+# 		) The APPLICATION_PASSWORD_ADMIN privilege is required to use the RETAIN
+# 			CURRENT PASSWORD clause for SET_PASSWORD statements that apply to your
+# 			own account.
+#
+# 			the privilege is required to manipulate your own secondary password
+# 			because most users require only one password
+#
+# 		) If an account is to be permitted to manipulate secondary passwords for
+# 			all accounts, it should be granted the CREATE_USER privilege rather than
+# 			APPLICATION_PASSWORD_ADMIN
+#
+# When the read_only system variable is enabled, SET_PASSWORD requires the CONNECTION_ADMIN
+# or SUPER privilege in addition to any other required privileges.
+#
+# For additional information about setting passwords and authentication plugins, see
+# SECTION 6.3.7, "ASSIGNING ACCOUNT PASSWORDS", and SECTION 6.3.10, "PLUGGABLE AUTHENTICATION"
+#
+# 13.7.1.11 SET ROLE SYNTAX
+#
+# 		SET ROLE {
+# 			DEFAULT
+# 		 | NONE
+# 		 | ALL
+# 		 | ALL EXCEPT role [, role ] ---
+# 		 | role [, role ] ---
+# 		}
+#
+# SET_ROLE modifies the current user's effective privileges within the current session by
+# specifying which of its granted roles are active.
+#
+# Granted roles include those granted explicitly to the user and those named
+# in the mandatory_roles system variable value.
+#
+# Privileges that the user has been granted directly (rather than through roles) remain
+# unaffected by changes to the active roles.
+#
+# Each role name uses the format described in SECTION 6.2.5, "SPECIFYING ROLE NAMES".
+#
+# For example:
+#
+# 		SET ROLE DEFAULT;
+# 		SET ROLE 'role1', 'role2';
+# 		SET ROLE ALL;
+# 		SET ROLE ALL EXCEPT 'role1', 'role2';
+#
+# The host name part of the role name, if omitted, defaults to '%'
+#
+# The statement permits these role specifiers:
+#
+# 		) DEFAULT:
+#
+# 			Activate the account default roles. Default roles are those specified with SET_DEFAULT_ROLE
+#
+# 			When a user connects to the server and authenticates successfully, the server determines
+# 			which roles to activate as the default roles.
+#
+# 			If the activate_all_roles_on_login system variable is enabled, the server activates all granted
+# 			roles.
+#
+# 			Otherwise, The server executes SET_ROLE_DEFAULT implicitly.
+#
+# 			The server activates only default roles that can be activated.
+#
+# 			The server wites warnings to its error log for default roles that cannot be	
+# 			activated, but the client receives no warnings.
+#
+# 			If a user executes SET_ROLE_DEFAULT during a session, an error occurs if any
+# 			default role cannot be activated (for example, if it does not exist or is not
+# 			granted to the user)
+#
+# 			In this case, the currrent active roles are not changed.
+#
+# 		) NONE:
+#
+# 			Set the active roles to NONE (no active roles)
+#
+# 		) ALL:
+#
+# 			Activate all roles granted to the account
+#
+# 		) ALL EXCEPT role [, role ] ---:
+#
+# 			Activate all roles granted to the account except those named.
+#
+# 			The named roles need not exist or be granted to the account.
+#
+# 		) role [, role ] ---: 
+#
+# 			Activate the named roles, which must be granted to the account.
+#
+# NOTE:
+#
+# 		SET_DEFAULT_ROLE and SET_ROLE_DEFAULT are different statements:
+#
+# 			) SET_DEFAULT_ROLE defines which account roles to activate by default within account sessions.
+#
+# 			) SET_ROLE_DEFAULT sets the active roles within the current session to the current account default roles.
+#
+# 13.7.2 RESOURCE GROUP MANAGEMENT STATEMENTS
+#
+# 13.7.2.1 ALTER RESOURCE GROUP SYNTAX
+# 13.7.2.2 CREATE RESOURCE GROUP SYNTAX
+#
+# 13.7.2.3 DROP RESOURCE GROUP SYNTAX
+# 13.7.2.4 SET RESOURCE GROUP SYNTAX
+#
+# MySQL supports creation and management of resource groups, and permits assigning threads
+# running within the server to particular groups so that threads execute according to the
+# resources available to the group.
+#
+# This section describes the SQL statements available for resource group management.
+#
+# For general discussion of the resource group capability, see SECTION 8.12.5, "RESOURCE GROUPS"
+#
+# 13.7.2.1 ALTER RESOURCE GROUP SYNTAX
+#
+# 		ALTER RESOURCE GROUP group_name
+# 			[VCPU [=] vcpu_spec [, vcpu_spec] ---]
+# 			[THREAD_PRIORITY [=] N]
+# 			[ENABLE|DISABLE [FORCE]]
+#
+# 		vcpu_spec: {N | M - N}
+#
+# ALTER_RESOURCE_GROUP is used for resource group management (see SECTION 8.12.5, "RESOURCE GROUPS")
+#
+# This statement alters modifiable attributes of an existing resource group.
+#
+# It requires the RESOURCE_GROUP_ADMIN privilege.
+#
+# group_name identifies which resource group to alter. If the group does not exist,
+# an error occurs.
+#
+# The attributes for CPU affinity, priority, and whether the group is enabled can be
+# modified with ALTER_RESOURCE_GROUP.
+#
+# These attributes are specified the same way as described for CREATE_RESOURCE_GROUP
+# (see SECTION 13.7.2.2, "CREATE RESOURCE GROUP SYNTAX")
+#
+# Only the attributes specified are altered. Unspecified attributes retain their
+# current values.
+#
+# The FORCE modifier is used with DISABLE.
+#
+# It determines statement behavior if the resource group has any threads assigned to it:
+#
+# 		) If FORCE is not given, existing threads in the group continue to run until they terminate,
+# 			but new threads cannot be assigned to the group.
+#
+# 		) If FORCE is given, existing threads in the group are moved to their respective default group
+# 			(system threads to SYS_default, user threads to USR_default)
+#
+# The name and type attributes are set at group creation time and cannot be modified thereafter
+# with ALTER_RESOURCE_GROUP.
+#
+# Examples:
+#
+# 		) Alter a group CPU affinity:
+#
+# 			ALTER RESOURCE GROUP rg1 VCPU = 0-63;
+#
+# 		) Alter a group thread priority:
+#
+# 			ALTER RESOURCE GROUP rg2 THREAD_PRIORITY = 5;
+#
+# 		) Disable a group, moving any threads assigned to it to the default groups:
+#
+# 			ALTER RESOURCE GROUP rg3 DISABLE FORCE;
+#
+# Resource group management is local to the server on which it occurs.
+#
+# ALTER_RESOURCE_GROUP statements are not written to the binary log and are not
+# replicated.
+#
+# 13.7.2.2 CREATE RESOURCE GROUP SYNTAX
+#
+# 		CREATE RESOURCE GROUP group_name
+# 			TYPE = {SYSTEM|USER}
+# 			[VCPU [=] vcpu_spec [, vcpu_spec] ---]
+# 			[THREAD_PRIORITY [=] N]
+# 			[ENABLE|DISABLE]
+#
+# 		vcpu_spec: {N | M - N}
+#
+# CREATE_RESOURCE_GROUP is used for resource group management (see SECTION 8.12.5, "RESOURCE GROUPS")
+#
+# This statement creates a new resource group and assigns its initial attribute values.
+#
+# It requires the RESOURCE_GROUP_ADMIN privilege.
+#
+# group_name identifies which resource group to create. If the group already exists,
+# an error occurs.
+#
+# The TYPE attribute is required. It should be SYSTEM for a system resource group,
+# USER for a user resource group.
+#
+# The group type affects permitted THREAD_PRIORITY values, as described later.
+#
+# The VCPU attribute indicates the CPU affinity; that is, the set of virtual CPUs
+# the group can use:
+#
+# 		) If VCPU is not given, the resource group has no CPU affinity and can use all available CPUs.
+#
+# 		) If VCPU is given, the attribute value is a list of comma-separated CPU numbers or ranges:
+#
+# 			) Each number must be an integer in the range from 0 to the number of CPUs - 1.
+#
+# 				For example, on a system with 64 CPUs, the number can range from 0 to 63.
+#
+# 			) A range is given in the form M - N, where M is less than or equal to N and both
+# 				numbers are in the CPU range.
+#
+# 			) If a CPU number is an integer outside the permitted range or is not an integer,
+# 				an error occurs.
+#
+# Example VCPU specifiers (these are all equivalent):
+#
+# 		VCPU = 0,1,2,3,9,10
+# 		VCPU = 0-3,9-10
+# 		VCPU = 9,10,0-3
+# 		VCPU = 0,10,1,9,3,2
+#
+# The THREAD_PRIORITY attribute indicates the priority for threads assigned to the group:
+#
+# 		) If THREAD_PRIORITY is not given, the default priority is 0
+#
+# 		) If THREAD_PRIORITY is given, the attribute value must be in the range from -20 (highest priority)
+# 			to 19 (lowest priority)
+#
+# 			The priority for system resource groups must be in the range from -20 to 0.
+#
+# 			The priority for user resource groups must be in the range from 0 to 19
+#
+# 			Use of different ranges for system and user groups ensures that user threads
+# 			never have a higher priority than system threads.
+#
+# ENABLE and DISABLE specify that the resource group is initially enabled or disabled.
+#
+# If neither is specified, the group is enabled by default.
+#
+# A disabled group cannot have threads assigned to it.
+#
+# Examples:
+#
+# 		) Create an enabled user group that has a single GPU and the lowest priority:
+#
+# 			CREATE RESOURCE GROUP rg1
+# 				TYPE = USER
+# 				VCPU = 0
+# 				THREAD_PRIORITY = 19;
+#
+# 		) Create a disabled system group that has no CPU affinity (can use all CPUs) and the
+# 			highest priority:
+#
+# 				CREATE RESOURCE GROUP rg2
+# 					TYPE = SYSTEM
+# 					THREAD_PRIORITY = -20
+# 					DISABLE;
+#
+# Resource group management is local to the server on which it occurs.
+#
+# CREATE_RESOURCE_GROUP statements are not written to the binary log and 
+# are not replicated.
+#
+# 13.7.2.3 DROP RESOURCE GROUP SYNTAX
+#
+# 		DROP RESOURCE GROUP group_name [FORCE]
+#
+# DROP_RESOURCE_GROUP is used for resource group management (see SECTION 8.12.5, "RESOURCE GROUPS")
+#
+# This statement drops a resource group. It requires the RESOURCE_GROUP_ADMIN privilege.
+#
+# group_name identifies which resource group to drop. If the group does not exist, an error occurs.
+#
+# The FORCE modifier determines statement behavior if the resource group has any threads assigned to it:
+#
+# 		) If FORCE is not given and any threads are assigned to the group, an error occurs.
+#
+# 		) If FORCE is given, existing threads in the group are moved to their respective default group
+# 			(system threads to SYS_default, user threads to USR_default)
+#
+# Examples:
+#
+# 		) Drop a group, failing if the group contains any threads:
+#
+# 			DROP RESOURCE GROUP rg1;
+#
+# 		) Drop a group and move existing threads to the default groups:
+#
+# 			DROP RESOURCE GROUP rg2 FORCE;
+#
+# Resource group management is local to the server on which it occurs.
+#
+# DROP_RESOURCE_GROUP statements are not written to the binary log and are not replicated.
+#
+# 13.7.2.4 SET RESOURCE GROUP SYNTAX
+#
+# 		SET RESOURCE GROUP group_name
+# 			[FOR thread_id [, thread_id] ---]
+#
+# SET_RESOURCE_GROUP is used for resource group management (see SECTION 8.12.5, "RESOURCE GROUPS")
+#
+# This statement assigns threads to a resource group.
+#
+# It requires the RESOURCE_GROUP_ADMIN or RESOURCE_GROUP_USER privilege.
+#
+# group_name identifies which resource group to be assigned. Any thread_id values indicate
+# threads to assign to the group.
+#
+# Thread IDs can be determined from the Performance Schema threads table.
+#
+# If the resource group or any named thread ID does not exist, an error occurs.
+#
+# With no FOR clause, the statement assigns the current thread for the session to the
+# resource group.
+#
+# With a FOR clause that names thread IDs, the statement assigns those threads to the
+# resource group.
+#
+# For attempts to assign a system thread to a user resource group or a user thread to
+# a system resource group, a warning occurs.
+#
+# Examples:
+#
+# 		) Assign the current session thread to a group:
+#
+# 			SET RESOURCE GROUP rg1;
+#
+# 		) Assign the named threads to a group:
+#
+# 			SET RESOURCE GROUP rg2 FOR 14, 78, 4;
+#
+# Resource group management is local to the server on which it occurs.
+#
+# SET_RESOURCE_GROUP statements are not written to the binary log and are not replicated.
+#
+# An alternative to SET_RESOURCE_GROUP is the RESOURCE_GROUP optimizer hint, which assigns
+# individual statements to a resource group.
+#
+# See SECTION 8.9.2, "OPTIMIZER HINTS"
+#
+# 13.7.3 TABLE MAINTENANCE STATEMENTS
+#
+# 13.7.3.1 ANALYZE TABLE SYNTAX
+# 13.7.3.2 CHECK TABLE SYNTAX
+#
+# 13.7.3.3 CHECKSUM TABLE SYNTAX
+# 13.7.3.4 OPTIMIZE TABLE SYNTAX
+#
+# 13.7.3.5 REPAIR TABLE SYNTAX
+#
+# 13.7.3.1 ANALYZE TABLE SYNTAX
+#
+# 		ANALYZE [NO_WRITE_TO_BINLOG | LOCAL]
+# 			TABLE tbl_name [, tbl_name] ---
+#
+# 		ANALYZE [NO_WRITE_TO_BINLOG | LOCAL]
+# 			TABLE tbl_name
+# 			UPDATE HISTOGRAM ON col_name [, col_name] ---
+# 				[WITH N BUCKETS]
+#
+# 		ANALYZE [NO_WRITE_TO_BINLOG | LOCAL]
+# 			TABLE tbl_name
+# 			DROP HISTOGRAM ON col_name [, col_name] ---
+#
+# ANALYZE_TABLE generates table statistics:
+#
+# 		) ANALYZE_TABLE without either HISTOGRAM clause performs a key distribution analysis
+# 			and stores the distribution for the named table or tables.
+#
+# 			For MyISAM tables, ANALYZE_TABLE for key distribution analysis is equivalent to using
+# 			myisamchk --analyze
+#
+# 		) ANALYZE_TABLE with the UPDATE HISTOGRAM clause generates histogram statistics for the named
+# 			table columns and stores them in the data dictionary.
+#
+# 			Only one table name is permitted for this syntax
+#
+# 		) ANALYZE_TABLE with the DROP HISTOGRAM clause removes histogram statistics for the named table
+# 			columns from the data dictionary.
+#
+# 			Only one table name is permitted for this syntax.
+#
+# NOTE:
+#
+# 		If the innodb_read_only system variable is enabled, ANALYZE_TABLE may fail because it
+# 		cannot update statistics tables in the data dictionary, which use InnoDB.
+#
+# 		For ANALYZE_TABLE operations that update the key distribution, failure may occur even
+# 		if the operation updates the table itself (for example, if it is a MyISAM table)
+#
+# 		To obtain the updated distribution statistics, set information_schema_stats_expiry=0
+#
+# This statement requires SELECT and INSERT privileges for the table.
+#
+# ANALYZE_TABLE works with InnoDB, NDB and MyISAM tables. It does not work with views.
+#
+# ANALYZE_TABLE is supported for partitioned tables, and you can use ALTER TABLE --- ANALYZE PARTITION
+# to analyze one or more partitions, for more information, see SECTION 13.1.9, "ALTER TABLE SYNTAX"
+# and SECTION 23.3.4, "MAINTENANCE OF PARTITIONS"
+#
+# During the analysis, the table is locked with a read lock for InnoDB and MyISAM.
+#
+# By default, the server writes ANALYZE_TABLE statements to the binary log so that they replicate
+# to replication slaves.
+#
+# To suppress logging, specify the optional NO_WRITE_TO_BINLOG keyword or its alias LOCAL.
+#
+# 		) ANALYZE TABLE OUTPUT
+#
+# 		) KEY DISTRIBUTION ANALYSIS
+#
+# 		) HISTOGRAM STATISTICS ANALYSIS
+#
+# ANALYZE TABLE OUTPUT
+#
+# ANALYZE_TABLE returns a result set with the columns shown in the following table.
+#
+# 		COLUMN 					VALUE
+#
+# 		Table 					The table name
+#
+# 		Op 						analyze or histogram
+#
+# 		Msg_type 				status, error, info, note or warning
+#
+# 		Msg_text 				An informational message
+#
+# KEY DISTRIBUTION ANALYSIS
+#
+# ANALYZE_TABLE without either HISTOGRAM clause performs a key distribution analysis
+# and stores the distribution for the table or tables.
+#
+# Any existing histogram statistics remain unaffected.
+#
+# If the table has not changed since the last key distribution analysis,
+# the table is not analyzed again.
+#
+# MySQL uses the stored key distribution to decide the order in which tables should be
+# joined for joins on something other than a constant.
+#
+# In addition, key distributions can be used when deciding which indexes to use
+# for a specific table within a query.
+#
+# For more information on how key distribution analysis works within InnoDB,
+# see SECTION 15.8.10.1, "CONFIGURING PERSISTENT OPTIMIZER STATISTICS PARAMETERS"
+# and SECTION 15.8.10.3, "ESTIMATING ANALYZE TABLE COMPLEXITY FOR INNODB TABLES"
+#
+# Also see SECTION 15.6.1.6, "LIMITS ON INNODB TABLES"
+#
+# In particular, when you enable the innodb_stats_persistent option,
+# you must run ANALYZE_TABLE after loading substansial data into an InnoDB
+# table, or creating a new index for one.
+#
+# To check the stored key distribution cardinality, use the SHOW_INDEX statement
+# or the INFORMATION_SCHEMA STATISTICS table.
+#
+# See SECTION 13.7.6.22, "SHOW INDEX SYNTAX", and SECTION 25.25, "THE INFORMATION_SCHEMA STATISTICS TABLE"
+#
+# HISTOGRAM STATISTICS ANALYSIS
+#
+# ANALYZE_TABLE with the HISTOGRAM clauses enables management of histogram statistics for table
+# column values.
+#
+# For information about histogram statistics, see SECTION 8.9.6, "OPTIMIZER STATISTICS"
+#
+# These histogram operations are available:
+#
+# 		) ANALYZE_TABLE with an UPDATE HISTOGRAM clause generates histogram statistics for the
+# 			named table columns and stores them in the data dictionary.
+#
+# 			Only one table name is permitted for this syntax.
+#
+# 			The optional WITH N BUCKETS clauses specifies the number of buckets for the histogram.
+#
+# 			The value of N must be an integer in the range from 1 to 1024.
+#
+# 			If this clause is omitted, the number of buckets is 100.
+#
+# 		) ANALYZE_TABLE with a DROP HISTOGRAM clause removes histogram statistics for the named
+# 			table columns from the data dictionary.
+#
+# 			Only one table name is permitted for this syntax.
+#
+# Stored histogram management statements affect only the named columns.
+#
+# Consider these statements:
+#
+# 		ANALYZE TABLE t UPDATE HISTOGRAM ON c1, c2, c3 WITH 10 BUCKETS;
+# 		ANALYZE TABLE t UPDATE HISTOGRAM ON c1, c3 WITH 10 BUCKETS;
+# 		ANALYZE TABLE t DROP HISTOGRAM ON c2;
+#
+# The first statement updates the histograms for columns c1, c2, and c3, replacing
+# any existing histograms for those columns.
+#
+# The second statement updates the histograms for c1 and c3, leaving the c2 histogram
+# unaffected.
+#
+# The third statement removes the histogram for c2, leaving those for c1 and c3 unaffected.
+#
+# Histogram generation is not supported for encrypted tables (to avoid exposing data in the statistics) or TEMPORARY tables.
+#
+# Histogram generation applies to columns of all data types except geometry types (spatial data) and JSON.
+#
+# Histograms can be generated for stored and virtual generated columns.
+#
+# Histograms cannot be generated for columns that are covered by single-column unique indexes.
+#
+# Histogram management statements attempt to perform as much of the requested operation as possible,
+# and report diagnostic messages for the remainder.
+#
+# For example, if an UPDATE HISTOGRAM statement names multiple columns, but some of them do not
+# exist or have an unsupported data type, histograms are generated for the other columns,
+# and messages are produced for the invalid columns.
+#
+# The histogram_generation_max_mem_size system variable controls the maximum amount of memory
+# available for histogram generation.
+#
+# The global and session values may be set at runtime.
+#
+# Changing the global histogram_generation_max_mem_size value requires privileges
+# sufficient to set global system variables.
+#
+# Changing the session histogram_generation_max_mem_size value requires privileges
+# sufficient to set restricted session system variables.
+#
+# See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# For information about memory allocations performed for histogram generation, monitor
+# the Performance Schema memory/sql/histograms instrument.
+#
+# See SECTION 26.12.16.10, "MEMORY SUMMARY TABLES"
+#
+# Histograms are affected by these DDL statements:
+#
+# 		) DROP_TABLE removes histograms for columns in the dropped table
+#
+# 		) DROP_DATABASE removes histograms for any table in the dropped database because the statement drops all tables in the database
+#
+# 		) RENAME_TABLE does not remove histograms. Instead, it renames histograms for the renamed table to be associated with the new table name
+#
+# 		) ALTER_TABLE statements that remove or modify a column remove histograms for that column
+#
+# 		) ALTER_TABLE_---_CONVERT_TO_CHARACTER_SET removes histograms for character columns because they are
+# 			affected by the change of character set.
+#
+# 			Histograms for noncharacter columns remain unaffected.
+#
+# 13.7.3.2 CHECK TABLE SYNTAX
+#
+# 		CHECK TABLE tbl_name [, tbl_name] --- [option] ---
+#
+# 		option: {
+# 			FOR UPGRADE
+# 		 | QUICK
+# 		 | FAST
+# 		 | MEDIUM
+# 		 | EXTENDED
+# 		 | CHANGED
+# 		}
+#
+# CHECK_TABLE checks a table or tables for errors.
+#
+# CHECK_TABLE can also check views for problems, such as tables that are referenced
+# in the view definition that no longer exist.
+#
+# To check a table, you must have some privilege for it.
+#
+# CHECK_TABLE works for InnoDB, MyISAM, ARCHIVE and CSV tables.
+#
+# Before running CHECK_TABLE on InnoDB tables, see CHECK TABLE USAGE NOTES FOR INNODB TABLES.
+#
+# CHECK_TABLE is supported for partitioned tables, and you can use ALTER TABLE --- CHECK PARTITION
+# to check one or more partitions; for more information, see SECTION 13.1.9, "ALTER TABLE SYNTAX",
+# and SECTION 23.3.4, "MAINTENANCE OF PARTITIONS"
+#
+# CHECK_TABLE ignores virtual generated columns that are not indexed.
+#
+# 		) CHECK TABLE OUTPUT
+#
+# 		) CHECKING VERSION COMPATIBILITY
+#
+# 		) CHECKING DATA CONSISTENCY
+#
+# 		) CHECK TABLE USAGE NOTES FOR INNODB TABLES
+#
+# 		) CHECK TABLE USAGE NOTES FOR MYISAM TABLES
+#
+# CHECK TABLE OUTPUT
+#
+# CHECK_TABLE returns a result set with the columns shown in the following table.
+#
+# 		COLUMN 				VALUE
+#
+# 		Table 				The table name
+#
+# 		Op 					Always check
+#
+# 		Msg_type 			status, error, info, note or warning
+#
+# 		Msg_text 			An informational message
+#
+# The statement might produce many rows of information for each checked table.
+#
+# The last row has a Msg_type value of status and the Msg_text normally should be
+# OK.
+#
+# Table is already up to date means that the storage engine for the table indicated
+# that there was no need to check the table.
+#
+# CHECKING VERSION COMPATIBILITY
+#
+# The FOR UPGRADE option checks whether the named tables are compatible with the
+# current version of MySQL.
+#
+# With FOR UPGRADE, the server checks each table to determine whether there
+# have been any incompatible changes in any of the table's data types or indexes
+# since the table was created.
+#
+# If not, the check succeeds.
+#
+# Otherwise, if there is a possible incompatibility, the server runs a full check
+# on the table (which might take some time)
+#
+# Incompatibilities might occur because the storage format for a data type has
+# changed or because its sort order has changed.
+#
+# Our aim is to avoid these changes, but occasionally they are necessary to correct
+# problems that would be worse than an incompatibility between releases.
+#
+# FOR UPGRADE discovers these incompatibilities:
+#
+# 		) The indexing order for end-space in TEXT columns for InnoDB and MyISAM tables
+# 			changed between MySQL 4.1 and MySQL 5.0
+#
+# 		) The storage method of the new DECIMAL data type changed between MySQL 5.0.3 and 5.0.5
+#
+# 		) Changes are sometimes made to character sets or collations that require table indexes
+# 			to be rebuilt.
+#
+# 			For details about such changes, see SECTION 2.11.1.3, "CHANGES IN MYSQL 8.0"
+#
+# 			For information about rebuilding tables, see SECTION 2.11.3, "REBUILDING OR REPAIRING TABLES OR INDEXES"
+#
+# 		) MySQL 8.0 does not support the YEAR(2) data type permitted in older versions of MySQL.
+#
+# 			For tables containing YEAR(2) columns, CHECK_TABLE recommends REPAIR_TABLE, which converts
+# 			YEAR(2) to YEAR(4)
+#
+# 		) Trigger creation time is maintained.
+#
+# 		) A table is reported as needing a rebuild if it contains old temporal columns in pre
+# 			5.6.4 format (TIME, DATETIME, and TIMESTAMP columns without support for fractional
+# 			seconds precision) and the avoid_temporal_upgrade system variable is disabled.
+#
+# 			This helps mysql_upgrade detect and upgrade tables containing old temporal
+# 			columns.
+#
+# 			If avoid_temporal_upgrade is enabled, FOR UPGRADE ignores the old temporal
+# 			columns present in the table; consequently, mysql_upgrade does not upgrade them.
+#
+# 			To check for tables that contain such temporal columns and need a rebuild,
+# 			disable avoid_temporal_upgrade before executing CHECK_TABLE_---_FOR_UPGRADE
+#
+# 		) Warnings are issued for tables that use nonnative partitioning because nonnative
+# 			partitioning is removed in MySQL 8.0
+#
+# 			See CHAPTER 23, PARTITIONING
+#
+# CHECKING DATA CONSISTENCY
+#
+# The following table shows the other check options that can be given.
+#
+# These options are passed to the storage engine, which may use or ignore them.
+#
+# 		TYPE 					MEANING
+#
+# 		QUICK 				Do not scan the rows to check for incorrect links. Applies to InnoDB and MyISAM tables and views.
+#
+# 		FAST 					Check only tables that have not been closed properly. Ignored for InnoDB; applies only to MyISAM tables and views.
+#
+# 		CHANGED 				Check only tables that have been changed since the last check or that have not been closed
+# 								properly.
+#
+# 								Ignored for InnoDB; applies only to MyISAM tables and views.
+#
+# 		MEDIUM 				Scan rows to verify that deleted links are valid.
+#
+# 								This also calculates a key checksum for the rows and verifies this with
+# 								a calculated checksum for the keys.
+#
+# 								Ignored for InnoDB; applies only to MyISAM tables and views.
+#
+# 		EXTENDED 			Do a full key lookup for all keys for each row.
+#
+# 								This ensures that the table is 100% consistent, but takes a long time.
+# 								Ignored for InnoDB; applies only to MyISAM tables and views.
+#
+# You can combine check options, as in the following example that does a quick check on the table
+# to determine whether it was closed properly:
+#
+# 		CHECK TABLE test_table FAST QUICK;
+#
+# NOTE:
+#
+# 		If CHECK_TABLE finds no problems with a table that is marked as "corrupted" or
+# 		"not closed properly", CHECK_TABLE may remove the mark.
+#
+# If a table is corrupted, the problem is most likely in the indexes and not in teh data part.
+#
+# All of the preceeding check types check the indexes thoroughly and should thus find
+# most errors.
+#
+# To check a table that you assume is okay, use no check options or the QUICK option.
+#
+# The latter should be used when you are in a hurry and can take the very small
+# risk that QUICK does not find an error in the data file.
+#
+# (In most cases, under normal usage, MySQL should find any error in the data file.
+#
+# If this happens, the table is marked as "corrupted" and cannot be used until it is
+# repaired.)
+#
+# FAST and CHANGED are mostly intended to be used from a script (for example, to be executed
+# from cron) to check tables periodically.
+#
+# In most cases, FAST is to be preferred over CHANGED. (The only case when it is not preferred
+# is when you suspect that you have found a bug in the MyISAM code)
+#
+# EXTENDED is to be used only after you have run a normal check but still get errors from
+# a table when MySQL tries to update a row or find a row by key.
+#
+# This is very unlikely if a normal check has succeeded.
+#
+# Use of CHECK_TABLE_---_EXTENDED might influence execution plans generated by the query optimizer.
+#
+# Some problems reported by CHECK_TABLE cannot be corrected automatically:
+#
+# 		) Found row where the auto_increment column has the value 0
+#
+# 			This means that you have a row in the table where the AUTO_INCREMENT index column
+# 			contains the value 0.
+#
+# 			(It is possible to create a row where the AUTO_INCREMENT column is 0 by explicitly
+# 			setting the column to 0 with an UPDATE statement)
+#
+# 			This is not an error in itself, but could cause trouble if you decide to dump the
+# 			table and restore it or do an ALTER_TABLE on the table.
+#
+# 			In this case, the AUTO_INCREMENT column changes value according to the rules
+# 			of AUTO_INCREMENT columns, which could cause problems such as a duplicate-key
+# 			error.
+#
+# 			To get rid of the warning, execute an UPDATE statement to set the column to some value
+# 			other than 0.
+#
+# CHECK TABLE USAGE NOTES FOR INNODB TABLES
+#
+# The following notes apply to InnoDB tables:
+#
+# 		) If CHECK_TABLE encounters a corrupt page, the server exits to prevent error propagation
+# 			(Bug #10132)
+#
+# 			If the corruption occurs in a secondary index but table data is readable, running
+# 			CHECK_TABLE can still cause a server exit.
+#
+# 		) If CHECK_TABLE encounters a corrupted DB_TRX_ID or DB_ROLL_PTR field in a clustered index,
+# 			CHECK_TABLE can cause InnoDB to access an invalid undo log record, resulting
+# 			in an MVCC-related server exit.
+#
+# 		) If CHECK_TABLE encounters errors in InnoDB tables or indexes, it reports an error, and usually
+# 			marks the index and sometimes marks the table as corrupted, preventing further use
+# 			of the index or table.
+#
+# 			Such errors include an incorrect number of entries in a secondary index or incorrect links.
+#
+# 		) If CHECK_TABLE finds an incorrect number of entries in a secondary index, it reports an error
+# 			but does not cause a server exit or prevent access to the file.
+#
+# 		) CHECK_TABLE surveys the index page structure, then surveys each key entry.
+#
+# 			It does not validate the key pointer to a clustered record or follow
+# 			the path for BLOB pointers.
+#
+# 		) When an InnoDB table is stored in its own .ibd file, the first 3 pages of the
+# 			.ibd file contain header information rather than table or index data.
+#
+# 			The CHECK_TABLE statement does not detect inconsistencies that affect only
+# 			the header data.
+#
+# 			To verify the entire contents of an InnoDB .ibd file, use the innochecksum
+# 			command.
+#
+# 		) When running CHECK_TABLE on large InnoDB tables, other threads may be blocked
+# 			during CHECK_TABLE execution.
+#
+# 			To avoid timeouts, the semaphore wait threshold (600 seconds) is extended
+# 			by 2 hours (7200 seconds) for CHECK_TABLE operations.
+#
+# 			If InnoDB detects semaphore waits of 240 seconds or more, it starts
+# 			printing InnoDB monitor output to the error log.
+#
+# 			If a lock request extends beyond the semaphore wait threshold, InnoDB
+# 			aborts the process.
+#
+# 			To avoid the possibility of a semaphore wait timeout entirely, run
+# 			CHECK_TABLE_QUICK instead of CHECK_TABLE
+#
+# 		) CHECK_TABLE functionality for InnoDB SPATIAL indexes includes an R-tree
+# 			validity check and a check to ensure that the R-tree row count matches
+# 			the clustered index.
+#
+# 		) CHECK_TABLE supports secondary indexes on virtual generated columns, which
+# 			are supported by InnoDB.
+#
+# 		) As of MySQL 8.0.14, InnoDB supports parallel index reads, which helps improve
+# 			CHECK_TABLE performance.
+#
+# 			The innodb_parallel_read_threads session variable must be set to a value
+# 			greater than 1 for parallel index reads to occur.
+#
+# 			THe default value is 4.
+#
+# 			The actual number of threads used to perform a parallel index read
+# 			is determined by the innodb_parallel_read_threads setting or the
+# 			number of index subtrees to scan, whichever is smaller.
+#
+# 			The pages read into the buffer pool during the scan are kept at the tail
+# 			of the buffer pool LRU list so that they can be discarded quickly when
+# 			free buffer pool pages are required.
+#
+# CHECK TABLE USAGE NOTES FOR MYISAM TABLES
+#
+# The following notes apply to MyISAM tables:
+#
+# 		) CHECK_TABLE updates key statistics for MyISAM tables
+#
+# 		) If CHECK_TABLE output does not return OK or Table is already up to date,
+# 			you should normally run a repair of the table.
+#
+# 			See SECTION 7.6, "MyISAM TABLE MAINTENANCE AND CRASH RECOVERY"
+#
+# 		) If none of the CHECK_TABLE options QUICK, MEDIUM or EXTENDED are specified,
+# 			the default check type for dynamic-format MyISAM tables is MEDIUM.
+#
+# 			This has the same result as running myisamchk --medium-check tbl_name
+# 			on the table.
+#
+# 			The default check type also is MEDIUM for static-format MyISAM tables,
+# 			unless CHANGED or FAST is specified.
+#
+# 			In that case, the default is QUICK.
+#
+# 			The row scan is skipped for CHANGED and FAST because the rows are
+# 			very seldom corrupted.
+#
+# 13.7.3.3 CHECKSUM TABLE SYNTAX
+#
+# 		CHECKSUM TABLE tbl_name [, tbl_name] --- [QUICK | EXTENDED]
+#
+# CHECKSUM_TABLE reports a checksum for the contents of a table.
+#
+# You can use this statement to verify that the contents are the same before
+# and after a backup, rollback, or other operation that is intended to put
+# the data back to a known state.
+#
+# This statement requires the SELECT privilege for the table.
+#
+# This statement is not supported for views. If you run CHECKSUM_TABLE against
+# a view, the Checksum value is always NULL, and a warning is returned.
+#
+# For a nonexistent table, CHECKSUM_TABLE returns NULL and generates a warning
+#
+# During the checksum operation, the table is locked with a read lock for InnoDB
+# and MyISAM.
+#
+# PERFORMANCE CONSIDERATIONS
+#
+# By default, the entire table is read row by row and the checksum is calculated.
+#
+# For large tables, this could take a long time, thus you would only perform this
+# operation occasionally.
+#
+# This row-by-row calculation is what you get with the EXTENDED clause, with InnoDB
+# and all other storage engines other than MyISAM, and with MyISAM tables not created
+# with the CHECKSUM=1 clause.
+#
+# For MyISAM tables created with the CHECKSUM=1 clause, CHECKSUM_TABLE or CHECKSUM_TABLE_---_QUICK
+# returns the "live" table checksum that can be returned very fast.
+#
+# If the table does not meet all these conditions, the QUICK method returns NULL.
+#
+# THe QUICK method is not supported with InnoDB tables. See SECTION 13.1.20, "CREATE TABLE SYNTAX"
+# for the syntax of the CHECKSUM clause.
+#
+# The checksum value depends on the table row format. If the row format changes, the checksum
+# also changes.
+#
+# For example, the storage format for temporal types such as TIME, DATETIME and TIMESTAMP
+# changed in MySQL 5.6 prior to MySQL 5.6.5, so if a 5.5 table is upgraded to MySQL 5.6,
+# the checksum value may change.
+#
+# IMPORTANT:
+#
+# 		If the checksums for two tables are different, then it is almost certain that
+# 		the tables are different in some way.
+#
+# 		However, because the hashing function used by CHECKSUM_TABLE is not guaranteed
+# 		to be collision-free, there is a slight chance that two tables which are not
+# 		identical can produce the same checksum.
+#
+# 13.7.3.4 OPTIMIZE TABLE SYNTAX
+#
+# 		OPTIMIZE [NO_WRITE_TO_BINLOG | LOCAL]
+# 			TABLE tbl_name [, tbl_name] ---
+#
+# OPTIMIZE_TABLE reorganizes the physical storage of table data and associated
+# index data, to reduce storage space and improve I/O efficiency when accessing
+# the table.
+#
+# The exact changes made to each table depend on the storage engine used by that
+# table.
+#
+# Use OPTIMIZE_TABLE in these cases, depending on the type of table:
+#
+# 		) After doing substansial insert, update or delete operations on an
+# 			InnoDB table that has its own .ibd file because it was created with the
+# 			innodb_file_per_table option enabled.
+#
+# 			The table and indexes are reorganized, and disk space can be reclaimed
+# 			for use by the operating system.
+#
+# 		) After doing substansial insert, update or delete operations on columns
+# 			that are part of a FULLTEXT index in an InnoDB table.
+#
+# 			Set the configuration option innodb_optimize_fulltext_only=1 first
+#
+# 			To keep the index maintenance period to a reasonable time, set the
+# 			innodb_ft_num_word_optimize option to specify how many words to update
+# 			in the search index, and run a sequence of OPTIMIZE TABLE statements
+# 			until the search index is fully updated.
+#
+# 		) After deleting a large part of a MyISAM or ARCHIVE table, or making many
+# 			changes to a MyISAM or ARCHIVE table with variable-length rows
+# 			(tables that have VARCHAR, VARBINARY, BLOB or TEXT columns)
+#
+# 			Deleted rows are maintained in a linked list and subsequent INSERT
+# 			operations reuse old row positions.
+#
+# 			You can use OPTIMIZE TABLE to reclaim the unused space and to
+# 			defragment the data file.
+#
+# 			After extensive changes to a table, this statement may also
+# 			improve performance of statements that use the table, 
+# 			sometimes significantly.
+#
+# This statement requires SELECT and INSERT privileges for the table.
+#
+# OPTIMIZE_TABLE works for InnoDB, MyISAM and ARCHIVE tables.
+#
+# OPTIMIZE_TABLE is also supported for dynamic columns of in-memory NDB
+# tables.
+#
+# It does not work for fixed-width columns of in-memory tables, nor does it
+# work for Disk Data tables.
+#
+# The performance of OPTIMIZE on NDB Cluster tables can be tuned using
+# --ndb_optimization_delay, which controls the length of time to wait
+# between processing batches of rows by OPTIMIZE_TABLE.
+#
+# For more information, see PREVIOUS NDB CLUSTER ISSUES RESOLVED IN NDB
+# CLUSTER 7.3
+#
+# For NDB Cluster tables, OPTIMIZE_TABLE can be interuppted by (for example)
+# killing the SQL thread performing the OPTIMIZE operation.
+#
+# By default, OPTIMIZE_TABLE does not work for tables created using any
+# other storage engine and returns a result indicating this lack of support.
+#
+# You can make OPTIMIZE TABLE work for other storage engines by starting
+# mysqld with the --skip-new option.
+#
+# In this case, OPTIMIZE_TABLE is just mapped to ALTER_TABLE
+#
+# This statement does not work with views
+#
+# OPTIMIZE_TABLE is supported for partitioned tables. For information about using
+# this statement with partitioned tables and table partitions, see SECTION 23.3.4,
+# "MAINTENANCE OF PARTITIONS"
+#
+# By default, the server writes OPTIMIZE_TABLE statements to the binary log so that
+# they replicate to replication slaves.
+#
+# To suppress logging, specify the optional NO_WRITE_TO_BINLOG keyword or its
+# alias LOCAL.
+#
+# 		) OPTIMIZE TABLE OUTPUT
+#
+# 		) INNODB DETAILS
+#
+# 		) MYISAM DETAILS
+#
+# 		) OTHER CONSIDERATIONS
+#
+# OPTIMIZE TABLE OUTPUT
+#
+# OPTIMIZE_TABLE returns a result set with the columns shown in the following table.
+#
+# 		COLUMN 				VALUE
+#
+# 		Table 				The table name
+#
+# 		Op 					Always optimize
+#
+# 		Msg_type 			status, error, info, note, or warning
+#
+# 		Msg_text 			An informational message
+#
+# OPTIMIZE_TABLE table catches and throws any errors that occur while copying
+# table statistics from the old file to the newly created file.
+#
+# For example, if the user ID of the owner of the .MYD or .MYI file is
+# different from the user ID of the mysqld process, OPTIMIZE_TABLE generates
+# a "cannot change ownership of the file" error unless mysqld is started
+# by the root user.
+#
+# INNODB DETAILS
+#
+# For InnoDB tables, OPTIMIZE_TABLE is mapped to ALTER_TABLE_---_FORCE,
+# which rebuilds the table to update index statistics and free unused
+# space in the clustered index.
+#
+# THis is displayed in the output of OPTIMIZE_TABLE when you run it on
+# an InnoDB table, as shown here:
+#
+# 		OPTIMIZE TABLE foo;
+# 		+--------------+------------------+-------------------+-------------------------------------------------------------------+
+# 		| Table 			| Op 					 | Msg_type 			| Msg_text 																 			  |
+# 		+--------------+------------------+-------------------+-------------------------------------------------------------------+
+# 		| test.foo 		| optimize 			 | note 					| Table does not support optimize, doing recreate + analyze instead |
+# 		| test.foo 		| optimize 			 | status 				| OK 																					  |
+# 		+--------------+------------------+-------------------+-------------------------------------------------------------------+
+#
+# OPTIMIZE_TABLE uses online DDL for regular and partitioned InnoDB tables, which reduces downtime
+# for concurrent DML operations.
+#
+# The table rebuild triggered by OPTIMIZE_TABLE and performed under the cover by ALTER_TABLE_---_FORCE is completed
+# in place.
+#
+# An exclusive table lock is only taken briefly during the prepare phase and the commit phase of the operation.
+#
+# During the prepare phase, metadata is updated and an intermediate table is created.
+#
+# During the commit phase, table metadata changes are committed.
+#
+# OPTIMIZE_TABLE rebuilds the table using the table copy method under the following conditions:
+#
+# 		) When the old_alter_table system variable is enabled
+#
+# 		) When the mysqld --skip-new option is enabled
+#
+# OPTIMIZE_TABLE using online DDL is not supported for InnoDB tables that contain
+# FULLTEXT indexes.
+#
+# The table copy method is used instead.
+#
+# InnoDB stores data using a page-allocation method and does not suffer from fragmentation
+# in the same way that legacy storage engines (such as MyISAM) will.
+#
+# When considering whether or not to run optimize, consider the workload of transactions
+# that your server will process:
+#
+# 		) Some level of fragmentation is expected. InnoDB only fills pages 93% full, to leave room
+# 			for updates without having to split pages.
+#
+# 		) Delete operations might leave gaps that leave gaps less filled than desired, which could make
+# 			it worthwhile to optimize the table
+#
+# 		) Updates to rows usually rewrite the data within the same page, depending on the data type
+# 			and row format, when sufficient space is available.
+#
+# 			See SECTION 15.9.1.5, "HOW COMPRESSION WORKS FOR INNODB TABLES" and
+# 			SECTION 15.10, "INNODB ROW FORMATS"
+#
+# 		) High-concurrency workloads might leave gaps in indexes over time, as InnoDB
+# 			retains multiple versions of the same data due through its MVCC
+# 			mechanism.
+#
+# 			See SECTION 15.3, "INNODB MULTI-VERSIONING"
+#
+# MYISAM DETAILS
+#
+# For MyISAM tables, OPTIMIZE_TABLE works as follows:
+#
+# 		1. If the table has deleted or split rows, repair the table
+#
+# 		2. If the index pages are not sorted, sort them
+#
+# 		3. If the table's statistics are not up to date (and the repair could not be accomplished by sorting the index),
+# 			update them.
+#
+# OTHER CONSIDERATIONS
+#
+# OPTIMIZE_TABLE is performed online for regular and partitioned InnoDB tables.
+#
+# Otherwise, MySQL locks the table during the time OPTIMIZE_TABLE is running.
+#
+# OPTIMIZE_TABLE does not sort R-tree indexes, such as spatial indexes on POINT columns.
+# (Bug #23578)
+#
+# 13.7.3.5 REPAIR TABLE SYNTAX
+#
+# 		REPAIR [NO_WRITE_TO_BINLOG | LOCAL]
+# 			TABLE tbl_name [, tbl_name] ---
+# 			[QUICK] [EXTENDED] [USE_FRM]
+#
+# REPAIR_TABLE repairs a possibly corrupted table, for certain storage engines only.
+#
+# This statement requires SELECT and INSERT privileges for the table.
+#
+# Although normally you should never have to run REPAIR_TABLE, if disaster strikes,
+# This statement is very likely to get back all your data from a MyISAM table.
+#
+# If your tables become corrupted often, try to find the reason for it, to
+# eliminate the need to use REPAIR_TABLE
+#
+# See SECTION B.6.3.3, "WHAT TO DO IF MYSQL KEEPS CRASHING", and SECTION 16.2.4, "MYISAM TABLE PROBLEMS"
+#
+# REPAIR_TABLE checks the table to see whether an upgrade is required.
+#
+# If so, it performs the upgrade, following the same rule as CHECK_TABLE_---_FOR_UPGRADE
+#
+# See SECTION 13.7.3.2, "CHECK TABLE SYNTAX", for more information.
+#
+# IMPORTANT:
+#
+# 		) Make a backup of a table before performing a table repair operation; under some circumstances
+# 			the operation might cause data loss.
+#
+# 			Possible causes include but are not limited to file system errors.
+#
+# 			See CHAPTER 7, BACKUP AND RECOVERY
+#
+# 		) If the server crashes during a REPAIR_TABLE operation, it is essential after restarting it
+# 			that you immediately execute another REPAIR_TABLE statement for the table before performing
+# 			any other operations on it.
+#
+# 			In the worst case, you might have a new clean index file without information
+# 			about the data file, and then the next operation you perform could overwrite
+# 			the data file.
+#
+# 			This is an unlikely but possible scenario that underscores the value of making a backup first.
+#
+# 		) In the event that a table on the master becomes corrupted and you run REPAIR_TABLE on it,
+# 			any resulting changes to the original table are not propagated to slaves.
+#
+# 	) REPAIR TABLE STORAGE ENGINE AND PARTITIONING SUPPORT
+#
+# 	) REPAIR TABLE OPTIONS
+#
+# 	) REPAIR TABLE OUTPUT
+#
+# 	) TABLE REPAIR CONSIDERATIONS
+#
+# REPAIR TABLE STORAGE ENGINE AND PARTITIONING SUPPORT
+#
+# REPAIR_TABLE works for MyISAM, ARCHIVE and CSV tables.
+#
+# For MyISAM tables, it has the same effect as myisamchk --recover tbl_name by default.
+#
+# This statement does not work with views.
+#
+# REPAIR_TABLE is supported for partitioned tables. However, the USE_FRM option cannot be
+# used with this statement on a partitioned table.
+#
+# You can use ALTER TABLE --- REPAIR PARTITION to repair one or more partitions; for more 
+# information, see SECTION 13.1.9, "ALTER TABLE SYNTAX" and SECTION 23.3.4, "MAINTENANCE OF PARTITIONS"
+#
+# REPAIR TABLE OPTIONS
+#
+# 		) NO_WRITE_TO_BINLOG or LOCAL
+#
+# 			By default, the server writes REPAIR_TABLE statements to the binary log so that they
+# 			replicate to replication slaves.
+#
+# 			To suppress logging, specify the optional NO_WRITE_TO_BINLOG keyword or its alias LOCAL
+#
+# 		) QUICK
+#
+# 			If you use the QUICK option, REPAIR_TABLE tries to repair only the index file, and not the
+# 			data file.
+#
+# 			This type of repair is like that done by myisamchk --recover --quick
+#
+# 		) EXTENDED
+#
+# 			If you use the EXTENDED option, MySQL creates the index row instead of creating
+# 			one index at a time with sorting.
+#
+# 			This type of repair is like that done by myisamchk --safe-recover
+#
+# 		) USE_FRM
+#
+# 			the USE_FRM option is available for use if the .MYI index file is missing or if its header
+# 			is corrupted.
+#
+# 			This option tells MySQL not to trust the information in the .MYI file header
+# 			and to re-create it using information from the data dictionary.
+#
+# 			This kind of repair cannot be done with myisamchk.
+#
+# 			CAUTION:
+#
+# 				Use the USE_FRM option only if you cannot use regular REPAIR modes.
+#
+# 				Telling the server to ignore the .MYI file makes important table metadata
+# 				stored in the .MYI unavailable to the repair process, which can have deleterious
+# 				consequences:
+#
+# 					) The current AUTO_INCREMENT value is lost
+#
+# 					) The link to deleted records in the table is lost, which means that free space
+# 						for deleted records will remain unoccupied thereafter.
+#
+# 					) https://dev.mysql.com/doc/refman/8.0/en/repair-table.html
