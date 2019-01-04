@@ -29813,4 +29813,1390 @@
 # 					) The link to deleted records in the table is lost, which means that free space
 # 						for deleted records will remain unoccupied thereafter.
 #
-# 					) https://dev.mysql.com/doc/refman/8.0/en/repair-table.html
+# 					) The .MYI header indicates whether the table is compressed. If the server
+# 						ignores this information, it cannot tell that a table is compressed and
+# 						repair can cause change or loss of table contents.
+#
+# 						This means that USE_FRM should not be used with compressed tables.
+#
+# 						That should not be necessary, anyway: Compressed tables are read only,
+# 						so they should not become corrupt.
+#
+# 				If you use USE_FRM for a table that was created by a different version of the
+# 				MySQL server than the one you are currently running, REPAIR_TABLE does not attempt
+# 				to repair the table.
+#
+# 				In this case, the result set returned by REPAIR_TABLE contains a line with a 
+# 				Msg_type value of error and a Msg_text value of Failed repairing incompatible .FRM file
+#
+# 				If USE_FRM is used, REPAIR_TABLE does not check the table to see whether an upgrade is required.
+#
+# REPAIR TABLE OUTPUT
+#
+# REPAIR_TABLE returns a result set with the columns shown in the following table.
+#
+# 		COLUMN 				VALUE
+#
+# 		Table 				The table name
+#
+# 		Op 					Always repair
+#
+# 		Msg_type 			status, error, info, note or warning
+#
+# 		Msg_text 			An informational message
+#
+# The REPAIR_TABLE statement might produce many rows of information for each repaired table.
+#
+# The last row has a Msg_type value of status and Msg_test normally should be OK.
+#
+# For a MyISAM table, if you do not get OK, you should try repairing it with myisamchk --safe-recover
+#
+# (REPAIR_TABLE does not implement all the options of myisamchk. With myisamchk --safe-recover, you can
+# also use options that REPAIR_TABLE does not support, such as --max-record-length)
+#
+# REPAIR_TABLE table catches and throws any errors that occur while copying table statistics from the old
+# corrupted file to the newly created file.
+#
+# For example, if the user ID of the owner of the .MYD or .MYI file is different from the user ID of the
+# mysqld process, REPAIR_TABLE generates a "cannot change ownership of the file" error unless mysqld
+# is started by the root user.
+#
+# TABLE REPAIR CONSIDERATIONS
+#
+# REPAIR_TABLE upgrades a table if it contains old temporal columns in pre-5.6.4 format
+# (TIME, DATETIME, and TIMESTAMP columns without support for fractional seconds precision)
+# and the avoid_temporal_upgrade system variable is disabled.
+#
+# If avoid_temporal_upgrade is enabled, REPAIR_TABLE ignores the old temporal columns present
+# in the table and does not upgrade them.
+#
+# To upgrade tables that contain such temporal columns, disable avoid_temporal_upgrade before
+# executing REPAIR_TABLE
+#
+# You may be able to increase REPAIR_TABLE performance by setting certain system variables,
+# see SECTION 8.6.3, "OPTIMIZING REPAIR TABLE STATEMENTS"
+#
+# 13.7.4 COMPONENT, PLUGIN, AND USER-DEFINED FUNCTION STATEMENTS
+#
+# 	13.7.4.1 CREATE FUNCTION SYNTAX FOR USER-DEFINED FUNCTIONS
+# 	13.7.4.2 DROP FUNCTION SYNTAX
+#
+# 	13.7.4.3 INSTALL COMPONENT SYNTAX
+# 	13.7.4.4 INSTALL PLUGIN SYNTAX
+#
+# 	13.7.4.5 UNINSTALL COMPONENT SYNTAX
+# 	13.7.4.6 UNINSTALL PLUGIN SYNTAX
+#
+# 13.7.4.1 CREATE FUNCTION SYNTAX FOR USER-DEFINED FUNCTIONS
+#
+# 		CREATE [AGGREGATE] FUNCTION function_name
+# 			RETURNS {STRING|INTEGER|REAL|DECIMAL}
+# 			SONAME shared_library_name
+#
+# A user-defined function (UDF) is a way to extend MySQL with a new function that
+# works like a native (built-in) MySQL function such as ABS() or CONCAT()
+#
+# function_name is the name that should be used in SQL statements to invoke the function.
+#
+# The RETURNS clause indicates the type of the function's return value.
+#
+# DECIMAL is a legal value after RETURNS, but currently DECIMAL functions return string
+# values and should be written like STRING functions.
+#
+# shared_library_name is the base name of the shared library file that contains the code that
+# implements the function.
+#
+# The file must be located in the plugin directory. This directory is given by the value 
+# of the plugin_dir system variable.
+#
+# For more information, see SECTION 5.7.1, "INSTALLING AND UNINSTALLING USER-DEFINED FUNCTIONS"
+#
+# To create a function, you must have the INSERT privilege for the mysql system database.
+#
+# This is necessary because CREATE_FUNCTION adds a row to the mysql.func system table that
+# records the function's name, type, and shared library name.
+#
+# UDFs registered using CREATE_FUNCTION are listed in the Performance Schema user_defined_functions
+# table; See SECTION 26.12.17.6, "THE USER_DEFINED_FUNCTIONS TABLE"
+#
+# An active function is one that has been loaded with CREATE_FUNCTION and not removed with DROP_FUNCTION.
+#
+# All active functions are reloaded each time the server starts, unless you start mysqld
+# with the --skip-grant-tables option. In this case, UDF initialization is skipped and
+# UDFs are unavailable.
+#
+# For instructions on writing user-defined functions, see SECTION 29.4.2, "ADDING A NEW USER-DEFINED FUNCTION"
+#
+# For the UDF mechanism to work, functions must be written in C or C++ (or another language that can use
+# C calling conventions), your operating system must support dynamic loading and you must have
+# compiled mysqld dynamically (not statically)
+#
+# An AGGREGATE function works exactly like a native MySQL aggregate (summary) function such as
+# SUM or COUNT()
+#
+# NOTE:
+#
+# 		To upgrade the shared library associated with a UDF, issue a DROP_FUNCTION statement, upgrade
+# 		the shared library, and then issue a CREATE_FUNCTION statement.
+#
+# 		If you upgrade the shared library first and then use DROP_FUNCTION, the server may crash.
+#
+# 13.7.4.2 DROP FUNCTION SYNTAX
+#
+# 		DROP FUNCTION function_name
+#
+# This statement drops the user-defined function (UDF) named function_name
+#
+# To drop a function, you must have the DELETE privilege for the mysql system database.
+#
+# This is because DROP_FUNCTION removes a row from the mysql.func system table that
+# records the function's name, type and shared library name.
+#
+# NOTE:
+#
+# 		To upgrade the shared library associated with a UDF, issue a DROP_FUNCTION statement,
+# 		upgrade the shared library, and then issue a CREATE_FUNCTION statement.
+#
+# 		If you upgrade the shared library first and then use DROP_FUNCTION, the server may crash.
+#
+# DROP_FUNCTION is also used to drop stored functions (see SECTION 13.1.29, "DROP PROCEDURE AND DROP FUNCTION SYNTAX")
+#
+# 13.7.4.3 INSTALL COMPONENT SYNTAX
+#
+# 		INSTALL COMPONENT component_name [, component_name ] ---
+#
+# This statement installs one or more server components, which become active immediately.
+#
+# A component provides services that are available to the server and other components;
+# see SECTION 5.5, "MYSQL SERVER COMPONENTS"
+#
+# INSTALL_COMPONENT requires the INSERT privilege for the mysql.component system table.
+#
+# Example:
+#
+# 		INSTALL COMPONENT 'file://component1', 'file://component2';
+#
+# Component names are URNs that begin with file:// and indicate the base name of the file
+# that implements the component, located in the directory named by the plugin_dir
+# system variable.
+#
+# Component names do not include any platform-dependent file name suffix such as .so
+# or .dll (These naming details are subject to change because component name interpretation
+# is itself performed by a service and the component infrastructure makes it possible
+# to replace the default service implementation with alternative implementations.)
+#
+# If any error occurs, the statement fails and has no effect.
+#
+# For example, this happens if a component name is errornous, a named component
+# does not exist or is already installed, or component initialization fails.
+#
+# A loader service handles component loading, which includes adding installed components
+# to the mysql.component system table that serves as a registry.
+#
+# For subsequent server restarts, any components listed in mysql.component are loaded
+# by the loader service during the startup sequence.
+#
+# This occurs even if the server is started with the --skip-grant-tables option
+#
+# If a component depends on services not present in the registry and you attempt
+# to install the component without also installing the component or components that
+# provide the services on which it depends, an error occurs:
+#
+# 		ERROR 3527 (HY000): Cannot satisfy dependency for service 'component_a'
+# 		required by component 'component_b'
+#
+# To avoid this problem, either install all components in the same statement, or install
+# the dependent component after installing any components on which it depends.
+#
+# 13.7.4.4 INSTALL PLUGIN SYNTAX
+#
+# 		INSTALL PLUGIN plugin_name SONAME 'shared_library_name'
+#
+# This statement installs a server plugin. It requires the INSERT privilege for the
+# mysql.plugin system table.
+#
+# plugin_name is the name of the plugin as defined in the plugin descriptor structure
+# contained in the library file (see SECTION 29.2.4.2, "PLUGIN DATA STRUCTURES")
+#
+# Plugin names are not case-sensitive. For maximal compatibility, plugin names should
+# be limited to ASCII letters, digits and underscore because they are used in C
+# source files, shell command lines, M4 and Bourne shell scripts, and SQL environments.
+#
+# shared_library_name is the name of the shared library that contains the plugin code.
+#
+# The name includes the file name extension (for example, libmyplugin.so, libmyplugin.dll
+# or libmyplugin.dylib)
+#
+# The shared library must be located in the plugin directory (the directory named by the
+# plugin_dir system variable)
+#
+# The library must be in the plugin directory itself, not in a subdirectory.
+#
+# By default, plugin_dir is the plugin directory under the directory named by the
+# pkglibdir configuration variable, but it can be changed by setting the value of
+# plugin_dir at server startup.
+#
+# For example, set its value in a my.cnf file:
+#
+# 		[mysqld]
+# 		plugin_dir=/path/to/plugin/directory
+#
+# If the value of plugin_dir is a relative path name, it is taken to be relative
+# to the MySQL base directory (the value of the basedir system variable)
+#
+# INSTALL_PLUGIN loads and initializes the plugin code to make the plugin available
+# for use.
+#
+# A plugin is initialized by executing its initialization function, which handles
+# any setup that the plugin must perform before it can be used.
+#
+# When the server shuts down, it executes the deinitialization function for each
+# plugin that is loaded so that the plugin has a chance to perform any final cleanup.
+#
+# INSTALL_PLUGIN also registers the plugin by adding a line that indicates the plugin
+# name and library file name to the mysql.plugin system table.
+#
+# At server startup, the server loads and initializes any plugin that is listed in
+# mysql.plugin
+#
+# This means that a plugin is installed with INSTALL_PLUGIN only once, not every
+# time the server starts.
+#
+# Plugin loading at startup does not occur if the server is started with the --skip-grant-tables
+# option.
+#
+# A plugin library can contain multiple plugins. For each of them to be installed, use a separate
+# INSTALL_PLUGIN statement.
+#
+# Each statement names a different plugin, but all of them specify the same library name.
+#
+# INSTALL_PLUGIN causes the server to read option (my.cnf) files just as during server
+# startup.
+#
+# This enables the plugin to pick up any relevant options from those files. It is
+# possible to add plugin options to an option file even before loading a plugin
+# (if the loose prefix is used)
+#
+# It is also possible to uninstall a plugin, edit my.cnf, and install the plugin again.
+#
+# Restarting the plugin this way enables it to the new option values without a server restart.
+#
+# For options that control individual plugin loading at server startup, see SECTION 5.6.1,
+# "INSTALLING AND UNINSTALLING PLUGINS"
+#
+# If you need to load plugins for a single server startup when the --skip-grant-tables
+# option is given (which tells the server not to read system tables), use the --plugin-load
+# option.
+#
+# See SECTION 5.1.7, "SERVER COMMAND OPTIONS"
+#
+# To remove a plugin, use the UNINSTALL_PLUGIN statement
+#
+# For additional information about plugin loading, see SECTION 5.6.1, "INSTALLING AND UNINSTALLING PLUGINS"
+#
+# To see what plugins are installed, use the SHOW_PLUGINS statement or query the INFORMATION_SCHEMA
+# the PLUGINS table.
+#
+# If you recompile a plugin library and need to reinstall it, you can use either of the following methods:
+#
+# 		) Use UNINSTALL_PLUGIN to uninstall all plugins in the library, install the new plugin library file
+# 			in the plugin directory, and then use INSTALL_PLUGIN to install all plugins in the library.
+#
+# 			This procedure has the advantage that it can be used without stopping the server.
+#
+# 			However, if the plugin library contains many plugins, you must issue many INSTALL_PLUGIN
+# 			and UNINSTALL_PLUGIN statements.
+#
+# 		) Stop the server, install the new plugin library file in the plugin directory, and restart the server.
+#
+# 13.7.4.5 UNINSTALL COMPONENT SYNTAX
+#
+# 		UNINSTALL COMPONENT component_name [, component_name ] ---
+#
+# This statement deactivates and uninstalls one or more server components.
+#
+# A component provides services that are available to the server and other components;
+# see SECTION 5.5, "MYSQL SERVER COMPONENTS"
+#
+# UNINSTALL_COMPONENT is the complement of INSTALL_COMPONENT
+#
+# It requires the DELETE privilege for the mysql.component system table
+#
+# Example:
+#
+# 		UNINSTALL COMPONENT 'file://component1', 'file://component2';
+#
+# For information about component naming, see SECTION 13.7.4.3, "INSTALLING COMPONENT SYNTAX"
+#
+# If any error occurs, the statement fails and has no effect. For example, this happens if a 
+# component name is errorneous, a named component is not installed, or cannot be uninstalled
+# because other installed components depend on it.
+#
+# A loader service handles component unloading, which includes removing uninstalled
+# components from the mysql.component system table that serves as a registry.
+#
+# As a result, unloaded components are not loaded during the startup sequence
+# for subsequent server restarts.
+#
+# 13.7.4.6 UNINSTALL PLUGIN SYNTAX
+#
+# 		UNINSTALL PLUGIN plugin_name
+#
+# This statement removes an installed server plugin. It requires the DELETE privilege
+# for the mysql.plugin system table.
+#
+# UNINSTALL_PLUGIN is the complement of INSTALL_PLUGIN
+#
+# plugin_name must be the name of some plugin that is listed in the mysql.plugin table.
+#
+# The server executes the plugin's deinitialization function and removes the row for
+# the plugin from the mysql.plugin system table, so that subsequent server restarts will
+# not load and initialize the plugin.
+#
+# UNINSTALL_PLUGIN does not remove the plugin's shared library file
+#
+# You cannot uninstall a plugin if any table that uses it is open
+#
+# Plugin removal has implications for the use of associated tables.
+#
+# For example, if a full-text parser plugin is associated with a FULLTEXT
+# index on the table, uninstalling the plugin makes the table unusable.
+#
+# Any attempt to access the table results in an error.
+#
+# The table cannot even be opened, so you cannot drop an index for which
+# the plugin is used.
+#
+# THis means that uninstalling a plugin is something to do with care unless
+# you do not care about the table contents.
+#
+# If you are uninstalling a plugin with no intention of reinstalling it later
+# and you care about the table contents, you should dump the table with mysqldump
+# and remove the WITH PARSER clause from the dumped CREATE_TABLE statement
+# so that you can reload the table later.
+#
+# If you do not care about the table, DROP_TABLE can be used even if any plugins
+# associated with the table are missing.
+#
+# For additional information about plugin loading, see SECTION 5.6.1, "INSTALLING AND UNINSTALLING PLUGINS"
+#
+# 13.7.5 SET SYNTAX
+#
+# 13.7.5.1 SET SYNTAX FOR VARIABLE ASSIGNMENT
+# 13.7.5.2 SET CHARACTER SET SYNTAX
+# 13.7.5.3 SET NAMES SYNTAX
+#
+# The SET statement has several forms.
+#
+# Descriptions for those forms that are not associated with a specific server capability
+# appear in subsections of this section:
+#
+# 		) SET_var_name = value enables you to assign values to variables that affect the
+# 			operation of the server or clients.
+#
+# 			See SECTION 13.7.5.1, "SET SYNTAX FOR VARIABLE ASSIGNMENT"
+#
+# 		) SET_CHARACTER_SET and SET_NAMES assign values to character set and collation
+# 			variables associated with the current connection to the server.
+#
+# 			See SECTION 13.7.5.2, "SET CHARACTER SET SYNTAX", and SECTION 13.7.5.3, "SET NAMES SYNTAX"
+#
+# Descriptions for the other forms appear elsewhere, grouped with other statements related
+# to the capability they help implement:
+#
+# 		) SET_DEFAULT_ROLE and SET_ROLE set the default role and current role for user accounts.
+#
+# 			See SECTION 13.7.1.9, "SET DEFAULT ROLE SYNTAX" and SECTION 13.7.1.11, "SET ROLE SYNTAX"
+#
+# 		) SET_PASSWORD assigns account passwords. See SECTION 13.7.1.10, "SET PASSWORD SYNTAX"
+#
+# 		) SET RESOURCE GROUP assigns threads to a resource group. See SECTION 13.7.2.4, "SET RESOURCE GROUP SYNTAX"
+#
+# 		) SET_TRANSACTION_ISOLATION_LEVEL sets the isolation level for transaction processing.
+#
+# 			See SECTION 13.3.7, "SET TRANSACTION SYNTAX"
+#
+# 13.7.5.1 SET SYNTAX FOR VARIABLE ASSIGNMENT
+#
+# 		SET variable = expr [, variable = expr] ---
+#
+# 		variable: {
+# 			user_var name
+# 		 | param_name
+# 		 | local_var_name
+# 		 | {GLOBAL | @@GLOBAL.} system_var_name
+# 		 | {PERSIST | @@PERSIST.} system_var_name
+# 		 | {PERSIST_ONLY | @@PERSIST_ONLY.} system_var_name
+# 		 | [SESSION | @@SESSION. | @@] system_var_name
+# 		}
+#
+# SET syntax for variable assignment enables you to assign values to different types
+# of variables that affect the operation of the server or clients:
+#
+# 		) User-defined variables. See SECTION 9.4, "USER-DEFINED VARIABLES"
+#
+# 		) Stored procedure and function parameters, and stored program local variables. See SECTION 13.6.4, "VARIABLES IN STORED PROGRAMS"
+#
+# 		) System variables. See SECTION 5.1.8, "SERVER SYSTEM VARIABLES". System variables also can be set at server startup, as described
+# 			in SECTION 5.1.9, "USING SYSTEM VARIABLES"
+#
+# A SET statement that assigns variable values is not written to the binary log, so in replication
+# scenarios it affects only the host on which you execute it.
+#
+# To affect all replication hosts, execute the statement on each host.
+#
+# The following sections describe SET syntax for setting variables.
+#
+# They use the = assignment operator, but the := assignment operator is
+# also permitted for this purpose.
+#
+# 		) USER-DEFINED VARIABLE ASSIGNMENT
+#
+# 		) PARAMETER AND LOCAL VARIABLE ASSIGNMENT
+#
+# 		) SYSTEM VARIABLE ASSIGNMENT
+#
+# 		) SET ERROR HANDLING
+#
+# 		) MULTIPLE VARIABLE ASSIGNMENT
+#
+# 		) SYSTEM VARIABLE REFERENCES IN EXPRESSIONS
+#
+# USER-DEFINED VARIABLE ASSIGNMENT
+#
+# User-defined variables are created locally within a session and exist only
+# within the context of that session; see SECTION 9.4, "USER-DEFINED VARIABLES"
+#
+# A user-defined variable is written as @var_name and is assigned an expression
+# value as follows:
+#
+# 		SET @var_name = expr;
+#
+# Examples:
+#
+# 		SET @name = 43;
+# 		SET @total_tax = (SELECT SUM(tax) FROM taxable_transactions);
+#
+# As demonstrated by those statements, expr can range from simple (a literal value) to more complex
+# (the value returned by a scalar subquery)
+#
+# The Performance Schema user_variable_by_thread table contains information about user-defined
+# variables.
+#
+# See SECTION 26.12.10, "PERFORMANCE SCHEMA USER-DEFINED VARIABLE TABLES"
+#
+# PARAMETER AND LOCAL VARIABLE ASSIGNMENT
+#
+# SET applies to parameters and local variables in the contexts of the stored object within
+# which they are defined.
+#
+# The following procedure uses the increment procedure parameter and counter local variable:
+#
+# 		CREATE PROCEDURE p(increment INT)
+# 		BEGIN
+# 			DECLARE counter INT DEFAULT 0;
+# 			WHILE counter < 10 DO
+# 				--- do work ---
+# 				SET counter = counter + increment;
+# 			END WHILE;
+# 		END;
+#
+# SYSTEM VARIABLE ASSIGNMENT
+#
+# The MySQL server maintains system variables that configure its operation.
+#
+# A system variable can have a global value that affects server operation
+# as a whole, a session value that affects the current session, or both.
+#
+# Many system variables are dynamic and can be changed at runtime using the SET
+# statement to affect operation of the current server instance.
+#
+# SET can also be used to persist certain system variables to the mysqld-auto.cnf
+# file in the data directory, to affect server operation for subsequent
+# startups.
+#
+# If you change a session system variable, the value remains in effect within
+# your session until you change the variable to a different value or the 
+# session ends.
+#
+# The change has no effect on other sessions.
+#
+# If you change a global system variable, the value is remembered and used to
+# initialize the session value for new sessions until you change the variable
+# to a different value or the server exits.
+#
+# The change is visible to any client that accesses the global value.
+#
+# However, the change affects the corresponding session value only for clients
+# that connect after the change.
+#
+# The global variable change does not affect the session value for any current
+# client sessions (not even the session within which the global value change occurs)
+#
+# To make a global system variable setting permanent so that it applies across
+# server restarts, you can persist it to the mysqld-auto.cnf file in the data directory.
+#
+# It is also possible to make persistent configuration changes by manually modifying
+# a my.cnf option file, but that is more cumbersome, and an error in a manually
+# entered setting might not be discovered until much later.
+#
+# SET statements that persist system variables are more convenient and avoid the
+# possibility of malformed settings because settings with syntax errors do not
+# succeed and do not change server configuration.
+#
+# For more information about persisting system variables and the mysqld-auto.cnf
+# file, see SECTION 5.1.9.3, "PERSISTED SYSTEM VARIABLES"
+#
+# NOTE:
+#
+# 		Setting or persisting a global system variable value always requires special
+# 		privileges.
+#
+# 		Setting a session system variable value normally requires no special privileges
+# 		and can be done by any user, although there are exceptions.
+#
+# 		For more information, see SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# The following discussion describes the syntax options for setting and persisting
+# system variables:
+#
+# 		) To assign a value to a global system variable, precede the variable name by the
+# 			GLOBAL keyword or the @@GLOBAL. qualifier:
+#
+# 			SET GLOBAL max_connections = 1000;
+# 			SET @@GLOBAL.max_connections = 1000;
+#
+# 		) To assign a value to a session system variable, precede the variable name by the
+# 			SESSION or LOCAL keyword, by the @@SESSION., @@LOCAL., or @@ qualifier, or by
+# 			no keyword or no modifier at all:
+#
+# 				SET SESSION sql_mode = 'TRADITIONAL';
+# 				SET LOCAL sql_mode = 'TRADITIONAL';
+# 				SET @@SESSION.sql_mode = 'TRADITIONAL';
+# 				SET @@LOCAL.sql_mode = 'TRADITIONAL';
+# 				SET @@sql_mode = 'TRADITIONAL';
+# 				SET sql_mode = 'TRADITIONAL';
+#
+# 			A client can change its own session variables, but not those of any other client.
+#
+# 		) To persist a global system variable to the mysqld-auto.cnf option file in the data
+# 			directory, precede the variable name by the PERSIST keyword or the @@PERSIST.
+# 			qualifier:
+#
+# 				SET PERSIST max_connections = 1000;
+# 				SET @@PERSIST.max_connections = 1000;
+#
+# 			This SET syntax enables you to make configuration changes at runtime that also
+# 			persist across server restarts.
+#
+# 			Like SET_GLOBAL, SET_PERSIST sets the global variable runtime value, but also
+# 			writes the variable setting to the mysqld-auto.cnf file (replacing any existing
+# 			variable setting if there is one)
+#
+# 		) To persist a global system variable to the mysqld-auto.cnf file without setting the
+# 			global variable runtime value, precede the variable name by the PERSIST_ONLY
+# 			keyword or the @@PERSIST_ONLY. qualifier:
+#
+# 				SET PERSIST_ONLY back_log = 100;
+# 				SET @@PERSIST_ONLY.back_log = 100;
+# 	
+# 			Like PERSIST, PERSIST_ONLY writes the variable setting to mysqld-auto.cnf
+#
+# 			However, unlike PERSIST, PERSIST_ONLY does not modify the global variable
+# 			runtime value.
+#
+# 			This makes PERSIST_ONLY suitable for configuring read-only system variables
+# 			that can be set only at server startup.
+#
+# To set a global system variable value to the compiled-in MySQL default value or
+# a session system variable to the current corresponding global value, set the
+# variable to the value DEFAULT.
+#
+# For example, the following two statements are identical in setting the session
+# value of max_join_size to the current global value:
+#
+# 		SET @@SESSION.max_join_size = DEFAULT;
+# 		SET @@SESSION.max_join_size = @@GLOBAL.max_join_size;
+#
+# Using SET to persist a global system variable to a value of DEFAULT or to its
+# literal default value assigns the variable its default value and adds a 
+# setting for the variable to mysqld-auto.cnf 
+#
+# To remove the variable from the file, use RESET_PERSIST
+#
+# Some system variables cannot be persisted or are persist-restricted.
+#
+# See SECTION 5.1.9.4, "NONPERSISTIBLE AND PERSIST-RESTRICTED SYSTEM VARIABLES"
+#
+# A system variable implemented by a plugin can be persisted if the plugin is installed
+# when the SET statement is executed.
+#
+# Assignment of the persisted plugin variable takes effect for subsequent server
+# restarts if the plugin is still installed.
+#
+# If the plugin is no longer installed, the plugin variable will not exist
+# when the server reads the mysqld-auto.cnf file
+#
+# In this case, the server writes a warning to the error log and continues:
+#
+# 		currently unknown variable 'var_name'
+# 		was read from the persisted config file
+#
+# To display system variable names and values:
+#
+# 		) Use the SHOW_VARIABLES statement; see SECTION 13.7.6.39, "SHOW VARIABLES SYNTAX"
+#
+# 		) Several Performance Schema tables provide system variable information. See SECTION 26.12.13, "PERFORMANCE SCHEMA SYSTEM VARIABLE TABLES"
+#
+# 		) The Performance Schema variables_info table contains information showing when and by
+# 			which user each system variable was most recently set.
+#
+# 			See SECTION 26.12.13.2, "PERFORMANCE SCHEMA VARIABLES_INFO TABLE"
+#
+# 		) The Performance Schema persisted_variables table provides an SQL interface to the
+# 			mysqld-auto.cnf file, enabling its contents to be inspected at runtime using
+# 			SELECT statements.
+#
+# 			See SECTION 26.12.13.1, "PERFORMANCE SCHEMA PERSISTED_VARIABLES TABLE"
+#
+# SET ERROR HANDLING
+#
+# If any variable assignment in a SET statement fails, the entire statement fails and no variables
+# are changed, nor is the mysqld-auto.cnf file changed.
+#
+# SET produces an error under the circumstances described here.
+#
+# Most of the examples show SET statements that use keyword syntax 
+# (for example, GLOBAL or SESSION), but the principles are also true
+# for statements that use the corresponding modifiers (for example, @@GLOBAL. or @@SESSION.)
+#
+# 		) Use of SET (any variant) to set a read-only variable:
+#
+# 			SET GLOBAL version = 'abc';
+# 			ERROR 1238 (HY000): Variable 'version' is a read only variable
+#
+# 		) Use of GLOBAL, PERSIST, or PERSIST_ONLY to set a variable that has only a session value:
+#
+# 			SET GLOBAL sql_log_bin = ON;
+# 			ERROR 1228 (HY000): Variable 'sql_log_bin' is a SESSION
+# 			variable and can't be used with SET GLOBAL
+#
+# 		) Use of SESSION to set a variable that has only a global value:
+#
+# 			SET SESSION max_connections = 1000;
+# 			ERROR 1229 (HY000): Variable 'max_connections' is a 
+# 			GLOBAL variable and should be set with SET GLOBAL
+#
+# 		) Omission of GLOBAL, PERSIST, or PERSIST_ONLY to set a variable that
+# 			has only a global value:
+#
+# 			SET max_connections = 1000;
+# 			ERROR 1229 (HY000): Variable 'max_connections' is a
+# 			GLOBAL variable and should be set with SET GLOBAL
+#
+# 		) Use of PERSIST or PERSIST_ONLY to set a variable that cannot be persisted:
+#
+# 			SET PERSIST port = 3307;
+# 			ERROR 1238 (HY000): Variable 'port' is a read only variable
+# 			SET PERSIST_ONLY port = 3307;
+# 			ERROR 1238 (HY000): Variable 'port' is a non-persistent read only variable
+#
+# 		) The @@GLOBAL., @@PERSIST., @@PERSIST_ONLY., @@SESSION., and @@ modifiers apply only
+# 			to system variables.
+#
+# 			An error occurs for attempts to apply them to user-defined variables, stored procedure
+# 			or function parameters, or stored program local variables.
+#
+# 		) Not all system variables can be set to DEFAULT. In such cases, assigning DEFAULT results in an error.
+#
+# 		) An error occurs for attempts to assign DEFAULT to user-defined variables, stored procedure
+# 			or function parameters, or stored program local variables.
+#
+# MULTIPLE VARIABLE ASSIGNMENT
+#
+# A SET statement can contain multiple variable assignments, separated by commas.
+#
+# This statement assigns values to a user-defined variable and a system variable:
+#
+# 		SET @x = 1, SESSION sql_mode = '';
+#
+# If you set multiple system variables in a single statement, the most recent GLOBAL,
+# PERSIST, PERSIST_ONLY or SESSION keyword in the statement is used for following
+# assignments that have no keyword specified.
+#
+# Examples of multiple-variable assignment:
+#
+# 		SET GLOBAL sort_buffer_size = 1000000, SESSION sort_buffer_size = 1000000;
+# 		SET @@GLOBAL.sort_buffer_size = 1000000, @@LOCAL.sort_buffer_size = 1000000;
+# 		SET GLOBAL max_connections = 1000, sort_buffer_size = 1000000;
+#
+# The @@GLOBAL., @@PERSIST., @@PERSIST_ONLY., @@SESSION., and @@ modifiers apply only
+# to the immediately following system variable, not any remaining system variables.
+#
+# This statement sets the sort_buffer_size global value to 50000 and the session
+# value to 1000000:
+#
+# 		SET @@GLOBAL.sort_buffer_size = 50000, sort_buffer_size = 1000000;
+#
+# SYSTEM VARIABLE REFERENCES IN EXPRESSIONS
+#
+# To refer to the value of a system variable in expressions, use one of the
+# @@-modifiers (except @@PERSIST. and @@PERSIST_ONLY., which are not permitted
+# in expressions)
+#
+# For example, you can retrieve system variable values in a SELECT statement
+# like this:
+#
+# 		SELECT @@GLOBAL.sql_mode, @@SESSION.sql_mode, @@sql_mode;
+#
+# NOTE:
+#
+# 		A reference to a system variable in an expression as @@var_name
+# 		(with @@ rather than @@GLOBAL. or @@SESSION.) returns the session
+# 		value if it exists and the global value otherwise.
+#
+# 		This differs from SET @@var_name = expr, which always refers to the session value.
+#
+# 13.7.5.2 SET CHARACTER SYNTAX
+#
+# 		SET {CHARACTER SET | CHARSET}
+# 			 {'charset_name' | DEFAULT}
+#
+# This statement maps all strings sent between the server and the current client with the
+# given mapping.
+#
+# SET CHARACTER SET sets three session system variables:
+#
+# 		character_set_client and character_set_results are set to the given character set
+#
+# 		and character_set_connection to the value of character_set_database
+#
+# See SECTION 10.4, "CONNECTION CHARACTER SETS AND COLLATIONS"
+#
+# charset_name may be quoted or unquoted.
+#
+# The default character set mapping can be restored by using the value DEFAULT.
+#
+# The default depends on the server configuration.
+#
+# Some character sets cannot be used as the client character set.
+# Attempting to use them with SET_CHARACTER_SET produces an error.
+#
+# See IMPERMISSIBLE CLIENT CHARACTER SETS
+#
+# 13.7.5.3 SET NAMES SYNTAX
+#
+# 		SET NAMES {'charset_name'
+# 			[COLLATE 'collation_name'] | DEFAULT}
+#
+# This statement sets the three session system variables character_set_client, character_set_connection,
+# and character_set_results to the given character set.
+#
+# Setting character_set_connection to charset_name also sets collation_connection to the default collation
+# for charset_name.
+#
+# See SECTION 10.4, "CONNECTION CHARACTER SETS AND COLLATIONS"
+#
+# The optional COLLATE clause may be used to specify a collation explicitly.
+#
+# If given, the collation must one of the permitted collations for charset_name.
+#
+# charset_name and collation_name may be quoted or unquoted.
+#
+# The default mapping can be restored by using a value of DEFAULT.
+# The default depends on the server configuration.
+#
+# Some character sets cannot be used as the client character set. Attempting ot use
+# them with SET_NAMES produces an error.
+#
+# See IMPERMISSIBLE CLIENT CHARACTER SETS
+#
+# 13.7.6 SHOW SYNTAX
+#
+# 		13.7.6.1 SHOW BINARY LOGS SYNTAX
+# 		13.7.6.2 SHOW BINLOG EVENTS SYNTAX
+#
+# 		13.7.6.3 SHOW CHARACTER SET SYNTAX
+# 		13.7.6.4 SHOW COLLATION SYNTAX
+#
+# 		13.7.6.5 SHOW COLUMNS SYNTAX
+# 		13.7.6.6 SHOW CREATE DATABASE SYNTAX
+#
+# 		13.7.6.7 SHOW CREATE EVENT SYNTAX
+# 		13.7.6.8 SHOW CREATE FUNCTION SYNTAX
+#
+# 		13.7.6.9 SHOW CREATE PROCEDURE SYNTAX
+# 		13.7.6.10 SHOW CREATE TABLE SYNTAX
+#
+# 		13.7.6.11 SHOW CREATE TRIGGER SYNTAX
+# 		13.7.6.12 SHOW CREATE USER SYNTAX
+#
+# 		13.7.6.13 SHOW CREATE VIEW SYNTAX
+# 		13.7.6.14 SHOW DATABASES SYNTAX
+#
+# 		13.7.6.15 SHOW ENGINE SYNTAX
+# 		13.7.6.16 SHOW ENGINES SYNTAX
+#
+# 		13.7.6.17 SHOW ERRORS SYNTAX
+# 		13.7.6.18 SHOW EVENTS SYNTAX
+#
+# 		13.7.6.19 SHOW FUNCTION CODE SYNTAX
+# 		13.7.6.20 SHOW FUNCTION STATUS SYNTAX
+#
+# 		13.7.6.21 SHOW GRANTS SYNTAX
+# 		13.7.6.22 SHOW INDEX SYNTAX
+#
+# 		13.7.6.23 SHOW MASTER STATUS SYNTAX
+# 		13.7.6.24 SHOW OPEN TABLES SYNTAX
+#
+# 		13.7.6.25 SHOW PLUGINS SYNTAX
+# 		13.7.6.26 SHOW PRIVILEGES SYNTAX
+#
+# 		13.7.6.27 SHOW PROCEDURE CODE SYNTAX
+# 		13.7.6.28 SHOW PROCEDURE STATUS SYNTAX
+#
+# 		13.7.6.29 SHOW PROCESSLIST SYNTAX
+# 		13.7.6.30 SHOW PROFILE SYNTAX
+#
+# 		13.7.6.31 SHOW PROFILES SYNTAX
+# 		13.7.6.32 SHOW RELAYLOG EVENTS SYNTAX
+#
+# 		13.7.6.33 SHOW SLAVE HOSTS SYNTAX
+# 		13.7.6.34 SHOW SLAVE STATUS SYNTAX
+#
+# 		13.7.6.35 SHOW STATUS SYNTAX
+# 		13.7.6.36 SHOW TABLE STATUS SYNTAX
+#
+# 		13.7.6.37 SHOW TABLES SYNTAX
+# 		13.7.6.38 SHOW TRIGGERS SYNTAX
+#
+# 		13.7.6.39 SHOW VARIABLES SYNTAX
+# 		13.7.6.40 SHOW WARNINGS SYNTAX
+#
+# SHOW has many forms that provide information about databases, tables, columns, or status information
+# about the server.
+#
+# This section describes those following:
+#
+# 		SHOW {BINARY | MASTER} LOGS
+# 		SHOW BINLOG EVENTS [IN 'log_name'] [FROM pos] [LIMIT [offset,] row_count]
+#
+# 		SHOW CHARACTER SET [like_or_where]
+# 		SHOW COLLATION [like_or_where]
+#
+# 		SHOW [FULL] COLUMNS FROM tbl_name [FROM db_name] [like_or_where]
+# 		SHOW CREATE DATABASE db_name
+#
+# 		SHOW CREATE EVENT event_name
+# 		SHOW CREATE FUNCTION func_name
+#
+# 		SHOW CREATE PROCEDURE proc_name
+# 		SHOW CREATE TABLE tbl_name
+#
+# 		SHOW CREATE TRIGGER trigger_name
+# 		SHOW CREATE VIEW view_name
+#
+# 		SHOW DATABASES [like_or_where]
+# 		SHOW ENGINE engine_name {STATUS | MUTEX}
+#
+# 		SHOW [STORAGE] ENGINES
+# 		SHOW ERRORS [LIMIT [offset,] row_count]
+#
+# 		SHOW EVENTS
+# 		SHOW FUNCTION CODE func_name
+#
+# 		SHOW FUNCTION STATUS [like_or_where]
+# 		SHOW GRANTS FOR user
+#
+# 		SHOW INDEX FROM tbl_name [FROM db_name]
+# 		SHOW MASTER STATUS
+#
+# 		SHOW OPEN TABLES [FROM db_name] [like_or_where]
+# 		SHOW PLUGINS
+#
+# 		SHOW PROCEDURE CODE proc_name
+# 		SHOW PROCEDURE STATUS [like_or_where]
+#
+# 		SHOW PRIVILEGES
+# 		SHOW [FULL] PROCESSLIST
+#
+# 		SHOW PROFILE [types] [FOR QUERY n] [OFFSET n] [LIMIT n]
+# 		SHOW PROFILES
+#
+# 		SHOW RELAYLOG EVENTS [IN 'log_name'] [FROM pos] [LIMIT [offset,] row_count]
+# 		SHOW SLAVE HOSTS
+#
+# 		SHOW SLAVE STATUS [FOR CHANNEL channel]
+# 		SHOW [GLOBAL | SESSION] STATUS [like_or_where]
+#
+# 		SHOW TABLE STATUS [FROM db_name] [like_or_where]
+# 		SHOW [FULL] TABLES [FROM db_name] [like_or_where]
+#
+# 		SHOW TRIGGERS [FROM db_name] [like_or_where]
+# 		SHOW [GLOBAL | SESSION] VARIABLES [like_or_where]
+#
+# 		SHOW WARNINGS [LIMIT [offset,] row_count]
+#
+# 		like_or_where:
+# 			LIKE 'pattern'
+# 		 | WHERE expr
+#
+# If the syntax for a given SHOW statement includes a LIKE_'pattern' part,
+# 'pattern' is a string that can contain the SQL % and _ wildcard characters.
+#
+# The pattern is useful for restricting statement output to matching values.
+#
+# Several SHOW statements also accept a WHERE clause that provides more flexibility
+# in specifying which rows to display.
+#
+# See SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS"
+#
+# Many MySQL APIs (such as PHP) enable you to treat the result returned from a SHOW
+# statement as you would a result set from a SELECT, see CHAPTER 28, CONNECTORS AND APIs,
+# or your API documentation for more information.
+#
+# In addition, you can work in SQL with results from queries on tables in the INFORMATION_SCHEMA
+# database, which you cannot easily do with results from SHOW statements.
+#
+# See CHAPTER 25, INFORMATION_SCHEMA TABLES
+#
+# 13.7.6.1 SHOW BINARY LOGS SYNTAX
+#
+# 		SHOW BINARY LOGS
+# 		SHOW MASTER LOGS
+#
+# Lists the binary log files on the server.
+#
+# This statement is used as part of the procedure described in SECTION 13.4.1.1,
+# "PURGE BINARY LOGS SYNTAX", that shows how to determine which logs can be purged.
+#
+# Encrypted binary log files have a 512-byte file header that stores information
+# required for encryption and decryption of the file.
+#
+# This is included in the file size displayed by SHOW_BINARY_LOGS
+#
+# The Encrypted column shows whether or not the binary log file is encrypted.
+#
+# Binary log encryption is active if binlog_encryption=ON is set for the 
+# server.
+#
+# Existing binary log files are not encrypted or decrypted if binary log encryption
+# is activated or deactivated while the server is running.
+#
+# 		SHOW BINARY LOGS;
+# 		+-----------------------+-----------------+---------------------+
+# 		| Log_name 					| File_size 		| Encrypted 			 |
+# 		+-----------------------+-----------------+---------------------+
+# 		| binlog.000015 			| 724935 			| Yes 					 |
+# 		| binlog.000016 			| 733481 			| Yes 					 |
+# 		+-----------------------+-----------------+---------------------+
+#
+# SHOW_MASTER_LOG is equivalent to SHOW_BINARY_LOGS
+#
+# A user with the SUPER or REPLICATION_CLIENT privilege may execute this statement.
+#
+# 13.7.6.2 SHOW BINLOG EVENTS SYNTAX
+#
+# 		SHOW BINLOG EVENTS
+# 			[IN 'log_name']
+# 			[FROM pos]
+# 			[LIMIT [offset,] row_count]
+#
+# Shows the events in the binary log. If you do not specify 'log_name', the first binary log is displayed.
+#
+# The LIMIT clause has the same syntax as for the SELECT statement.
+#
+# See SECTION 13.2.10, "SELECT SYNTAX"
+#
+# NOTE:
+#
+# 		Issuing a SHOW_BINLOG_EVENTS with no LIMIT clause could start a very time- and resource-consuming
+# 		process because the server returns to the client the complete contents of the binary log
+# 		(which includes all statements executed by the server that modify data)
+#
+# 		As an alternative to SHOW_BINLOG_EVENTS, use the mysqlbinlog utility to save the binary
+# 		log to a text file for later examination and analysis.
+#
+# 		See SECTION 4.6.8, "mysqlbinlog -- Utility for processing binary log files"
+#
+# SHOW_BINLOG_EVENTS displays the following fields for each event in the binary log:
+#
+# 		) Log_name
+#
+# 			THe name of the file that is being listed.
+#
+# 		) Pos
+#
+# 			THe position at which the event occurs.
+#
+# 		) Event_type
+#
+# 			An identifier that describes the event type
+#
+# 		) Server_id
+#
+# 			The server ID of the server on which the event originated
+#
+# 		) End_log_pos
+#
+# 			The position at which the next event begins, which is equal to Pos plus the size of the event
+#
+# 		) Info
+#
+# 			More detailed information about the event type.
+#
+# 			The format of this information depends on the event type.
+#
+# NOTE:
+#
+# 		Some events relating to the setting of user and system variables are not included
+# 		in the output from SHOW_BINLOG_EVENTS
+#
+# 		To get complete coverage of events within a binary log, use mysqlbinlog
+#
+# NOTE:
+#
+# 		SHOW_BINLOG_EVENTS does not work with relay log files.
+#
+# 		You can use SHOW_RELAYLOG_EVENTS for this purpose.
+#
+# 13.7.6.3 SHOW CHARACTER SET SYNTAX
+#
+# 		SHOW CHARACTER SET
+# 			[LIKE 'pattern' | WHERE expr]
+#
+# The SHOW_CHARACTER_SET statement shows all available character sets.
+#
+# The LIKE clause, if present, indicates which character set names to match.
+#
+# The WHERE clause can be given to select rows using more general conditions
+# , as discussed in SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS".
+#
+# For example:
+#
+# 		SHOW CHARACTER SET LIKE 'latin%';
+# 		+----------+----------------------------+---------------------+-------------------+
+# 		| Charset  | Description 					 | Default collation   | Maxlen 				 |
+# 		+----------+----------------------------+---------------------+-------------------+
+# 		| latin1   | cp1252 West European 		 | latin1_swedish_ci   | 1 					 |
+# 		| latin2   | ISO 8859-2 Central European| latin2_general_ci   | 1 					 |
+# 		| latin5   | ISO 8859-9 Turkish 		    | latin5_turkish_ci   | 1 					 |
+# 		| latin7   | ISO 8859-13 Baltic 			 | latin7_general_ci   | 1 					 |
+# 		+----------+----------------------------+---------------------+-------------------+
+#
+# SHOW_CHARACTER_SET output has these columns:
+#
+# 		) Charset
+#
+# 			The character set name
+#
+# 		) Description
+#
+# 			A description of the character set
+#
+# 		) Default collation
+#
+# 			THe default collation for the character set
+#
+# 		) Maxlen
+#
+# 			The maximum number of bytes required to store one character
+#
+# The filename character set is for internal use only; consequently, SHOW_CHARACTER_SET does not display it.
+#
+# Character set information is also available from the INFORMATION_SCHEMA CHARACTER_SETS table.
+#
+# See SECTION 25.2, "THE INFORMATION_SCHEMA CHARACTER_SETS TABLE"
+#
+# 13.7.6.4 SHOW COLLATION SYNTAX
+#
+# 		SHOW COLLATION
+# 			[LIKE 'pattern' | WHERE expr]
+#
+# This statement lists collations supported by the server.
+#
+# By default, the output from SHOW_COLLATION includes all available collations.
+#
+# The LIKE clause, if present, indicates which collation names to match.
+#
+# The WHERE clause can be given to select rows using more general conditions,
+# as discussed in SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS".
+#
+# For example:
+#
+# 		SHOW COLLATION WHERE Charset = 'latin1';
+# 		+--------------------+-----------+------+--------------+--------------+------------------+
+# 		| Collation 			| Charset 	| Id   | Default 		 | Compiled 	 | Sortlen 			  |
+# 		+--------------------+-----------+------+--------------+--------------+------------------+
+# 		| latin1_german1_ci  | latin1 	| 5 	 | 				 | Yes 			 | 	1 				  |
+# 		| latin1_swedish_ci  | latin1 	| 8 	 | Yes 			 | Yes 			 | 	1 				  |
+# 		| latin1_danish_ci   | latin1 	| 15 	 | 				 | Yes 			 | 	1 				  |
+# 		| etc.
+#
+# SHOW_COLLATION output has these columns:
+#
+# 		) Collation
+#
+# 			The collation name
+#
+# 		) Charset
+#
+# 			The name of the character set with which the collation is associated
+#
+# 		) Id
+#
+# 			The collation ID
+#
+# 		) Default
+#
+# 			Whether the collation is the default for its character set
+#
+# 		) Compiled
+#
+# 			Whether hte character set is compiled into the server
+#
+# 		) Sortlen
+#
+# 			This is related to the amount of memory required to sort strings expressed in the char set
+#
+# To see the default collation for each character set, use the following statement.
+#
+# Default is a reserved word, so to use it as an identifier, it must be quoted as such:
+#
+# 		SHOW COLLATION WHERE `Default` = 'Yes';
+# 		+--------------------------+----------+-----------+------------+------------------+-------------+
+# 		| Collation 				   | Charset  | Id 		  | Default    | Compiled 			 | Sortlen 		|
+# 		+--------------------------+----------+-----------+------------+------------------+-------------+
+# 		| big5_chinese_ci 			| big5 	  | 1 		  | Yes 	      | Yes 				 | 1 				|
+# 		etc.
+#
+# Collation information is also available from the INFORMATION_SCHEMA COLLATIONS table.
+#
+# See SECTION 25.3, "THE INFORMATION_SCHEMA COLLATIONS TABLE"
+#
+# 13.7.6.5 SHOW COLUMNS SYNTAX
+#
+# 		SHOW [EXTENDED] [FULL] {COLUMNS | FIELDS}
+# 			{FROM | IN} tbl_name
+# 			[{FROM | IN} db_name]
+# 			[LIKE 'pattern' | WHERE expr]
+#
+# SHOW_COLUMNS displays information about the columns in a given table.
+#
+# It also works for views. SHOW_COLUMNS displays information only for those
+# columns for which you have some privilege.
+#
+# 		SHOW COLUMNS FROM City;
+# 		+-----------+------------+---------+---------+--------------+-----------------+
+# 		| Field 		| Type 		 | Null 	  | Key 		| Default 		| Extra 				|
+# 		+-----------+------------+---------+---------+--------------+-----------------+
+# 		| ID 			| int(11) 	 | NO 	  | PRI 		| NULL 			| auto_increment 	|
+# 		| Name 		| char(35) 	 | NO 	  | 			| 					| 						|
+# 		| etc.
+#
+# An alternative to tbl_name FROM db_name syntax is db_name.tbl_name
+#
+# These two statements are equivalent:
+#
+# 		SHOW COLUMNS FROM mytable FROM mydb;
+# 		SHOW COLUMNS FROM mydb.mytable;
+#
+# The optional EXTENDED keyword causes the output to include information
+# about hidden columns that MySQL uses internally and are not accessible by users.
+#
+# The optional FULL keyword causes the output to include the column collation
+# and comments, as well as the privileges you have for each column.
+#
+# The LIKE clause, if present, indicates which column names to match.
+#
+# The WHERE clause can be given to select rows using more general conditions,
+# as discussed in SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS"
+#
+# THe data types may differ from what you expect them to be based on a CREATE_TABLE
+# statement because MySQL sometimes changes data types when you create or alter a
+# table.
+#
+# The conditions under which this occurs are described in SECTION 13.1.20.7,
+# "SILENT COLUMN SPECIFICATION CHANGES"
+#
+# SHOW_COLUMNS displays the following values for each table column:
+#
+# 		) Field
+#
+# 			THe name of the column
+#
+# 		) Type
+#
+# 			THe column data type
+#
+# 		) Collation
+#
+# 			THe collation for nonbinary string columns, or NULL for other columns.
+#
+# 			This value is displayed only if you use the FULL keyword
+#
+# 		) Null
+#
+# 			The column nullability. The value is YES if NULL values can be stored
+# 			in the column, NO if not.
+#
+# 		) Key
+#
+# 			Whether the column is indexed:
+#
+# 				) If Key is empty, the column either is not indexed or is indexed only as a secondary
+# 					column in a multiple-column, nonunique index.
+#
+# 				) If Key is PRI, the column is a PRIMARY KEY or is one of the columns in a multiple-column PRIMARY KEY
+#
+# 				) If Key is UNI, the column is the first column of a UNIQUE index. (A UNIQUE index permits multiple NULL values,
+# 					but you can tell whether the column permits NULL by checking the Null field)
+#
+# 				) If Key is MUL, the column is the first column of a nonunique index in which multiple occurences
+# 					of a given value are permitted within the column.
+#
+# If more than one of the Key values applies to a given column of a table, Key displays the one with the
+# highest priority, in the order PRI, UNI, MUL.
+#
+# A UNIQUE index may be displayed as PRI if it cannot contain NULL values and there is no PRIMARY KEY
+# in the table.
+#
+# A UNIQUE index may display as MUL if several columns form a composite UNIQUE index; although
+# the combination of the columns is unique, each column can still hold multiple occurrences
+# of a given value.
+#
+# 		) Default
+#
+# 			The default value for the column. This is NULL if the column has an explicit default of NULL,
+# 			or if the column definition includes no DEFAULT clause.
+#
+# 		) Extra
+#
+# 			Any additional information that is available about a given column.
+#
+# 			The value is nonempty in these cases:
+#
+# 				) auto_increment for columns that have the AUTO_INCREMENT attribute
+#
+# 				) on update CURRENT_TIMESTAMP for TIMESTAMP or DATETIME columns that have the ON UPDATE CURRENT_TIMESTAMP attribute
+#
+# 				) VIRTUAL GENERATED or VIRTUAL STORED for generated columns
+#
+# 				) DEFAULT_GENERATED for columns that have an expression default value
+#
+# 		) Privileges
+#
+# 			THe privileges you have for the column.
+#
+# 			THis value is displayed only if you use the FULL keyword
+#
+# 		) Comment
+#
+# 			ANy comment included in the column definition. 
+#
+# 			This value is displayed only if you use the FULL keyword
+#
+# Table column information is also available from the INFORMATION_SCHEMA COLUMNS table.
+#
+# See SECTION 25.5, "THE INFORMATION_SCHEMA COLUMNS TABLE"
+#
+# The extended information about hidden columns is available only using
+# SHOW EXTENDED COLUMNS; it cannot be obtained from the COLUMNS table.
+#
+# You can list a table's columns with the mysqlshow db_name tbl_name command
+#
+# The DESCRIBE statement provides information similar to SHOW_COLUMNS.
+# See SECTION 13.8.1, "DESCRIBE SYNTAX"
+#
+# The SHOW_CREATE_TABLE, SHOW_TABLE_STATUS and SHOW_INDEX statements also
+# provide information about tables.
+#
+# See SECTION 13.7.6, "SHOW SYNTAX"
+#
+# 13.7.6.6 SHOW CREATE DATABASE SYNTAX
+#
+# 		SHOW CREATE {DATABASE | SCHEMA} [IF NOT EXISTS] db_name
+#
+# Shows the CREATE_DATABASE statement that creates the named database.
+#
+# If the SHOW statement includes an IF NOT EXISTS clause, the output too includes
+# such a clause.
+#
+# SHOW_CREATE_SCHEMA is a synonym for SHOW_CREATE_DATABASE
+#
+# 		SHOW CREATE DATABASE test\G
+# 		************************* 1. row *******************************
+# 				Database: test
+# 		Create Database: CREATE DATABASE `test`
+# 								/*!40100 DEFAULT CHARACTER SET utf8mb4 */
+#
+# 		SHOW CREATE SCHEMA test\G
+# 		************************* 1. row *******************************
+# 				Database: test
+# 		Create Database: CREATE DATABASE `test`
+# 								/*!40100 DEFAULT CHARACTER SET utf8mb4 */
+#
+# SHOW_CREATE_DATABASE quotes table and column names according to the value of the sql_quote_show_create option.
+#
+# See SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# 13.7.6.7 SHOW CREATE EVENT SYNTAX
+#
+# 		SHOW CREATE EVENT event_name
+#
+# THis statement displays the CREATE_EVENT statement needed to re-create a given event.
+#
+# it requires the EVENT privilege for the database from which the event is to be 
+# shown.
+#
+# For example (using the same event e_daily defined and then altered in SECTION 13.7.6.18, "SHOW EVENTS SYNTAX")
+#
+# 		SHOW CREATE EVENT myschema..e_daily\G
+# 		*********************** 1. row ***************************
+# 						Event: e_daily
+# 					sql_mode: ONLY_FULL_GROUP_BY, STRICT_TRANS_TABLES,
+# 								 NO_ZERO_IN_DATE, NO_ZERO_DATE,
+# 								 ERROR_FOR_DIVISION_BY_ZERO,
+# 								 NO_ENGINE_SUBSTITUTION
+# 					time_zone: SYSTEM
+#				Create event: CREATE DEFINER=`jon`@`ghidora` EVENT `e_daily`
+# 									ON SCHEDULE EVERY 1 DAY
+# 									STARTS CURRENT_TIMESTAMP + INTERVAL 6 HOUR
+# 									ON COMPLETION NOT PRESERVE
+# 									ENABLE
+# 									COMMENT 'Saves total number of sessions then 
+# 												clears the table each day'
+# 									DO BEGIN
+# 										INSERT INTO site_activity.totals (time, total)
+# 											SELECT CURRENT_TIMESTAMP, COUNT(*)
+# 												FROM site_activity.sessions;
+# 										DELETE FROM site_activity.sessions;
+# 									END
+# 		character_set_client: utf8mb4
+# 		collation_connection: utf8mb4_0900_ai_ci
+# 			Database Collation: utf8mb4_0900_ai_ci
+#
+# character_set_client is the session value of the character_set_client system variable
+# when the event was created.
+#
+# collation_connection is the session value of the collation_connection system variable
+# when the event was created.
+#
+# Database Collation is the collation of the database with which the event is associated.
+#
+# The output reflects the current status of the event (ENABLE) rather than the status with which
+# it was created.
+#
+# 13.7.6.8 SHOW CREATE FUNCTION SYNTAX
+#
+# 		SHOW CREATE FUNCTION func_name
+#
+# This statement is similar to SHOW_CREATE_PROCEDURE but for stored functions.
+#
+# See SECTION 13.7.6.9, "SHOW CREATE PROCEDURE SYNTAX"
+#
+# 13.7.6.9 SHOW CREATE PROCEDURE SYNTAX
+#
+# 		SHOW CREATE PROCEDURE proc_name
+#
+# https://dev.mysql.com/doc/refman/8.0/en/show-create-procedure.html
