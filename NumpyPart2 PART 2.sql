@@ -31199,4 +31199,2008 @@
 #
 # 		SHOW CREATE PROCEDURE proc_name
 #
-# https://dev.mysql.com/doc/refman/8.0/en/show-create-procedure.html
+# This statement is a MySQL extension.
+#
+# It returns the exact string that can be used to re-create the named stored procedure.
+#
+# A similar statement, SHOW_CREATE_FUNCTION, displays information about stored functions
+# (see SECTION 13.7.6.8, "SHOW CREATE FUNCTION SYNTAX")
+#
+# To use either statement, you must have the global SELECT privilege.
+#
+# 		SHOW CREATE PROCEDURE test.simpleproc\G
+# 		********************* 1. row ***************************
+# 						Procedure: simpleproc
+# 						sql_mode : ONLY_FULL_GROUP_BY, STRICT_TRANS_TABLES,
+# 									  NO_ZERO_IN_DATE, NO_ZERO_DATE,
+# 									  ERROR_FOR_DIVISION_BY_ZERO,
+# 									  NO_ENGINE_SUBSTITUTION
+# 			  Create Procedure: CREATE PROCEDURE `simpleproc` (OUT param1 INT)
+# 									  BEGIN
+# 									  SELECT COUNT(*) INTO param1 FROM t;
+# 									  END
+# 		 character_set_client: utf8mb4
+# 		collation_connection : utf8mb4_0900_ai_ci
+# 			Database Collation: utf8mb4_0900_ai_ci
+#
+# 		SHOW CREATE FUNCTION test.hello\G
+# 		********************* 1. row ****************************
+# 						Function: hello
+# 						sql_mode: ONLY_FULL_GROUP_BY, STRICT_TRANS_TABLES,
+# 									 NO_ZERO_IN_DATE, NO_ZERO_DATE,
+# 									 ERROR_FOR_DIVISION_BY_ZERO,
+# 									 NO_ENGINE_SUBSTITUTION
+# 			  Create function: CREATE FUNCTION `hello`(s CHAR(20))
+# 									 RETURNS char(50) CHARSET utf8mb4
+# 									 RETURN CONCAT('Hello, ',s,'!')
+# 		character_set_client: utf8mb4
+# 		collation_connection: utf8mb4_0900_ai_ci
+# 		  Database Collation: utf8mb4_0900_ai_ci
+#
+# character_set_client is the session value of the character_set_client system variable
+# when the routine was created.
+#
+# collation_connection is the session value of the collation_connection system variable
+# when the routine was created.
+#
+# Database Collation is the collation of the database with which the routine is associated.
+#
+# 13.7.6.10 SHOW CREATE TABLE SYNTAX
+#
+# 		SHOW CREATE TABLE tbl_name
+#
+# Shows the CREATE_TABLE statement that creates the named table.
+#
+# To use this statement, you must have some privilege for the table.
+# This statement also works with views.
+#
+# 		SHOW CREATE TABLE t\G
+# 		********************** 1. row **********************
+# 			 	 Table: t
+# 		Create Table: CREATE TABLE `t` (
+# 			`id` int(11) NOT NULL AUTO_INCREMENT,
+# 			`s` char(60) DEFAULT NULL,
+# 			PRIMARY KEY (`id`)
+# 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+#
+# SHOW_CREATE_TABLE quotes table and column names according to the value of the sql_quote_show_create
+# option.
+#
+# See SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# For information about how CREATE_TABLE statements are stored by MySQL,
+# see SECTION 13.1.20.1, "CREATE TABLE STATEMENT RETENTION"
+#
+# 13.7.6.11 SHOW CREATE TRIGGER SYNTAX
+#
+# 		SHOW CREATE TRIGGER trigger_name
+#
+# This statement shows the CREATE_TRIGGER statement that creates the named trigger.
+#
+# This statement requires the TRIGGER privilege for the table associated with the trigger.
+#
+# 		SHOW CREATE TRIGGER ins_sum\G
+# 		*************************** 1. row ******************************
+# 							Trigger: ins_sum
+# 						  sql_mode: ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,
+# 										NO_ZERO_IN_DATE,NO_ZERO_DATE,
+# 										ERROR_FOR_DIVISION_BY_ZERO,
+# 										NO_ENGINE_SUBSTITUTION
+# 		SQL Original Statement: CREATE DEFINER=`me`@`localhost` TRIGGER `ins_sum`
+# 										BEFORE INSERT ON `account`
+# 										FOR EACH ROW SET @sum = @sum + NEW.amount
+# 		 character_set_client : utf8mb4
+# 		  collation_connection: utf8mb4_0900_ai_ci
+# 		   Database Collation : utf8mb4_0900_ai_ci
+# 							Created: 2018-08-08 10:10:12.61
+#
+# SHOW_CREATE_TRIGGER output has these columns:
+#
+# 		) Trigger: The trigger name
+#
+# 		) sql_mode: The SQL mode in effect when the trigger executes
+#
+# 		) SQL Original Statement: The CREATE_TRIGGER statement that defines the trigger
+#
+# 		) character_set_client: The session value of the character_set_client system variable when the trigger was created
+#
+# 		) collation_connection: The session value of the collation_connection system variable when the trigger was created
+#
+# 		) Database Collation: The collation of the database with which the trigger is associated
+#
+# 		) Created: The date and time when the trigger was created. This is a TIMESTAMP(2) value (with a fractional part in hundredths of seconds) for triggers.
+#
+# Trigger information is also available from the INFORMATION_SCHEMA TRIGGERS table.
+#
+# See SECTION 25.33, "THE INFORMATION_SCHEMA TRIGGERS TABLE"
+#
+# 13.7.6.12 SHOW CREATE USER SYNTAX
+#
+# 		SHOW CREATE USER user
+#
+# This statement shows the CREATE_USER statement that creates the named user.
+#
+# An error occurs if the user does not exist. The statement requires the SELECT privilege
+# for the mysql system database, except to see information for the current user.
+#
+# For the current user, the SELECT privilege for the mysql.user system table is required
+# for display of the password hash in the IDENTIFIED AS clause; otherwise, the hash displays
+# as <secret>
+#
+# To name the account, use the format described in SECTION 6.2.4, "SPECIFYING ACCOUNT NAMES"
+#
+# The host name part of the account name, if omitted, defaults to '%'.
+#
+# It is also possible to specify CURRENT_USER or CURRENT_USER() to refer to the account
+# associated with the current session.
+#
+# 		SHOW CREATE USER 'root'@'localhost'\G
+# 		********************* 1.  row **************************
+# 		CREATE USER for root@localhost: CREATE USER 'root'@'localhost'
+# 		IDENTIFIED WITH 'mysql_native_password'
+# 		AS '*<serial>'
+# 		REQUIRE NONE PASSWORD EXPIRE DEFAULT ACCOUNT UNLOCK
+#
+# TO display the privileges granted to an account, use the SHOW_GRANTS statement.
+#
+# See SECTION 13.7.6.21, "SHOW GRANTS SYNTAX"
+#
+# 13.7.6.13 SHOW CREATE VIEW SYNTAX
+#
+# 		SHOW CREATE VIEW view_name
+#
+# This statement shows the CREATE_VIEW statement that creates the named view.
+#
+# 		SHOW CREATE VIEW v\G
+# 		************************* 1. row **************************
+# 								View: v
+# 					Create View  : CREATE ALGORITHM=UNDEFINED
+# 										DEFINER=`bob`@`localhost`
+# 										SQL SECURITY DEFINER VIEW
+# 										`v` AS select 1 AS `a`,2 AS `b`
+# 		  character_set_client: utf8mb4
+# 		  collation_connection: utf8mb4_0900_ai_ci
+#
+# character_set_client is the session value of the character_set_client system variable
+# when the view was created.
+#
+# collation_connection is the session value of the collation_connection system variable
+# when the view was created.
+#
+# Use of SHOW_CREATE_VIEW requires the SHOW_VIEW privilege, and the SELECT privilege
+# for the view in question.
+#
+# View information is also available from the INFORMATION_SCHEMA VIEWS table. See SECTION 25.35, "THE INFORMATION_SCHEMA VIEWS TABLE"
+#
+# MySQL lets you use different sql_mode settings to tell the server the type of SQL syntax to support.
+# For example, you might use the ANSI SQL mode to ensure MySQL correctly interprets the standard
+# SQL concatenation operator, the double bar (||), in your queries.
+#
+# If you then create a view that concatenates items, you might worry that changing the sql_mode
+# setting to a value different from ANSI could cause the view to become invalid.
+#
+# But this is not the case. No matter how you write out a view definition, MySQL always
+# stores in the same way, in a canonical form.
+#
+# Here is an example that shows how the server changes a double bar concatenation operator
+# to a CONCAT() function:
+#
+# 		SET sql_mode = 'ANSI';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		CREATE VIEW test.v AS SELECT 'a' || 'b' as col1;
+# 		Query OK, 0 rows affected (0.01 sec)
+#
+# 		SHOW CREATE VIEW test.v\G
+# 		************************** 1. row **************************************
+# 								View: v
+# 					  Create View: CREATE VIEW "v" AS select concat('a', 'b') AS "col1"
+# 		---
+# 		1 row in set (0.00 sec)
+#
+# The advantage of storing a view definition in canonical form is that changes made
+# later to the value of sql_mode will not affect the results from the view.
+#
+# However an additional consequence is that comments prior to SELECT are stripped
+# from the definition by the server.
+#
+# 13.7.6.14 SHOW DATABASES SYNTAX
+#
+# 		SHOW {DATABASES | SCHEMAS}
+# 			[LIKE 'pattern' | WHERE expr]
+#
+# SHOW_DATABASES lists the databases on the MySQL server host.
+#
+# SHOW_SCHEMAS is a synonym for SHOW_DATABASES.. The LIKE clause, if present,
+# indicates which database names to match.
+#
+# The WHERE clause can be given to select rows using more general conditions,
+# as discussed in SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS"
+#
+# You see only those databases for which you have some kind of privilege, unless
+# you have the global SHOW_DATABASES privilege.
+#
+# You can also get this list using the mysqlshow command.
+#
+# If the server was started with the --skip-show-database option, you cannot use
+# this statement at all unless you have the SHOW_DATABASES privilege.
+#
+# MySQL implements databases as directories in the data directory, so this statement
+# simply lists directories in that location.
+#
+# However, the output may include names of directories that do not correspond to actual
+# databases.
+#
+# Database information is also available from the INFORMATION_SCHEMA SCHEMATA table.
+#
+# See SECTION 25.23, "THE INFORMATION_SCHEMA SCHEMATA TABLE"
+#
+# 13.7.6.15 SHOW ENGINE SYNTAX
+#
+# 		SHOW ENGINE engine_name {STATUS | MUTEX}
+#
+# SHOW_ENGINE displays operational information about a storage engine.
+# It requires the PROCESS privilege.
+#
+# The statement has three variants:
+#
+# 		SHOW ENGINE INNODB STATUS
+# 		SHOW ENGINE INNODB MUTEX
+# 		SHOW ENGINE PERFORMANCE_SCHEMA STATUS
+#
+# SHOW_ENGINE_INNODB_STATUS displays extensive information from the standard
+# InnoDB Monitor about the state of the InnoDB storage engine.
+#
+# For information about the standard monitor and other InnoDB monitors
+# that provide information about InnoDB processing, see SECTION 15.16,
+# "InnoDB Monitors"
+#
+# SHOW_ENGINE_INNODB_MUTEX displays InnoDB mutex and rw-lock statistics.
+#
+# NOTE:
+#
+# 		InnoDB mutexes and rwlocks can also be monitored using PERFORMANCE SCHEMA tables.
+#
+# 		See SECTION 15.15.2, "MONITORING INNODB MUTEX WAITS USING PERFORMANCE SCHEMA"
+#
+# Mutex statistics collection is configured dynamically using the following options:
+#
+# 		) To enable the collection of mutex statisitcs, run:
+#
+# 			SET GLOBAL innodb_monitor_enable='latch';
+#
+# 		) To reset mutex statistics, run:
+#
+# 			SET GLOBAL innodb_monitor_reset='latch';
+#
+# 		) To disable the collection of mutex statistics, run:
+#
+# 			SET GLOBAL innodb_monitor_disable='latch';
+#
+# Collection of mutex statistics for SHOW_ENGINE_INNODB_MUTEX can also be enabled
+# by setting innodb_monitor_enable='all', or disable by setting innodb_monitor_disable='all'
+#
+# SHOW_ENGINE_INNODB_MUTEX output has these columns:
+#
+# 		) Type
+# 			
+# 			Always InnoDB
+#
+# 		) Name
+#
+# 			For mutexes, the Name field reports only the mutex name.
+#
+# 			For rwlocks, the Name field reports the source file where the rwlock
+# 			is implemented, and the line number in the file where the rwlock is created.
+#
+# 			The line number is specific to your version of MySQL.
+#
+# 		) Status
+#
+# 			The mutex status.
+#
+# 			The field reports the number of spins, waits and calls. Statistics for low-level
+# 			operating system mutexes, which are implemented outside of InnoDB, are not reported.
+#
+# 				) spins indicates the number of spins
+#
+# 				) waits indicates the number of mutex waits
+#
+# 				) calls indicates how many times the mutex was requested
+#
+# 			SHOW ENGINE INNODB MUTEX skips the mutexes and rw-locks of buffer pool blocks,
+# 			as the amount of output can be overwhelming on systems with a large buffer pool.
+#
+# 			(There is one mutex and one rw-lock in each 16K buffer pool block, and there are 
+# 			65,536 blocks per gigabyte)
+#
+# 			SHOW ENGINE INNODB MUTEX also does not list any mutexes or rw-locks that have never
+# 			been waited on (os_waits=0)
+#
+# 			Thus, SHOW ENGINE INNODB MUTEX only displays information about mutexes and rw-locks
+# 			outside of the buffer pool that have caused at least one OS-level wait.
+#
+# 			Use SHOW_ENGINE_PERFORMANCE_SCHEMA_STATUS to inspect the internal operation of the
+# 			Performance Schema code:
+#
+# 				SHOW ENGINE PERFORMANCE_SCHEMA STATUS\G
+# 				---
+# 				************************* 3. row ***************************************
+# 					Type: performance_schema
+# 					Name: events_waits_history.size
+# 					Status: 76
+#				************************* 4. row ***************************************
+# 					Type: performance_schema
+# 					Name: events_waits_history.count
+# 					Status: 10000
+# 				************************* 5. row ***************************************
+# 					Type: performance_schema
+# 					name: events_waits_history.memory
+# 					Status: 760000
+# 				---
+# 				************************* 57. row ***************************************
+# 					Type: performance_schema
+# 					Name: performance_schema.memory
+# 				Status : 26459600
+# 				---
+#
+# This statement is intended to help the DBA understand the effects that different Performance
+# Schema options have on memory requirements.
+#
+# Name values consist of two parts, which name an internal buffer and a buffer attribute,
+# respectively. Interpret buffer names as follows:
+#
+# 		) An internal buffer that is not exposed as a table is named within parentheses.
+#
+# 			Examples: (pfs_cond_class).size, (pfs_mutex_class).memory
+#
+# 		) An internal buffer that is exposed as a table in the performance_schema database
+# 			is named after the table, without parentheses.
+#
+# 			Examples: events_waits_history.size, mutex_instances.count
+#
+# 		) A value that applies to the Performance Schema as a whole begins with
+# 			performance_schema. 
+#
+# 			Example: performance_schema.memory
+#
+# Buffer attributes have these meanings:
+#
+# 		) size is the size of the internal record used by the implementation, such as the size of a row
+# 			in a table.
+#
+# 			size values cannot be changed
+#
+# 		) count is the number of internal records, such as the number of rows in a table. 
+#
+# 			count values can be changed using Performance Schema configuration options.
+#
+# 		) For a table, tbl_name.memory is the product of size and count.
+#
+# 			For the Performance Schema as a whole, performance_schema.memory is
+# 			the sum of all the memory used (the sum of all other memory values)
+#
+# In some cases, there is a direct relationship between a Performance Schema configuration
+# parameter and a SHOW ENGINE value.
+#
+# For example, events_waits_history_long.count corresponds to performance_schema_waits_history_long_size
+#
+# In other cases, the relationship is more complex. 
+#
+# For example, events_waits_history.count corresponds to performance_schema_events_waits_history_size 
+# (the number of rows per thread) multiplied by performance_schema_max_thread_instances (the number of threads)
+#
+# SHOW ENGINE NDB STATUS
+#
+# If the server has the NDB storage engine enabled, SHOW ENGINE NDB STATUS displays cluster
+# status information such as the number of connected data nodes, the cluster connectstring,
+# and cluster binary log epochs, as well as counts of various Cluster API objects created
+# by the MySQL Server when connected to the cluster.
+#
+# Sample output from this statement is shown here:
+#
+# 		SHOW ENGINE NDB STATUS;
+# 		+------------+--------------------------------+--------------------------------------------+
+# 		| Type 		 | Name 									 | Status 												 |
+# 		+------------+--------------------------------+--------------------------------------------+
+# 		| ndbcluster | connection 							 | cluster_node_id=7, 								 |
+# 		  connected_host=198.51.100.103, connected_port=1186, number_of_data_nodes=4,
+# 		  number_of_ready_data_nodes=3, connect_count=0
+# 		| ndbcluster | NdbTransaction 					 | created=6, free=0, sizeof=212 			 	 |
+# 		| ndbcluster | NdbOperation 						 | created=8, free=8, sizeof=660 				 |
+# 		| ndbcluster | NdbIndexScanOperation 			 | created=1, free=1, sizeof=744 				 |
+# 		| ndbcluster | NdbIndexOperation 				 | created=0, free=0, sizeof=664 				 |
+# 		| ndbcluster | NdbRecAttr 							 | created=1285, free=1285, sizeof=60 			 |
+# 		| ndbcluster | NdbApiSignal 						 | created=16, free=16, sizeof=136 				 |
+# 		| ndbcluster | NdbLabel 							 | created=0, free=0, sizeof=196 				 |
+# 		| ndbcluster | NdbBranch 							 | created=0, free=0, sizeof=24 					 |
+# 		| ndbcluster | NdbSubroutine 						 | created=0, free=0, sizeof=68 					 |
+# 		| ndbcluster | NdbCall 								 | created=0, free=0, sizeof=16 					 |
+# 		| ndbcluster | NdbBlob 								 | created=1, free=1, sizeof=264 				 |
+# 		| ndbcluster | NdbReceiver 						 | created=4, free=0, sizeof=68 					 |
+# 		| ndbcluster | binlog 								 | latest_epoch=155467, latest_trans_epoch=148126,
+# 		  latest_received_binlog_epoch=0, latest_handled_binlog_epoch=0,
+# 		  latest_applied_binlog_epoch=0 																				 |
+# 		+------------------------------------------------------------------------------------------+
+# 
+#
+# The Status column in each of these rows provides information about the MySQL server's connection
+# to the cluster and about the cluster binary log's status, respectively.
+#
+# The Status information is in the form of comma-delimited set of name/value pairs.
+#
+# The connection row's Status column contains the name/value pairs described in the following table.
+#
+# 		NAME 													VALUE
+#
+# 	cluster_node_id 								The node ID of the MySQL server in the cluster
+#
+# 	connected_host 								The host name or IP address of the cluster management server to which the MySQL server is connected
+#
+# 	connected_port 								The port used by the MySQL server to connect to the management server (connected_host)
+#
+# 	number_of_data_nodes 						The number of data nodes configured for the cluster (that is, the number of [ndbd] sections in
+# 														the cluster config.ini file)
+#
+# 	number_of_ready_data_nodes 				The number of data nodes in the cluster that are actually running
+#
+# 	connect_count 									The number of times this mysqld has connected or reconnected to cluster data nodes
+#
+# The binlog row's Status column contains information relating to NDB Cluster Replication.
+#
+# The name/value pairs it contains are described in the following table.
+#
+# 		NAME 													VALUE
+#
+# latest_epoch 										The most recent epoch most recently run on this MySQL server (that is, the sequence
+# 															number of the most recent transaction run on the server)
+#
+# latest_trans_epoch 								The most recent epoch processed by the cluster's data nodes
+#
+# latest_received_binlog_epoch 					The most recent epoch received by the binary log thread
+#
+# latest_handled_binlog_epoch 					The most recent epoch processed by the binary log thread (for writing to the binary log)
+#
+# latest_applied_binlog_epoch 					The most recent epoch actually written to the binary log
+#
+# See SECTION 22.6, "NDB CLUSTER REPLICATION", for more information.
+#
+# The remaining rows from the output of SHOW ENGINE NDB STATUS which are most likely to prove useful
+# in monitoring the cluster are listed here by Name:
+#
+# 		) NdbTransaction: The number and size of NdbTransaction objects that have been created.
+#
+# 			An NdbTransaction is created each time a table schema operation (such as CREATE_TABLE or ALTER_TABLE)
+# 			is performed on an NDB table.
+#
+# 		) NdbOperation: The number and size of NdbOperation objects that have been created.
+#
+# 		) NdbIndexScanOperation: The number and size of NdbIndexScanOperation objects that have been created.
+#
+# 		) NdbIndexOperation: The number and size of NdbIndexOperation objects that have been created.
+#
+# 		) NdbRecAttr: The number and size of NdbRecAttr objects that have been created.
+# 		
+# 			In general, one of these is created each time a data manipulation statement is performed
+# 			by an SQL node.
+#
+# 		) NdbBlob: The number and size of NdbBlob objects that have been created. An NdbBlob is created for each
+# 			new operation involving a BLOB column in an NDB table.
+#
+# 		) NdbReceiver: The number and size of any NdbReceiver object that have been created.
+#
+# 			The number in the created column is the same as the number of data nodes in the cluster
+# 			to which the MySQL server was connected.
+#
+# 			NOTE:
+#
+# 				SHOW ENGINE NDB STATUS returns an empty result if no operations involving NDB tables
+# 				have been performed during the current session by the MySQL client accessing
+# 				the SQL node on which this statement is run.
+#
+# 13.7.6.16 SHOW ENGINES SYNTAX
+#
+# 		SHOW [STORAGE] ENGINES
+#
+# SHOW_ENGINES displays status information about the server's storage engines.
+#
+# This is particularly useful for checking whether a storage engine is supported,
+# or to see what the default engine is.
+#
+# For information about MySQL storage engines, see CHAPTER 15, THE INNODB STORAGE ENGINE, and CHAPTER 16, ALTERNATIVE STORAGE ENGINES
+#
+# 		SHOW ENGINES\G
+# 		*********************** 1. row ********************************
+# 				Engine: ARCHIVE
+# 			Support  : YES
+# 			  Comment: Archive storage engine
+# 		Transactions: NO
+# 					 XA: NO
+# 	   Savepoints  : NO
+# 		************************ 2. row **********************************
+# 				Engine: BLACKHOLE
+# 			 Support : YES
+# 			Comment  : /dev/null storage engine (anything you write to it disappears)
+# 	Transactions   : NO
+# 					 XA: NO
+# 		Savepoints  : NO
+# 		************************* 3. row ***********************************
+# 				Engine: MRG_MYISAM
+# 			Support  : YES
+# 			Comment  : Collection of identical MyISAM tables
+# 		Transactions: NO
+# 					XA : NO
+# 		Savepoints  : NO
+# 		************************* 4. row ************************************
+# 				Engine: FEDERATED
+# 			Support  : NO
+# 			Comment  : Federated MySQL storage engine
+# 		Transactions: NULL
+# 					XA : NULL
+# 		 Savepoints : NULL
+# 		************************** 5. row ************************************
+# 				Engine: MyISAM
+# 			Support  : YES
+# 			  Comment: MyISAM storage engine
+# 		Transactions: NO
+# 					XA : NO
+# 		Savepoints  : NO
+# 		************************** 6. row **************************************
+# 				Engine: PERFORMANCE_SCHEMA
+# 			  Support: YES
+# 			  Comment: Performance Schema
+# 		Transactions: NO
+# 					XA : NO
+# 		  Savepoints: NO
+# 		************************** 7. row **************************************
+# 				Engine: InnoDB
+# 			  Support: DEFAULT
+# 			  Comment: Supports transactions, row-level locking, and foreign keys
+# 		Transactions: YES
+# 					XA : YES
+# 		Savepoints  : YES
+# 		************************** 8. row ***************************************
+# 				Engine: MEMORY
+# 			Support  : YES
+# 			  Comment: Hash based, stored in memory, useful for temporary tables
+# 		Transactions: NO
+# 					XA : NO
+# 	    Savepoints : NO
+# 		************************** 9. row ***************************************
+# 				Engine: CSV
+# 			  Support: YES
+# 			  Comment: CSV storage engine
+# 		Transactions: NO
+# 					XA : NO
+# 		  Savepoints: NO
+#
+# The output from SHOW_ENGINES may vary according to the MySQL version used and other factors.
+#
+# SHOW_ENGINES output has these columns:
+#
+# 		) Engine
+#
+# 			The name of the storage engine
+#
+# 		) Support
+#
+# 			The server's level of support for the storage engine, as shown in the following table.
+#
+# 			VALUE 		MEANING
+#
+# 			YES 			The engine is supported and is active
+#
+# 			DEFAULT 		Like YES, plus this is the default engine
+#
+# 			NO 			The engine is not supported
+#
+# 			DISABLED 	The engine is supported but has been disabled
+#
+# 			A value of NO means that the server was compiled without support for the engine,
+# 			so it cannot be enabled at runtime.
+#
+# 			A value of DISABLED occurs either because the server was started with an option that
+# 			disables the engine, or because not all options required to enable it were given.
+#
+# 			In the latter case, the error log should contain a reason indicating why the option
+# 			is disabled.
+#
+# 			See SECTION 5.4.2, "THE ERROR LOG"
+#
+# 			You might also see DISABLED for a storage engine if the server was compiled to support
+# 			it, but was started with a --skip-engine_name option.
+#
+# 			For the NDB storage engine, DISABLED means the server was compiled with support
+# 			for NDB Cluster, but was not started with the --ndbcluster option
+#
+# 			All MySQL servers support MyISAM tables. It is not possible to disable MyISAM
+#
+# 		) Comment
+#
+# 			A brief desription of the storage engine
+#
+# 		) Transactions
+#
+# 			Whether the storage engine supports transactions
+#
+# 		) XA
+#
+# 			Whether the storage engine supports XA transactions
+#
+# 		) Savepoints
+#
+# 			Whether the storage engine supports savepoints
+#
+# Storage engine information is also available from the INFORMATION_SCHEMA ENGINES table.
+#
+# See SECTION 25.8, "THE INFORMATION_SCHEMA ENGINES TABLE"
+#
+# 13.7.6.17 SHOW ERRORS SYNTAX
+#
+# 		SHOW ERRORS [LIMIT [offset,] row_count]
+# 		SHOW COUNT(*) ERRORS
+#
+# SHOW_ERRORS is a diagnostic statement that is similar to SHOW_WARNINGS, except that
+# it displays information only for errors, rather than for errors, warnings, and notes.
+#
+# The LIMIT clause has the same syntax as for the SELECT statement. See SECTION 13.2.10, "SELECT SYNTAX"
+#
+# The SHOW_COUNT(*)_ERRORS statement displays the number of errors. You can also retrieve this
+# number from the error_count variable:
+#
+# 		SHOW COUNT(*) ERRORS;
+# 		SELECT @@error_count;
+#
+# SHOW_ERRORS and error_count apply only to errors, not warnings or notes.
+#
+# In other respects, they are similar to SHOW_WARNINGS and warning_count.
+#
+# In particular, SHOW_ERRORS cannot display information for more than max_error_count
+# messages, and error_count can exceed the value of max_error_count if the number
+# of errors exceeds max_error_count
+#
+# For more information, see SECTION 13.7.6.40, "SHOW WARNINGS SYNTAX"
+#
+# 13.7.6.18 SHOW EVENTS SYNTAX
+#
+# SHOW EVENTS
+# 		[{FROM | IN} schema_name]
+# 		[LIKE 'pattern' | WHERE expr]
+#
+# This statement displays information about Event Manager events, which are discussed
+# in SECTION 24.4, "USING THE EVENT SCHEDULER"
+#
+# It requires the EVENT privilege for the database from which the events are to be shown.
+#
+# In its simplest form, SHOW_EVENTS lists all of the events in the current schema:
+#
+# 		SELECT CURRENT_USER(), SCHEMA();
+# 		+-----------------+-----------+
+# 		| CURRENT_USER()  | SCHEMA()  |
+# 		+-----------------+-----------+
+# 		| jon@ghidora     | myschema  |
+# 		+-----------------+-----------+
+# 		1 row in set (0.00 sec)
+#
+# 		SHOW EVENTS\G
+# 		*********************** 1. row ***************************************
+# 							Db: myschema
+# 						 Name: e_daily
+# 					Definer : jon@ghidora
+# 				Time zone  : SYSTEM
+# 					  Type  : RECURRING
+# 			Execute at    : NULL
+# 			Interval value: 1
+# 			Interval field: DAY
+# 					Starts  : 2018-08-08 11:06:34
+# 					  Ends  : NULL
+# 					Status  : ENABLED
+# 				Originator : 1
+# 	character_set_client: utf8mb4
+# 	collation_connection: utf8mb4_0900_ai_ci
+#   Database Collation : utf8mb4_0900_ai_ci
+#
+# To see events for a specific schema, use the FROM clause. For example, to see events
+# for the test schema, use the following statement:
+#
+# 		SHOW EVENTS FROM test;
+#
+# The LIKE clause, if present, indicates which event names to match.
+#
+# The WHERE clause can be given to select rows using more general conditions,
+# as discussed in SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS"
+#
+# SHOW_EVENTS output has these columns:
+#
+# 		) Db
+# 			
+# 			The name of the schema (database) to which the event belongs
+#
+# 		) Name
+#
+# 			The name of the event
+#
+# 		) Definer
+#
+# 			The account of the user who created the event, in 'user_name'@'host_name' format.
+#
+# 		) Time zone
+#
+# 			The event time zone, which is the time zone used for scheduling the event and that
+# 			is in effect within the event as it executes.
+#
+# 			The default value is SYSTEM
+#
+# 		) Type
+#
+# 			The event repetition type, either ONE TIME (transient) or RECURRING (repeating)
+#
+# 		) Execute At
+#
+# 			For a one-time event, this is the DATETIME value specified in the AT clause of the
+# 			CREATE_EVENT statement used to create the event, or of the last ALTER_EVENT
+# 			statement that modified the event.
+#
+# 			The value shown in this column reflects the addition or subtraction of any
+# 			INTERVAL value included in the event's AT clause.
+#
+# 			For example, if an event is created using ON SCHEDULE AT CURRENT_TIMESTAMP + '1:6' DAY_HOUR,
+# 			and the event was created at 2018-02-09 14:05:30, the value shown in this column
+# 			would be '2018-02-10 20:05:30'
+#
+# 			If the event's timing is determined by an EVERY clause instead of an AT clause
+# 			(that is, if the event is recurring), the value of this column is NULL
+#
+# 		) Interval Value
+#
+# 			For a recurring event, the number of intervals to wait between event executions.
+#
+# 			For a transient event, the value of this column is always NULL
+#
+# 		) Interval Field
+#
+# 			The time units used for the interval which a recurring event waits before repeating.
+#
+# 			For a transient event, the value of this column is always NULL
+#
+# 		) Starts
+#
+# 			The start date and time for a recurring event.
+#
+# 			This is displayed as a DATETIME value, and is NULL if no start date and
+# 			time are defined for the event.
+#
+# 			For a transient event, this column is always NULL. For a recurring event
+# 			whose definition includes a STARTS clause, this column contains the corresponding
+# 			DATETIME value.
+#
+# 			As with the Execute At column, this value resolves any expressions used.
+#
+# 			If there is no STARTS clause affecting the timing of the event, this column is NULL
+#
+# 		) ENDS
+#
+# 			For a recurring event whose definition includes a ENDS clause, this column contains the
+# 			corresponding DATETIME value.
+#
+# 			As with the Execute At column, this value resolves any expressions used.
+#
+# 			If there is no ENDS clause affecting the timing of the event, this column is NULL
+#
+# 		) Status
+#
+# 			The event status. One of ENABLED, DISABLED or SLAVESIDE_DISABLED.
+#
+# 			SLAVESIDE_DISABLED indicates that hte creation of the event occurred
+# 			on another MySQL server acting as a replication master and replicated
+# 			to the current MySQL server which is acting as a slave, but the event
+# 			is not presently being executed on the slave.
+#
+# 			For more information, see SECTION 17.4.1.16, "REPLICATION OF INVOKED FEATURES"
+# 			information
+#
+# 		) Originator
+#
+# 			The server ID of the MySQL server on which the event was created; used in replication.
+#
+# 			The default value is 0
+#
+# 		) character_set_client
+#
+# 			The session value of the character_set_client system variable when the event
+# 			was created.
+#
+# 		) collation_connection
+#
+# 			The session value of the collation_connection system variable when the event
+# 			was created.
+#
+# 		) Database Collation
+#
+# 			The collation of the database with which the event is associated
+#
+# For more information about SLAVESIDE_DISABLED and the Originator column, see SECTION 17.4.1.16,
+# "REPLICATION OF INVOKED FEATURES"
+#
+# Times displayed by SHOW_EVENTS are given in the event time zone, as discussed in SECTION 24.4.4, "EVENT METADATA"
+#
+# Event information is also available from the INFORMATION_SCHEMA EVENTS table. See SECTION 25.9, "THE INFORMATION_SCHEMA EVENTS TABLE"
+#
+# The event action statement is not shown in the output of SHOW_EVENTS.
+#
+# Use SHOW_CREATE_EVENT or the INFORMATION_SCHEMA EVENTS table.
+#
+# 13.7.6.19 SHOW FUNCTION CODE SYNTAX
+#
+# 		SHOW FUNCTION CODE func_name
+#
+# This statement is similar to SHOW_PROCEDURE_CODE but for stored functions.
+#
+# See SECTION 13.7.6.27, "SHOW PROCEDURE CODE SYNTAX"
+#
+# 13.7.6.20 SHOW FUNCTION STATUS SYNTAX
+#
+# 		SHOW FUNCTION STATUS
+# 			[LIKE 'pattern' | WHERE expr]
+#
+# This statement is similar to SHOW_PROCEDURE_STATUS but for stored functions.
+#
+# See SECTION 13.7.6.28, "SHOW PROCEDURE STATUS SYNTAX"
+#
+# 13.7.6.21 SHOW GRANTS SYNTAX
+#
+# 		SHOW GRANTS
+# 			[FOR user_or_role
+# 				[USING role [, role] ---]]
+#
+# 		user_or_role: {
+# 			user
+# 		 | role
+# 		}
+#
+# This statement displays the privileges and roles that are assigned to a MySQL
+# user account or role, in the form of GRANT statements that must be executed
+# to duplicate the privilege and role assignments.
+#
+# NOTE:
+#
+# 		To display nonprivilege information for MySQL accounts, use the SHOW_CREATE_USER
+# 		statement.
+#
+# 		See SECTION 13.7.6.12, "SHOW CREATE USER SYNTAX"
+#
+# SHOW_GRANTS requires the SELECT privilege for the mysql system database, except to
+# display privileges and roles for the current user.
+#
+# To name the account or role for SHOW_GRANTS, use the same format as for the  GRANT
+# statement; for example, 'jeffrey'@'localhost':
+#
+# 		SHOW GRANTS FOR 'jeffrey'@'localhost';
+# 		+-----------------------------------------------------------------+
+# 		| Grants for jeffrey@localhost 												|
+# 		+-----------------------------------------------------------------+
+# 		| GRANT USAGE ON *.* TO `jeffrey`@`localhost`   						|
+# 		| GRANT SELECT, INSERT, UPDATE ON `db1`.* TO `jeffrey`@`localhost`|
+# 		+-----------------------------------------------------------------+
+#
+# The host part, if omitted, defaults to '%'
+#
+# For additional information about specifying account and role names,
+# See SECTION 6.2.4, "SPECIFYING ACCOUNT NAMES", and SECTION 6.2.5, "SPECIFYING ROLE NAMES"
+#
+# To display the privileges granted to the current user (the account you are using to connect
+# to the server), you can use any of the following statements:
+#
+# 		SHOW GRANTS;
+# 		SHOW GRANTS FOR CURRENT_USER;
+# 		SHOW GRANTS FOR CURRENT_USER();
+#
+# If SHOW GRANTS FOR CURRENT_USER (or any of the equivalent syntaxes) is used in
+# definer context, such as within a stored procedure that executes with definer
+# rather than invoker privileges, the grants displayed are those of the definer
+# and not hte invoker.
+#
+# In MySQL 8.0 compared to previous series, SHOW_GRANTS no longer displays ALL_PRIVILEGES
+# in its global-privileges output because the meaning of ALL_PRIVILEGES at the
+# global level varies depending on which dynamic privileges are defined.
+#
+# Instead, SHOW_GRANTS explicitly lists each granted global privilege:
+#
+# 		SHOW GRANTS FOR 'root'@'localhost';
+# 		+-------------------------------------------------------+
+# 		| Grants for root@localhost 								     |
+# 		+-------------------------------------------------------+
+# 		| GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP,   |
+# 		| RELOAD, SHUTDOWN, PROCESS, FILE, REFERENCES, INDEX,   |
+# 		| ALTER, SHOW DATABASES, SUPER, CREATE TEMPORARY TABLES,|
+# 		| LOCK TABLES, EXECUTE, REPLICATION SLAVE, REPLICATION  |
+# 		| CLIENT, CREATE VIEW, SHOW VIEW, CREATE ROUTINE, 		  |
+# 		| ALTER ROUTINE, CREATE USER, EVENT, TRIGGER, CREATE    |
+# 		| TABLESPACE, CREATE ROLE, DROP ROLE ON *.* TO  		  |
+# 		| `root`@`localhost` WITH GRANT  							  |
+# 		| OPTION  															  |
+# 		| GRANT PROXY ON ''@'' TO 'root'@'localhost' WITH       |
+# 		|  GRANT OPTION       											  |
+# 		+-------------------------------------------------------+
+#
+# Applications that process SHOW_GRANTS output should be adjusted accordingly.
+#
+# At the global level, GRANT_OPTION applies to all granted static global
+# privileges if granted for any of them, but applies individually to granted
+# dynamic privileges.
+#
+# SHOW_GRANTS displays global privileges this way:
+#
+# 		) One line listing all granted static privileges, if there are any, including WITH GRANT OPTION if appropriate
+#
+# 		) One line listing all granted dynamic privileges for which GRANT_OPTION is granted, if there are any,
+# 			including WITH GRANT OPTION
+#
+# 		) One line listing all granted dynamic privileges for which GRANT_OPTION is not granted, if there
+# 			are any, without WITH GRANT OPTION
+#
+# With the optional USING clause, SHOW_GRANTS enables you to examine the privileges associated
+# with roles for the user.
+#
+# Each role named in the USING clause must be granted to the user.
+#
+# Suppose that user u1 is assigned roles r1 and r2, as follows:
+#
+# 		CREATE ROLE 'r1', 'r2';
+# 		GRANT SELECT ON db1.* TO 'r1';
+# 		GRANT INSERT, UPDATE, DELETE ON db1.* TO 'r2';
+# 		CREATE USER 'u1'@'localhost' IDENTIFIED BY 'u1pass';
+# 		GRANT 'r1', 'r2' TO 'u1'@'localhost';
+#
+# SHOW_GRANTS without USING shows the granted roles:
+#
+# 		SHOW GRANTS FOR 'u1'@'localhost';
+# 		+-----------------------------------------------+
+# 		| Grants for u1@localhost 								|
+# 		+-----------------------------------------------+
+# 		| GRANT USAGE ON *.* TO `u1`@`localhost`  		|
+# 		| GRANT `r1`@`%`, `r2`@`%` TO `u1`@`localhost`  |
+# 		+-----------------------------------------------+
+#
+# Adding a USING clause causes the statement to also display the privileges
+# associated with each role named in the clause:
+#
+# 		SHOW GRANTS FOR 'u1'@'localhost' USING 'r1';
+# 		+--------------------------------------------+
+# 		| Grants for u1@localhost 					 		|
+# 		+--------------------------------------------+
+# 		| GRANT USAGE ON *.* TO `u1`@`localhost`		|
+# 		| GRANT SELECT ON `db1`.* TO `u1`@`localhost`|
+# 		| GRANT `r1`@`%`,`r2`@`%` TO `u1`@`localhost`|
+# 		+--------------------------------------------+
+# 		SHOW GRANTS FOR 'u1'@'localhost' USING 'r2';
+# 		+------------------------------------------------------------+
+# 		| Grants for u1@localhost 												 |
+# 		+------------------------------------------------------------+
+# 		| GRANT USAGE ON *.* TO `u1`@`localhost` 							 |
+# 		| GRANT INSERT, UPDATE, DELETE ON `db1`.* TO `u1`@`localhost`|
+# 		| GRANT `r1`@`%`, `r2`@`%` TO `u1`@`localhost`					 |
+# 		+------------------------------------------------------------+
+# 		SHOW GRANTS FOR 'u1'@'localhost' USING 'r1', 'r2';
+# 		+--------------------------------------------------------------------+
+# 		| Grants for u1@localhost 												 			|
+# 		+--------------------------------------------------------------------+
+# 		| GRANT USAGE ON *.* TO `u1`@`localhost` 							 			|
+# 		| GRANT SELECT, INSERT, UPDATE, DELETE ON `db1`.* TO `u1`@`localhost`|
+# 		| GRANT `r1`@`%`,`r2`@`%` TO `u1`@`localhost`								|
+# 		+--------------------------------------------------------------------+
+#
+# NOTE:
+#
+# 		A privilege granted to an account is always in effect, but a role is not.
+#
+# 		The active roles for an account can differ across and within sessions,
+# 		depending on the value of the activate_all_roles_on_login system
+# 		variable, the account default roles, and whether SET_ROLE has been executed
+# 		within a session.
+#
+# SHOW_GRANTS does not display privileges that are available to the named account
+# but are granted to a different account.
+#
+# For example, if an anonymous account exists, the named account might be able to
+# use its privileges, but SHOW_GRANTS does not display them.
+#
+# SHOW_GRANTS displays mandatory roles named in the mandatory_roles system variable
+# value as follows:
+#
+# 		) SHOW_GRANTS without a FOR clause displays privileges for the current user,
+# 			and includes mandatory roles
+#
+# 		) SHOW_GRANTS_FOR_user displays privileges for the name used, and does not include
+# 			mandatory roles.
+#
+# This behavior is for the benefit of applications that use the output of SHOW_GRANTS_FOR_user
+# to determine which privileges are granted explicitly to the named user.
+#
+# Were that output to include mandatory roles, it would be difficult to distinguish roles
+# granted explicitly to the user from mandatory roles.
+#
+# For the current user, applications can determine privileges with or without mandatory
+# roles by using SHOW_GRANTS or SHOW_GRANTS_FOR_CURRENT_USER, respectively.
+#
+# 13.7.6.22 SHOW INDEX SYNTAX
+#
+# 		SHOW [EXTENDED] {INDEX | INDEXES | KEYS}
+# 			{FROM | IN} tbl_name
+# 			[{FROM | IN} db_name]
+# 			[WHERE expr]
+#
+# SHOW_INDEX returns table index information.
+#
+# The format resembles that of the SQLStatistics call in ODBC.
+#
+# This statement requires some privilege for any column in the table.
+#
+# 		SHOW INDEX FROM City\G
+# 		*********************** 1. row ******************************
+# 					Table: city
+# 			Non_unique : 0
+# 				Key_name: PRIMARY
+# 		Seq_in_index  : 1
+# 		Column_name   : ID
+# 			Collation  : A
+# 		Cardinality   : 4188
+# 			Sub_part   : NULL
+# 			  Packed   : NULL
+# 				NULL    : 
+# 		Index_type    : BTREE
+# 				Comment : 
+# 		Index_comment :
+# 			Visible    : YES
+# 		  Expression  : NULL
+# 		*********************** 2. row *********************************
+# 					Table: city
+# 			Non_unique : 1
+# 				Key_name: CountryCode
+# 			Seq_in_index: 1
+# 			Column_name: CountryCode
+# 			 Collation : A
+# 			Cardinality: 232
+# 				Sub_part: NULL
+# 				 Packed : NULL
+# 					Null :
+# 			Index_type : BTREE
+# 			  Comment  :
+# 		Index_comment :
+# 			Visible    : YES
+# 			Expression : NULL
+#
+# An alternative to tbl_name FROM db_name syntax is db_name.tbl_name
+#
+# These two statements are equivalent:
+#
+# 		SHOW INDEX FROM mytable FROM mydb;
+# 		SHOW INDEX FROM mydb.mytable;
+#
+# The optional EXTENDED keyword causes the output to include information about
+# hidden indexes that MySQL uses internally and are not accessible by users.
+#
+# The WHERE clause can be given to select rows using more general conditions,
+# as discussed in SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS"
+#
+# SHOW_INDEX returns the following fields:
+#
+# 		) Table
+#
+# 			The name of the table
+#
+# 		) Non_unique
+#
+# 			0 if the index cannot contain duplicates, 1 if it can
+#
+# 		) Key_name
+#
+# 			The name of the index. If the index is the primary key, the name
+# 			is always PRIMARY
+#
+# 		) Seq_in_index
+# 
+# 			The column sequence number in the index, starting with 1
+#
+# 		) Column_name
+#
+# 			The column name. See also the description for the Expression column
+#
+# 		) Collation
+#
+# 			How the column is sorted in the index. This can have values A (ascending), D (descending)
+# 			or NULL (not sorted)
+#
+# 		) Cardinality
+#
+# 			An estimate of the number of unique values in the index.
+#
+# 			To update this number, run ANALYZE_TABLE or (for MyISAM tables) myisamchk -a
+#
+# 			Cardinality is counted based on statistics stored as integers, so the value is not
+# 			necessarily exact even for small tables.
+#
+# 			The higher hte cardinality, the greater the chance that MySQL uses the index when doing joins
+#
+# 		) Sub_part
+#
+# 			The index prefix.
+#
+# 			That is, the number of indexed characters if the column is only partly indexed,
+# 			NULL if the entire column is indexed.
+#
+# 			NOTE:
+#
+# 				Prefix limits are measured in bytes. However, prefix lengths for index
+# 				specifications in CREATE_TABLE, ALTER_TABLE, and CREATE_INDEX statements
+# 				are interpreted as number of characters for nonbinary string types
+# 				(CHAR, VARCHAR, TEXT) and number of bytes for binary string types
+# 				(BINARY, VARBINARY, BLOB)
+#
+# 				Take this into account when specifying a prefix length for a nonbinary string
+# 				column that uses a multibyte character set.
+#
+# 			For additional information about index prefixes, see SECTION 8.3.5, "COLUMN INDEXES",
+# 			and SECTION 13.1.15, "CREATE INDEX SYNTAX"
+#
+# 		) PACKED
+#
+# 			Indicates how the key is packed. NULL if it is not
+#
+# 		) NULL
+#
+# 			Contains YES if the column may contain NULL values and '' if not
+#
+# 		) INDEX_TYPE
+#
+# 			The index method used (BTREE, FULLTEXT, HASH, RTREE)
+#
+# 		) COMMENT
+#
+# 			Information about the index not described in its own column, such as disabled if the index is disabled.
+#
+# 		) INDEX_COMMENT
+#
+# 			Any comment provided for the index with a COMMENT attribute when the index was created.
+#
+# 		) VISIBLE
+#
+# 			Whether the index is visible to the optimizer. See SECTION 8.3.12, "INVISIBLE INDEXES"
+#
+# 		) EXPRESSION
+#
+# 			MySQL 8.0.13 and higher supports functional key parts (see FUNCTIONAL KEY PARTS),
+# 			which affects both the Column_name and Expression columns:
+#
+# 				) For a nonfunctional key part, Column_name indicates the column indexed
+# 					by the key part and Expression is NULL
+#
+# 				) For a functional key part, Column_name column is NULL and Expression indicates
+# 					the expression for the key part.
+#
+# Information about table indexes is also available from the INFORMATION_SCHEMA STATISTICS
+# table.
+#
+# See SECTION 25.25, "THE INFORMATION_SCHEMA STATISTICS TABLE"
+#
+# The extended information about hidden indexes is available only using
+# SHOW EXTENDED INDEX; it cannot be obtained from the STATISTICS table.
+#
+# You can list a table's indexes with the mysqlshow -k db_name tbl_name command
+#
+# 13.7.6.23 SHOW MASTER STATUS SYNTAX
+#
+# 		SHOW MASTER STATUS
+#
+# This statement provides status information about the binary log files of the master.
+#
+# It requires either the SUPER or REPLICATION_CLIENT privilege.
+#
+# Example:
+#
+# 		SHOW MASTER STATUS\G
+# 		********************** 1. row **************************
+# 						File: master-bin.000002
+# 				Position  : 1307
+# 			Binlog_Do_DB : test
+# 		Binlog_Ignore_DB: manual, mysql
+# 	  Executed_Gtid_Set: <serial>
+# 		1 row in set (0.00 sec)
+#
+# When global transaction IDs are in use, Executed_Gtid_Set shows the set of
+# GTIDs for transactions that have been executed on the master.
+#
+# This is the same as the value for the gtid_executed system variable
+# on this server, as well as the value for Executed_Gtid_Set in the
+# output of SHOW_SLAVE_STATUS on this server.
+#
+# 13.7.6.24 SHOW OPEN TABLES SYNTAX
+#
+# 		SHOW OPEN TABLES
+# 			[{FROM | IN} db_name]
+# 			[LIKE 'pattern' | WHERE expr]
+#
+# SHOW_OPEN_TABLES lists the non-TEMPORARY tables that are currently open in the
+# table cache.
+#
+# See SECTION 8.4.3.1, "HOW MYSQL OPENS AND CLOSES TABLES"
+#
+# The FROM clause, if present, restricts the tables shown to those
+# present in the db_name database.
+#
+# The LIKE clause, if present, indicates which table names to match.
+#
+# The WHERE clause can be given to select rows using more general conditions,
+# as discussed in SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS"
+#
+# SHOW_OPEN_TABLES output has these columns:
+#
+# 		) Database
+#
+# 			The database containing the table
+#
+# 		) Table
+#
+# 			The table name
+#
+# 		) In_use
+#
+# 			The number of table locks or lock requests there are for the table.
+#
+# 			For example, if one client acquires a lock for a table using:
+#
+# 				LOCK TABLE t1 WRITE
+#
+# 			In_use will be 1.
+#
+# 			If another client issues LOCK TABLE t1 WRITE while the table remains
+# 			locked, the client will block waiting for the lock, but the lock request
+# 			causes In_use to be 2.
+#
+# 			If the count is zero, the table is open but not currently being used.
+#
+# 			In_use is also increased by the HANDLER_---_OPEN statement and decreases
+# 			by HANDLER_---_CLOSE
+#
+# 		) Name_locked
+#
+# 			Whether the table name is locked. Name locking is used for operations
+# 			such as dropping or renaming tables.
+#
+# If you have no privileges for a table, it does not show up in the ouput from
+# SHOW_OPEN_TABLES
+#
+# 13.7.6.25 SHOW PLUGINS SYNTAX
+#
+# 		SHOW PLUGINS
+#
+# SHOW_PLUGINS displays information about server plugins
+#
+# Example of SHOW_PLUGINS output:
+#
+# 		SHOW PLUGINS\G
+# 		********************* 1. row ************************
+# 			Name: binlog
+# 		 Status: ACTIVE
+# 		  Type : STORAGE ENGINE
+# 		Library: NULL
+# 		License: GPL
+# 		********************** 2. row ************************
+# 			Name: CSV
+# 		 Status: ACTIVE
+# 		  Type : STORAGE ENGINE
+# 		Library: NULL
+# 		License: GPL
+#		*********************** 3. row ************************
+# 			Name: MEMORY
+# 		 Status: ACTIVE
+# 		  Type : STORAGE ENGINE
+# 		Library: NULL
+# 		License: GPL
+# 		*********************** 4. row *************************
+# 			Name: MyISAM
+# 		  Status: ACTIVE
+# 		Type   : STORAGE ENGINE
+# 		Library: NULL
+# 		License: GPL
+# 		---
+#
+# SHOW_PLUGINS output has these columns:
+#
+# 		) Name
+#
+# 			The name used to refer to the plugin in statements such as INSTALL_PLUGIN
+# 			and UNINSTALL_PLUGIN
+#
+# 		) Status
+#
+# 			The plugin status, one of ACTIVE, INACTIVE, DISABLED, DELETING or DELETED.
+#
+# 		) Type
+#
+# 			The type of plugin, such as STORAGE ENGINE, INFORMATION_SCHEMA, or AUTHENTICATION
+#
+# 		) Library
+#
+# 			The name of the plugin shared library file.
+#
+# 			This is the name used to refer to the plugin file in statements such as
+# 			INSTALL_PLUGIN and UNINSTALL_PLUGIN
+#
+# 			This file is located in the direcotry named by the plugin_dir system variable.
+#
+# 			If the library name is NULL, the plugin is compiled in and cannot be uninstalled
+# 			with UNINSTALL_PLUGIN
+#
+# 		) License
+#
+# 			How the plugin is licensed; for example, GPL
+#
+# For plugins installed with INSTALL_PLUGIN, the Name and Library values are also
+# registered in the mysql.plugin system table.
+#
+# For information about plugin data structures that form the basis of the information
+# displayed by SHOW_PLUGINS, see SECTION 29.2, "THE MYSQL PLUGIN API"
+#
+# Plugin information is also available from the INFORMATION_SCHEMA.PLUGINS table
+#
+# See SECTION 25.17, "THE INFORMATION_SCHEMA PLUGINS TABLE"
+#
+# 13.7.6.26 SHOW PRIVILEGES SYNTAX
+#
+# 		SHOW PRIVILEGES
+#
+# SHOW_PRIVILEGES shows the list of system privileges that the MySQL server supports.
+#
+# The privileges displayed include all static privileges, and all currently registered
+# dynamic privileges.
+#
+# 		SHOW PRIVILEGES\G
+# 		********************** 1. row *************************
+# 		Privilege: Alter
+# 		Context: Tables
+# 		Comment: To alter the table
+# 		********************** 2. row **************************
+# 		Privilege: Alter routine
+# 		Context: Functions, Procedures
+# 		Comment: To alter or drop stored functions/procedures
+# 		********************** 3. row ***************************
+# 		Privilege: Create
+# 		Context: Databases, Tables, Indexes
+# 		Comment: To create new databases and tables
+# 		********************** 4. row ****************************
+# 		Privilege: Create routine
+# 		Context: Databases
+# 		Comment: To use CREATE FUNCTION/PROCEDURE
+# 		********************** 5. row *****************************
+# 		Privilege: Create temporary tables
+# 		Context: Databases
+# 		Comment: To use CREATE TEMPORARY TABLE
+# 		---
+#
+# Privileges belonging to a specific user are displayed by the SHOW_GRANTS statement.
+#
+# See SECTION 13.7.6.21, "SHOW GRANTS SYNTAX", for more information.
+#
+# 13.7.6.27 SHOW PROCEDURE CODE SYNTAX
+#
+# 		SHOW PROCEDURE CODE proc_name
+#
+# this statement is a MySQL extension that is available only for servers that
+# have been built with debugging support.
+#
+# It displays a representation of the internal implementation of the named
+# stored procedure.
+#
+# A similar statement, SHOW_FUNCTION_CODE, displays information about stored
+# functions (see SECTION 13.7.6.19, "SHOW FUNCTION CODE SYNTAX")
+#
+# To use either statement, you must have the global SELECT privilege.
+#
+# If the named routine is available, each statement produces a result set.
+# Each row in the result set corresponds to one "instruction" in the routine.
+#
+# The first column is Pos, which is an ordinal number beginning with 0.
+#
+# The second column is Instruction, which contains an SQL statement (usually
+# changed from the original source), or a directive which has meaning only to
+# the stored-routine handler.
+#
+# 		DELIMITER //
+# 		CREATE PROCEDURE p1 ()
+# 		BEGIN
+# 			DECLARE fanta INT DEFAULT 55;
+# 			DROP TABLE t2;
+# 			LOOP
+# 				INSERT INTO t3 VALUES (fanta);
+# 				END LOOP;
+# 			END//
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		SHOW PROCEDURE CODE p1//
+# 		+------+----------------------------------------+
+# 		| Pos  | Instruction 								   |
+# 		+------+----------------------------------------+
+# 		| 0    | set fanta@0 55 							   |
+# 		| 1    | stmt 9 "DROP TABLE t2" 				      |
+# 		| 2    | stmt 5 "INSERT INTO t3 VALUES (fanta)" |
+# 		| 3  	 | jump 2 											|
+# 		+------+----------------------------------------+
+# 		4 rows in set (0.00 sec)
+#
+# In this example, the nonexecutable BEGIN and END statements have disappeared, and for
+# the DECLARE variable_name statement, only the executable part appears (the part where
+# the default is assigned)
+#
+# For each statement that is taken from source, there is a code word stmt followed
+# by a type (9 means DROP, 5 means INSERT, and so on)
+#
+# Tthe final row contains an instruction jump 2, meaning GOTO instruction #2
+#
+# 13.7.6.28 SHOW PROCEDURE STATUS SYNTAX
+#
+# 		SHOW PROCEDURE STATUS
+# 			[LIKE 'pattern' | WHERE expr]
+#
+# This statement is a MySQL extension. It returns characteristics of a stored procedure,
+# such as the database, name, type, creator, creation and modification dates, and
+# character set information.
+#
+# A similar statement, SHOW_FUNCTION_STATUS, displays information about stored functions
+# (see SECTION 13.7.6.20, "SHOW FUNCTION STATUS SYNTAX")
+#
+# The LIKE clause, if present, indicates which procedure or function names to match.
+#
+# The WHERE clause can be given to select rows using more general conditions, as
+# discussed in SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS"
+#
+# 		SHOW PROCEDURE STATUS LIKE 'sp1'\G
+# 		************************** 1. row *****************************
+# 								Db: test
+# 							Name : sp1
+# 							 Type: PROCEDURE
+# 						 Definer: testuser@localhost
+# 					  Modified : 2018-08-08 13:54:11
+# 					   Created : 2018-08-08 13:54:11
+# 				Security_type : DEFINER
+# 						Comment : 
+# 		character_set_client: utf8mb4
+# 		collation_connection: utf8mb4_0900_ai_ci
+# 		  Database Collation: utf8mb4_0900_ai_ci
+#
+# character_set_client is the session value of the character_set_client system variable
+# when the routine was created.
+#
+# collation_connection is the session value of the collation_connection system variable
+# when the routine was created.
+#
+# Database Collation is the collation of the database with which the routine is associated.
+#
+# Stored routine information is also available from the INFORMATION_SCHEMA PARAMETERS
+# and ROUTINES tables.
+#
+# See SECTION 25.15, "THE INFORMATION_SCHEMA PARAMETERS TABLE", and SECTION 25.22, "THE INFORMATION_SCHEMA ROUTINES TABLE"
+#
+# 13.7.6.29 SHOW PROCESSLIST SYNTAX
+#
+# 		SHOW [FULL] PROCESSLIST
+#
+# SHOW_PROCESSLIST shows which threads are running. If you have the PROCESS privilege,
+# you can see all threads.
+#
+# Otherwise, you can see only your own threads (that is, threads associated with the
+# MySQL account that you are using)
+#
+# If you do not use the FULL keyword, only the first 100 characters of each statement
+# are shown in the Info field.
+#
+# The SHOW_PROCESSLIST statement is very useful if you get the "too many connections"
+# error message and want to find out what is going on.
+#
+# MySQL reserves one extra connection to be used by accounts that have the CONNECTION_ADMIN
+# or SUPER privilege, to ensure that administrators should always be able to connect
+# and check the system (assuming that you are not giving this privilege to all your users)
+#
+# Threads can be killed with the KILL statement. See SECTION 13.7.7.4, "KILL SYNTAX"
+#
+# Example of SHOW_PROCESSLIST output:
+#
+# 		SHOW FULL PROCESSLIST\G
+# 		********************** 1. row *******************************
+# 		Id: 1
+# 		User: system user
+# 		Host:
+# 		db: NULL
+# 		Command: Connect
+# 		Time: 1030455
+# 		State: Waiting for master to send event
+# 		Info: NULL
+# 		********************* 2. row *********************************
+# 		Id: 2
+# 		User: system user
+# 		Host:
+# 		db: NULL
+# 		Command: Connect
+# 		Time: 1004
+# 		State: Has read all relay log; waiting for the slave I/O thread to update it
+# 		Info: NULL
+# 		********************** 3. row *********************************
+# 		Id: 3112
+# 		User: replikator
+# 		Host: artemis:2204
+# 		db: NULL
+# 		Command: Binlog Dump
+# 		Time: 2144
+# 		State: Has sent all binlog to slave; waiting for binlog to be updated
+# 		Info: NULL
+# 		********************* 4. row ***********************************
+# 		Id: 3113
+# 		User: replikator
+# 		Host: iconnect2:45781
+# 		db: NULL
+# 		Command: Binlog Dump
+# 		Time: 2086
+# 		State: Has sent all binlog to slave; waiting for binlog to be updated
+# 		Info: NULL
+# 		******************** 5. row ************************************
+# 		Id: 3123
+# 		User: stefan
+# 		Host: localhost
+# 		db: apollon
+# 		Command: Query
+# 		Time: 0
+# 		State: NULL
+# 		Info: SHOW FULL PROCESSLIST
+# 		5 rows in set (0.00 sec)
+#
+# SHOW_PROCESSLIST output has these columns:
+#
+# 		) Id
+#
+# 			The connection identifier.
+#
+# 			This is the same type of value displayed in the ID column of the
+# 			INFORMATION_SCHEMA PROCESSLIST table, the PROCESSLIST_ID column of
+# 			the Performance Schema threads table, and returned by the CONNECTION_ID() function.
+#
+# 		) User
+#
+# 			THe MySQL user who issued the statement. A value of system user refers to a nonclient
+# 			thread spawned by the server to handle tasks internally.
+#
+# 			This could be the I/O or SQL thread used on replication slaves or a delayed-row handler.
+#
+# 			For system user, there is no host specified in the Host column.
+#
+# 			unauthenticated user refers to a thread that has become associated with a client connection
+# 			but for which authentication of the client user has not yet been done.
+#
+# 			event_scheduler refers ot the thread that monitors scheduled events
+# 			(see SECTION 24.4, "USING THE EVENT SCHEDULER")
+#
+# 		) Host
+#
+# 			The host name of the client issuing the statement (except for system user, for which
+# 			there is no host)
+#
+# 			The host name for TCP/IP connections is reported in host_name:client_port format
+# 			to make it easier to determine which client is doing what.
+#
+# 		) db
+#
+# 			The default database, if one is selected; otherwise NULL
+#
+# 		) Command
+#
+# 			The type of command the thread is executing.
+#
+# 			For descriptions for thread commands, see SECTION 8.14, "EXAMINING THREAD INFORMATION"
+#
+# 			The value of this column corresponds to the COM_xxx commands of the client/server
+# 			protocol and Com_xxx status variables.
+#
+# 			See SECTION 5.1.10, "SERVER STATUS VARIABLES"
+#
+# 		) Time
+#
+# 			The time in seconds that the thread has been in its current state.
+#
+# 			For a slave SQL thread, the value is the number of seconds between
+# 			the timestamp of the last replicated event and the real time of the slave
+# 			machine.
+#
+# 			See SECTION 17.2.2, "REPLICATION IMPLEMENTATION DETAILS"
+#
+# 		) State
+#
+# 			An action, event or state that indicates what the thread is doing.
+#
+# 			Descriptions for State values can be found at SECTION 8.14, "EXAMINING THREAD INFORMATION"
+#
+# 			Most states correspond to very quick operations. If a thread stays in a given state
+# 			for many seconds, there might be a problem that needs to be investigated.
+#
+# 			For the SHOW_PROCESSLIST statement, the value of State is NULL
+#
+# 		) Info
+#
+# 			The statement the thread is executing, or NULL if it is not executing any statement.
+#
+# 			The statement might be the one sent ot the server, or an innermost statement if the
+# 			statement executes other statements.
+#
+# 			For example, if a CALL statement executes a stored procedure that is executing
+# 			a SELECT statement, the Info value shows the SELECT statement.
+#
+# Process information is also available from the mysqladmin processlist command, the
+# INFORMATION_SCHEMA PROCESSLIST table, and the Performance Schema threads table
+#
+# (see SECTION 4.5.2, "MYSQLADMIN -- CLIENT FOR ADMINISTERING A MYSQL SERVER", SECTION 25.18, "THE INFORMATION_SCHEMA PROCESSLIST TABLE",
+# and SECTION 26.12.17.5, "THE THREADS TABLE")
+#
+# In contrast to the INFORMATION_SCHEMA PROCESSLIST table and SHOW_PROCESSLIST statement,
+# which have negative performance consequences because they require a mutex, access to 
+# threads does not require a mutex and has minimal impact on the server performance.
+#
+# The threads table also shows information about background threads, which the PROCESSLIST
+# table and SHOW_PROCESSLIST do not.
+#
+# This means that threads can be used to monitor activity the other thread information
+# sources cannot.
+#
+# 13.7.6.30 SHOW PROFILE SYNTAX
+#
+# 		SHOW PROFILE [type [, type] --- ]
+# 			[FOR QUERY n]
+# 			[LIMIT row_count [OFFSET offset]]
+#
+# 		type: {
+# 			ALL
+# 		 | BLOCK IO
+# 		 | CONTEXT SWITCHES
+#      | CPU
+#      | IPC
+# 	    | MEMORY
+# 		 | PAGE FAULTS
+# 		 | SOURCE
+# 		 | SWAPS
+# 		}
+#
+# The SHOW_PROFILE and SHOW_PROFILES statements display profiling information that indicates
+# resource usage for statements executed during the course of the current session.
+#
+# NOTE:
+#
+# 		The SHOW_PROFILE and SHOW_PROFILES statements are deprecated and will be removed in a future
+# 		MySQL release.
+#
+# 		Use the PERFORMANCE SCHEMA instead; see SECTION 26.19.1, "QUERY PROFILING USING PERFORMANCE SCHEMA"
+#
+# To control profiling, use the profiling session variable, which has a default value of 0 (OFF)
+#
+# Enable profiling by setting profiling to 1 or ON:
+#
+# 		SET profiling = 1;
+#
+# SHOW_PROFILES displays a list of the most recent statements sent to the server.
+#
+# The size of the list is controlled by the profiling_history_size session variable,
+# which has a default value of 15.
+#
+# The maximum value is 100.
+#
+# Setting the value to 0 has the practical effect of disabling profiling.
+#
+# All statements are profiled except SHOW_PROFILE and SHOW_PROFILES, so you will find
+# neither of those statements in the profile list.
+#
+# Malformed statements are profiled. For example, SHOW PROFILING is an illegal statement,
+# and a syntax error occurs if you try to execute it, but it will show up in the
+# profiling list.
+#
+# SHOW_PROFILE displays detailed information about a single statement.
+#
+# Without the FOR QUERY n clause, the output pertains to the most recently
+# executed statement.
+#
+# If FOR QUERY n is included, SHOW_PROFILE displays information for statement n.
+#
+# The values of n correspond to the Query_ID values displayed by SHOW_PROFILES.
+#
+# The LIMIT row_count clause may be given to limit the output to row_count rows.
+#
+# If LIMIT is given, OFFSET offset may be added to begin the output offset rows
+# into the full set of rows.
+#
+# By default, SHOW_PROFILE displays Status and Duration columns.
+#
+# The Status values are like the State values displayed by SHOW_PROCESSLIST,
+# although there might be some minor differences in interpretation for the two
+# statements for some status values (see SECTION 8.14, "EXAMINING THREAD INFORMATION")
+#
+# Optional type values may be specified to display specific additional types of information:
+#
+# 		) ALL displays all information
+#
+# 		) BLOCK IO displays counts for block input and output operations
+#
+# 		) CONTEXT SWITCHES displays counts for voluntary and involuntary context switches
+#
+# 		) CPU displays user and system CPU usage times
+#
+# 		) IPC displays counts for messages sent and received
+#
+# 		) MEMORY is not currently implemented
+#
+# 		) PAGE FAULTS displays counts for major and minor page faults
+#
+# 		) SOURCE displays the names of functions from the source code, together with the name
+# 			and line number of the file in which the function occurs
+#
+# 		) SWAPS displays swap counts
+#
+# Profiling is enabled per session.
+#
+# When a session ends, its profiling information is lost.
+#
+# SELECT @@profiling;
+# +-----------------------+
+# | @@profiling 			  |
+# +-----------------------+
+# | 			0 				  |
+# +-----------------------+
+# 1 row in set (0.00 sec)
+#
+# SET profiling = 1;
+# Query OK, 0 rows affected (0.00 sec)
+#
+# DROP TABLE IF EXISTS t1;
+# Query OK, 0 rows affected, 1 warning (0.00 sec)
+#
+# CREATE TABLE T1 (id INT);
+# Query OK, 0 rows affected (0.01 sec)
+#
+# SHOW PROFILES;
+# +-----------+-------------+-----------------------------------+
+# | Query_ID  | Duration 	 | Query 									 |
+# +-----------+-------------+-----------------------------------+
+# | 0 		  | 0.000088    | SET PROFILING = 1 					 |
+# | 1 		  | 0.000136    | DROP TABLE IF EXISTS t1 			 |
+# | 2 		  | 0.011947    | CREATE TABLE t1 (id INT) 			 |
+# +-----------+-------------+-----------------------------------+
+# 3 rows in set (0.00 sec)
+#
+# SHOW PROFILE;
+# +------------------------------+---------------+
+# | Status 								| Duration 		 |
+# +------------------------------+---------------+
+# | checking permissions 			| 0.000040 		 |
+# | creating table 					| etc. 			 |
+# | After create 						| etc. 			 |
+# | query end 							| 0.000375 		 |
+# | freeing items 				   | 0.000089 		 |
+# | logging slow query 				| 0.000019 		 |
+# | cleaning up 						| 0.000005 		 |
+# +------------------------------+---------------+
+# 7 rows in set (0.00 sec)
+#
+# SHOW PROFILE FOR QUERY 1;
+# +--------------------------+----------------+
+# | Status 						  | Duration 		 |
+# +--------------------------+----------------+
+# | query end  				  | 0.000107 		 |
+# | freeing items 			  | 0.000008 		 |
+# | logging slow query 		  | 0.000015 		 |
+# | cleaning up 				  | 0.000006 		 |
+# +--------------------------+----------------+
+# 4 rows in set (0.00 sec)
+#
+# SHOW PROFILE CPU FOR QUERY 2;
+# +--------------------------+----------------+-------------+-----------------+
+# | Status 						  | 	Duration 	 | CPU_user 	| CPU_system 		|
+# +--------------------------+----------------+-------------+-----------------+
+# | checking permissions 	  | 0.000040 		 | 0.000038 	| 0.000002 			|
+# | creating table 			  | 0.000056 		 | 0.000028 	| 0.000028 			|
+# | After create 				  | 0.011363 		 | 0.000217 	| 0.001571 			|
+# | query end 					  | 0.000375 		 | 0.000013 	| 0.000028 			|
+# | freeing items 			  | 0.000089 		 | 0.000010 	| 0.000014 			|
+# | logging slow query 		  | 0.000019 		 | 0.000009 	| 0.000010 			|
+# | cleaning up 				  | 0.000005 		 | 0.000003 	| 0.000002 			|
+# +--------------------------+----------------+-------------+-----------------+
+# 7 rows in set (0.00 sec)
+#
+# NOTE:
+#
+# 		Profiling is only partially functional on some architechtures.
+#
+# 		For values that depend on the getrusage() system call, NULL is returned
+# 		on systems such as Windows that do not support the call.
+#
+# 		In addition, profiling is per process and not per thread.
+#
+# 		This means that activity on threads within the server other than your
+# 		own may affect the timing information that you see
+#
+# Profiling information is also available from the INFORMATION_SCHEMA
+# PROFILING table.
+#
+# See SECTION 25.19, "THE INFORMATION_SCHEMA PROFILING TABLE"
+#
+# For example, the following queries are equivalent:
+#
+# 		SHOW PROFILE FOR QUERY 2;
+#
+# 		SELECT STATE, FORMAT(DURATION, 6) AS DURATION
+# 		FROM INFORMATION_SCHEMA.PROFILING
+# 		WHERE QUERY_ID = 2 ORDER BY SEQ;
+#
+# 13.7.6.31 SHOW PROFILES SYNTAX
+#
+# 		SHOW PROFILES
+#
+# the SHOW_PROFILES statement, together with SHOW_PROFILE, displays
+# profiling information that indicates resource usage for statements executed
+# during the course of the current session.
+#
+# For more information, see SECTION 13.7.6.30, "SHOW PROFILE SYNTAX"
+#
+# NOTE:
+#
+# 		The SHOW_PROFILE and SHOW_PROFILES statements are deprecated and will be
+# 		removed in a future MySQL release.
+#
+# 		Use the Performance Schema instead; see SECTION 26.19.1, "QUERY PROFILING USING PERFORMANCE SCHEMA"
+#
+# 13.7.6.32 SHOW RELAYLOG EVENTS SYNTAX
+#
+# 		SHOW RELAYLOG EVENTS
+# 			[IN 'log_name']
+# 			[FROM pos]
+# 			[LIMIT [offset,] row_count]
+# 			[channel_option]
+#
+# 		channel_option:
+# 			FOR CHANNEL channel
+#
+# Shows the events in the relay log of a replication slave.
+#
+# If you do not specify 'log_name', the first relay log is displayed.
+#
+# This statement has no effect on the master.
+#
+# The LIMIT clause has the same syntax as for the SELECT statement.
+# See SECTION 13.2.10, "SELECT SYNTAX"
+#
+# NOTE:
+#
+# 		Issuing a SHOW_RELAYLOG_EVENTS with no LIMIT clause could start
+# 		a very time- and resource-consuming process because the server returns
+# 		to the client the complete contents of the relay log
+#
+# 		(including all statements modifying data that have been received by the slave)
+#
+# The optional FOR CHANNEL channel clause enables you to name which replication channel
+# the statement applies to.
+#
+# Providing a FOR CHANNEL channel clause applies the statement to a specific replication
+# channel.
+#
+# If no channel is named and no extra channels exist, the statement applies to the default channel.
+#
+# When using multiple replication channels, if a SHOW_RELAYLOG_EVENTS statement does not have
+# a channel defined using a FOR CHANNEL channel clause an error is generated.
+#
+# See SECTION 17.2.3, "REPLICATION CHANNELS" for more information
+#
+# SHOW_RELAYLOG_EVENTS displays the following fields for each event in the relay log:
+#
+# 		) Log_name
+#
+# 			the name of the file that is being listed
+#
+# 		) Pos
+#
+# 			The position at which the event occurs
+#
+# 		) Event_type
+#
+# 			An identifier that describes the event type
+#
+# 		) Server_id
+#
+# 			The server ID of hte server on which the event originated
+#
+# 		) End_log_pos
+#
+# 			The value of End_log_pos for htis event in the master's binary log
+#
+# 		) Info
+#
+# 			More detailed information about the event type.
+#
+# 			The format of this information depends on the event type.
+#
+# NOTE:
+#
+# 		Some events relating to the setting of user and system variables are not included
+# 		in the output from SHOW_RELAYLOG_EVENTS
+#
+# 		To get complete coverage of events within a relay log, use mysqlbinlog
+#
+# 13.7.6.33 SHOW SLAVE HOSTS SYNTAX
+#
+# 		SHOW SLAVE HOSTS
+#
+# Displaying a list of replication slaves currently registered with the master
+#
+# SHOW SLAVE HOSTS should be executed on a server that acts as a replication master.
+#
+# The statement displays information about servers that are or have been connected
+# as replication slaves, with each row of the result corresponding to one slave server,
+# as shown here:
+#
+# 		SHOW SLAVE HOSTS;
+# 		+------------+-------------+-------+---------------+------------------------------+
+# 		| Server_id  | Host 			| Port  | Master_id 		| Slave_UUID 						 |
+# 		+------------+-------------+-------+---------------+------------------------------+
+# 		| <id> 	    | iconnect2 	| 3306  | <id> 			| <serial> 							 |
+# 		| <id> 		 | athena 		| 3306  | <id> 			| <serial> 							 |
+# 		+------------+-------------+-------+---------------+------------------------------+
+#
+# 		) Server_id: The unique server ID of the slave server, as configured in the slave server's
+# 			option file, or on the command line with --server-id=value
+#
+# 		) Host: The host name of the slave server as specified on the slave with the --report-host
+# 			option.
+#
+# 			THis can differ from the machine name as configured in the operating system
+#
+# 		) User: The slave server uses name as, specified on the slave with the --report-user option
+#
+# 			Statement output includes this column only if the master server is started with the
+# 			--show-slave-auth-info option
+#
+# 		) Password: The slave server password as, specified on the slave with --report-password option
+#
+# 			Statement output includes this column only if the master server is started with the
+# 			--show-slave-auth-info option
+#
+# 		) Port: The port on the master to which the slave server is listening, as specified
+# 			on the slave with the --report-port option
+#
+# 			A zero in this column means that the slave port (--report-port) was not set
+#
+# 		) Master_id: The unique server ID of the master server that the slave server is
+# 			replicating from.
+#
+# 			This is the server ID of the server on which SHOW SLAVE HOSTS is executed,
+# 			so this same value is listed for each row in the result.
+#
+# 		) Slave_UUID: The globally unique Id of this slave, as generated on the slave
+# 			and found in the slave's auto.cnf file
+#
+# 13.7.6.34 SHOW SLAVE STATUS SYNTAX
+#
+# 		SHOW SLAVE STATUS [FOR CHANNEL channel]
+#
+# This statement provides status information on essential parameters of the slave threads.
+#
+# It requires either the SUPER or REPLICATION_CLIENT privilege.
+#
+# SHOW SLAVE STATUS is nonblocking.
+#
+# When run concurrently with STOP_SLAVE, SHOW SLAVE STATUS returns without waiting for
+# STOP SLAVE to finish shutting down the slave SQL thread or slave I/O thread (or both)
+#
+# This permits use in monitoring and other applications where getting an immediate
+# response from SHOW SLAVE STATUS more important than ensuring that it returned
+# the latest data.
+#
+# If you issue this statement using the mysql client, you can use a \G statement terminator
+# rather than a semicolon to obtain a more readable vertical layout:
+#
+# 		SHOW SLAVE STATUS\G
+# 		******************************** 1. row ***********************************
+# 		
+# 		https://dev.mysql.com/doc/refman/8.0/en/show-slave-status.html
+# 
