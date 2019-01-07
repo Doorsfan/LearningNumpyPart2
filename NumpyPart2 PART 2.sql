@@ -33201,6 +33201,1449 @@
 #
 # 		SHOW SLAVE STATUS\G
 # 		******************************** 1. row ***********************************
-# 		
-# 		https://dev.mysql.com/doc/refman/8.0/en/show-slave-status.html
+# 								Slave_IO_State: Waiting for master to send event
+# 								 Master_Host  : localhost
+# 								   Master_User: repl
+# 								   Master_Port: 13000
+# 								 Connect_Retry: 60
+# 							  Master_Log_File: master-bin.000002
+# 						 Read_Master_Log_Pos: 1307
+# 								Relay_Log_File: slave-relay-bin.000003
+# 								 Relay_Log_Pos: 1508
+# 					  Relay_Master_Log_File: master-bin.000002
+# 						Slave_IO_Running    : Yes
+# 							SLave_SQL_Running: Yes
+# 							  Replicate_Do_DB: 
+# 						Replicate_Ignore_DB : 
+# 						  Replicate_Do_Table:
+# 					 Replicate_Ignore_Table: 		
+#  				Replicate_Wild_Do_Table: 
+# 			  Replicate_Wild_Ignore_Table:
+# 								Last_Errno    : 0
+# 									Last_Error : 
+# 								Skip_Counter  : 0
+# 						Exec_Master_Log_Pos : 1307
+# 							Relay_Log_Space  : 1858
+# 							Until_Condition  : None
+# 							 Until_Log_File  : 
+# 							   Until_Log_Pos : 0
+# 						Master_SSL_Allowed  : No
+# 						Master_SSL_CA_File  : 
+# 						Master_SSL_CA_Path  :
+# 							Master_SSL_Cert  :
+# 						Master_SSL_Cipher   : 
+# 					Seconds_Behind_Master  : 0
+# 			Master_SSL_Verify_Server_Cert: No
+# 						Last_IO_Errno 		  : 0
+# 						Last_IO_Error 		  :
+# 						Last_SQL_Errno 	  : 0
+# 						Last_SQL_Error 	  : 
+# 			Replicate_Ignore_Server_Ids  : 
+# 					Master_Server_Id  	  : 1
+# 							Master_UUID 	  : <serial>
+# 					Master_Info_File 		  : /var/mysqld.2/data/master.info
+# 								SQL_Delay 	  : 0
+# 					SQL_Remaining_Delay 	  : NULL
+# 					Slave_SQL_Running_State: Reading event from the relay log
+# 						Master_Retry_Count  : 10
+# 						Master_Bind 		  : 
+# 					Last_IO_Error_Timestamp:
+# 				 Last_SQL_Error_Timestamp : 
+# 						Master_SSL_Crl 	  : 
+# 						Master_SSL_Crlpath  :
+# 						Retrieved_Gtid_Set  : <serial>
+# 						Executed_Gtid_Set   : <serial>
+# 							Auto_Position    : 1
+# 						Replicate_Rewrite_DB:
+# 							Channel_name 	  :
+# 						Master_TLS_Version  : TLSv1.2
+# 					Master_public_key_path : public_key.pem
+# 					  Get_master_public_key: 0
+#
+# The Performance Schema provides tables that expose replication information.
+#
+# This is similar to the information available from the SHOW_SLAVE_STATUS statement,
+# but represented in table form.
+#
+# For details, see SECTION 26.12.11, "PERFORMANCE SCHEMA REPLICATION TABLES"
+#
+# The following list describes the fields returned by SHOW_SLAVE_STATUS
+#
+# For additional information about interpreting their meanings, see SECTION 17.1.7.1,
+# "CHECKING REPLICATION STATUS"
+#
+# 		) Slave_IO_State
+#
+# 			A copy of the State field of the SHOW_PROCESSLIST output for the slave I/O thread.
+#
+# 			This tells you what the thread is doing: trying to connect to the master, waiting
+# 			for events from the master, reconnecting to the master, and so on.
+#
+# 			For a listing of possible states, see SECTION 8.14.4, "REPLICATION SLAVE Ì/O THREAD STATES"
+#
+# 		) Master_Host
+#
+# 			The master host that the slave is connected to
+#
+# 		) Master_User
+#
+# 			The user name of the account used to connect to the master
+#
+# 		) Master_Port
+#
+# 			The port used to connect to the master
+#
+# 		) Connect_Retry
+#
+# 			The number of seconds between connect retries (default 60)
+#
+# 			This can be set with the CHANGE_MASTER_TO statement
+#
+# 		) Master_Log_File
+#
+# 			The name of the master binary log file from which the I/O thread is currently reading
+#
+# 		) Read_Master_Log_Pos
+#
+# 			The position in the current master binary log file up to which the I/O thread has read
+#
+# 		) Relay_Log_File
+#
+# 			The name of the relay log file from which the SQL thread is currently reading and executing
+#
+# 		) Relay_Log_Pos
+#
+# 			The position in the current relay log file up to which the SQL thread has read and executed.
+#
+# 		) Relay_Master_Log_File
+#
+# 			The name of the master binary log file containing the most recent event executed by the SQL thread
+#
+# 		) Slave_IO_Running
+#
+# 			Whether the I/O thread is started and has connected successfully to the master.
+#
+# 			Internally, the state of this thread is represented by one of the following three values:
+#
+# 				) MYSQL_SLAVE_NOT_RUN. The slave I/O thread is not running. For this state, Slave_IO_Running is No
+#
+# 				) MYSQL_SLAVE_RUN_NOT_CONNECT. The slave I/O thread is running, but is not connected to a replication master.
+# 
+# 					For this state, Slave_IO_Running is Connecting
+#
+# 				) MYSQL_SLAVE_RUN_CONNECT.
+#
+# 					The slave I/O thread is running, and is connected to a replication master.
+#
+# 					For this state, Slave_IO_Running is Yes
+#
+# 			The value of the Slave_running system status variable corresponds with this value
+#
+# 		) Slave_SQL_Running
+#
+# 			Whether the SQL thread is started
+#
+# 		) Replicate_Do_DB, Replicate_Ignore_DB
+#
+# 			The names of any databases that were specified with the --replicate-do-db and
+# 			--replicate-ignore-db options, or the CHANGE_REPLICATION_FILTER statement.
+#
+# 			If the FOR CHANNEL clause was used, the channel specific replication filters are shown.
+#
+# 			Otherwise, the replication filters for every replication channel are shown.
+#
+# 		) Replicate_Do_Table, Replicate_Ignore_Table, Replicate_Wild_Do_Table, Replicate_Wild_Ignore_Table
+#
+# 			The names of any tables that were specified with the --replicate-do-table, --replicate-ignore-table,
+# 			--replicate-wild-do-table and --replicate-wild-ignore-table options, or the CHANGE_REPLICATION_FILTER
+# 			statement.
+#
+# 			If the FOR CHANNEL clause was used, the channel specific replication filters are shown.
+#
+# 			Otherwise, the replication filters for every replication channel are shown.
+#
+# 		) Last_Errno, Last_Error
+#
+# 			These columns are aliases for Last_SQL_Errno and Last_SQL_Error
+#
+# 			Issuing RESET_MASTER or RESET_SLAVE resets the values shown in these columns.
+#
+# 			NOTE:
+#
+#				When the slave SQL thread receives an error, it reports the error first, then
+# 				stops the SQL thread.
+#
+# 				This means that there is a small window of time during which SHOW_SLAVE_STATUS
+# 				shows a nonzero value for Last_SQL_Errno even though Slave_SQL_Running still displays Yes.
+#
+# 		) Skip_Counter
+#
+# 			The current value of the sql_slave_skip_counter system variable.
+#
+# 			See SECTION 13.4.2.5, "SET GLOBAL SQL_SLAVE_SKIP_COUNTER SYNTAX"
+#
+# 		) Exec_Master_Log_Pos
+#
+# 			The position in the current master binary log file to which the SQL thread has read
+# 			and executed, marking the start of the next transaction or event to be processed.
+#
+# 			You can use this value with the CHANGE_MASTER_TO statement's MASTER_LOG_POS option
+# 			when starting a new slave from an existing slave, so that the new slave reads
+# 			from this point.
+#
+# 			The coordinates given by (Relay_Master_Log_File, Exec_Master_Log_Pos) in the
+# 			master's binary log correspond to the coordinates given by (Relay_Log_File, Relay_Log_Pos)
+# 			in the relay log.
+#
+# 			Inconsistencies in the sequence of transactions from the relay log which have been 
+# 			executed can cause this value to be a "low-water mark".
+#
+# 			In other words, transactions appearing before the position are guaranteed to have committed,
+# 			but transactions after the position may have committed or not.
+#
+# 			If these gaps need to be corrected, use START_SLAVE_UNTIL_SQL_AFTER_MTS_GAPS
+#
+# 			See SECTION 17.4.1.34, "REPLICATION AND TRANSACTION INCONSISTENCIES" for more information
+#
+# 		) Relay_Log_Space
+#
+# 			The total combined size of all existing relay log files
+#
+# 		) Until_Condition, Until_Log_File, Until_Log_Pos
+#
+# 			The values specified in the UNTIL clause of the START_SLAVE statement.
+#
+# 			Until_Condition has these values:
+#
+# 				) None if no UNTIL clause was specified
+#
+# 				) Master if the slave is reading until a given position in the master's binary log
+#
+# 				) Relay if the slave is reading until a given position in its relay log
+#
+# 				) SQL_BEFORE_GTIDS if the slave SQL thread is processing transactions until it has reached
+# 					the first transaction whose GTID is listed in the gtid_set
+#
+# 				) SQL_AFTER_GTIDS if the slave threads are processing all transactions until the last transaction
+# 					in the gtid_set has been processed by both threads.
+#
+# 				) SQL_AFTER_MTS_GAPS if a multithreaded slave's SQL threads are running until no more gaps are found in the relay log
+#
+# 			Until_Log_File and Until_Log_Pos indicate the log file name and position that define the coordinates
+# 			at which the SQL thread stops executing.
+#
+# 			For more information on UNTIL clauses, see SECTION 13.4.2.6, "START SLAVE SYNTAX"
+#
+# 		) Master_SSL_Allowed, Master_SSL_CA_File, Master_SSL_CA_Path, Master_SSL_Cert, Master_SSL_Cipher,
+# 			Master_SSL_CRL_File, Master_SSL_CRL_Path, Master_SSL_Key, Master_SSL_Verify_Server_Cert
+#
+# 			These fields show the SSL parameters used by the slave to connect to the master, if any.
+#
+# 			Master_SSL_Allowed has these values:
+#
+# 				) Yes if an SSL connection to the master is permitted
+#
+# 				) No if an SSL connection to the master is not permitted
+#
+# 				) Ignored if an SSL connection is permitted but the slave server does not have SSL support enabled
+#
+# 			The values of the other SSL-related fields correspond to the values of the MASTER_SSL_CA,
+# 			MASTER_SSL_CAPATH, MASTER_SSL_CERT, MASTER_SSL_CIPHER, MASTER_SSL_CRL, MASTER_SSL_CRLPATH,
+# 			MASTER_SSL_KEY and MASTER_SSL_VERIFY_SERVER_CERT options to the CHANGE_MASTER_TO statement.
+#
+# 			See SECTION 13.4.2.1, "CHANGE MASTER TO SYNTAX"
+#
+# 		) Seconds_Behind_Master
+#
+# 			This field is an indication of how "late" the slave is:
+#
+# 				) When the slave is actively processing updates, this field shows the difference between the
+# 					current timestamp on the slave and the original timestamp logged on the master for the
+# 					event currently being processed on the slave.
+#
+# 				) When no event is currently being processed on the slave, this value is 0
+#
+# 			In essence, this field measures the time difference in seconds between the slave SQL thread
+# 			and the slave I/O thread.
+#
+# 			If the network connection between master and slave is fast, the slave I/O thread is very close
+# 			to the master, so this field is a good approximation of how late the slave SQL thread is compared
+# 			to the master.
+#
+# 			If the network is slow, this is not a good approximation; the slave SQL thread may quite often
+# 			be caught up with the slow-reading slave I/O thread, so Seconds_Behind_Master often shows
+# 			a value of 0, even if the I/O thread is late compared to the master.
+#
+# 			In other words, this column is useful only for fast networks.
+#
+# 			This time difference computation works even if the master and slave do not have identical
+# 			clock times, provided that the difference, computed when the slave I/O thread strats,
+# 			remains constant from then on.
+#
+# 			Any changes - including NTP updates - can lead to clock skews that can make calculation
+# 			of Seconds_Behind_Master less reliable.
+#
+# 			In MySQL 8.0, this field is NULL (undefined or unknown) if the slave SQL thread is not running,
+# 			or if the SQL thread has consumed all of the relay log and the slave I/O thread is not running.
+#
+# 			(In older versions of MySQL, this field was NULL if the slave SQL thread or the slave I/O thread
+# 			was not running or was not connected to the master)
+#
+# 			If the I/O thread is running but the relay log is exhausted, Seconds_Behind_Master is set to 0
+#
+# 			The value of Seconds_Behind_Master is based on the timestamps stored in events, which are preserved
+# 			through replication.
+#
+# 			This means that if a master M1 is itself a slave of M0, any event from M1's binary log that originates
+# 			from M0's binary log has M0's timestamp for that event.
+#
+# 			This enables MySQL to replicate TIMESTAMP successfully.
+#
+# 			However, the problem for Seconds_Behind_Master is that if M1 also receives direct
+# 			updates from clients, the Seconds_Behind_Master value randomly fluctuates because
+# 			sometimes the last event from M1 originates from M0 and sometimes is the result
+# 			of a direct update on M1.
+#
+# 			When using a multithreaded slave, you should keep in mind that this value is based on
+# 			Exec_Master_Log_Pos, and so may not reflect the position of the most recently
+# 			committed transaction.
+#
+# 		) Last_IO_Errno, Last_IO_Error
+#
+# 			The error number and error message of the most recent error that caused the I/O
+# 			thread to stop.
+#
+# 			An error number of 0 and message of the empty string mean "no error"
+#
+# 			If the Last_IO_Error value is not empty, the error values also appear in the
+# 			slave's error log.
+#
+# 			I/O error information includes a timestamp showing when the most recent I/O
+# 			thread error occurred.
+#
+# 			This timestamp uses the format YYMMDD HH:MM:SS, and appears in the Last_IO_Error_Timestamp
+# 			column.
+#
+# 			Issuing RESET_MASTER or RESET_SLAVE resets the values shown in these columns.
+#
+# 		) Last_SQL_Errno, Last_SQL_Error
+#
+# 			The error number and error message of the most recent error that caused the SQL thread
+# 			to stop.
+#
+# 			An error number of 0 and message of the empty string mean "no error"
+#
+# 			If the Last_SQL_Error value is not empty, the error values also appear in the
+# 			slave's error log.
+#
+# 			If the slave is multithreaded, the SQL thread is the coordinator for worker threads.
+#
+# 			In this case, the Last_SQL_Error field shows exactly what the Last_Error_Message
+# 			column in the Performance Schema replication_applier_status_by_coordinator table shows.
+#
+# 			The field value is modified to suggest that there may be more failures in the other
+# 			worker threads which can be seen in the replication_applier_status_by_worker table that
+# 			shows each worker thread's status.
+#
+# 			If that table is not available, the slave error log can be used.
+#
+# 			The log or the replication_applier_status_by_worker table should also be used
+# 			to learn more about the failure shown by SHOW_SLAVE_STATUS or the coordinator table.
+#
+# 			SQL error information includes a timestamp showing when the most recent SQL thread error occurred.
+#
+# 			This timestamp uses the format YYMMDD HH:MM:SS, and appears in the Last_SQL_Error_Timestamp column
+#
+# 			Issuing RESET_MASTER or RESET_SLAVE resets the values shown in these columns.
+#
+# 			In MySQL 8.0, all error codes and messages displayed in the Last_SQL_Errno and Last_SQL_Error
+# 			columns correspond to error values listed in SECTION B.3, "SERVER ERROR MESSAGE REFERENCE"
+#
+# 			This was not always true in previous versions. (Bug #11760365, Bug #52768)
+#
+# 		) Replicate_Ignore_Server_Ids
+#
+# 			Any server IDs that have been specified using the IGNORE_SERVER_IDS option of the
+# 			CHANGE_MASTER_TO statement, so that the slave ignores events from these servers.
+#
+# 			This option is used in a circular or other multi-master replication setup when
+# 			one of the servers is removed.
+#
+# 			If any server IDs have been set in this way, a comma-delimited list of one
+# 			or more numbers is shown. If no server IDs have been set, the field is blank.
+#
+# 			NOTE:
+#
+# 				The Ignored_server_ids value in the slave_master_info table also shows the
+# 				server IDs to be ignored, but as a space-delimited list, preceded by the total
+# 				number of server IDs to be ignored.
+#
+# 				For example, if a CHANGE_MASTER_TO statement containing the IGNORE_SERVER_IDS = (2,6,9)
+# 				option has been issued to tell a slave to ignore masters having the server ID
+# 				2, 6 or 9, that information appears as shown here:
+#
+# 					Replicate_Ignore_Server_Ids: 2, 6, 9
+# 
+# 					Ignored_server_ids: 3, 2, 6, 9
+#
+# 			Replicate_Ignore_Server_Ids filtering is performed by the I/O thread, rather than by the
+# 			SQL thread, which means that events which are filtered out are not written to the relay log.
+#
+# 			This differs from the filtering actions taken by server options such --replicate-do-table,
+# 			which apply to the SQL thread.
+#
+# 			NOTE:
+#
+# 				From MySQL 8.0.3, a deprecation warning is issued if SET GTID_MODE=ON is issued
+# 				when any channel has existing server IDs set with IGNORE_SERVER_IDS.
+#
+# 				Before starting GTID-based replication, use SHOW_SLAVE_STATUS to check
+# 				for and clear all ignored server ID lists on the servers involved.
+#
+# 				You can clear a list by issuing a CHANGE_MASTER_TO statement containing
+# 				the IGNORE_SERVER_IDS option with an empty list.
+#
+# 		) Master_Server_Id
+#
+# 			The server_id value from the master.
+#
+# 		) Master_UUID
+#
+# 			THe server_uuid value from the master
+#
+# 		) Master_Info_File
+#
+# 			The location of the master.info file, if a file rather than a table is used for
+# 			the slave's master info repository
+#
+# 		) SQL_Delay
+#
+# 			The number of seconds that the slave must lag the master
+#
+# 		) SQL_Remaining_Delay
+#
+# 			When Slave_SQL_Running_State is Waiting until MASTER_DELAY seconds after master
+# 			executed event, this field contains the number of delay seconds remaining.
+#
+# 			At other times, this field is NULL
+#
+# 		) Slave_SQL_Running_State
+#
+# 			The state of the SQL thread (analogous to Slave_IO_State)
+#
+# 			The value is identical to the State value of the SQL thread as displayed
+# 			by SHOW_PROCESSLIST.
+#
+# 			SECTION 8.14.5, "REPLICATION SLAVE SQL THREAD STATES", provides a listing
+# 			of possible states
+#
+# 		) Master_Retry_Count
+#
+# 			The number of times the slave can attempt to reconnect to the master in the event
+# 			of a lost connection.
+#
+# 			This value can be set using the MASTER_RETRY_COUNT option of the
+# 			CHANGE_MASTER_TO statement (preferred) or the older --master-retry-count server
+# 			option (still supported for backward compatibility)
+#
+# 		) Master_Bind
+#
+# 			The network interface that the slave is bound to, if any.
+#
+# 			This is set using the MASTER_BIND option for the CHANGE_MASTER_TO statement
+#
+# 		) Last_IO_Error_Timestamp
+#
+# 			A timestamp in YYMMDD HH:MM:SS format that shows when the most recent I/O error took place
+#
+# 		) Last_SQL_Error_Timestamp
+#
+# 			A timestamp in YYMMDD HH:MM:SS format that shows when the last SQL error occurred.
+#
+# 		) Retrieved_Gtid_Set
+#
+# 			The set of global transaction IDs corresponding to all transactions received by this slave.
+#
+# 			Empty if GTIDs are not in use. See GTID Sets for more information.
+#
+# 			This is the set of all GTIDs that exist or have existed in the relay logs.
+#
+# 			Each GTID is added as soon as the Gtid_log_event is received.
+#
+# 			This can cause partially transmitted transactions to have their GTIDs included in the set.
+#
+# 			When all relay logs are lost due to executing RESET_SLAVE or CHANGE_MASTER_TO, or due
+# 			to the effects of the --relay-log-recovery option, the set is cleared.
+#
+# 			When relay_log_purge = 1, the newest relay log is always kept, and the set is not cleared.
+#
+# 		) Executed_Gtid_Set
+#
+# 			The set of global transaction IDs written in the binary log.
+#
+# 			This is the same as the value for the global gtid_executed system variable
+# 			on this server, as well as the value for Executed_Gtid_Set in the output of
+# 			SHOW_MASTER_STATUS on this server.
+#
+# 			Empty if GTIDs are not in use.
+#
+# 			See GTID SETS for more information.
+#
+# 		) Auto_Position
+#
+# 			1 if autopositioning is in use; otherwise 0.
+#
+# 		) Replicate_Rewrite_DB
+#
+# 			The Replicate_Rewrite_DB value displays any replication filtering rules that were
+# 			specified.
+#
+# 			For example, if the following replication filter rule was set:
+#
+# 				CHANGE REPLICATION FILTER REPLICATE_REWRITE_DB=((db1,db2), (db3,db4));
+#
+# 			the Replicate_Rewrite_DB value displays:
+#
+# 				Replicate_Rewrite_DB: (db1,db2), (db3,db4)
+#
+# 			For more information, see SECTION 13.4.2.2, "CHANGE REPLICATION FILTER SYNTAX"
+#
+# 		) Channel_name
+#
+# 			The replication channel which is being displayed.
+#
+# 			There is always a default replication channel, and more replication channels
+# 			can be added.
+#
+# 			See SECTION 17.2.3, "REPLICATION CHANNELS" for more information.
+#
+#		) Master_TLS_Version
+#
+# 		 	The TLS version used on the master.
+#
+# 			For TLS version information, see SECTION 6.4.6, "ENCRYPTED CONNECTION PROTOCOLS AND CIPHERS"
+#
+# 		) Master_public_key_path
+#
+# 			The path name to a file containing a slave-side copy of the public key required by the master
+# 			for RSA key pair-based password exchange.
+#
+# 			The file must be in PEM format.
+#
+# 			This column applies to slaves that authenticate with the sha256_password
+# 			or caching_sha2_password authentication plugin.
+#
+# 			If Master_public_key_path is given and specifies a valid public key file, it takes
+# 			precedence over Get_master_public_key
+#
+# 		) Get_master_public_key
+#
+# 			Whether to request from the master the public key required for RSA key pair-based
+# 			password exchange.
+#
+# 			This column applies to slaves that authenticate with the caching_sha2_password
+# 			authentication plugin.
+#
+# 			For that plugin, the master does not send the public key unless requested.
+#
+# 			If Master_public_key_path is given and specifies a valid public key file,
+# 			it takes precedence over Get_master_public_key
+#
+# 13.7.6.35 SHOW STATUS SYNTAX
+#
+# 		SHOW [GLOBAL | SESSION] STATUS
+# 			[LIKE 'pattern' | WHERE expr]
+#
+# SHOW_STATUS provided server status information (see SECTION 5.1.10, "SERVER STATUS VARIABLES")
+#
+# This statement does not require any privilege. It requires only the ability to
+# connect to the server.
+#
+# Status variable information is also available from these sources:
+#
+# 		) Performance Schema tables. See SECTION 26.12.14, "PERFORMANCE SCHEMA STATUS VARIABLE TABLES"
+#
+# 		) The mysqladmin extended-status command. See SECTION 4.5.2, "mysqladmin -- CLIENT FOR ADMINISTERING A MYSQL SERVER"
+#
+# For SHOW_STATUS, a LIKE clause, if present, indicates which variable names to match.
+#
+# A WHERE clause can be given to select rows using more general conditions, as discussed
+# in SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS"
+#
+# SHOW_STATUS accepts an optional GLOBAL or SESSION variable scope modifier:
+#
+# 		) With a GLOBAL modifier, the statement displays the global status values.
+#
+# 			A global status variable may represent status for some aspect of the server
+# 			itself (for example, Aborted_connects), or the aggregated status over all
+# 			connections to MySQL (for example, Bytes_received and Bytes_sent)
+#
+# 			If a variable has no global value, the session value is displayed
+#
+# 		) With a SESSION modifier, the statement displays the status variable values for the
+# 			current connection.
+#
+# 			If a variable has no session value, the global value is displayed.
+#
+# 			LOCAL is a synonym for SESSION
+#
+# 		) If no modifier is present, the default is SESSION
+#
+# The scope for each status variable is listed at SECTION 5.1.10, "SERVER STATUS VARIABLES"
+#
+# Each invocation of the SHOW_STATUS statement uses an internal temporary table and increments
+# the global Created_tmp_tables value.
+#
+# Partial output is shown here.
+#
+# The list of names and value may differ for your server.
+#
+# The meaning of each variable is given in SECTION 5.1.10, "SERVER STATUS VARIABLES"
+#
+# 		SHOW STATUS;
+# 		+---------------------------------------+--------------+
+# 		| Variable_name 								 | Value 		 |
+# 		+---------------------------------------+--------------+
+# 		| Aborted_clients 							 | 0 				 |
+# 		| Aborted_connects 							 | 0 				 |
+# 		| Bytes_received 								 | 155372598 	 |
+# 		| Bytes_sent 									 | 1176560426   |
+# 		| Connections 									 | 30023 		 |
+# 		| Created_tmp_disk_tables 					 | 0 				 |
+# 		| Created_tmp_tables 						 | 8340 			 |
+# 		| Created_tmp_files 							 | 60 			 |
+# 		---
+# 		| Open_tables 									 | 1 				 |
+# 		| Open_files 									 | 2 				 |
+# 		| Open_streams 								 | 0 				 |
+# 		| Opened_tables 								 | 44600 		 |
+# 		| Questions 									 | 2026873 		 |
+# 		---
+# 		| Table_locks_immediate 					 | 1920382 		 |
+# 		| Table_locks_waited 						 | 0 				 |
+# 		| Threads_cached 								 | 0 				 |
+# 		| Threads_created 							 | 30022 		 |
+# 		| Threads_connected 							 | 1 				 |
+# 		| Threads_running 							 | 1 				 |
+# 		| Uptime 										 | 80380 		 |
+# 		+---------------------------------------+--------------+
+#
+# With a LIKE clause, the statement displays only rows for those variables with names
+# that match the pattern:
+#
+# 		SHOW STATUS LIKE 'Key%';
+# 		+---------------------+-----------+
+# 		| Variable_name 		 | Value 	 |
+# 		+---------------------+-----------+
+# 		| Key_blocks_used 	 | 14955 	 |
+# 		| Key_read_requests   | 96854827  |
+# 		| Key_reads 			 | 162040 	 |
+# 		| Key_write_requests  | 7589728   |
+# 		| Key_writes 			 | 3813196   |
+# 		+---------------------+-----------+
+#
+# 13.7.6.36 SHOW TABLE STATUS SYNTAX
+#
+# 		SHOW TABLE STATUS
+# 			[{FROM | IN} db_name]
+# 			[LIKE 'pattern' | WHERE expr]
+#
+# SHOW_TABLE_STATUS works likes SHOW_TABLES, but provides a lot of information about each
+# non-TEMPORARY table.
+#
+# You can also get this list using the mysqlshow --status db_name command.
+#
+# The LIKE clause, if present, indicates which table names to match.
+#
+# The WHERE clause can be given to select rows using more general conditions,
+# as discussed in SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS"
+#
+# This statement also displays information about views.
+#
+# SHOW_TABLE_STATUS output has these columns:
+#
+# 		) Name
+#
+# 			The name of the table
+#
+# 		) Engine
+#
+# 			The storage engine for the table.
+#
+# 			See CHAPTER 15, THE INNODB STORAGE ENGINE, and CHAPTER 16, ALTERNATIVE STORAGE ENGINES
+#
+# 			For partitioned tables, Engine shows the name of the storage engine used by all partitions
+#
+# 		) Version
+#
+# 			This column is unused. With the removal of .frm files in MySQL 8.0, this column now
+# 			reports a hardcoded value of 10, which is the last .frm file version used in MySQL
+# 			5.7
+#
+# 		) Row_format
+#
+# 			The row-storage format (Fixed, Dynamic, Compressed, Redundant, Compact)
+#
+# 			For MyISAM tables, Dynamic corresponds to what myisamchk -dvv reports as Packed.
+#
+# 		) Rows
+#
+# 			The number of rows.
+#
+# 			Some storage engines, such as MyISAM, store the exact count.
+#
+# 			For other storage engines, such as InnoDB, this value is an approximation
+# 			and may vary from the actual value by as much as 40% to 50%.
+#
+# 			In such cases, use SELECT COUNT(*) to obtain an accurate count.
+#
+# 			The Rows value is NULL for INFORMATION_SCHEMA tables.
+#
+# 			For InnoDB tables, the row count is only a rough estimate used in SQL optimization.
+#
+# 			(This is also true if the InnoDB table is partitioned)
+#
+# 		) Avg_row_length
+#
+# 			The average row length
+#
+# 		) Data_length
+#
+# 			For MyISAM, Data_length is the length of the data file, in bytes.
+#
+# 			For InnoDB, Data_length is the approximate amount of memory allocated
+# 			for the clustered index, in bytes.
+#
+# 			Specifically, it is the clustered index size, in pages, multiplied by
+# 			the InnoDB page size.
+#
+# 			Refer to the notes at the end of this section for information regarding
+# 			other storage engines.
+#
+# 		) Max_data_length
+#
+# 			For MyISAM, Max_data_length is maximum length of the data file.
+#
+# 			This is the total number of bytes of data that can be stored in the table,
+# 			given the data pointer size used.
+#
+# 			Unused for InnoDB.
+#
+# 			Refer to the notes at the end of this section for information regarding other
+# 			storage engines.
+#
+# 		) Index_length
+#
+# 			For MyISAM, Index_length is the length of the index file, in bytes.
+#
+# 			For InnoDB, Index_length is the approximate amount of memory allocated for
+# 			non-clustered indexes, in bytes.
+#
+# 			Specifically, it is the sum of non-clustered index sizes, in pages,
+# 			multiplied by the InnoDB page size.
+#
+# 			Refer to the notes at the end of this section for information regarding other
+# 			storage engines.
+#
+# 		) Data_free
+#
+# 			The number of allocated but unused bytes.
+#
+# 			InnoDB tables report the free space of the tablespace to which the table belongs.
+#
+# 			For a table located in the shared tablespace, this is the free space of the shared
+# 			tablespace.
+#
+# 			If you are using multiple tablespaces and the table has its own tablespace,
+# 			the free space is for only that table.
+#
+# 			Free space means the number of bytes in completely free extents minus a safety
+# 			margin.
+#
+# 			Even if free space displays as 0, it may be possible to insert rows as long
+# 			as new extents need not be allocated.
+#
+# 			For NDB Cluster, Data_free shows the space allocated on disk for, but not
+# 			used by, a Disk Data table or fragment on disk.
+#
+# 			(In-memory data resource usage is reported by the Data_length column)
+#
+# 			For partitioned tables, this value is only an estimate and may not be absolutely
+# 			correct.
+#
+# 			A more accurate model of obtaining this information in such cases is to query
+# 			the INFORMATION_SCHEMA PARTITIONS table, as shown in this example:
+#
+# 				SELECT SUM(DATA_FREE)
+# 					FROM INFORMATION_SCHEMA.PARTITIONS
+# 					WHERE TABLE_SCHEMA = 'mydb'
+# 					AND TABLE_NAME = 'mytable';
+#
+# 			For more information, see SECTION 25.16, "THE INFORMATION_SCHEMA PARTITIONS TABLE"
+#
+# 		) Auto_increment
+#
+# 			The next AUTO_INCREMENT value
+#
+# 		) Create_time
+#
+# 			When the table was created.
+#
+# 		) Update_time
+#
+# 			When the data file was last updated. For some storage engines, this value is NULL.
+#
+# 			For example, InnoDB stores multiple tables in its system tablespace and the data
+# 			file timestamp does not apply.
+#
+# 			Even with file-per-table mode with each InnoDB table in a separate .ibd file,
+# 			change buffering can delay the write to the data file, so the file modification
+# 			time is different from the time of the last insert, update, or delete.
+#
+# 			For MyISAM, the data file timestamp is used; however, on Windows the timestamp
+# 			is not updated by updates, so the value is inaccurate.
+#
+# 			Update_time displays a timestamp value for the last UPDATE, INSERT, or DELETE
+# 			performed on InnoDB tables that are not partitioned.
+#
+# 			For MVCC, the timestamp value reflects the COMMIT time, which is considered
+# 			the last update time.
+#
+# 			Timestamps are not persisted when the server is restarted or when the table is evicted
+# 			from the InnoDB data dictionary cache.
+#
+# 		) Check_time
+#
+# 			When the table was last checked. Not all storage engines update this time, in which case,
+# 			the value is always NULL
+#
+# 			For partitioned InnoDB tables, Check_time is always NULL
+#
+# 		) Collation
+#
+# 			The table default collation. The output does not explicitly list the table default character
+# 			set, but the collation name begins with the character set name
+#
+# 		) Checksum
+#
+# 			The live checksum value, if any
+#
+# 		) Create_options
+#
+# 			Extra options used with CREATE_TABLE.
+#
+# 			The original options from when CREATE_TABLE was executed are retained
+# 			and the options reported here may differ from the active table settings and options.
+#
+# 			For InnoDB tables, the actual ROW_FORMAT and KEY_BLOCK_SIZE options are reported.
+#
+# 			Prior to MySQL 8.0, Create_options reports the originally supplied ROW_FORMAT
+# 			and KEY_BLOCK_SIZE.
+#
+# 			For more information, see SECTION 13.1.20, "CREATE TABLE SYNTAX"
+#
+# 			Create_options shows partitioned if the table is partitioned.
+#
+# 			It also shows the ENCRYPTION option specified when creating or altering
+# 			a file-per-table tablespace.
+#
+# 			This column does not show the encryption option specified when creating
+# 			or altering a general tablespace.
+#
+# 			The ENCRYPTION column of the INNODB_TABLESPACES table is applicable
+# 			to both file-per-table and general tablespaces.
+#
+# 		) Comment
+#
+# 			The comment used when creating the table (or information as to why MySQL could not
+# 			access the table information)
+#
+# NOTES
+#
+# 		) For NDB tables, the output of this statement shows appropriate values for the Avg_row_length
+# 			and Data_length columns, with the exception that BLOB columns are not taken into account.
+#
+# 		) For NDB tables, Data_length includes data stored in main memory only; the Max_data_length
+# 			and Data_free columns apply to Disk Data
+#
+# 		) For NDB Cluster Disk Data tables, Max_data_length shows the space allocated for the disk part
+# 			of a Disk Data table or fragment.
+#
+# 			(In-memory data resource usage is reported by the Data_length column)
+#
+# 		) For MEMORY tables, the Data_length, Max_data_length, and Index_length values
+# 			approximate the actual amount of allocated memory.
+#
+# 			The allocation algorithm reserves memory in large amounts to reduce the number
+# 			of allocation operations.
+#
+# 		) For views, most columns displayed by SHOW_TABLE_STATUS are 0 or NULL except
+# 			that Name indicates the view name, Create_time indicates the creation time,
+# 			and Comment says VIEW.
+#
+# Table information is also available from the INFORMATION_SCHEMA TABLES table.
+#
+# See SECTION 25.29, "THE INFORMATION_SCHEMA TABLES TABLE"
+#
+# 13.7.6.37 SHOW TABLES SYNTAX
+#
+# 		SHOW [EXTENDED] [FULL] TABLES
+# 			[{FROM | IN} db_name]
+# 			[LIKE 'pattern' | WHERE expr]
+#
+# SHOW_TABLES lists the non-TEMPORARY tables in a given database.
+#
+# You can also get this list using the mysqlshow db_name command.
+#
+# The LIKE clause, if present, indicates which table names to match:
+#
+# The WHERE clause can be given to select rows using more general conditions,
+# as discussed in SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS"
+#
+# Matching performed by the LIKE clause is dependent on the setting of the lower_case_table_names
+# system variable.
+#
+# The optional EXTENDED modifier causes SHOW_TABLES to list hidden tables created by failed
+# ALTER_TABLE statements.
+#
+# These temporary tables have names beginning with #sql and can be dropped using
+# DROP_TABLE
+#
+# This statement also lists any views in the database. The optional FULL modifier
+# causes SHOW_TABLES to display a second output column with values of BASE TABLE
+# for a table, VIEW for a view, or SYSTEM VIEW for an INFORMATION_SCHEMA table
+#
+# If you have no privileges for a base table or view, it does not show up in the
+# output from SHOW_TABLES or mysqlshow db_name
+#
+# Table information is also available from the INFORMATION_SCHEMA TABLES table.
+#
+# See SECTION 25.29, "THE INFORMATION_SCHEMA TABLES TABLE"
+#
+# 13.7.6.38 SHOW TRIGGERS SYNTAX
+#
+# 		SHOW TRIGGERS
+# 			[{FROM | IN} db_name]
+# 			[LIKE 'pattern' | WHERE expr]
+#
+# SHOW_TRIGGERS lists the triggers currently defined for tables in a database
+# (The default database unless a FROM clause is given)
+#
+# This statement returns results only for databases and tables for which you have
+# the TRIGGER privilege.
+#
+# The LIKE clause, if present, indicates which table names (not trigger names)
+# to match and causes the statement to display triggers for those tables.
+#
+# The WHERE clause can be given to select rows using more general conditions,
+# as dicussed in SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS"
+#
+# For the ins_sum trigger defined in SECTION 24.3, "USING TRIGGERS",
+# the output of SHOW_TRIGGERS is as shown here:
+#
+# 		SHOW TRIGGERS LIKE 'acc%'\G
+# 		*********************** 1. row ********************************
+# 						Trigger: ins_sum
+# 						 Event : INSERT
+# 					    Table : account
+# 					Statement : SET @sum = @sum + NEW.amount
+# 						Timing : BEFORE
+# 						Created: 2018-08-08 10:10:12.61
+# 					sql_mode  : ONLY_FULL_GROUP_BY, STRICT_TRANS_TABLES,
+# 									NO_ZERO_IN_DATE, NO_ZERO_DATE,
+# 									ERROR_FOR_DIVISION_BY_ZERO,
+# 									NO_ENGINE_SUBSTITUTION
+# 						Definer: me@localhost
+# 	  character_set_client: utf8mb4
+# 	  collation_connection: utf8mb4_0900_ai_ci
+# 		Database Collation : utf8mb4_0900_ai_ci
+#
+# SHOW_TRIGGERS output has these columns:
+#
+# 		) Trigger
+#
+# 			The name of the trigger
+#
+# 		) Event
+#
+# 			The trigger event. This is the type of operation on the associated table for which
+# 			the trigger activates.
+#
+# 			The value is INSERT (a row was inserted), DELETE (a row was deleted), or
+# 			UPDATE (a row was modified)
+#
+# 		) Table
+#
+# 			The table for which the trigger is defined
+#
+# 		) Statement
+#
+# 			The trigger body; that is, the statement executed when the trigger activates.
+#
+# 		) Timing
+#
+# 			Whether hte trigger activates before or after the triggering event.
+#
+# 			The value is BEFORE or AFTER.
+#
+# 		) Created
+#
+# 			The date and time when the trigger was created. This is a TIMESTAMP(2) value
+# 			(with a fractional part in hundreths of seconds) for triggers.
+#
+# 		) sql_mode
+#
+# 			The SQL mode in effect when the trigger was created, and under which the
+# 			trigger executes.
+#
+# 			For the permitted values, see SECTION 5.1.11, "SERVER SQL MODES"
+#
+# 		) Definer
+#
+# 			The account of the user who created the trigger, in 'user_name'@'host_name' format
+#
+# 		) character_set_client
+#
+# 			The session value of the character_set_client system variable when the trigger was created.
+#
+# 		) collation_connection
+#
+# 			The session value of the collation_connection system variable when the trigger was created.
+#
+# 		) Database Collation
+#
+# 			The collation of the database with which the trigger is associated
+#
+# Trigger information is also available from the INFORMATION_SCHEMA TRIGGERS table.
+#
+# See SECTION 25.33, "THE INFORMATION_SCHEMA TRIGGERS TABLE"
+#
+# 13.7.6.39 SHOW VARIABLES SYNTAX
+#
+# 		SHOW [GLOBAL | SESSION] VARIABLES
+# 			[LIKE 'pattern' | WHERE expr]
+#
+# SHOW_VARIABLES shows the values of MySQL system variables (see SECTION 5.1.8, "SERVER SYSTEM VARIABLES")
+#
+# This statement does not require any privilege. It requires only the ability to connect to the server.
+#
+# System variable information is also available from these sources:
+#
+# 		) Performance Schema tables. See SECTION 26.12.13, "PERFORMANCE SCHEMA SYSTEM VARIABLE TABLES"
+#
+# 		) The mysqladmin variables command. See SECTION 4.5.2, "mysqladmin -- Client for Administering a MySQL Server"
+#
+# For SHOW_VARIABLES, a LIKE clause, if present, indicates which variable names to match.
+#
+# A WHERE clause can be given to select rows using more general conditions, as
+# discussed in SECTION 25.41, "EXTENSIONS TO SHOW STATEMENTS"
+#
+# SHOW_VARIABLES accepts an optional GLOBAL or SESSION variable scope modifier:
+#
+# 		) With a GLOBAL modifier, the statement displays global system variable values.
+#
+# 			These are the values used to initialize the corresponding session variables
+# 			for new connections to MySQL.
+#
+# 			If a variable has no global value, no value is displayed
+#
+# 		) With a SESSION modifier, the statement displays the system variable values that are
+# 			in effect for the current connection.
+#
+# 			If a variable has no session value, the global value is displayed.
+#
+# 			LOCAL is a synonym for SESSION
+#
+# 		) If no modifier is present, the default is SESSION
+#
+# The scope for each system variable is listed at SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# SHOW_VARIABLES is subject to a version-dependent display-width limit.
+#
+# For variables with very long values that are not completely displayed, use SELECT
+# as a workaround.
+#
+# For example:
+#
+# 		SELECT @@GLOBAL.innodb_data_file_path;
+#
+# Most system variables can be set at server startup (read-only variables such as
+# version_comment are exceptions)
+#
+# Many can be changed at runtime with the SET statement.
+#
+# See SECTION 5.1.9, "USING SYSTEM VARIABLES", and SECTION 13.7.5.1, "SET SYNTAX FOR VARIABLE ASSIGNMENT"
+#
+# Partial output is shown here.
+#
+# The list of names and values may differ for your server.
+#
+# SECTION 5.1.8, "SERVER SYSTEM VARIABLES", describes the meaning of each variable,
+# and SECTION 5.1.1, "CONFIGURING THE SERVER", provides information about tuning them.
+#
+# 		SHOW VARIABLES;
+# 		+--------------------------------------------+--------------------------+
+# 		| Variable_name 							 			| Value 						   |
+# 		+--------------------------------------------+--------------------------+
+# 		| activate_all_roles_on_login 		 			| OFF 							|
+# 		| auto_generate_certs 					 			| ON 							   |
+# 		| auto_increment_increment 			 			| 1 								|
+# 		| auto_increment_offset 				 			| 1 								|
+# 		| autocommit 								 			| ON 							   |
+# 		| automatic_sp_privileges 				 			| ON 							   |
+# 		| avoid_temporal_upgrade 				 			| OFF 							|
+# 		| back_log 									 			| 151 							|
+# 		| basedir 									 			| /usr/ 						   |
+# 		| big_tables 								 			| OFF 							|
+# 		| bind_address 							 			| * 								|
+# 		| binlog_cache_size 						 			| 32768 						   |
+# 		| binlog_checksum 						 			| CRC32 						   |
+# 		| binlog_direct_non_transactional_updates 	| OFF 							|
+# 		| binlog_error_action 								| ABORT_SERVER 				|
+# 		| binlog_expire_logs_seconds 						| 2592000 						|
+# 		| binlog_format 										| ROW 							|
+# 		| binlog_group_commit_sync_delay 				| 0 								|
+# 		| binlog_group_commit_sync_no_delay_count 	| 0 								|
+# 		| binlog_gtid_simple_recovery 					| ON 								|
+# 		| binlog_max_flush_queue_time 					| 0 								|
+# 		| binlog_order_commits 								| ON 								|
+# 		| binlog_row_image 									| FULL 							|
+# 		| binlog_row_metadata 								| MINIMAL 						|
+# 		| binlog_row_value_options 						| 									|
+# 		| binlog_rows_query_log_events 					| OFF 							|
+# 		| binlog_stmt_cache_size 							| 32768 							|
+# 		| binlog_transaction_dependency_history_size | 25000 							|
+# 		| binlog_transaction_dependency_tracking 	   | COMMIT_ORDER 				|
+# 		| block_encryption_mode 							| aes-128-ecb 					|
+# 		| bulk_insert_buffer_size 							| 8388608 						|
+# 		---
+# 		---
+# 		---
+# 		| max_allowed_packet 								| 67108864 						|
+# 		| max_binlog_cache_size 							| 18446744073709547520 		|
+# 		| max_binlog_size 									| 1073741824 					|
+# 		| max_binlog_stmt_cache_size 						| 1844674073709547520 		|
+# 		| max_connect_errors 								| 100 							|
+# 		| max_connections 									| 151 							|
+# 		| max_delayed_threads 								| 20 								|
+# 		| max_digest_length 									| 1024 							|
+# 		| max_error_count 									| 1024 							|
+# 		| max_execution_time 								| 0 								|
+# 		| max_heap_table_size 								| 16777216 						|
+# 		| max_insert_delayed_threads 						| 20 								|
+# 		| max_join_size 										| 18446744073709551615 		|
+# 		---
+# 		---
+# 		---
+# 		| thread_handling 									| one-thread-per-connection|
+# 		| thread_stack 										| 286720 						|
+# 		| time_zone 											| SYSTEM 						|
+# 		| timestamp 											| 1530906638.765316 			|
+# 		| tls_version 											| TLSv1, TLSv1.1,TLSv1.2   |
+# 		| tmp_table_size 										| 16777216 						|
+# 		| tmpdir 												| /tmp 							|
+# 		| transaction_alloc_block_size 					| 8192 							|
+# 		| transaction_allow_batching 						| OFF 							|
+# 		| transaction_isolation 							| REPEATABLE-READ 			|
+# 		| transaction_prealloc_size 						| 4096 							|
+# 		| transaction_read_only 							| OFF 							|
+# 		| transaction_write_set_extraction 			 	| XXHASH64 						|
+# 		| unique_checks 										| ON 								|
+# 		| updatable_views_with_limit 						| YES 							|
+# 		| version 												| 8.0.12 						|
+# 		| version_comment 									| MySQL Community Server - GPL |
+# 		| version_compile_machine 							| x86_64 						|
+# 		| version_compile_os 								| Linux 							|
+# 		| version_compile_zlib 								| 1.2.11 						|
+# 		| wait_timeout 										| 28800 							|
+# 		| warning_count 										| 0 								|
+# 		| windowing_use_high_precision 					| ON 								|
+# 		+--------------------------------------------+--------------------------+
+#
+# With a LIKE clause, the statement displays only rows for those variables with names that
+# match the pattern.
+#
+# To obtain the row for a specific variable, use a LIKE clause as shown:
+#
+# 		SHOW VARIABLES LIKE 'max_join_size';
+# 		SHOW SESSION VARIABLES LIKE 'max_join_size';
+#
+# To get a list of variables whose name match a pattern, use the % wildcard character
+# in a LIKE clause:
+#
+# 		SHOW VARIABLES LIKE '%size%';
+# 		SHOW GLOBAL VARIABLES LIKE '%size%';
+#
+# Wildcard characters can be used in any position within the pattern to be matched.
+#
+# Strictly speaking, because _ is a wildcard that matches any single character,
+# you should escape it as \_ to match it literally.
+#
+# In practice, this is rarely necessary.
+#
+# 13.7.6.40 SHOW WARNINGS SYNTAX
+#
+# 		SHOW WARNINGS [LIMIT [offset,] row_count]
+# 		SHOW COUNT(*) WARNINGS
+#
+# SHOW_WARNINGS is a diagnostic statement that displays information about the conditions
+# (errors, warnings and notes) resulting from executing a statement in the current session.
+#
+# Warnings are generated for DML statements such as INSERT, UPDATE, and LOAD_DATA_INFILE
+# as well as DDL statements such as CREATE_TABLE and ALTER_TABLE
+#
+# The LIMIT clause has the same syntax as for the SELECT statement. See SECTION 13.2.10, "SELECT SYNTAX"
+#
+# SHOW_WARNINGS is also used following EXPLAIN, to display the extended information generated
+# by EXPLAIN.
+#
+# See SECTION 8.8.3, "EXTENDED EXPLAIN OUTPUT FORMAT"
+#
+# SHOW_WARNINGS displays information about the conditions resulting from execution
+# of the most recent nondiagnostic statement in the current session.
+#
+# If the most recent statement resulted in an error during parsing, SHOW_WARNINGS
+# shows the resulting conditions, regardless of statement type (diagnostic or nondiagnostic)
+#
+# The SHOW_COUNT(*)_WARNINGS diagnostic statement displays the total number of errors,
+# warnings, and notes.
+#
+# You can also retrieve this number from the warning_count system variable:
+#
+# 		SHOW COUNT(*) WARNINGS;
+# 		SELECT @@warning_count;
+#
+# A difference in these statements is that the first is a diagnostic statement that
+# does not clear the message list.
+#
+# The second, because it is a SELECT statement is considered nondiagnostic and does
+# clear the message list.
+#
+# A related diagnostic statement, SHOW_ERRORS, shows only error conditions (it excludes
+# warnings and notes), and SHOW_COUNT(*)_ERRORS statement displays the total number
+# of errors.
+#
+# See SECTION 13.7.6.17, "SHOW ERRORS SYNTAX"
+#
+# GET_DIAGNOSTICS can be used to examine information for individual conditions.
+#
+# See SECTION 13.6.7.3, "GET DIAGNOSTICS SYNTAX"
+#
+# Here is a simple example that shows data-conversion warnings for INSERT.
+#
+# The example assumes that strict SQL mode is disabled. With strict mode
+# enabled, the warnings would become errors and terminate the INSERT.
+#
+# 		CREATE TABLE t1 (a TINYINT NOT NULL, b CHAR(4));
+# 		Query OK, 0 rows affected (0.05 sec)
+#
+# 		INSERT INTO t1 VALUES(10,'mysql'), (NULL,'test'), (300, 'xyz');
+# 		Query OK, 3 rows affected, 3 warnings (0.00 sec)
+# 		Records: 3 Duplicates: 0 Warnings: 3
+#
+# 		SHOW WARNINGS\G
+# 		************************ 1. row ******************************
+# 			Level: Warning
+# 			Code : 1265
+# 		Message : Data truncated for column 'b' at row 1
+# 		************************ 2. row ******************************
+# 			Level: Warning
+# 			Code : 1048
+# 		Message : Column 'a' cannot be null
+# 		************************ 3. row ******************************
+# 			Level: Warning
+# 			Code : 1264
+# 		Message : Out of range value for column 'a' at row 3
+# 		3 rows in set (0.00 sec)
+#
+# The max_error_count system variable controls the maximum number of error, warning,
+# and note messages for which the server stores information, and thus the number
+# of messages that SHOW_WARNINGS displays.
+#
+# To change the number of messages the server can store, change the value of max_error_count
+#
+# max_error_count controls only how many messages are stored, not how many are counted.
+#
+# The value of warning_count is not limited by max_error_count, even if the number of
+# messages generated exceeds max_error_count.
+#
+# The following example demonstrates this.
+#
+# The ALTER_TABLE statement produces three warning messages (strict SQL mode is disabled
+# for the example to prevent an error from occuring after a single conversion issue).
+#
+# Only one message is stored and displayed because max_error_count has been set to 1,
+# but all three are counted (as shown by the value of warning_count):
+#
+# 		SHOW VARIABLES LIKE 'max_error_count';
+# 		+-----------------+-----------+
+# 		| Variable_name   | Value 		|
+# 		+-----------------+-----------+
+# 		| max_error_count | 1024 		|
+# 		+-----------------+-----------+
+# 		1 row in set (0.00 sec)
+#
+# 		SET max_error_count=1, sql_mode = '';
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		ALTER TABLE t1 MODIFY b CHAR;
+# 		Query OK, 3 rows affected, 3 warnings (0.00 sec)
+# 		Records: 3 Duplicates: 0 Warnings: 3
+#
+# 		SHOW WARNINGS;
+# 		+---------+-------+----------------------------------------+
+# 		| Level   | Code  | Message 										  |
+# 		+---------+-------+----------------------------------------+
+# 		| Warning | 1263  | Data truncated for column 'b' at row 1 |
+# 		+---------+-------+----------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		SELECT @@warning_count;
+# 		+------------------------+
+# 		| @@warning_count 		 |
+# 		+------------------------+
+# 		| 			3 					 |
+# 		+------------------------+
+# 		1 row in set (0.01 sec)
+#
+# To disable message storage, set max_error_count to 0.
+#
+# In this case, warning_count still indicates how many warnings occurred, but messages
+# are not stored and cannot be displayed.
+#
+# The sql_notes system variable controls whether note messages increment warning_count
+# and whether the server stores them.
+#
+# By default, sql_notes is 1, but if set to 0, notes do not increment warning_count and
+# the server does not store them:
+#
+# 		SET sql_notes = 1;
+# 		DROP TABLE IF EXISTS test.no_such_table;
+# 		Query OK, 0 rows affected, 1 warning (0.00 sec)
+# 		SHOW WARNINGS;
+# 		+-------+--------+------------------------------------+
+# 		| Level | Code   | Message 							 		|
+# 		+-------+--------+------------------------------------+
+# 		| Note  | 1051   | Unknown table 'test.no_such_table' |
+# 		+-------+--------+------------------------------------+
+# 		1 row in set (0.00 sec)
+#
+# 		SET sql_notes = 0;
+# 		DROP TABLE IF EXISTS test.no_such_table;
+# 		Query OK, 0 rows affected (0.00 sec)
+# 		SHOW WARNINGS;
+# 		Empty set (0.00 sec)
+#
+# The MySQL server sends to each client a count indicating the total number of errors,
+# warnings and notes resulting from the most recent statement executed by that client.
+#
+# From the C API, this value can be obtained by calling mysql_warning_count()
+#
+# See SECTION 28.7.7.82, "MYSQL_WARNING_COUNT()"
+#
+# In the mysql client, you can enable and disable automatic warnings display using the
+# warnings and nowarning commands, respectively, or their shortcuts, \W and \w
+# (see SECTION 4.5.1.2, "MYSQL CLIENT COMMANDS").
+#
+# For example:
+#
+# 		\W
+# 		Show warnings enabled
+# 		SELECT 1/0;
+# 		+---------+
+# 		| 1/0     |
+# 		+---------+
+# 		| NULL 	 |
+# 		+---------+
+# 		1 row in set, 1 warning (0.03 sec)
+#
+# 		Warning (Code 1365): Division by 0
+# 		\w
+# 		Show warnings disabled
+#
+# 13.7.7 OTHER ADMINISTRATIVE STATEMENTS
+#
+# 13.7.7.1 BINLOG SYNTAX
+# 13.7.7.2 CACHE INDEX SYNTAX
+#
+# 13.7.7.3 FLUSH SYNTAX
+# 13.7.7.4 KILL SYNTAX
+#
+# 13.7.7.5 LOAD INDEX INTO CACHE SYNTAX
+# 13.7.7.6 RESET SYNTAX
+#
+# 13.7.7.7 RESET PERSIST SYNTAX
+# 13.7.7.8 RESTART SYNTAX
+#
+# 13.7.7.9 SHUTDOWN SYNTAX
+#
+# 13.7.7.1 BINLOG SYNTAX
+#
+# 		BINLOG 'str'
+#
+# BINLOG is an internal-use statement. It is generated by the mysqlbinlog program
+# as the printable representation of certain events in binary log files.
+#
+# (See SECTION 4.6.8, "MYSQLBINLOG -- UTILITY FOR PROCESSING BINARY LOG FILES")
+#
+# The 'str' value is base 64-encoded string that the server decodes to determine
+# the data change indicated by the corresponding event.
+#
+# This statement requires the BINLOG_ADMIN or SUPER privilege.
+#
+# This statement can execute only format description events and row events.
+#
+# 13.7.7.2 CACHE INDEX SYNTAX
+#
+# 		CACHE INDEX
+# 			tbl_index_list [, tbl_index_list]
+# 			[PARTITION (partition_list | ALL)]
+# 			IN key_cache_name
+#
+# 		tbl_index_list:
+# 			tbl_name [[INDEX|KEY] (index_name[, index_name] ---)]
+#
+# 		partition_list:
+# 			partition_name[, partition_name][, ---]
+#
+# The CACHE_INDEX statement assigns table indexes to a specific key cache.
+#
+# It is used only for MyISAM tables. After the indexes have been assigned,
+# they can be preloaded into the cache if desired with LOAD_INDEX_INTO_CACHE
+#
+# The following statement assigns indexes from the tables t1, t2, and t3 to the
+# key cache named hot_cache:
+#
+# 		CACHE INDEX t1, t2, t3 IN hot_cache;
+# 		+----------+------------------------+----------+------------+
+# 		| Table 	  | Op 							| Msg_type | Msg_text 	|
+# 		+----------+------------------------+----------+------------+
+# 		| test.t1  | assign_to_keycache 		| status   | OK 			|
+# 		| test.t2  | assign_to_keycache 		| status   | OK 			|
+# 		| test.t3  | assign_to_keycache 		| status   | OK 			|
+# 		+----------+------------------------+----------+------------+
+#
+# The syntax of CACHE_INDEX enables you to specify that only particular indexes from
+# a table should be assigned to the cache.
+#
+# The current implementation assigns all the table's indexes to the cache, so there
+# is no reason to specify anything other than the table name.
+#
+# The key cache referred to in a CACHE_INDEX statement can be created by setting its
+# size with a parameter setting statement or in the server parameter settings.
+#
+# For example:
+#
+# 		SET GLOBAL keycache1.key_buffer_size=128*1024;
+#
+# Key cache parameters can be accessed as members of a structured system variable.
+# See SECTION 5.1.9.5, "STRUCTURED SYSTEM VARIABLES"
+#
+# A key cache must exist before you can assign indexes to it:
+#
+# 		CACHE INDEX t1 IN non_existent_cache;
+# 		ERROR 1284 (HY000): Unknown key cache 'non_existent_cache'
+#
+# https://dev.mysql.com/doc/refman/8.0/en/cache-index.html
+#
 # 
