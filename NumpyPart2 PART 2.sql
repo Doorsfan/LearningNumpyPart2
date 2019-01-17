@@ -34644,6 +34644,1640 @@
 # 		CACHE INDEX t1 IN non_existent_cache;
 # 		ERROR 1284 (HY000): Unknown key cache 'non_existent_cache'
 #
-# https://dev.mysql.com/doc/refman/8.0/en/cache-index.html
+# By default, table indexes are assigned to the main (default) key cache created at the
+# server startup.
+#
+# When a key cache is destroyed, all indexes assigned to it become assigned to the
+# default key cache again.
+#
+# Index assignment affects the server globally: If one client assigns an index to a given cache,
+# This cache is used for all queries involving the index, no matter which client issues
+# the queries.
+#
+# In MySQL 8.0, this statement is also supported for partitioned MyISAM tables.
+#
+# You can assign one or more indexes for one, several, or all partitions to a given
+# key cache.
+#
+# For example, you can do the following:
+#
+# 		CREATE TABLE pt (c1 INT, c2 VARCHAR(50), INDEX i(c1))
+# 			ENGINE=MyISAM
+# 			PARTITION BY HASH(c1)
+# 			PARTITIONS 4;
+#
+# 		SET GLOBAL kc_fast.key_buffer_size = 128 * 1024;
+# 		SET GLOBAL kc_slow.key_buffer_size = 128 * 1024;
+#
+# 		CACHE INDEX pt PARTITION (p0) IN kc_fast;
+# 		CACHE INDEX pt PARTITION (p1, p3) IN kc_slow;
+#
+# The previous set of statements performs the following actions:
+#
+# 		) Creates a partitioned table with 4 partitions; these partitions are automatically named p0, ---, p3;
+# 			This table has an index named i on column c1
+#
+# 		) Creates 2 key caches named kc_fast and kc_slow
+#
+# 		) Assigns the index for partition p0 to the kc_fast key cache and the index
+# 			for partitions p1 and p3 to the kc_slow key cache;
+#
+# 			The index for the remaining partition (p2) uses the servers
+# 			default key cache
+#
+# If you wish instead to assign the indexes for all partitions in table pt to a single
+# key cache named kc_all, you can use either one of the following 2 statements:
+#
+# 		CACHE INDEX pt PARTITION (ALL) IN kc_all;
+#
+# 		CACHE INDEX pt IN kc_all;
+#
+# The two statements just shown are equivalent, and issuing either one of them
+# has exactly the same effect.
+#
+# In other words, if you wish to assign indexes for all partitions of a partitioned
+# table to the same key cache, then the PARTITION (ALL) clause is optional.
+#
+# When assigning indexes for multiple partitions to a key cache, the partitions
+# do not have to be contiguous, and you are not required to list their names
+# in any particular order.
+#
+# Indexes for any partitions that are not explicitly assigned to a key cache automatically
+# use the server's default key cache.
+#
+# In MySQL 8.0, index preloading is also supported for partitioned MyISAM tables.
+#
+# For more information, see SECTION 13.7.7.5, "LOAD INDEX INTO CACHE SYNTAX"
+#
+# 13.7.7.3 FLUSH SYNTAX
+#
+# 		FLUSH [NO_WRITE_TO_BINLOG | LOCAL] {
+# 			flush_option [, flush_option] ---
+# 		 | tables_option
+# 		}
+#
+# 		flush_option: {
+# 			BINARY LOGS
+# 		 | ENGINE LOGS
+# 		 | ERROR LOGS
+# 		 | GENERAL LOGS
+# 		 | HOSTS
+# 		 | LOGS
+# 		 | PRIVILEGES
+# 		 | OPTIMIZER_COSTS
+# 		 | RELAY LOGS [FOR CHANNEL channel]
+# 		 | SLOW LOGS
+# 		 | STATUS
+# 		 | USER_RESOURCES
+# 		}
+#
+# 		tables_option: {
+# 			TABLES
+# 		 | TABLES tbl_name [, tbl_name] ---
+# 		 | TABLES WITH READ LOCK
+# 		 | TABLES tbl_name [, tbl_name] --- WITH READ LOCK
+# 		 | TABLES tbl_name [, tbl_name] --- FOR EXPORT
+# 		}
+#
+# The FLUSH statement has several variant forms that clear or reload various internal caches,
+# flush tables, or acquire locks.
+#
+# To execute FLUSH, you must have the RELOAD privilege.
+#
+# Specific flush options might require additional privileges, as described later.
+#
+# NOTE:
+#
+# 		It is not possible to issue FLUSH statements within stored functions or triggers.
+#
+# 		However, you may use FLUSH in stored procedures, so long as these are not called
+# 		from stored functions or triggers.
+#
+# 		See SECTION C.1, "RESTRICTIONS ON STORED PROGRAMS"
+#
+# By default, the server writes FLUSH statements to the binary log so that they replicate
+# to replication slaves.
+#
+# To suppress logging, specify the optional NO_WRITE_TO_BINLOG keyword or its alias LOCAL.
+#
+# NOTE:
+#
+# 		FLUSH_LOGS, FLUSH_BINARY_LOGS, FLUSH_TABLES_WITH_READ_LOCK (with or without a table list),
+# 		and FLUSH_TABLES_tbl_name_---_FOR_EXPORT are not written to the binary log in any case
+# 		because they would cause problems if replicated to a slave.
+#
+# The FLUSH statement causes an implicit commit. See SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT"
+#
+# The mysqladmin utility provides a command-line interface to some flush operations, using commands such
+# as flush-hosts, flush-logs, flush-privileges, flush-status, and flush-tables.
+#
+# See SECTION 4.5.2, "MYSQLADMIN -- CLIENT FOR ADMINISTERING A MYSQL SERVER"
+#
+# Sending a SIGHUP signal to the server causes several flush operations to occur that are similar
+# to various forms of the FLUSH statement.
+#
+# See SECTION 5.1.16, "SERVER RESPONSE TO SIGNALS"
+#
+# The RESET statement is similar to FLUSH
+#
+# See SECTION 13.7.7.6, "RESET SYNTAX", for information about using the RESET statement with replication.
+#
+# The following list describes the permitted FLUSH statement flush_option values.
+#
+# For descriptions of FLUSH_TABLES variants, see FLUSH TABLES SYNTAX
+#
+# 		) FLUSH_BINARY_LOGS
+#
+# 			Closes and reopens any binary log file to which the server is writing.
+#
+# 			If binary logging is enabled, the sequence number of the binary log file is
+# 			incremented by one relative to the previous file.
+#
+# 		) FLUSH_ENGINE_LOGS
+#
+# 			Closes and reopens any flushable logs for installed storage engines.
+#
+# 			This causes InnoDB to flush its logs to disk.
+#
+# 		) FLUSH_ERROR_LOGS
+#
+# 			Closes and reopens any error log file to which the server is writing
+#
+# 		) FLUSH_GENERAL_LOGS
+#
+# 			Closes and reopens any general query log file to which the server is writing.
+#
+# 		) FLUSH_HOSTS
+#
+# 			Empties the host cache and the Performance Schema host_cache table that exposes
+# 			the cache contents, and unblocks any blocked hosts.
+#
+# 			See SECTION 8.12.4.2, "DNS LOOKUP OPTIMIZATION AND THE HOST CACHE"
+#
+# 			Flush the host cache if some of your host change IP address or if the error message
+# 			Host 'host_name' is blocked occurs for connections from legitimate hosts.
+#
+# 			(See SECTION B.6.2.5, "HOST 'host_name' IS BLOCKED")
+#
+# 			When more than max_connect_errors errors occur successively for a given host
+# 			while connecting to the MySQL server, MySQL assumes that something is wrong
+# 			and blocks the host from further connection requests.
+#
+# 			Flushing the host cache enables further connection attempts from the host.
+#
+# 			The default value of max_connect_errors is 100
+#
+# 			To avoid this error message, start the server with max_connect_errors
+# 			set to a large value.
+#
+# 		) FLUSH_LOGS
+#
+# 			Closes and reopens any log file to which the server is writing.
+#
+# 			If binary logging is enabled, the sequence number of the binary log file
+# 			is incremented by one relative to the previous file.
+#
+# 			If relay logging is enabled, the sequence number of the relay log file
+# 			is incremented by one relative to the previous file.
+#
+# 			FLUSH_LOGS has no effect on tables used for the general query log or
+# 			for the slow query log (see SECTION 5.4.1, "SELECTING GENERAL QUERY LOG AND SLOW QUERY LOG OUTPUT DESTINATIONS")
+#
+# 		) FLUSH_OPTIMIZER_COSTS
+#
+# 			Rereads the cost model tables so that the optimizer starts using the current cost estimates stored
+# 			in them.
+#
+# 			The server writes a warning to the error log for any unrecognized entries.
+#
+# 			(For information about these tables, see SECTION 8.9.5, "THE OPTIMIZER COST MODEL")
+#
+# 			This operation affects only sessions that begin subsequent to the flush.
+#
+# 			Existing sessions continue to use the cost estimates that were current when they began.
+#
+# 		) FLUSH_PRIVILEGES
+#
+# 			Reloads the privileges from the grant tables in the mysql system database, and clears
+# 			the in-memory cache used by the caching_sha2_password authentication plugin.
+#
+# 			As part of this operation, the server reads the global_grants table containing
+# 			dynamic privilege assignments and registers any unregistered privileges found there.
+#
+# 			The server cache information in memory as a result of GRANT, CREATE_USER, CREATE_SERVER,
+# 			and INSTALL_PLUGIN statements.
+#
+# 			This memory is not released by the corresponding REVOKE, DROP_USER, DROP_SERVER and
+# 			UNINSTALL_PLUGIN statements, so for a server that executes many instances of the statements
+# 			that cause caching, there will be an increase in memory use.
+#
+# 			This cached memory can be freed with FLUSH_PRIVILEGES
+#
+# 		) FLUSH_RELAY_LOGS_[FOR_CHANNEL_channel]
+#
+# 			Closes and reopens any relay log file to which the server is writing.
+#
+# 			If relay logging is enabled, the sequence number of the relay log file is
+# 			incremented by one relative to the previous file.
+#
+# 			The FOR CHANNEL channel clause enables you to name which replication channel the
+# 			statement applies to.
+#
+# 			Execute FLUSH_RELAY_LOGS_FOR_CHANNEL_channel to flush the relay log for a specific
+# 			replication channel.
+#
+# 			If no channel is named and no extra replication channels exist, the statement
+# 			applies to the default channel.
+#
+# 			If no channel is named and multiple replication channels exist, the statement
+# 			applies to all replication channels.
+#
+# 			For more information, see SECTION 17.2.3, "REPLICATION CHANNELS"
+#
+# 		) FLUSH_SLOW_LOGS
+#
+# 			Closes and reopens any slow query log file to which the server is writing.
+#
+# 		) FLUSH_STATUS
+#
+# 			This option adds the session status from all active sessions to the global
+# 			status variables, resets the status of all active sessions, and resets account,
+# 			host, and user status values aggregated from disconnected sessions.
+#
+# 			See SECTION 26.12.14, "PERFORMANCE SCHEMA STATUS VARIABLE TABLES"
+#
+# 			This information may be of use when debugging a query. See SECTION 1.7, "HOW TO REPORT BUGS OR PROBLEMS"
+#
+# 		) FLUSH_USER_RESOURCES
+#
+# 			Resets all per-hour user resources to zero.
+#
+# 			This enables clients that have reached their hourly connection, query, or update
+# 			limits to resume activity immediately.
+#
+# 			FLUSH_USER_RESOURCES does not apply to the limit on maximum simultaneous connections
+# 			that is controlled by the max_user_connections system variable.
+#
+# 			See SECTION 6.3.6, "SETTING ACCOUNT RESOURCE LIMITS"
+#
+# FLUSH TABLES SYNTAX
+#
+# 	FLUSH_TABLES flushes tables, and depending on the variant used, acquires locks.
+#
+# Any TABLES variant used in a FLUSH statement must be the only option used.
+#
+# FLUSH_TABLE is a synonym for FLUSH_TABLES
+#
+# NOTE:
+#
+# 		The descriptions here that indicate tables are flushed by closing them apply differently
+# 		for InnoDB, which flushes table contents to disk but leaves them open.
+#
+# 		This still permits table files to be copied while the tables are open, as long as other
+# 		activity does not modify them.
+#
+# 		) FLUSH_TABLES
+#
+# 			Closes all open tables,, forces all tables in use to be closed, and flushes the prepared
+# 			statement cache.
+#
+# 			For information about prepared statement caching, see SECTION 8.10.3, "CACHING OF PREPARED STATEMENTS AND STORED PROGRAMS"
+#
+# 			FLUSH_TABLES is not permitted when there is an active LOCK_TABLES_---_READ 
+#
+# 			To flush and lock tables, use FLUSH_TABLES_tbl_name_---_WITH_READ_LOCK instead.
+#
+# 		) FLUSH_TABLES_tbl_name_[, tbl_name] ---
+#
+# 			With a list of one or more comma-separated table names, this statement is like FLUSH_TABLES
+# 			with no names except that the server flushes only the named tables.
+#
+# 			If a named table does not exist, no error occurs.
+#
+# 		) FLUSH_TABLES_WITH_READ_LOCK
+#
+# 			Closes all open tables and locks all tables for all databases with a global read lock.
+#
+# 			This is a very convenient way to get backups if you have a file system such as
+# 			Veritas or ZFS that can take snapshots in time.
+#
+# 			Use UNLOCK_TABLES to release the lock.
+#
+# 			FLUSH_TABLES_WITH_READ_LOCK acquires a global read lock rather  than table locks, so it is
+# 			not subject to the same behavior as LOCK_TABLES and UNLOCK_TABLES with respect to table
+# 			locking and implicit commits:
+#
+# 				) UNLOCK_TABLES implicitly commits any active transaction only if any tables currently
+# 					have been locked with LOCK_TABLES.
+#
+# 					The commit does not occur for UNLOCK_TABLES following FLUSH_TABLES_WITH_READ_LOCK
+# 					because the latter statement does not acquire table locks.
+#
+# 				) Beginning a transaction causes table locks acquired with LOCK_TABLES to be released,
+# 					as though you had executed UNLOCK_TABLES
+#
+# 					Beginning a transaction does not release a global read lock acquired with
+# 					FLUSH_TABLES_WITH_READ_LOCK
+#
+# 			FLUSH_TABLES_WITH_READ_LOCK does not prevent the server from inserting rows into the log tables
+# 			(see SECTION 5.4.1, "SELECTING GENERAL QUERY LOG AND SLOW QUERY LOG OUTPUT DESTINATIONS")
+#
+# 		) FLUSH_TABLES_tbl_name [, tbl_name] --- WITH_READ_LOCK
+#
+# 			This statement flushes and acquires read locks for the named tables.
+#
+# 			The statement first acquires exclusive metadata locks for the tables, so it waits
+# 			for transactions that have those tables open to complete.
+#
+# 			Then the statement flushes the tables from the table cache, reopens the tables, acquires
+# 			table locks (like LOCK_TABLES_---_READ), and downgrades the metadata locks from exclusive
+# 			to shared.
+#
+# 			After the statement acquires locks and downgrades the metadata locks, other sessions can read
+# 			but not modify the tables.
+#
+# 			Because this statement acquires table locks, you must have the LOCK_TABLES privilege for each
+# 			table, in addition to the RELOAD privilege that is required to use any FLUSH Statement.
+#
+# 			This statement applies only to existing base (non-TEMPORARY) tables.
+#
+# 			If a name refers to a base table, that table is used.
+#
+# 			If it refers to a TEMPORARY table, it is ignored.
+#
+# 			If a name applies to a view, an ER_WRONG_OBJECT error occurs.
+#
+# 			Otherwise, an ER_NO_SUCH_TABLE error occurs.
+#
+# 			Use UNLOCK_TABLES to release the locks, LOCK_TABLES to release the locks
+# 			and acquire other locks, or START_TRANSACTION to release the locks and begin
+# 			a new transaction.
+#
+# 			This FLUSH_TABLES variant enables tables to be flushed and locked in a single operation.
+#
+# 			It provides a workaround for the restriction that FLUSH_TABLES is not permitted
+# 			when there is an active LOCK_TABLES_---_READ
+#
+# 			This statement does not perform an implicit UNLOCK_TABLES, so an error results if
+# 			you use the statement while there is any active LOCK_TABLES or use it a second
+# 			time without first releasing the locks acquired.
+#
+# 			If a flushed table was opened with HANDLER, the handler is implicitly flushed and
+# 			loses its position.
+#
+# 		) FLUSH_TABLES_tbl_name_[, tbl_name]_---_FOR_EXPORT
+#
+# 			This FLUSH_TABLES variant applies to InnoDB tables.
+#
+# 			It ensures that changes to the named tables have been flushed to disk so that
+# 			binary table copies can be made while the server is running.
+#
+# 			The statement works like this:
+#
+# 				a. It acquires shared metadata locks for the named tables.
+#
+# 					The statement blocks as long as other sessions have active transactions
+# 					that have modified those tables or hold table locks for them.
+#
+# 					When the locks have been acquired, the statement blocks transactions
+# 					that attempt to update the tables, while permitting read-only operations
+# 					to continue.
+#
+# 				b. It checks whether all storage engines for the tables support FOR EXPORT.
+#
+# 					If any do not, an ER_ILLGAL_HA error occurs and the statement fails.
+#
+# 				c. The statement notifies the storage engine for each table to make the table ready
+# 					for export.
+#
+# 					The storage engine must ensure that any pending changes are written to disk.
+#
+# 				d. THe statement puts the session in lock-tables mode so that the metadata locks acquired
+# 					earlier are not released when the FOR EXPORT statement completes.
+#
+# The FLUSH_TABLES_---_FOR_EXPORT statement requires that you have the SELECT privilege for each table.
+#
+# Because this statement acquires table locks, you must also have the LOCK_TABLES privilege for each
+# table, in addition to the RELOAD privilege that is required to use any FLUSH statement.
+#
+# This statement applies only to existing base (non-TEMPORARY) tables.
+#
+# If a name refers to a base table, that table is used. If it refers to a TEMPORARY table,
+# it is ignored.
+#
+# if a name applies to a view, an ER_WRONG_OBJECT error occurs. Otherwise, an ER_NO_SUCH_TABLE error occurs.
+#
+# InnoDB supports FOR EXPORT for tables that have their own .ibd file file (that is, tables created with the
+# innodb_file_per_table setting enabled)
+#
+# InnoDB ensures when notidifed by the FOR EXPORT statement that any changes have been flushed to disk.
+#
+# This permits a binary copy of table contents to be made while the FOR EXPORT statement is in effect
+# because the .ibd file is transaction consistent and can be copied while the server is running.
+#
+# FOR EXPORT does not apply to InnoDB system tablespace files, or to InnoDB tables that have FULLTEXT
+# indexes.
+#
+# FLUSH_TABLES_---_FOR_EXPORT is supported for partitioned InnoDB tables.
+#
+# When notified by FOR EXPORT, InnoDB writes to disk certain kinds of data that is normally
+# held in memory or in separate disk buffers outside the tablespace files.
+#
+# For each table, InnoDB also produces a file named table_name.cfg in the same database
+# directory as the table.
+#
+# The .cfg contains metadata needed to reimport the tablespace files later, into the same or
+# different server.
+#
+# When the FOR EXPORT statement completes, InnoDB will have flushed all dirty pages to the table
+# data files.
+#
+# ANy change buffer entries are merged prior to flushing.
+#
+# At this point, the tables are locked and quiescent: The tables are in a transactionally
+# consistent state on disk and you can copy the .ibd tablespace files along with the corresponding
+# .cfg files to get a consistent snapshot of those tables.
+#
+# For the procedure to reimport the copied table data into a MySQL instance, see SECTION 15.6.3.7, "COPYING TABLESPACES TO ANOTHER INSTANCE"
+#
+# After you are done with the tables, use UNLOCK_TABLES to release the locks, LOCK_TABLES to release
+# the locks and acquire other locks, or START_TRANSACTION to release the locks and begin a new 
+# transaction.
+#
+# While any of these statements is in effect within the session, attempts to use FLUSH_TABLES_---_FOR_EXPORT
+# produce an error:
+#
+# 		FLUSH TABLES --- WITH READ LOCK
+# 		FLUSH TABLES --- FOR EXPORT
+# 		LOCK TABLES --- READ
+# 		LOCK TABLES --- WRITE
+#
+# While FLUSH_TABLES_---_FOR_EXPORT is in effect within the session, attempts to use any of these
+# statements produce an error:
+#
+# 		FLUSH TABLES WITH READ LOCK
+# 		FLUSH TABLES --- WITH READ LOCK
+# 		FLUSH TABLES --- FOR EXPORT
+#
+# 13.7.7.4 KILL SYNTAX
+#
+# 		KILL [CONNECTION | QUERY] processlist_id
+#
+# Each connection to mysqld runs in a separate thread. You can kill a thread with the KILL processlist_id statement.
+#
+# Thread processlist identifiers can be determined from the ID column of the INFORMATION_SCHEMA PROCESSLIST table,
+# the Id column of SHOW_PROCESSLIST output, and the PROCESSLIST_ID column of the Performance Schema threads table.
+#
+# The value for the current thread is returned by the CONNECTION_ID() function.
+#
+# KILL permits an optional CONNECTION or QUERY modifier:
+#
+# 		) KILL_CONNECTION is the same as KILL with no modifier:
+#
+# 			It terminates the connection associated with the given processlist_id, after terminating
+# 			any statement the connection is executing.
+#
+# 		) KILL_QUERY terminates the statement the connection is currently executing, but leaves the connection
+# 			itself intact.
+#
+# If you have the PROCESS privilege, you can see all threads.
+#
+# If you have the CONNECTION_ADMIN or SUPER privilege, you can kill all threads and statements.
+#
+# Otherwise, you can see and kill only your own threads and statements.
+#
+# You can also use the mysqladmin processlist and mysqladmin kill commands to examine and kill threads.
+#
+# When you use a KILL, a thread-specific kill flag is set for the thread.
+#
+# In most cases, it might take some time for the thread to die because the kill flag
+# is checked only at specific intervals:
+#
+# 		) During SELECT operations, for ORDER BY and GROUP BY loops, the flag is checked after reading
+# 			a block of rows.
+#
+# 			If the kill flag is set, the statement is aborted.
+#
+# 		) ALTER_TABLE operations that make a table copy check the kill flag periodically for each few copied
+# 			rows read from the original table.
+#
+# 			If the kill flag was set, the statement is aborted and the temporary table is deleted.
+#
+# 			The KILL statement returns without waiting for confirmation, but the kill flag check aborts the
+# 			operation within a reasonably small amount of time.
+#
+# 			Aborting the operation to perform any necessary cleanup also takes some time.
+#
+# 		) During UPDATE or DELETE operations, the kill flag is checked after each block read
+# 			and after each updated or deleted row.
+#
+# 			If the kill flag is set, the statement is aborted.
+#
+# 			If you are not using transactions, the changes are not rolled back.
+#
+# 		) GET_LOCK() aborts and returns NULL
+#
+# 		) If the thread is in the table lock handler (state: Locked), the table lock is quickly aborted
+#
+# 		) If the thread is waiting for free disk space in a write cell, the write is aborted with a 
+# 			"disk full" error message.
+#
+# WARNING:
+#
+# 		Killing a REPAIR_TABLE or OPTIMIZE_TABLE operation on a MyISAM table results in a table that is
+# 		corrupted and unusable.
+#
+# 		Any reads or writes to such a table fail until you optimize or repair it again (without interruption)
+#
+# 13.7.7.5 LOAD INDEX INTO CACHE SYNTAX
+#
+# 		LOAD INDEX INTO CACHE
+# 			tbl_index_list [, tbl_index_list] ---
+#
+# 		tbl_index_list:
+# 			tbl_name
+# 				[PARTITION (partition_list | ALL)]
+# 				[[INDEX|KEY] (index_name[, index_name] ---)]
+# 				[IGNORE LEAVES]
+#
+# 		partition_list:
+# 			partition_name[, partition_name][, ---]
+#
+# The LOAD_INDEX_INTO_CACHE statement preloads a table index into the key cache to which
+# it has been assigned by an explicit CACHE_INDEX statement, or into the default key cache
+# otherwise.
+#
+# LOAD_INDEX_INTO_CACHE is used only for MyISAM tables. In MySQL 8.0, it is also supported
+# for partitioned MyISAM tables; in addition, indexes on partitioned tables can be
+# preloaded for one, several or all partitions.
+#
+# The IGNORE LEAVES modifier causes only blocks for the nonleaf nodes of the index to be preloaded.
+#
+# IGNORE LEAVES is also supported for partitioned MyISAM tables.
+#
+# The following statement preloads nodes (index blocks) of indexes for the tables t1 and t2:
+#
+# 		LOAD INDEX INTO CACHE t1, t2 IGNORE LEAVES;
+# 		+-----------+--------------------+----------+-------------+
+# 		| Table 		| Op 						| Msg_type | Msg_text 	 |
+# 		+-----------+--------------------+----------+-------------+
+# 		| test.t1   | preload_keys 	   | status   | OK 			 |
+# 		| test.t2   | preload_keys 		| status   | OK 			 |
+# 		+-----------+--------------------+----------+-------------+
+#
+# This statement preloads all index blocks from t1.
+#
+# It preloads only blocks for the nonleaf nodes from t2.
+#
+# The syntax of LOAD_INDEX_INTO_CACHE enables you to specify that only particular
+# indexes from a table should be preloaded.
+#
+# The current implementation preloads all the table's indexes into the cache,
+# so there is no reason to specify anything other than the table name.
+#
+# It is possible to preload indexes on specific partitions of partitioned MyISAM tables.
+#
+# For example, of the following 2 statements, the first preloads indexes for partition
+# p0 of a partitioned table pt, while the second preloads the indexes for partitions
+# p1 and p3 of the same table:
+#
+# 		LOAD INDEX INTO CACHE pt PARTITION (p0);
+# 		LOAD INDEX INTO CACHE pt PARTITION (p1, p3);
+#
+# To preload the indexes for all partitions in table pt, you can use either one of the
+# following 2 statements:
+#
+# 		LOAD INDEX INTO CACHE pt PARTITION (ALL);
+# 
+# 		LOAD INDEX INTO CACHE pt;
+#
+# The two statements just shown are equivalent, and issuing either one of them has exactly
+# the same effect.
+#
+# In other words, if you wish to preload indexes for all partitions of a partitioned table,
+# then the PARTITION (ALL) clause is optional.
+#
+# When preloading indexes for multiple partitions, the partitions do not have to be contiguous,
+# and you are not required to list their names in any particular order.
+#
+# LOAD_INDEX_INTO_CACHE_---_IGNORE_LEAVES fails unless all indexes in a table have the
+# same block size.
+#
+# You can determine index block size for a table by using myisamchk -dv and checking
+# the Blocksize column.
+#
+# 13.7.7.6 RESET SYNTAX
+#
+# 		RESET reset_option [, reset_option] ---
+#
+# 		reset_option: {
+# 			MASTER
+# 		 | SLAVE
+# 		}
+#
+# The RESET statement is used to clear the state of various server operations.
+#
+# You must have the RELOAD privilege to execute RESET.
+#
+# For information about the RESET_PERSIST statement that removes persisted global
+# system variables, see SECTION 13.7.7.7, "RESET PERSIST SYNTAX"
+#
+# RESET acts as a stronger version of the FLUSH statement. See SECTION 13.7.7.3, "FLUSH SYNTAX"
+#
+# The RESET statement causes an implicit commit. See SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT"
+#
+# The following list describes the permitted RESET statement reset_option values:
+#
+# 		) RESET MASTER
+#
+# 			Deletes all binary logs listed in the index file, resets the binary log index file
+# 			to be empty and creates a new binary log file
+#
+# 		) RESET SLAVE
+#
+# 			Makes the slave forget its replication position in the master binary logs.
+#
+# 			Also resets the relay log by deleting any existing relay log files and beginning
+# 			a new one.
+#
+# 13.7.7.7 RESET PERSIST SYNTAX
+#
+# 		RESET PERSIST [[IF EXISTS] system_var_name]
+#
+# RESET_PERSIST removes persisted global system variable settings from the mysqld-auto.cnf option file
+# in the data directory.
+#
+# Removing a persisted system variable causes the variable no longer to be initialized from mysqld-auto.cnf
+# at server startup.
+#
+# For more information about persisting system variables and the mysqld-auto.cnf file, see SECTION 5.1.9.3, "PERSISTED SYSTEM VARIABLES"
+#
+# THe privileges required for RESET_PERSIST depend on the type of system variable to be removed:
+#
+# 		) For dynamic system variables, this statement requires the SYSTEM_VARIABLES_ADMIN or SUPER privilege
+#
+# 		) For read-only system variables, this statement requires the SYSTEM_VARIABLES_ADMIN and PERSIST_RO_VARIABLES_ADMIN privileges
+#
+# See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# Depending on whether the variable name and IF EXISTS clauses are present, the RESET_PERSIST
+# statement has these forms:
+#
+# 		) To remove all persisted variables from mysqld-auto.cnf, use RESET_PERSIST without naming any system variable:
+#
+# 			RESET PERSIST;
+#
+# 			You must have privileges for removing both dynamic and read-only system variables if mysqld-auto.cnf
+# 			contains both kinds of variables.
+#
+# 		) To remove a specific persisted variable from mysqld-auto.cnf, name it in the statement:
+#
+# 			RESET PERSIST system_var_name;
+#
+# 			This includes plugin system variables, even if the plugin is not currently installed.
+#
+# 			If the variable is not present in the file, an error occurs.
+#
+# 		) To remove a specific persisted variable from mysqld-auto.cnf, but produces a warning rather than an error
+# 			if the variable is not present in the file, add an IF EXISTS clause to the previous syntax:
+#
+# 			RESET PERSIST IF EXISTS system_var_name;
+#
+# RESET_PERSIST is not affected by the value of the persisted_globals_load system variable.
+#
+# RESET_PERSIST affects the contents of the Performance Schema persisted_variables table because the tables
+# contents correspond to the contents of the mysqld-auto.cnf file.
+#
+# On the other hand, because RESET_PERSIST does not change variable values, it has no effect on the contents
+# of the Performance Schema variables_info table until the server is restarted.
+#
+# For information about RESET statement variants that clear the state of other server operations,
+# see SECTION 13.7.7.6, "RESET SYNTAX"
+#
+# 13.7.7.8 RESTART SYNTAX
+#
+# 		RESTART
+#
+# This statement stops and restarts the MySQL server. It requires the SHUTDOWN privilege.
+#
+# One use for RESTART is when it is not possible or convenient to gain command-line access
+# to the MySQL server on the server host to restart it.
+#
+# For example, SET_PERSIST_ONLY can be used at runtime to make configuration changes to
+# system variables that can be set only at server startup, but the server must still be 
+# restarted for those changes to take effect.
+#
+# The RESTART statement provides a way to do so from within client sessions, without requiring
+# command-line access on the server host.
+#
+# NOTE:
+#
+# 		After executing a RESTART statement, the client can expect the current connection to be lost.
+#
+# 		If auto-reconnect is enabled, the connection will be reestablished after the server
+# 		restarts.
+#
+# 		Otherwise, the connection must be reestablished manually.
+#
+# A successful RESTART operation requires mysqld to be running in an environment that has a monitoring
+# process available to detect a server shutdown performed for restart purposes:
+#
+# 		) In the presence of a monitoring process, RESTART causes mysqld to terminate such that the monitoring
+# 			process can determine that it hsould start a new mysqld instance
+#
+# 		) If no monitoring process is present, RESTART fails with an error
+#
+# These platforms provide the necessary monitoring support for the RESTART statement:
+#
+# 		) Windows, when mysqld is started as a Windows service or standalone.
+#
+# 			(mysqld forks, and one process acts as a monitor to the other, which acts as
+# 			the server)
+#
+# 		) Unix and Unix-like systems that use systemd or mysqld_safe to manage mysqld
+#
+# On Windows, the forking used to implement RESTART makes determining the server process to attach
+# to for debugging more difficult.
+#
+# To alleviate this, starting the server with --gdb suppresses forking, in addition to its other
+# actions done to set up a debugging environment.
+#
+# In non-debug settings, --no-monitor may be used for the sole purpose of suppressing
+# forking at the monitor process.
+#
+# For a server started with either --gdb or --no-monitor, executing RESTART causes the server
+# to simply exit without restarting.
+#
+# 13.7.7.9 SHUTDOWN SYNTAX
+#
+# 		SHUTDOWN
+#
+# THis statement stops the MySQL server. It requires the SHUTDOWN privilege.
+#
+# SHUTDOWN provides an SQL-level interface to the same functionality available
+# using the mysqladmin shutdown command.
+#
+# 13.8 UTILITY STATEMENTS
+#
+# 13.8.1 DESCRIBE SYNTAX
+#
+# 		The DESCRIBE and EXPLAIN statements are synonyms, used either to obtain information about
+# 		table structure or query execution plans.
+#
+# 		For more information, see SECTION 13.7.6.5, "SHOW COLUMNS SYNTAX" and SECTION 13.8.2, "EXPLAIN SYNTAX"
+#
+# 13.8.2 EXPLAIN SYNTAX
+#
+# 		{EXPLAIN | DESCRIBE | DESC}
+# 			tbl_name [col_name | wild]
+#
+# 		{EXPLAIN | DESCRIBE | DESC}
+# 			[explain_type]
+# 			{explainable_stmt | FOR CONNECTION connection_id}
+#
+# 		explain_type: {
+# 			FORMAT = format_name
+# 		}
+#
+# 		format_name: {
+# 			TRADITIONAL
+# 		 | JSON
+# 		}
+#
+# 		explainable_stmt: {
+# 			SELECT statement
+# 		 | DELETE statement
+# 		 | INSERT statement
+# 		 | REPLACE statement
+# 		 | UPDATE statement
+# 		}
+#
+# The DESCRIBE and EXPLAIN statements are synonyms. In practice, the DESCRIBE keyword is more often
+# used to obtain information about table structure, whereas EXPLAIN is used to obtain a query
+# execution plan (that is, an explanation of how MySQL would execute a query)
+#
+# The following discussion uses the DESCRIBE and EXPLAIN keywords in accordance with those uses,
+# but the MySQL parser treats them as complete synonyms.
+#
+# 		) OBTAINING TABLE STRUCTURE INFORMATION
+#
+# 		) OBTAINING EXECUTION PLAN INFORMATION
+#
+# OBTAINING TABLE STRUCTURE INFORMATION
+#
+# DESCRIBE provides information about the columns in a table:
+#
+# 		DESCRIBE City;
+# 		+-------------------+-------------------+---------+---------+-------------------+--------------------------+
+# 		| Field 				  | Type 				 | Null    | Key 		| Default 			  | Extra 						  |
+# 		+-------------------+-------------------+---------+---------+-------------------+--------------------------+
+# 		| Id 					  | int(11) 			 | NO 	  | PRI 	   | NULL 				  | auto_increment 			  |
+# 		| Name 				  | char(35) 			 | NO 	  | 			| 						  | 								  |
+# 		| Country 			  | char(3) 			 | NO 	  | UNI 	   | 						  | 								  |
+# 		| District 			  | char(20) 			 | YES 	  | MUL     | 						  | 								  |
+# 		| Population 		  | int(11) 			 | NO 	  | 		   | 0 					  | 								  |
+# 		+-------------------+-------------------+---------+---------+-------------------+--------------------------+
+#
+# DESCRIBE is a shortcut for SHOW_COLUMNS
+#
+# These statements also display information for views. The description for SHOW_COLUMNS provides more information
+# about the output columns.
+#
+# See SECTION 13.7.6.5, "SHOW COLUMNS SYNTAX"
+#
+# By default, DESCRIBE displays information about all columns in the table.
+#
+# col_name, if given, is the name of a column in the table. In this case, the statement displays
+# information only for the named column.
+#
+# wild, if given, is a pattern string. It can contain the SQL % and _ wildcard characters.
+#
+# In this case, the statement displays output only for the columns with names matching the string.
+#
+# There is no need to enclose the string within quotation marks unless it contains spaces or
+# other special characters.
+#
+# The DESCRIBE statement is provided for compatibility with Oracle
+#
+# The SHOW_CREATE_TABLE, SHOW_TABLE_STATUS and SHOW_INDEX statements also provide information
+# about tables.
+#
+# See SECTION 13.7.6, "SHOW SYNTAX"
+#
+# OBTAINING EXECUTION PLAN INFORMATION
+#
+# The EXPLAIN statement provides information about how MySQL executes statements:
+#
+# 		) EXPLAIN works with SELECT, DELETE, INSERT, REPLACE and UPDATE statements.
+#
+# 		) When EXPLAIN is used with an explainable statement, MySQL displays information from the
+# 			optimizer about the statement execution plan.
+#
+# 			That is, MySQL explains how it would process the statement, including information about how
+# 			tables are joined and in which order.
+#
+# 			FOr information about using EXPLAIN to obtain execution plan information.
+#
+# 			See SECTION 8.8.2, "EXPLAIN OUTPUT FORMAT"
+#
+# 		) When EXPLAIN is used with FOR CONNECTION connection_id rather than an explainable
+# 			statement, it displays the execution for the statement executing in the named connection.
+#
+# 			See SECTION 8.8.4, "OBTAINING EXECUTION PLAN INFORMATION FOR A NAMED CONNECTION"
+#
+# 		) For explainable statements, EXPLAIN produces additional execution plan information that
+# 			can be displayed using SHOW_WARNINGS.
+#
+# 			See SECTION 8.8.3, "EXTENDED EXPLAIN OUTPUT FORMAT"
+#
+# 		) EXPLAIN is useful for examining queries involving partitioned tables. See SECTION 23.3.5, "OBTAINING INFORMATION ABOUT PARTITIONS"
+#
+# 		) The FORMAT option can be used to select the output format.
+#
+# 			TRADITIONAL presents the output in tabular format.
+#
+# 			THis is the default if no FORMAT option is present. JSON format displays the information
+# 			in JSON format.
+#
+# EXPLAIN requires the SELECT privilege for any tables or views accessed, including any underlying
+# tables of views.
+#
+# For views, EXPLAIN also requires the SHOW_VIEW privilege.
+#
+# With the help of EXPLAIN, you can see where you should add indexes to tables so that the statement
+# executes faster by using indexes to find rows.
+#
+# You can also use EXPLAIN to check whether the optimizer joins the tables in an optimal order.
+#
+# To give a hint to the optimizer to use a join order corresponding to the order in which the
+# tables are named in a SELECT statement, begin the statement with SELECT STRAIGHT_JOIN rather
+# than just SELECT.
+#
+# (See SECTION 13.2.10, "SELECT SYNTAX")
+#
+# The optimizer trace may sometimes provide information complementary to that of EXPLAIN
+#
+# However, the optimizer trace format and content are subject to change between versions.
+#
+# For details, see MYSQL INTERNALS: TRACING THE OPTIMIZER
+#
+# If you have a problem with indexes not being used when you believe that they should be,
+# run ANALYZE_TABLE to update table statistics, such as cardinality of keys, that can
+# affect the choices the optimizer makes.
+#
+# See SECTION 13.7.3.1, "ANALYZE TABLE SYNTAX"
+#
+# NOTE:
+#
+# 		MYSQL Workbench has a Visual Explain capability that provides a visual representation
+# 		of EXPLAIN output.
+#
+# 		See TUTORIAL: USING EXPLAIN TO IMPROVE QUERY PERFORMANCE
+#
+# 13.8.3 HELP SYNTAX
+#
+# 		HELP 'search_string'
+#
+# The HELP statement returns online information from the MySQL Reference manual.
+#
+# Its proper operation requires that the help tables in the mysql database be
+# initialized with help topic information (see SECTION 5.1.15, "SERVER-SIDE HELP")
+#
+# The HELP statement searches the help tables for the given search string and displays the result of the search.
+#
+# The search string is not case-sensitive.
+#
+# The search string can contain the wildcard characters % and _
+#
+# These have the same meaning as for pattern-matching operations performed with the LIKE
+# operator.
+#
+# For example, HELP 'rep%' returns a list of topics that begin with rep.
+#
+# The HELP statement understands several types of search strings:
+#
+# 		) At the most general level, use contents to retrieve a list of the top-level help categories:
+#
+# 			HELP 'contents'
+#
+# 		) For a list of topics in a given help category, such as Data Types, use the category name:
+#
+# 			HELP 'data types'
+#
+# 		) For help on a specific help topic, such as the ASCII() function or the CREATE_TABLE statement,
+# 			use the associated keyword or keywords:
+#
+# 			HELP 'ascii'
+# 			HELP 'create table'
+#
+# In other words, the search string matches a category, many topics or a single topic.
+#
+# You cannot necessarily tell in advance whether a given search string will return a list
+# of items or the help information for a single help topic.
+#
+# However, you can tell what kind of response HELP returned by examining the number of rows
+# and columns in the result set.
+#
+# The following descriptions indicate the forms that the result set can take.
+#
+# Output for the example statements is shown using the familiar "tabular" or "vertical"
+# format that you see when using the mysql client, but note that mysql itself reformats
+# HELP result sets in a different way.
+#
+# 		) Empty result set
+#
+# 			No match could be found for the search string.
+#
+# 		) Result set containing a single row with three columns
+#
+# 			THis means that the search string yielded a hit for the help topic.
+#
+# 			The result has three columns:
+#
+# 				) name: The topic name
+#
+# 				) description: Descriptive help text for the topic
+#
+# 				) example: Usage example or examples. This column might be blank
+#
+# 			Example: HELP 'replace'
+#
+# 			Yields:
+#
+# 				name: REPLACE
+# 				description: Syntax:
+# 				REPLACE(str,from_str,to_str)
+#
+# 				Returns the string str with all occurrences of the string from_str
+# 				replaced by the string to_str. REPLACE() performs a case-sensitive
+# 				match when searching for from_str.
+#
+# 				example: mysql> SELECT REPLACE('www.mysql.com', 'w', 'WW');
+# 						-> 'WWWWWW.mysql.com'
+#
+# 		) Result set containing multiple rows with two columns
+#
+# 			This means that the search string matched many help topics.
+#
+# 			The result set indicates the help topic names:
+#
+# 				) name: THe help topic name.
+#
+# 				) is_it_category: Y if the name represents a help category, N if it does not.
+#
+# 					If it does not, the name value when specified as the argument to the HELP
+# 					statement should yield a single-row result set containing a description for the named item.
+#
+# 			Example: HELP 'status'
+#
+# 			Yields:
+#
+# 				+--------------------------------------+----------------+
+# 				| name 											| is_it_category |
+# 				+--------------------------------------+----------------+
+# 				| SHOW 										   | N 				  |
+# 				| SHOW ENGINE 									| N 				  |
+# 				| SHOW MASTER STATUS 						| N 				  |
+# 				| SHOW PROCEDURE STATUS 					| N 				  |
+# 				| SHOW SLAVE STATUS 							| N 				  |
+# 				| SHOW STATUS 									| N 				  |
+# 				| SHOW TABLE STATUS 							| N 				  |
+# 				+--------------------------------------+----------------+
+#
+# 		) Result set containing multiple rows with three columns
+#
+# 			This means the search string matches a category. The result set contains category entries:
+#
+# 				) source_category_name: The help category name
+#
+# 				) name: The category or topic name
+#
+# 				) is_it_category: Y if the name represents a help category, N if it does not.
+#
+# 					If it does not, the name value when specified as the argument to the HELP statement
+# 					should yield a single-row result set containing a description for the named item.
+#
+# 			Example: HELP 'functions'
+#
+# 			Yields:
+#
+# 				+-----------------------------------------+----------------------------------+------------------------+
+# 				| source_category_name 							| name 									  | is_it_category 		   |
+# 				+-----------------------------------------+----------------------------------+------------------------+
+# 				| Functions 										| CREATE FUNCTION 					  | N 							|
+# 				| Functions 										| DROP FUNCTION 						  | N 							|
+# 				| Functions 										| Bit Functions 						  | Y 							|
+# 				| Functions 										| Comparison operators 				  | Y 							|
+# 				| Functions 										| Control flow functions 			  | Y 							|
+# 				| Functions 										| Date and Time Functions 			  | Y 							|
+# 				| Functions 										| Encryption Functions 				  | Y 							|
+# 				| Functions 										| Information Functions 			  | Y 							|
+# 				| Functions 										| Logical operators 					  | Y 							|
+# 				| Functions 										| Miscellaneous Functions 			  | Y 							|
+# 				| Functions 										| Numeric Functions 					  | Y 							|
+# 				| Functions 										| String Functions 					  | Y 							|
+# 				+-----------------------------------------+----------------------------------+------------------------+
 #
 # 
+# 13.8.4 USE SYNTAX
+#
+# 		USE db_name
+#
+# The USE db_name statement tells MySQL to use the db_name database as the default (current) database
+# for subsequent statements.
+#
+# The database remains the default until the end of the session or another USE statement is issued:
+#
+# 		USE db1;
+# 		SELECT COUNT(*) FROM mytable; #selects from db1.mytable
+# 		USE db2;
+# 		SELECT COUNT(*) FROM mytable; #selects from db2.mytable
+#
+# The database name must be specified on a single line. Newlines in database names are not supported.
+#
+# Making a particular database the default by means of the USE statement does not preclude accessing
+# tables in other databases.
+#
+# The following example accesses the author table from the db1 database and the editor
+# table from the db2 database:
+#
+# 		USE db1;
+# 		SELECT author_name.editor_name FROM author,db2.editor
+# 			WHERE author.editor_id = db2.editor.editor_id;
+#
+# CHAPTER 14 MYSQL DATA DICTIONARY
+#
+# TABLE OF CONTENTS
+#
+# 14.1 DATA DICTIONARY SCHEMA
+# 14.2 REMOVAL OF FILE-BASED METADATA STORAGE
+# 14.3 TRANSACTIONAL STORAGE OF DICTIONARY DATA
+# 14.4 DICTIONARY OBJECT CACHE
+#
+# 14.5 INFORMATION_SCHEMA AND DATA DICTIONARY INTEGRATION
+# 14.6 SERIALIZED DICTIONARY INFORMATION (SDI)
+# 14.7 DATA DICTIONARY USAGE DIFFERENCES
+# 14.8 DATA DICTIONARY LIMITATIONS
+#
+# MySQL Server incorporates a transactional data dictionary that stores information about database
+# objects.
+#
+# In previous MySQL releases, dictionary data was stored in metadata files, nontransactional tables,
+# and storage engine-specific data dictionaries.
+#
+# This chapter describes the main features, benefits, usage differences, and limitations of the data
+# dictionary.
+#
+# For other implications of the data dictionary feature, refer to the "Data Dictionary notes" section
+# in the MySQL 8.0 RELEASE NOTES.
+#
+# Benefits of the MySQL data dictionary include:
+#
+# 		) Simplicity of a centralized data dictionary schema that uniformly stores dictionary data. See SECTION 14.1, "DATA DICTIONARY SCHEMA"
+#
+# 		) Removal of file-based metadata storage. See SECTION 14.2,, "REMOVAL OF FILE-BASED METADATA STORAGE"
+#
+# 		) Transactional, crash-safe storage of dictionary data. See SECTION 14.3, "TRANSACTIONAL STORAGE OF DICTIONARY DATA"
+#
+# 		) Uniform and centralized caching for dictionary objects. See SECTION 14.4, "DICTIONARY OBJECT CACHE"
+#
+# 		) A simpler and improved implementation for some INFORMATION_SCHEMA tables. See SECTION 14.5, "INFORMATION_SCHEMA AND DATA DICTIONARY INTEGRATION"
+#
+# 		) Atomic DDL. See SECTION 13.1.1, "ATOMIC DATA DEFINITION STATEMENT SUPPORT"
+#
+# IMPORTANT:
+#
+# 		A data dictionary-enabled server entails some general operational differences compared to a server
+# 		that does not have a data dictionary; see SECTION 14.7, "DATA DICTIONARY USAGE DIFFERENCES"
+#
+# 		Also, for upgrades to MySQL 8.0, the upgrade procedure differs somewhat from previous MySQL
+# 		releases and requires that you verify the upgrade readiness of your installation by checking
+# 		specific prerequisites.
+#
+# 		For more information, see SECTION 2.11.1, "UPGRADING MYSQL", particularly SECTION 2.11.1.4,
+# 		"PREPARING YOUR INSTALLATION FOR UPGRADE"
+#
+# 14.1 DATA DICTIONARY SCHEMA
+#
+# Data dictionary tables are protected and may only be accessed in debug builds of MySQL.
+#
+# However, MySQL supports access to data stored in data dictionary tables through INFORMATION_SCHEMA
+# tables and SHOW statements.
+#
+# For an overview of the tables that comprise the data dictionary, see DATA DICTIONARY TABLES.
+#
+# MySQL system tables still exist in MySQL 8.0 and can be viewed by issuing a SHOW_TABLES
+# statement on the mysql system database.
+#
+# Generally, the difference between MySQL system tables and data dictionary tables is that system
+# tables contain auxiliary data such as time zone and help information, whereas data dictionary
+# tables contain data required to execute SQL queries.
+#
+# MySQL system tables and data dictionary tables also differ in how they are upgraded.
+#
+# Upgrading MySQL system tables requires running mysql_upgrade. Data dictionary upgrades
+# are managed by the MySQL server.
+#
+# See How The Data Dictionary is Upgraded.
+#
+# HOW THE DATA DICTIONARY IS UPGRADED
+#
+# New versions of MYSQL may include changes to data dictionary table definitions.
+#
+# Such changes are present in newly installed versions of MySQL, but when performing an
+# in-place upgrade of MySQL binaries, changes are applied when the MySQL server is restarted
+# using the new binaries.
+#
+# At startup, the data dictionary version of the server is compared to the version information
+# stored in the data dictionary to determine if data dictionary tables should be upgraded.
+#
+# If an upgrade is necessary and supported, the server creates data dictionary tables with
+# updated definitions, copies persisted metadata to the new tables, atomically replaces
+# the old tables with the new ones, and reinitializes the data dictionary.
+#
+# If an upgrade is not necessary, startup continues without updating the data dictionary
+# tables.
+#
+# Upgrade of data dictionary tables is an atomic operation, which means that all of the
+# data dictionary tables are upgraded as necessary or the operation fails.
+#
+# If the upgrade operation fails, server startup fails with an error.
+#
+# In this case, the old server binaries can be used with the old data directory to start
+# the server.
+#
+# When the new server binaries are used again to start the server, the data dictionary upgrade
+# is reattempted.
+#
+# Generally, after data dictionary tables are successfully upgraded, it is not possible to restart
+# the server using the old server binaries.
+#
+# As a result, downgrading MySQL server binaries to a previous MySQL version is not supported
+# after data dictionary tables are upgraded.
+#
+# The mysqld --no-dd-upgrade option can be used to prevent automatic upgrade of data dictionary
+# tables at startup.
+#
+# When --no-dd-upgrade is specified, and the server finds that the data dictionary version of the
+# server is different from the version stored in the data dictionary, startup fails with an error
+# stating that the data dictionary upgrade is prohibited.
+#
+# VIEWING DATA DICTIONARY TABLES USING A DEBUG BUILD OF MYSQL
+#
+# Data dictionary tables are protected by default but can be accessed by compiling MySQL
+# with debugging support (using the -DWITH_DEBUG=1 CMake option) and specifying the
+# +d, skip_dd_table_access_check debug option and modifier.
+#
+# For information about compiling debug builds, see SECTION 29.5.1.1, "COMPILING MYSQL FOR DEBUGGING"
+#
+# WARNING:
+#
+# 		Modifying or writing to data dictionary tables directly is not recommended and may render
+# 		your MySQL instance inoperable.
+#
+# After compiling MySQL with debugging support, use this SET statement to make data dictionary
+# tables visible to the mysql client session:
+#
+# 		SET SESSION debug='+d,skip_dd_table_access_check';
+#
+# Use this query to retrieve a list of data dictionary tables:
+#
+# 		SELECT name, schema_id, hidden, type FROM mysql.tables WHERE schema_id=1 AND hidden='System';
+#
+# Use SHOW_CREATE_TABLE to view data dictionary table definitions. For example:
+#
+# 		SHOW CREATE TABLE mysql.catalogs\G
+#
+# 14.2 REMOVAL OF FILE-BASED METADATA STORAGE
+#
+# In previous MySQL releases, dictionary data was partially stored in metadata files.
+#
+# Issues with file-based metadata storage included expensive file scans, suspectibiblity
+# to file system-related bugs, complex code for handling of replication and crash recovery
+# failure states, and a lack of extensibility that made it difficult to add metadata for new
+# features and relational objects.
+#
+# The metadata files listed below are removed from MySQL. Unless otherwise noted, data previously
+# stored in metadata files is now stored in data dictionary tables.
+#
+# 		) .frm files: Table metadata files. With the removal of .frm files:
+#
+# 			) The 64KB table definition size limit imposed by the .frm file structure is removed.
+#
+# 			) The INFORMATION_SCHEMA.TABLES VERSION column reports a hardcoded value of 10, which is the
+# 				last .frm file version used in MySQL 5.7
+#
+# 		) .par files: Partition definition files. InnoDB stopped using partition definition files in MySQL 5.7
+#			with the introduction of native partitioning support for InnoDB tables.
+#
+# 		) .TRN files: Trigger namespace files
+#
+# 		) .TRG files: Trigger parameter files
+#
+# 		) .isl files: InnoDB Symbolic Link files containing the location of file-per-table tablespace files
+# 			created outside of the data directory.
+#
+# 		) db.opt files: Database configuration files. These files, one per database directory, contained database
+# 			default character set attributes.
+#
+# 14.3 TRANSACTIONAL STORAGE OF DICTIONARY DATA
+#
+# The data dictionary schema stores dictionary data in transactional (InnoDB) tables.
+#
+# Data dictionary tables are located in the mysql database together with non-data dictionary
+# system tables.
+#
+# Data dictionary tables are created in a single InnoDB tablespace named mysql.ibd, which resides
+# in the MySQL data directory.
+#
+# The mysql.ibd tablespace file must reside in the MySQL data directory and its name cannot be
+# modified or used by another tablespace.
+#
+# Dictionary data is protected by the same commit, rollback and crash-recovery capabilities
+# that protect user data that is stored in InnoDB tables.
+#
+# 14.4 DICTIONARY OBJECT CACHE
+#
+# The dictionary object cache is a shared global cache that stores previously accessed data dictionary
+# objects in memory to enable object reuse and minimize disk I/O.
+#
+# Similar to other cache mechanisms used by MySQL, the dictionary object cache uses an LRU-based
+# eviction strategy to evict least recently used objects from memory.
+#
+# The dictionary object cache comprises cache partitions that store different object types.
+#
+# Some cache partition size limits are configurable, whereas others are hardcoded.
+#
+# 		) tablespace definition cache partition: Stores tablespace definition objects.
+#
+# 			The tablespace_definition_cache option sets a limit for the number of tablespace
+# 			definition objects that can be stored in the dictionary object cache.
+#
+# 			The default value is 256.
+#
+# 		) schema definition cache partition: Stores schema definition objects.
+#
+# 			The schema_definition_cache option sets a limit for the number of schema
+# 			definition objects that can be stored in the dictionary object cache.
+#
+# 			THe default value is 256.
+#
+# 		) table definition cache partition: Stores table definition objects.
+#
+# 			The object limit is set to the value of max_connections, which has a default
+# 			value of 151.
+#
+# 			The table definition cache partition exists in parallel with the table definition
+# 			cache that is configured using the table_definition_cache configuration option.
+#
+# 			Both caches store table definitions but serve different parts of the MySQL server.
+#
+# 			Objects in one cache have no dependence on the existence of objects in the other.
+#
+# 		) stored program definition cache partition: Stores stored program definition objects.
+#
+# 			The stored_program_definition_cache option sets a limit for the number of stored
+# 			program definition objects that can be stored in the dictionary object cache.
+#
+# 			The default value is 256.
+#
+# 			The stored program definition cache partition exists in parallel with the stored procedure
+# 			and stored function caches that are configured using the stored_program_cache option.
+#
+# 			The stored_program_cache option sets a soft upper limit for the number of cached stored
+# 			procedures or functions per connection, and the limit is checked each time a connection
+# 			executes a stored procedure or function.
+#
+# 			The stored program definition cache partition, on the other hand, is a shared cache that
+# 			stores stored program definition objects for other purposes.
+#
+# 			The existence of objects in the stored program definition cache partition has no dependence
+# 			on the existence of objects in the stored procedure cache or stored function cache, and 
+# 			vice versa.
+#
+# 		) character set definition cache partition: Stores character set definition objects and has a hardcoded object
+# 			limit of 256.
+#
+# 		) collation definition cache partition: Stores collation definition objects and has a hardcoded object limit of 256
+#
+# For information about valid values for dictionary object cache configuration options, refer to SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# 14.5 INFORMATION_SCHEMA AND DATA DICTIONARY INTEGRATION
+#
+# With the introduction of the data dictionary, the following INFORMATION_SCHEMA tables are implemented as views on
+# data dictionary tables:
+#
+# 		) CHARACTER_SETS
+#
+# 		) COLLATIONS
+#
+# 		) COLLATION_CHARACTER_SET_APPLICABILITY
+#
+# 		) COLUMNS
+#
+# 		) COLUMN_STATISTICS
+#
+# 		) EVENTS
+#
+# 		) FILES
+#
+# 		) INNODB_COLUMNS
+#
+# 		) INNODB_DATAFILES
+#
+# 		) INNODB_FIELDS
+#
+# 		) INNODB_FOREIGN
+#
+# 		) INNODB_FOREIGN_COLS
+#
+# 		) INNODB_INDEXES
+#
+# 		) INNODB_TABLES
+#
+# 		) INNODB_TABLESPACES
+#
+# 		) INNODB_TABLESPACES_BRIEF
+#
+# 		) INNODB_TABLESTATS
+#
+# 		) KEY_COLUMN_USAGE
+#
+# 		) KEYWORDS
+#
+# 		) PARAMETERS
+#
+# 		) PARTITIONS
+#
+# 		) REFERENTIAL_CONSTRAINTS
+#
+# 		) RESOURCE_GROUPS
+#
+# 		) ROUTINES
+#
+# 		) SCHEMATA
+#
+# 		) STATISTICS
+#
+# 		) ST_GEOMETRY_COLUMNS
+#
+# 		) ST_SPATIAL_REFERENCE_SYSTEMS
+#
+# 		) TABLES
+#
+# 		) TABLE_CONSTRAINTS
+#
+# 		) TRIGGERS
+#
+# 		) VIEWS
+#
+# 		) VIEW_ROUTINE_USAGE
+#
+# 		) VIEW_TABLE_USAGE
+#
+# Queries on those tables are now more efficient because they obtain information from data dictionary
+# tables rather than by other, slower means.
+#
+# In particular, for each INFORMATION_SCHEMA table that is a view on data dictionary tables:
+#
+# 		) The server no longer must create a temporary table for each query of the INFORMATION_SCHEMA table
+#
+# 		) When the underlying data dictionary tables store values previously obtained by directory scans (for example,
+# 			to enumerate database names or table names within databases) or file-opening operations (for example, to read
+# 			information from .frm files), INFORMATION_SCHEMA queries for those values now use table lookups instead.
+#
+# 			(Additionally, even for a non-view INFORMATION_SCHEMA table, values such as database and table names are retrieved
+# 			by lookups from the data dictionary and do not require directory or file scans)
+#
+# 		) Indexes on the underlying data dictionary tables permit the optimizer to construct efficient query execution
+# 			plans, something not true for the previous implementation that processed the INFORMATION_SCHEMA table
+# 			using a temporary table per query.
+#
+# The preceding improvements also apply to SHOW statements that display information corresponding to the INFORMATION_SCHEMA
+# tables that are views on data dictionary tables.
+#
+# For example, SHOW_DATABASES displays the same information as the SCHEMATA table.
+#
+# In addition to the introduction of views on data dictionary tables, table statistics contained in the STATISTICS and
+# TABLES is now cached to improve INFORMATION_SCHEMA query performance.
+#
+# The information_schema_stats_expiry system variable defines the period of time before cached table statistics expire.
+#
+# The default is 86400 seconds (24 hours). If there are no cached statistics or statistics have expired, statistics
+# are retrieved from storage engine when querying table statistics columns.
+#
+# To update cached values at any time for a given table, use ANALYZE_TABLE
+#
+# information_schema_stats_expiry can be set to 0 to have INFORMATION_SCHEMA queries retrieve the latest statistics
+# directly from the storage engine, which is not as fast as retrieving cached statistics.
+#
+# For more information, see SECTION 8.2.3, "OPTIMIZING INFORMATION_SCHEMA QUERIES"
+#
+# 14.6 SERIALIZED DICTIONARY INFORMATION (SDI)
+#
+# In addition to storing metadata about database objects in the data dictionary, MySQL stores it in
+# serialized form.
+#
+# This data is referred to as Serialized Dictionary Information (SDI)
+#
+# InnoDB stores SDI data within its tablespace files. Other storage engines store SDI data in .sdi files
+# that are created in the schema directory.
+#
+# SDI data is generated in a compact JSON format.
+#
+# Serialized Dictionary Information (SDI) is present in all InnoDB tablespace files except for temporary
+# tablespace and undo tablespace files.
+#
+# SDI records in an InnoDB tablespace file only describe table and tablespace objects contained within
+# the tablespace.
+#
+# SDI data in within an InnoDB tablespace file is only updated by DDL operations on tables within the tablespace.
+#
+# The presence of SDI data provides metadata redundancy. For example, if the data dictionary becomes unavailable,
+# object metadata can be extracted directly from InnoDB tablespace files using the ibd2sdi tool.
+#
+# For InnoDB, an SDI record requires a single index page, which is 16kb in size by default.
+#
+# However, SDI data is compressed to reduce the storage footprint.
+#
+# For partitioned InnoDB tables comprised of multiple tablespaces, SDI data is stored in the tablespace
+# file of the first partition.
+#
+# The MySQL server uses an internal API that is accessed during DDL operations to create and maintain SDI
+# records.
+#
+# The IMPORT_TABLE statement imports MyISAM tables based on information contained in .sdi files.
+#
+# For more information, see SECTION 13.2.5, "IMPORT TABLE SYNTAX"
+#
+# 14.7 DATA DICTIONARY USAGE DIFFERENCES
+#
+# Use of a data dictionary enabled MySQL server entails some operational differences compared to a server
+# that does not have a data dictionary:
+#
+# 		) Previously, enabling the innodb_read_only system variable prevented creating and dropping tables only
+# 			for the InnoDB storage.
+#
+# 			As of MySQL 8.0, enabling innodb_read_only prevents these operations for all storage engines.
+#
+# 			Table creation and drop operations for any storage engine modify data dictionary tables in the mysql
+# 			system database, but those tables use the InnoDB storage engine and cannot be modified when innodb_read_only
+# 			is enabled.
+#
+# 			The same principle applies to other table operations that require modifying data dictionary tables.
+#
+# 			Examples:
+#
+# 				) ANALYZE TABLE fails because it updates table statistics, which are stored in the data dictionary
+#
+# 				) ALTER_TABLE_tbl_name_ENGINE=engine_name fails because it updates the storage engine designation,
+# 					which is stored in the data dictionary.
+#
+# NOTE:
+#
+# 		Enabling innodb_read_only also has important implications for non-data dictionary tables in the mysql
+# 		system database.
+#
+# 		For details, see the description of innodb_read_only in SECTION 15.13, "INNODB STARTUP OPTIONS AND SYSTEM VARIABLES"
+#
+# 		) Previously, tables in the mysql system database were visible to DML and DDL statements.
+#
+# 			As of MySQL 8.0, data dictionary tables are invisible and cannot be modified or queried directly.
+#
+# 			However, in most cases there are corresponding INFORMATION_SCHEMA tables that can be queried
+# 			instead.
+#
+# 			This enables the underlying data dictionary tables to be changed as server development proceeds,
+# 			while maintaining a stable INFORMATION_SCHEMA interface for application use.
+#
+# 		) INFORMATION_SCHEMA tables in MySQL 8.0 are closely tried to the data dictionary, resulting in several
+# 			usage differences:
+#
+# 			) Previously, INFORMATION_SCHEMA queries for table statistics in the STATISTICS and TABLES tables
+# 				retrieved statistics directly from storage engines.
+#
+# 				As of MySQL 8.0, cached table statistics are used by default.
+#
+# 				The information_schema_stats_expiry system variable defines the period of time before cached
+# 				table statistics expire.
+#
+# 				The default is 86400 (24 hours). (To update the cached values at any time for a given table,
+# 				use ANALYZE_TABLE)
+#
+# 				If there are no cached statistics or statistics have expired, statistics are retrieved from storage
+# 				engines when querying table statistics columns.
+#
+# 				To always retrieve the latest statistics directly from storage engines, set information_schema_stats_expiry
+# 				to 0.
+#
+# 				For more information, see SECTION 8.2.3, "OPTIMIZING INFORMATION_SCHEMA QUERIES"
+#
+# 			) Several INFORMATION_SCHEMA tables are views on data dictionary tables, which enables the optimizer
+# 				to use indexes on those underlying tables.
+#
+# 				Consequently, depending on optimizer choices, the row order of results for INFORMATION_SCHEMA
+# 				queries might differ from previous results.
+#
+# 				If a query result must have specific row ordering characteristics, include an ORDER BY clause.
+#
+# 			) mysqldump and mysqlpump no longer dump the INFORMATION_SCHEMA database, even if explicitly
+# 				named on the command line.
+#
+# 			) CREATE_TABLE_dst_tbl_LIKE_src_tbl requires that src_tbl be a base table and fails if it is an
+# 				INFORMATION_SCHEMA table that is a view on data dictionary tables.
+#
+# 			) Previously, result set headers of columns selected from INFORMATION_SCHEMA tables used the
+# 				capitalization specified in the query.
+#
+# 				This query produces a result set with a header of table_name:
+#
+# 					SELECT table_name FROM INFORMATION_SCHEMA.TABLES;
+#
+# 				As of MySQL 8.0, these headers are capitalized; the preceding query produces a result set
+# 				with a header of TABLE_NAME.
+#
+# 				If necessary, a column alias can be used to achieve a different lettercase.
+#
+# 				For example:
+#
+# 					SELECT table_name AS 'table_name' FROM INFORMATION_SCHEMA.TABLES;
+#
+# 		) The data directory affects how mysqldump and mysqlpump dump information from the mysql system database:
+#
+# 			) Previously, it was possible to dump all tables in the mysql system database.
+#
+# 				As of MySQL 8.0, mysqldump and mysqlpump dump only non-data dictionary tables in that database.
+#
+# 			) Previously, the --routines and --events options were not required to include stored routines and events
+# 				when using the --all-databases option:
+#
+# 					The dump included the mysql system database, and therefore also the proc and event tables containing
+# 					stored routine and event definitions.
+#
+# 					As of MySQL 8.0, the event and proc tables are not used.
+#
+# 					Definitions for the corresponding objects are stored in data dictionary tables, but those 
+# 					tables are not dumped.
+#
+# 					To include stored routines and events in a dump made using --all-databases, use the --routines
+# 					and --events options explicitly.
+#
+# 			) Previously, the --routines option required the SELECT privilege for the proc table.
+#
+# 				AS of MySQL 8.0, that table is not used;
+#
+# 				--routines requires the global SELECT privilege instead.
+#
+# 			) Previously, it was possible to dump stored routine and event definitions together with their
+# 				creation and modification timestamps, by dumping the proc and event tables.
+#
+# 				As of MySQL 8.0, those tables are not used, so it is not possible to dump timestamps.
+#
+# 		) Previously, creating a stored routine that contains illegal characters produced a warning.
+#
+# 			As of MySQL 8.0, this is an error.
+#
+# 14.8 DATA DICTIONARY LIMITATIONS
+#
+# https://dev.mysql.com/doc/refman/8.0/en/data-dictionary-limitations.html
+# 			
