@@ -36279,5 +36279,2388 @@
 #
 # 14.8 DATA DICTIONARY LIMITATIONS
 #
-# https://dev.mysql.com/doc/refman/8.0/en/data-dictionary-limitations.html
+# This section describes temporary limitations introduced with the MySQL data dictionary.
+#
+# 		) Manual creation of database directories under the data directory (for example, with mkdir)
+# 			is unsupported.
+#
+# 			Manually created database directories are not recognized by the MySQL server.
+#
+# 		) DDL operations take longer due to writing to storage, undo logs, and redo logs instead of .frm files
+#
+# CHAPTER 15 THE INNODB STORAGE ENGINE
+#
+# TABLE OF CONTENTS
+#
+# 15.1 INTRODUCTION TO INNODB
+# 15.2 INNODB AND THE ACID MODEL
+#
+# 15.3 INNODB MULTI-VERSIONING
+# 15.4 INNODB ARCHITECHTURE
+#
+# 15.5 INNODB IN-MEMORY STRUCTURES
+# 15.6 INNODB ON-DISK STRUCTURES
+#
+# 15.7 INNODB LOCKING AND TRANSACTION MODEL
+# 15.8 INNODB CONFIGURATION
+#
+# 15.9 INNODB TABLE AND PAGE COMPRESSION
+# 15.10 INNODB ROW FORMATS
+#
+# 15.11 INNODB DISK I/O AND FILE SPACE MANAGEMENT
+# 15.12 INNODB AND ONLINE DDL
+#
+# 15.13 INNODB STARTUP OPTIONS AND SYSTEM VARIABLES
+# 15.14 INNODB INFORMATION_SCHEMA TABLES
+#
+# 15.15 INNODB INTEGRATION WITH MYSQL PERFORMANCE SCHEMA
+# 15.16 INNODB MONITORS
+#
+# 15.17 INNODB BACKUP AND RECOVERY
+# 15.18 INNODB AND MYSQL REPLICATION
+#
+# 15.19 INNODB MEMCACHED PLUGIN
+# 15.20 INNODB TROUBLESHOOTING
+#
+# 15.1 INTRODUCTION TO INNODB
+#
+# 15.1.1 BENEFITS OF USING INNODB TABLES
+# 15.1.2 BEST PRACTICES FOR INNODB TABLES
+#
+# 15.1.3 VERIFYING THAT INNODB IS THE DEFAULT STORAGE ENGINE
+# 15.1.4 TESTING AND BENCHMARKING WITH INNODB
+#
+# InnoDB is a general-purpose storage engine that balances high reliability and high performance.
+#
+# In MySQL 8.0, InnoDB is the default MySQL storage engine. Unless you have configured a different
+# default storage engine, issuing a CREATE_TABLE statement without an ENGINE= clause creates
+# an InnoDB table.
+#
+# KEY ADVANTAGES OF INNODB
+#
+# 		) Its DML operations follow the ACID model, with transactions featuring commit, rollback, and crash-recovery
+# 			capabilities to protect user data.
+#
+# 			See SECTION 15.2, "INNODB AND THE ACID MODEL" for more information
+#
+# 		) Row-level locking and Oracle-style consistent reads increase multi-user concurrency
+# 			and performance.
+#
+# 			See SECTION 15.7, "InnoDB LOCKING AND TRANSACTION MODEL" for more information.
+#
+# 		) InnoDB tables arrange your data on disk to optimize queries based on primary keys.
+#
+# 			Each InnoDB table has a primary key index called the clustered index that organizes
+# 			the data to minimize I/O for primary key lookups.
+#
+# 			See SECTION 15.6.2.1, "CLUSTERED AND SECONDARY INDEXES" for more information
+#
+# 		) To maintain data integrity, InnoDB supports FOREIGN_KEY constraints.
+#
+# 			With foreign keys, inserts, updates, and deletes are checked to ensure they do
+# 			not result in inconsistencies across different tables.
+#
+# 			See SECTION 15.6.1.5, "InnoDB AND FOREIGN KEY CONSTRAINTS" for more information
+#
+# TABLE 15.1 INNODB STORAGE ENGINE FEATURES
+#
+# 		FEATURE 																											Support
+#
+# B-tree indexes 											Yes
+# 
+# Backup/point-in-time recovery (Implemented in the server, rather than in the storage engine) 	Yes
+#
+# Cluster database support 							No
+#
+# Clustered indexes 										Yes
+#
+# Compressed data 										Yes
+#
+# Data caches 												Yes
+#
+# Encrypted data 											Yes (Implemented in the server via encryption functions;
+# 																In MySQL 5.7 and later, data-at-rest tablespace encryption is supported)
+#
+# Foreign key support 									Yes
+#
+# Full-text search indexes 							Yes (InnoDB support for FULLTEXT indexes is available in MySQL 5.6 and later)
+#
+# Geospatial data type support 						Yes
+#
+# Geospatial indexing support 						Yes (InnoDB support for geospatial indexing is available in MySQL 5.7 and later)
+#
+# Hash indexes 											No (InnoDB utilizes hash indexes internally for its Adaptive Hash Index feature)
+#
+# Index caches 											Yes
+#
+# Locking granularity 									Row
+#
+# MVCC 														Yes
+#
+# Replication support (Implemented in the server, rather than in the storage engine) 		Yes
+#
+# Storage limits 											64TB
+#
+# T-tree indexes 											No
+#
+# Transactions 											Yes
+#
+# Update statistics for data dictionary 			Yes
+#
+# To compare the features of InnoDB with other storage engines provided with MySQL, see the
+# Storage Engine Features table in CHAPTER 16, ALTERNATIVE STORAGE ENGINES
+#
+# INNODB ENHANCEMENTS AND NEW FEATURES
+#
+# For information about InnoDB enhancements and new features, refer to:
+#
+# 		) The InnoDB enhancements list in SECTION 1.4, "WHAT IS NEW IN MYSQL 8.0"
+#
+# 		) The RELEASE NOTES
+#
+# ADDITIONAL INNODB INFORMATION AND RESOURCES
+#
+# 		) For InnoDB related terms and definitions, see the MySQL Glossary
+#
+# 		) For a forum dedicated to the InnoDB storage engine, see MySQL Forums::InnoDB
+#
+# 		) InnoDB is published under the same GNU GPL License Version 2 (of June 1991) as MySQL.
+#
+# 			For more information on MySQL licensin, see <links>
+#
+# 15.1.1 BENEFITS OF USING INNODB TABLES
+#
+# You may find InnoDB tables beneficial for the following reasons:
+#
+# 		) If your server crashes because of a hardware or software issue, regardless of what was happening
+# 			in the database at the time, you do not need to do anything special after restarting the database.
+#
+# 			InnoDB crash recovery automatically finalizes any changes that were committed before the time of the
+# 			crash, and undoes any changes that were in process but not committed.
+#
+# 			Just restart and continue where you left off.
+#
+# 		) The InnoDB storage engine maintains its own buffer pool that caches table and index data in main memory
+# 			as data is accessed.
+#
+# 			Frequently used data is processed directly from memory.
+#
+# 			This cache applies to many types of information and speeds up processing.
+#
+# 			On dedicated database servers, up to 80% of physical memory is often assigned
+# 			to the buffer pool.
+#
+# 		) If you split up related data into different tables, you can set up foreign keys that enforce
+# 			referential integrity.
+#
+# 			Update or delete data, and the related data in other tables is updated or deleted automatically.
+#
+# 			Try to insert data into a secondary table without corresponding data in the primary table, and
+# 			the bad data gets kicked out automatically.
+#
+# 		) If data becomes corrupted on disk or in memory, a checksum mechanism alerts you to the bogus data
+# 			before you use it.
+#
+# 		) When you design your database with appropriate primary key columns for each table, operations involving
+# 			those columns are automatically optimized.
+#
+# 			It is very fast to reference the primary key columns in WHERE clauses, ORDER_BY clauses, GROUP_BY clauses,
+# 			and join operations.
+#
+# 		) Inserts, updates, and deletes are optimized by an automatic mechanism called change buffering.
+#
+# 			InnoDB not only allows concurrent read and write access to the same table, it caches changed
+# 			data to streamline disk I/O
+#
+# 		) Performance benefits are not limited to giant tables with long-running queries.
+#
+# 			When the same rows are accessed over and over from a table, a feature called the Adaptive Hash Index
+# 			takes over to make these lookups even faster, as if they came out of a hash table.
+#
+# 		) You can compress tables and associated indexes.
+#
+# 		) You can create and drop indexes with much less impact on performance and availability
+#
+# 		) Truncating a file-per-table tablespace is very fast, and can free up disk space for the operating
+# 			system to reuse, rather than freeing up space within the system tablespace that only InnoDB can reuse.
+#
+# 		) The storage layout for table data is more efficient for BLOB and long text fields, with the DYNAMIC row format.
+#
+# 		) You can monitor the internal workings of the storage engine by querying INFORMATION_SCHEMA tables
+#
+# 		) You can monitor the performance details of the storage engine by querying Performance Schema tables.
+#
+# 		) You can freely mix InnoDB tables with tables from other MySQL storage engines, even within the same statement.
+#
+# 			For example, you can use a join operation to combine data from InnoDB and MEMORY tables in a single query.
+#
+# 		) InnoDB has been designed for CPU efficiency and maximum performance when processing large data volumes
+#
+# 		) InnoDB tables can handle large quantities of data, even on operating systems where file size is limited to 2GB
+#
+# For InnoDB-specific tuning techniques you can apply in your application code, see SECTION 8.5, "OPTIMIZING FOR INNODB TABLES"
+#
+# 15.1.2 BEST PRACTICES FOR INNODB TABLES
+#
+# This section describes best practices when using InnoDB tables.
+#
+# 		) Specifying a primary key for every table using the most frequently queried column or columns,
+# 			or an auto-increment value if there is no obvious primary key
+#
+# 		) Using joins wherever data is pulled from multiple tables based on identical ID values from those tables.
+#
+# 			For fast join performance, define foreign keys on the join columns, and declare those columns with the same
+# 			data type in each table.
+#
+# 			Adding foreign keys ensures that referenced columns are indexed, which can improve performance.
+#
+# 			Foreign key also propagate deletes or updates to all affected tables, and prevent insertion of data
+# 			in a child table if the corresponding IDs are not present in the parent table.
+#
+# 		) Turning off autocommit. Committing hundreds of times a second puts a cap on performance (limited by the write speed
+# 			of your storage device)
+#
+# 		) Grouping sets of related DML operations into transactions, by bracketing them with START TRANSACTION and COMMIT
+# 			statements.
+#
+# 			While you don't want to commit too often, you also don't want to issue huge batches of INSERT, UPDATE or DELETE
+# 			statements that run for hours without committing.
+#
+# 		) Not using LOCK_TABLES statements.
+#
+# 			InnoDB can handle multiple sessions all reading and writing to the same table at once,
+# 			without sacrificing reliability or high performance.
+#
+# 			To get exclusive write access to a set of rows, use the SELECT_---_FOR_UPDATE syntax to
+# 			lock just the rows you intend to update.
+#
+# 		) Enabling the innodb_file_per_table option or using general tablespaces to put the data and indexes
+# 			for tables into separate files, instead of the system tablespace.
+#
+# 			The innodb_file_per_table option is enabled by default.
+#
+# 		) Evaluating whether your data and access patterns benefit from the InnoDB table or page compression
+# 			features.
+#
+# 			You can compress InnoDB tables without sacrificing read/write capability.
+#
+# 		) Running your server with the option --sql_mode=NO_ENGINE_SUBSTITUTION to prevent tables being created
+# 			with a different storage engine if there is an issue with the engine specified in the ENGINE=
+# 			clause of CREATE_TABLE
+#
+# 15.1.3 VERIFYING THAT INNODB IS THE DEFAULT STORAGE ENGINE
+#
+# Issue the SHOW_ENGINES statement to view the available MySQL storage engines.
+#
+# Look for DEFAULT in the InnoDB line.
+#
+# 		SHOW ENGINES;
+#
+# Alternatively, query the INFORMATION_SCHEMA.ENGINES table.
+#
+# 		SELECT * FROM INFORMATION_SCHEMA.ENGINES;
+#
+# 15.1.4 TESTING AND BENCHMARKING WITH INNODB
+#
+# If InnoDB is not your default storage engine, you can determine if your database server or applications
+# work correctly with InnoDB by restarting the server with --default-storage-engine=InnoDB defined on the
+# command line or with default-storage-engine=innodb defined in the [mysqld] section of your MySQL server
+# option file.
+#
+# Since changing the default storage engine only affects new tables as they are created, run all your
+# application installation and setup steps to confirm that everything installs properly.
+#
+# Then exercise all the application features to make sure all the data loading, editing, and querying
+# features work.
+#
+# If a table relies on a feature that is specific to another storage engine, you will receive an error;
+# add the ENGINE=other_engine_name clause to the CREATE_TABLE statement to avoid the error.
+#
+# If you did not make a deliberate decision about the storage engine, and you want to preview how
+# certain tables work when created using InnoDB, issue the command ALTER_TABLE_table_name_ENGINE=InnoDB;
+# for each table.
+#
+# Or, to run test queries and other statements without disturbing the original table, make a copy:
+#
+# 		CREATE TABLE InnoDB_Table (---) ENGINE=InnoDB AS SELECT * FROM other_engine_table;
+#
+# To assess performance with a full application under a realistic workload, install the latest
+# MySQL server and run benchmarks.
+#
+# Test the full application lifecycle, from installation, through heavy usage, and server restart.
+#
+# Kill the server process while the database is busy to simulate a power failure, and verify that
+# the data is recovered successfully when you restart the server.
+#
+# Test any replication configurations, especially if you use different MySQL versions and options
+# on the master and slaves.
+#
+# 15.2 InnoDB AND THE ACID MODEL
+#
+# The ACID model is a set of database design principles that emphasize aspects of reliability that are
+# important for business data and mission-critical applications.
+#
+# MySQL includes components such as the InnoDB storage engine that adhere closely to the ACID model,
+# so that data is not corrupted and results are not distorted by exceptional conditions such as
+# software crashes and hardware malfunctions.
+#
+# When you rely on ACID-compliant features, you do not need to reinvent the wheel of consistency
+# checking and crash recovery mechanisms.
+#
+# In cases where you have additional software safeguards, ultra-reliable hardware, or an application
+# that can tolerate a small amount of data loss or inconsistency, you can adjust MySQL settings to trade
+# some of the ACID reliability for greater performance or throughput.
+#
+# The following sections discuss how MySQL features, in particular the InnoDB storage engine, interact
+# with the categories of the ACID model:
+#
+# 		) A: atomicity
+#
+# 		) C: Consistency
+#
+# 		) I: Isolation
+#
+# 		) D: durability
+#
+# ATOMICITY
+#
+# The atomicity aspect of the ACID model mainly involves InnoDB transactions.
+#
+# Related MySQL features include:
+#
+# 		) Autocommit setting
+#
+# 		) COMMIT statement
+#
+# 		) ROLLBACK statement
+#
+# 		) Operational data from the INFORMATION_SCHEMA tables
+#
+# CONSISTENCY
+#
+# The consistency aspect of the ACID model mainly involves internal InnoDB processing to
+# protect data from crashes.
+#
+# Related MySQL features include:
+#
+# 		) InnoDB doublewrite buffer
+#
+# 		) InnoDB crash recovery
+#
+# ISOLATION
+#
+# The isolation aspect of the ACID model mainly involves InnoDB transactions, in particular the isolation level 
+# that applies to each transaction.
+#
+# Related MySQL features include:
+#
+# 		) Autocommit setting
+#
+# 		) SET ISOLATION LEVEL statement
+#
+# 		) The low-level details of InnoDB locking. During performance tuning, you see these details through
+# 			INFORMATION_SCHEMA tables.
+#
+# DURABILITY
+#
+# The durability aspect of the ACID model involves MySQL software features interacting with your
+# particular hardware configuration.
+#
+# Because of the many possibilities depending on the capabilities of your CPU, network, and storage
+# devices, this aspect is the most complicated to provide concrete guidelines for.
+#
+# (And those guidelines might take the form of buy "new hardware")
+#
+# Related MySQL features include:
+#
+# 		) InnoDB doublewrite buffer, turned on and off by the innodb_doublewrite configuration option
+#
+# 		) Configuration option innodb_flush_log_at_trx_commit
+#
+# 		) Configuration option sync_binlog
+#
+# 		) Configuration option innodb_file_per_table
+#
+# 		) Write buffer in a storage device, such as a disk drive, SSD, or RAID array
+#
+# 		) Battery-backed cache in a storage device
+#
+# 		) The operating system used to MySQL, in particular its support for the fsync() system call
+#
+# 		) Uninterruptible power supply (UPS) protecting the electrical power to all computer servers and storage
+# 			devices that run MySQL servers and store MySQL data.
+#
+# 		) Your backup strategy, such as frequency and types of backups, and backup retention periods.
+#
+# 		) For distributed or hosted data applications, the particular characteristics of the data centers
+# 			where the hardware for the MySQL servers is located, and network connections between the data
+# 			centers.
+#
+# 15.3 INNODB MULTI-VERSIONING
+#
+# InnoDB is a multi-versioned storage engine: it keeps information about old versions of changed rows,
+# to support transactional features such as concurrency and rollback.
+#
+# This information is stored in the tablespace in a data structure called a rollback segment (after an
+# analogous data structure in Oracle)
+#
+# InnoDB uses the information in the rollback segment to perform the undo operations needed in a transaction
+# rollback.
+#
+# It also uses the information to build earlier versions of a row for a consistent read.
+#
+# Internally, InnoDB adds three fields to each row stored in the database. A 6-byte DB_TRX_ID
+# field indicates the transaction identifier for the last transaction that inserted or updated
+# the row.
+#
+# Also, a deletion is treated internally as an update where a special bit in the row is set
+# to mark it as deleted.
+#
+# Each row also contains a 7-byte DB_ROLL_PTR field called the roll pointer.
+#
+# The roll pointer points to an undo log record written to the rollback segment.
+#
+# If the row was updated, the undo log record contains the information necessary
+# to rebuild the content of the row before it was updated.
+#
+# A 6-byte DB_ROW_ID field contains a row ID that increases monotonically as new rows are
+# inserted.
+#
+# If InnoDB generates a clustered index automatically, the index contains row ID values.
+#
+# Otherwise, the DB_ROW_ID column does not appear in any index.
+#
+# Undo logs in the rollback segment are divided into insert and update undo logs.
+# Insert undo logs are needed only in transaction rollback and can be discarded as
+# soon as the transaction commits.
+#
+# Update undo logs are used also in consistent reads, but they can be discarded
+# only after there is no transaction present for which InnoDB has assigned a snapshot
+# that in a consistent read could need the information in the update undo log to build
+# an earlier version of a database row.
+#
+# Commit your transactions regularly, including those transactions that issue only consistent
+# reads.
+#
+# Otherwise, InnoDB cannot discard data from the update undo logs, and the rollback segment
+# may grow too big, filling up your tablespace.
+#
+# The physical size of an undo log record in the rollback segment is typically smaller than the
+# corresponding inserted or updated row.
+#
+# You can use this information to calculate the space needed for your rollback segment.
+#
+# In the InnoDB multi-versioning scheme, a row is not physically removed from the database
+# immediately when you delete it with an SQL statement.
+#
+# InnoDB only physically removes the corresponding row and its index records when it discards
+# the update undo log record written for the deletion.
+#
+# This removal operation is called a purge, and it is quite fast, usually taking the same order
+# of time as the SQL statement that did the deletion.
+#
+# If you insert and delete rows in smallish batches at about the same rate in the table, the purge
+# thread can start to lag behind and the table can grow bigger and bigger because of all the
+# "dead" rows, making everything disk-bound and very slow.
+#
+# In such a case, throttle new row operations, and allocate more resources to the purge thread
+# by tuning the innodb_max_purge_lag system variable.
+#
+# See SECTION 15.13, "InnoDB STARTUP OPTIONS AND SYSTEM VARIABLES" for more information
+#
+# MULTI-VERSIONING AND SECONDARY INDEXES
+#
+# InnoDB multiversion concurrency control (MVCC) treats secondary indexes differently than
+# clustered indexes.
+#
+# Records in a clustered index are updated-in-place, and their hidden system columns point
+# undo log entries from which earlier versions of records can be reconstructed.
+#
+# Unlike clustered index records, secondary index records do not contain hidden system
+# columns nor are they updated in-place.
+#
+# When a secondary index column is updated, old secondary index records are delete-marked,
+# new records are inserted, and delete-marked records are eventually purged.
+#
+# When a secondary index record is delete-marked or the secondary index page is updated
+# by a newer transaction, InnoDB looks up the database record in the clustered index.
+#
+# In the clustered index, the record's DB_TRX_ID is checked, and the correct version of
+# the record is retrieved from the undo log if the record was modified after the reading 
+# transaction was initiated.
+#
+# If a secondary index record is marked for deletion or the secondary index page is updated
+# by a newer transaction, the covering index technique is not used.
+#
+# Instead of returning values from the index structure, InnoDB looks up the record in the
+# clustered index.
+#
+# However, if the index condition pushdown (ICP) optimization is enabled, and parts of the
+# WHERE condition can be evaluated using only fields from the index, the MySQL server still
+# pushes this part of the WHERE condition down to the storage engine where it is evaluated
+# using the index.
+#
+# If no matching records are found, the clustered index lookup is avoided.
+#
+# If matching records are found, even among delete-marked records, InnoDB looks
+# up the record in the clustered index.
+#
+# 15.4 INNODB ARCITECHTURE
+#
+# The following refers to in-memory and on-disk structures that comprise the InnoDB
+# storage engine architechture.
+#
+# For information about each structure, see SECTION 15.5, "InnoDB IN-MEMORY STRUCTURES"
+# and SECTION 15.6, "INNODB ON-DISK STRUCTURES"
+#
+# FIGURE 15.1 INNODB ARCHITECHTURE
+#
+# 		In-Memory Structures 												On-Disk Structures 				File-per-table tablespaces
+# 		
+# 			Buffer Pool -> O_DIRECT | OS CACHE | -> O_DIRECT  |	System Tablespace	| 				innodb_file_per_table=ON
+# 			 																		(ibdata1)  								t1.ibd t2.ibd
+# 	Adaptive Hash INdex  													
+# 																					Doublewrite Buffer 
+#
+# 																					Change Buffer
+#											| OS CACHE |
+# 																																General Tablespaces
+#												VVVVVV 
+# 																															ts1.ibd -> t3 t4 t5
+# 																															ts2.ibd -> t6 t7 t8
+#
+# 			Change Buffer 														Undo Tablespaces
+#											| OS CACHE | 
+# 																					undo_001 undo_003.ibu
+# 												VVVVV
+# 																					undo_002 (system) 
+# 											| OS CACHE | 						undo_004.ibu (user-defined) 				Temporary Tablespaces
+
+# 		|	Log Buffer 		| 			| OS CACHE |							| Redo Log | 										ibtmp1 (global)
+#
+# 																				V	| ib_logfile0 | <									temp_1.ibt, temp_2.ibt, temp_3.ibt (Session)
+# 																				>  | ib_logfile1 | ^
 # 			
+#
+# 
+# 15.5 INNODB IN-MEMORY STRUCTURES
+#
+# 15.5.1 BUFFER POOL
+# 15.5.2 CHANGE BUFFER
+# 15.5.3 ADAPTIVE HASH INDEX
+# 15.5.4 LOG BUFFER
+#
+# This section describes InnoDB in-memory structures and related topics.
+#
+# 15.5.1 BUFFER POOL
+#
+# The buffer pool is an area in main memory where caches table and index data as it is
+# accessed.
+#
+# The buffer pool permits frequently used data to be processed directly from memory,
+# which speeds up processing.
+#
+# On dedicated servers, up to 80% of physical memory is often assigned to the buffer pool.
+#
+# For efficiency of high-volume read operations, the buffer pool is divided into pages that
+# can potentially hold multiple rows.
+#
+# For efficiency of cache management, the buffer pool is implemented as a linked list of
+# pages; data that is rarely used is aged out of the cache using a variation of the LRU
+# algorithm.
+#
+# Knowing how to take advantage of the buffer pool to keep frequently accessed data in
+# memory is an important aspect of MySQL tuning.
+#
+# BUFFER POOL LRU ALGORITHM
+#
+# The buffer pool is managed as a list using a variation of the least recently used (LRU)
+# algorithm.
+#
+# When room is needed to add a new page to the buffer pool, the least recently used
+# page is evicted and a new page is added to the middle of the list.
+#
+# This midpoint insertion strategy treats the list as two sublists:
+#
+# 		) At the head, a sublist of new ("young") pages that were accessed recently
+#
+# 		) At the tail, a sublist of old pages that were accessed less recently
+#
+# FIGURE 15.2 BUFFER POOL LIST
+#							+------+ ^
+# 							| HEAD | | Accessed pages are made young
+# 							+------+ |
+# 							|  5/8 | 	| Unused pages become old
+# 			New Sublist	|buffer|    |
+# 							| pool |		v
+# 							|      |
+# 							+------+
+# Midpoint insertion | Tail |
+# 			------------+------+
+# of pages read into	| Head |
+# the buffer pool 	+------+
+# 							| 3/8  |
+# 			Old Sublist	|buffer|
+# 							| pool |
+# 							+------+
+# 							| Tail |
+# 							+------+
+# 							  V V V Pages that remain unused are eventually evicted
+#
+# The algorithm keeps pages that are heavily used by queries in the new sublist.
+#
+# The old sublist contains less-used pages; these pages are candidates for eviction.
+#
+# By default, the algorithm operates as follows:
+#
+# 		) 3/8 of the buffer pool is devoted to the old sublist
+#
+# 		) The midpoint of the list is the boundary where the tail of the new sublist meets the head of the old sublist
+#
+# 		) When InnoDB reads a page into the buffer pool, it initially inserts it at the midpoint
+# 			(the head of the old sublist)
+#
+# 			A page can be read because it is required for a user-specified operation such as an SQL
+# 			query, or as part of a read-ahead operation performed automatically by InnoDB
+#
+# 		) Accessing a page in the old sublist makes it "young", moving it to the head of the buffer pool
+# 			(the head of the new sublist)
+#
+# 			If the page was read because it was required, the first access occurs immediately and the
+# 			page is made young.
+#
+# 			If the page was read due to read-ahead, the first access does not occur immediately (and might
+# 			not occur at all before the page is evicted)
+#
+# 		) As the database operates, pages in the buffer pool that are not accessed "age" by moving toward the
+# 			tail of the list.
+#
+# 			Pages in both the new and old sublists age as other pages are made new.
+#
+# 			Pages in the old sublist also age as pages are inserted at the midpoint.
+#
+# 			Eventually, a page that remains unused reaches the tail of the old sublist
+# 			and is evicted.
+#
+# By default, pages read by queries immediately move into the new sublist, meaning they stay
+# in the buffer pool longer.
+#
+# A table scan (such as performed for a mysqldump operation, or a SELECT statement with no WHERE
+# clause) can bring a large amount of data into the buffer pool and evict an equivalent amount of older
+# data, even if the new data is never used again.
+#
+# Similarly, pages that are loaded by the read-ahead background thread and then accessed only once move
+# to the head of the new list.
+#
+# These situations can push frequently used pages to the old sublist where they become subject to eviction.
+#
+# For information about optimizing this behavior, see SECTION 15.8.3.3, "MAKING THE BUFFER POOL SCAN RESISTANT"
+# and SECTION 15.8.3.4, "CONFIGURING INNODB BUFFER POOL PREFETCHING (READ-AHEAD)"
+#
+# InnoDB Standard Monitor output contains several fields in the BUFFER POOL AND MEMORY section regarding
+# operation of the buffer pool LRU algorithm.
+#
+# For details, see MONITORING THE BUFFER POOL USING THE INNODB STANDARD MONITOR
+#
+# BUFFER POOL CONFIGURATION
+#
+# You can configure the various aspects of the buffer pool to improve performance.
+#
+# 		) Ideally, you set the size of the buffer pool to as large a value as practical, leaving enough
+# 			memory for other processes on the server to run without excessive paging.
+#
+# 			The larger the buffer pool, the more InnoDB acts like an in-memory database, reading data from
+# 			disk once and then accessing the data from memory during subsequent reads.
+#
+# 			See SECTION 15.8.3.1, "CONFIGURING INNODB BUFFER POOL SIZE"
+#
+# 		) On 64-bit systems with sufficient memory, you can split the buffer pool into multiple parts
+# 			to minimize contention for memory structures among concurrent operations.
+#
+# 			For details, see SECTION 15.8.3.2, "CONFIGURING MULTIPLE BUFFER POOL INSTANCES"
+#
+# 		) You can keep frequently accessed data in memory regardless of sudden spikes of activity
+# 			from operations that would bring large amounts of infrequently accessed data into the
+# 			buffer pool.
+#
+# 			For details, see SECTION 15.8.3.3, "MAKING THE BUFFER POOL SCAN RESISTANT"
+#
+# 		) You can control when and how to perform read-ahead requests to prefetch pages into the buffer
+# 			pool asynchronously in anticipation that the pages will be needed soon.
+#
+# 			For details, see SECTION 15.8.3.4, "CONFIGURING INNODB BUFFER POOL PREFETCHING (READ-AHEAD)"
+#
+# 		) You can control when background flushing occurs and whether or not the rate of flushing is dynamically
+# 			adjusted based on workload.
+#
+# 			For details, see SECTION 15.8.3.5, "CONFIGURING INNODB BUFFER POOL FLUSHING"
+#
+# 		) You can fine-tune aspects of buffer pool flushing behavior to improve performance.
+#
+# 			For details, see SECTION 15.8.3.6, "FINE-TUNING INNODB BUFFER POOL FLUSHING"
+#
+# 		) You can configure how InnoDB preserves the current buffer pool state to avoid a lengthy
+# 			warmup period after a server restart.
+#
+# 			For details, see SECTION 15.8.3.7, "SAVING AND RESTORING THE BUFFER POOL STATE"
+#
+# MONITORING THE BUFFER POOL USING THE INNODB STANDARD MONITOR
+#
+# InnoDB Standard Monitor output, which can be accessed using SHOW_ENGINE_INNODB_STATUS, provides
+# metrics regarding operation of the buffer pool.
+#
+# Buffer pool metrics are located in the BUFFER POOL AND MEMORY section of InnoDB Standard Monitor
+# output and appear similar to the following:
+#
+# 		--------------------------
+# 		BUFFER POOL AND MEMORY
+# 		--------------------------
+# 		Total large memory allocated 2198863872
+# 		Dictionary memory allocated 776332
+# 		Buffer pool size 				 131072
+# 		Free buffers 	  				 124908
+# 		Database pages   				 5720
+# 		Old database pages 			 2071
+# 		Modified db pages 			 910
+# 		Pending reads 					 0
+# 		Pending writes: LRU 0, flush list 0, single page 0
+# 		Pages made young 4, not young 0
+# 		0.10 youngs/s, 0.00 non-youngs/s
+# 		Pages read 197, 190.89 creates/s, 244.94 writes/s
+# 		0.00 reads/s, 190.89 creates/s, 244.94 writes/s
+# 		Buffer pool hit rate 1000 / 1000, young-making rate 0 / 1000 not
+# 		0 / 1000
+# 		Pages read ahead 0.00/s, evicted without access 0.00/s Random read
+# 		ahead 0.00/s
+# 		LRU len: 5720, unzip_LRU len: 0
+# 		I/O sum[0]:cur[0], unzip sum[0]:cur[0]
+#
+# The following table describes buffer pool metrics reported by the InnoDB Standard Monitor.
+#
+# NOTE:
+#
+# 		Per second averages provided in InnoDB Standard Monitor output are based on the elapsed
+# 		time since InnoDB Standard Monitor output was last printed.
+#
+# TABLE 15.2 INNODB BUFFER POOL METRICS
+#
+# 		NAME 													DESCRIPTION
+#
+# Total memory allocated 			The total memory allocated for the buffer pool in bytes.
+#
+# Dictionary memory allocated 	The total memory allocated for the InnoDB data dictionary in bytes.
+#
+# Buffer pool size 					The total size in pages allocated to the buffer pool
+#
+# Free buffers 						The total size in pages of the buffer pool free list
+#
+# Database pages 						The total size in pages of the buffer pool LRU list
+#
+# Old database pages 				The total size in pages of the buffer pool old LRU sublist
+#
+# Modified db pages 					The current number of pages modified in the buffer pool
+#
+# Pending reads 						The number of buffer pool pages waiting to be read into the buffer pool
+#
+# Pending writes LRU 				The number of old dirty pages within the buffer pool to be written from the bottom of the LRU list
+#
+# Pending writes flush list 		The number of buffer pool pages to be flushed during checkpointing
+#
+# Pending writes single page 		The number of pending independent page writes within the buffer pool
+#
+# Pages made young 					The total number of pages made young in the buffer pool LRU list (moved to the head of sublist of "new" pages)
+#
+# Pages made not young 				The total number of pages not made young in the buffer pool LRU list (pages that have remained in the "old" sublist
+# 											without being made young)
+#
+# youngs/s 								The per second average of accesses to old pages in the buffer pool LRU list that have resulted in making
+# 											pages young. See the notes that follow this table for more information.
+#
+# non-youngs/s 						The per second average of accesses to old pages in the buffer pool LRU list that have resulted in not making
+# 											pages young. See the notes that follow this table for more information.
+#
+# Pages read 							The total number of pages read from the buffer pool
+#
+# Pages created 						The total number of pages created within the buffer pool
+#
+# Pages written 						The total number of pages written from the buffer pool
+#
+# reads/s 								The per second average number of buffer pool page reads per second
+#
+# creates/s 							The per second average number of buffer pool pages created per second
+#
+# writes/s 								The per second average number of buffer pool page writes per second
+#
+# Buffer pool hit rate 				The buffer pool page hit rate for pages read from the buffer pool memory vs from disk storage
+#
+# young-making rate 					The average hit rate at which page accesses have resulted in making pages young.
+#
+# 											See the notes that follow this table for more information
+#
+# not (young-making rate) 			The average hit rate at which page accesses have not resulted in making pages young.
+#
+# 											See the notes that follow this table for more information
+#
+# Pages read ahead 					The per second average of read ahead operations
+#
+# Pages evicted without access 	The per second average of the pages evicted without being accessed from the buffer pool
+#
+# Random read ahead 					The per second average of random read ahead operations
+#
+# LRU len 								The total size in pages of the buffer pool LRU list
+#
+# unzip_LRU len 						The total size in pages of the buffer pool unzip_LRU list
+#
+# I/O sum 								The total number of buffer pool LRU list pages accessed, for the last 50 seconds
+#
+# I/O cur 								The total number of buffer pool LRU list pages accessed
+#
+# I/O unzip sum 						The total number of buffer pool unzip_LRU list pages accessed
+#
+# I/O unzip cur 						The total number of buffer pool unzip_LRU list pages accessed
+#
+# NOTES:
+#
+# 		) The young/s metric is applicable only to old pages.
+#
+# 			It is based on the number of accesses to pages and not the number of pages.
+#
+# 			There can be multiple accesses to a given page, all of which are counted.
+#
+# 			If you see very low youngs/s values when there are no large scans occurring,
+# 			you might need to reduce the delay time or increase the percentage of the buffer
+# 			pool used for the old sublist.
+#
+# 			Increasing the percentage makes the old sublist larger, so pages in that sublist
+# 			take longer to move to the tail, which increases the likelihood that those pages
+# 			will be accessed again and made young.
+#
+# 		) The non-youngs/s metric is applicable only to old pages.
+#
+# 			It is based on the number of accesses to pages and not the number of pages.
+#
+# 			There can be multiple accesses to a given page, all of which are counted.
+# 			If you do not see a higher non-youngs/s value when performing large table scans
+# 			(and a higher youngs/s value), increase the delay value.
+#
+# 		) The young-making rate accounts for accesses to all buffer pool pages, not just
+# 			accesses to pages in the old sublist.
+#
+# 			The young-making rate and not rate do not normally add up to the overall buffer
+# 			pool hit rate.
+#
+# 			Page hits in the old sublist cause pages to move to the new sublist, but page hits
+# 			in the new sublist causes pages to move to the head of the list only if they are
+# 			a certain distance from the head.
+#
+# 		) not (young-making rate) is the average hit rate at which page accesses have not resulted
+# 			in making pages young due to the delay defined by innodb_old_blocks_time not being met,
+# 			or due to page hits in the new sublist that did not result in pages being moved to the head.
+#
+# 			This rate accounts for accesses to all buffer pool pages, not just accesses to pages in the
+# 			old sublist.
+#
+# Buffer pool server status variables and the INNODB_BUFFER_POOL_STATS table provide many of the
+# same buffer pool metrics found in InnoDB Standard Monitor output.
+#
+# For more information, see EXAMPLE 15.10, "QUERYING THE INNODB_BUFFER_POOL_STATS TABLE"
+#
+# 15.5.2 CHANGE BUFFER
+#
+# The change buffer is a special data structure that caches changes to secondary index pages when
+# those pages are not in the buffer pool.
+#
+# The buffered changes, which may result from INSERT, UPDATE or DELETE operations (DML), are merged
+# later when the pages are loaded into the buffer pool by other read operations.
+#
+# 											FIGURE 15.3 CHANGE BUFFER
+#
+# 										The purge operation periodically and efficiently writes 
+# 										updated index pages to disk
+#
+# 											| Buffer Pool | -> DISK
+#
+# Changes to secondary index  			^ ^ ^ 			V
+# pages that are not in the  									--> Changes are periodically merged as secondary index pages 
+# buffer pool are cached in >>	| Change Buffer |    ^ 	 are read into the buffer pool
+# the change buffer
+#
+# Unlike clustered indexes, secondary indexes are usually nonunique, and inserts into secondary
+# indexes happen in a relatively random order.
+#
+# Similarly, deletes and updates may affect secondary index pages that are not adjacently located
+# in an index tree.
+#
+# Merging cached changes at a later time, when affected pages are read into the buffer
+# pool by other operations, avoids substansial random access I/O that would be required to
+# read secondary index pages into the buffer pool from disk.
+#
+# Periodically, the purge operation that runs when the system is mostly idle, or during a slow
+# shutdown, writes the updated index pages to disk.
+#
+# The purge operation can write disk blocks for a series of index values more efficiently
+# than if each value were written to disk immediately.
+#
+# Change buffer merging may take several hours when there are many affected rows and numerous
+# secondary indexes to update.
+#
+# During this time, disk I/O is increased, which can cause a significant slowdown for disk-bound
+# queries.
+#
+# Change buffer merging may also continue to occur after a transaction is committed, and even
+# after a server shutdown and restart (see SECTION 15.20.2, "FORCING INNODB RECOVERY" for more information)
+#
+# In memory, the change buffer occupies part of the buffer pool. On disk, the change buffer is part of
+# the system tablespace, where index changes are buffered when the database server is shut down.
+#
+# The type of data cached in the change buffer is governed by the innodb_change_buffering variable.
+#
+# For more information, see CONFIGURING CHANGE BUFFERING. You can also configure the maximum change
+# buffer size.
+#
+# For more information, see CONFIGURING THE CHANGE BUFFER MAXIMUM SIZE
+#
+# Change buffering is not supported for a secondary index if the index contains a descending
+# index column or if the primary key includes a descending index column.
+#
+# For answers to frequently asked questions about the change buffer, see SECTION A.15, "MYSQL 8.0 FAQ: INNODB CHANGE BUFFER"
+#
+# CONFIGURING CHANGE BUFFERING
+#
+# When INSERT, UPDATE and DELETE operations are performed on a table, the values of indexed columns
+# (particularly the values of secondary keys) are often in an unsorted order, requiring substansial
+# I/O to bring secondary indexes up to date.
+#
+# The change buffer caches changes to secondary index entries when the relevant page is not in the
+# buffer pool, thus avoiding expensive I/O operations by not immediately reading in the page from disk.
+#
+# The buffered changes are merged when the page is loaded into the buffer pool, and the updated page
+# is later flushed to disk.
+#
+# The InnoDB main thread merges buffered changes when the server is nearly idle, and during
+# a slow shutdown.
+#
+# Because it can result in fewer disk reads and writes, the change buffer feature is most valuable
+# for workloads that are I/O-bound, for example applications with a high volume of DML operations
+# such as bulk inserts.
+#
+# However, the change buffer occupies a part of the buffer pool, reducing the memory available to cache
+# data pages.
+#
+# If the working set almost fits in the buffer pool, or if your tables have relatively few secondary
+# indexes, it may be useful to disable change buffering.
+#
+# If the working data set fits entirely within the buffer pool, change buffering does not impose extra
+# overhead, because it only applies to pages that are not in the buffer pool.
+#
+# You can control the extent to which InnoDB performs change buffering using the innodb_change_buffering
+# configuration parameter.
+#
+# You can enable or disable buffering for inserts, delete operations (when index records are initially
+# marked for deletion) and purge operations (when index records are physically deleted)
+#
+# An update operation is a combination of an insert and a delete. The default innodb_change_buffering
+# value is all.
+#
+# Permitted innodb_change_buffering values include:
+#
+# 		) all
+#
+# 			The default value: buffer inserts, delete-marking operations and purges
+#
+# 		) none
+#
+# 			Do not buffer any operations
+#
+# 		) inserts
+#
+# 			Buffer insert operations
+#
+# 		) deletes
+#
+# 			Buffer delete-marking operations
+#
+# 		) changes
+#
+# 			Buffer both inserts and delete-marking operations
+#
+# 		) purges
+#
+# 			Buffer the physical deletion operations that happen in the background
+#
+# You can set the innodb_change_buffering parameter in the MySQL option file (my.cnf or my.ini)
+# or change it dynamically with the SET_GLOBAL statement, which requires privileges sufficient
+# to set global system variables.
+#
+# See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# Changing the setting affects the buffering of new operations; the merging of existing
+# buffered entries is not affected.
+#
+# CONFIGURING THE CHANGE BUFFER MAXIMUM SIZE
+#
+# The innodb_change_buffer_max_size variable permits configuring the maximum size of the
+# change buffer as a percentage of the total size of the buffer pool.
+#
+# By default, innodb_change_buffer_max_size is set to 25
+#
+# The maximum setting is 50
+#
+# Consider increasing innodb_change_buffer_max_size on a MySQL server with heavy insert,
+# update and delete activity, where change buffer merging does not keep pace with new
+# change buffer entries, causing the change buffer to reach its maximum size limit.
+#
+# Consider decreasing innodb_change_buffer_max_size on a MySQL server with static data
+# used for reporting, or if the change buffer consumes too much of the memory space shared
+# with the buffer pool, causing pages to age out of the buffer pool sooner than desired.
+#
+# Test different settings with a representative workload to determine an optimal configuration.
+#
+# The innodb_change_buffer_max_size setting is dynamic, which permits modifying the setting
+# without restarting the server.
+#
+# MONITORING THE CHANGE BUFFER
+#
+# The following options are available for change buffer monitoring:
+#
+# 		) InnoDB Standard Monitor output includes change buffer status information.
+#
+# 			To view monitor data, issue the SHOW ENGINE INNODB STATUS statement.
+#
+# 				SHOW ENGINE INNODB STATUS\G
+#
+# 			Change buffer status information is located under the INSERT BUFFER AND ADAPTIVE HASH INDEX
+# 			heading and appears similar to the following:
+#
+# 				----------------------------------
+# 				INSERT BUFFER AND ADAPTIVE HASH INDEX
+# 				----------------------------------
+# 				Ibuf: size 1, free list len 0, seg size 2, 0 merges
+# 				merged operations:
+# 					insert 0, delete mark 0, delete 0
+# 				discarded operations:
+# 					insert 0, delete mark 0, delete 0
+# 				Hash table size 4425293, used cells 32, node heap has 1 buffer(s)
+# 				13577.57 hash searches/s, 202.47 non-hash searches/s
+#
+# 			For more information, see SECTION 15.16.3, "INNODB STANDARD MONITOR AND LOCK MONITOR OUTPUT"
+#
+# 		) The INFORMATION_SCHEMA.INNODB_METRICS table provides most of the data points found in InnoDB
+# 			Standard Monitor output, plus other data points.
+#
+# 			To view change buffer metrics and a description of each, issue the following query:
+#
+# 				SELECT NAME, COMMENT FROM INFORMATION_SCHEMA.INNODB_METRICS WHERE NAME LIKE '%ibuf%'\G
+#
+# 			For INNODB_METRICS table usage information, see SECTION 15.14.6, "INNODB INFORMATION_SCHEMA METRICS TABLE"
+#
+# 		) The INFORMATION_SCHEMA.INNODB_BUFFER_PAGE table provides metadata about each page in the buffer pool,
+# 			including change buffer index and change buffer bitmap pages.
+#
+# 			Change buffer pages are identified by PAGE_TYPE.IBUF_INDEX is the page type for change buffer index pages,
+# 			and IBUF_BITMAP is the page type for change buffer bitmap pages.
+#
+# 				WARNING:
+#
+# 					Querying the INNODB_BUFFER_PAGE table can introduce significant performance overhead.
+#
+# 					To avoid impacting performance, reproduce the issue you want to investigate on a test
+# 					instance and run your queries on the test instance.
+#
+# 			For example, you can query the INNODB_BUFFER_PAGE table to determine the approximate number of
+# 			IBUF_INDEX and IBUF_BITMAP pages as a percentage of total buffer pool pages.
+#
+# 				SELECT (SELECT COUNT(*) FROM INFORMATION_SCHEMA.INNODB_BUFFER_PAGE
+# 				WHERE PAGE_TYPE LIKE 'IBUF%') AS change_buffer_pages,
+# 				(SELECT COUNT(*) FROM INFORMATION_SCHEMA.INNODB_BUFFER_PAGE) AS total_pages,
+# 				(SELECT ((change_buffer_pages/total_pages)*100))
+# 				AS change_buffer_page_percentage;
+# 				+-------------------------------+--------------------+------------------------------------------+
+# 				| change_buffer_pages 			  | total_pages 		  | change_buffer_page_percentage 				|
+# 				+-------------------------------+--------------------+------------------------------------------+
+# 				| 25 									  | 8192 				  | 0.3052 												|
+# 				+-------------------------------+--------------------+------------------------------------------+
+#
+# 			For information about other data provided by the INNODB_BUFFER_PAGE table, see SECTION 25.38.1, "THE INFORMATION_SCHEMA
+# 			INNODB_BUFFER_PAGE TABLE"
+#
+# 			For related usage information, see SECTION 15.14.5, "INNODB INFORMATION_SCHEMA BUFFER POOL TABLES"
+#
+# 		) Performance Schema provides change buffer mutex wait instrumentation for advanced performance monitoring.
+#
+# 			To view change buffer instrumentation, issue the following query:
+#
+# 				SELECT * FROM performance_schema.setup_instruments
+# 				WHERE NAME LIKE '%wait/synch/mutex/innodb/ibuf%';
+# 				+--------------------------------------------------------+--------------+------------+
+# 				| NAME 																 	| ENABLED 		 | TIMED 	 |
+# 				+--------------------------------------------------------+--------------+------------+
+# 				| wait/synch/mutex/innodb/ibuf_bitmap_mutex 				 	| YES 			 | YES 		 |
+# 				| wait/synch/mutex/innodb/ibuf_mutex 						 	| YES 			 | YES 		 |
+# 				| wait/synch/mutex/innodb/ibuf_pessimistic_insert_mutex  | YES 			 | YES 		 |
+# 				+--------------------------------------------------------+---------------+-----------+
+#
+# 			For information about monitoring InnoDB mutex waits, see SECTION 15.15.2, "MONITORING INNODB MUTEX WAITS USING PERFORMANCE SCHEMA"
+#
+# 15.5.3 ADAPTIVE HASH INDEX
+#
+# The adaptive hash index feature enables InnoDB to perform more like an in-memory database
+# on systems with appropriate combinations of workload and sufficient memory for the buffer
+# pool without sacrificing transactional features or reliability.
+#
+# The adaptive hash index feature is enabled by the innodb_adaptive_hash_index variable,
+# or turned off at server startup by --skip-innodb-adaptive-hash-index
+#
+# Based on the observed pattern of searches, a hash index is built using a prefix of the index key.
+#
+# The prefix can be any length, and it may be that only some values in the B-tree appear in the
+# hash index.
+#
+# Hash indexes are built on demand for the pages of the index that are accessed often.
+#
+# If a table fits almost entirely in main memory, a hash index can speed up queries by enabling
+# direct lookup of any element, turning the index value into a sort of pointer.
+#
+# InnoDB has a mechanism that monitors index searches.
+#
+# If InnoDB notices that queries could benefit from building a hash index, it does so automatically.
+#
+# With some workloads, the speedup from hash index lookups greatly outweighs the extra work to monitor
+# index lookups and maintain the hash index structure.
+#
+# Access to the adaptive hash index can sometimes become a source of contention under heavy workloads,
+# such as multiple concurrent joins.
+#
+# Queries with LIKE operators and % wildcards also tend not to benefit.
+#
+# For workloads that do not benefit from the adaptive hash index feature, turning it
+# off reduces unnecessary performance overhead.
+#
+# Because it is difficult to predict in advance whether the adaptive hash index feature
+# is appropriate for a particular system and workload, consider running benchmarks with
+# it enabled and disabled.
+#
+# Architechtural changes in MySQL 5.6 make it more suitable to disable the adaptive hash
+# index feature than in earlier releases.
+#
+# The adaptive hash index feature is partitioned. Each index is bound to a specific partition,
+# and each partition is protected by a separate latch.
+#
+# Partitioning is controlled by the innodb_adaptive_hash_index_parts variable.
+#
+# The innodb_adaptive_hash_index_parts variable is set to 8 by default. The maximum setting is 512.
+#
+# You can monitor adaptive hash index use and contention in the SEMAPHORES section of SHOW_ENGINE_INNODB_STATUS
+# output.
+#
+# If there are numerous threads waiting on RW-latches created in btr0sea.c, consider increasing the number of
+# adaptive hash index partitions or disabling the adaptive hash index feature.
+#
+# For information about the performance characteristics of hash indexes, see SECTION 8.3.9, "COMPARISON OF B-TREE AND HASH INDEXES"
+#
+# 15.5.4 LOG BUFFER
+#
+# The log buffer is the memory area that holds data to be written to the log files on disk.
+#
+# Log buffer size is defined by the innodb_log_buffer_size variable. The default size is 16MB.
+#
+# The contents of the log buffer are periodically flushed to disk. A large log buffer enables
+# large transactions to run without the need to write redo log data to disk before the transaction
+# commit.
+#
+# Thus, if you have transactions that update, insert, or delete many rows, increasing the size
+# of the log buffer saves disk I/O
+#
+# The innodb_flush_log_at_trx_commit variable controls how the contents of the log buffer are written and 
+# flushed to disk.
+#
+# The innodb_flush_log_at_timeout variable controls log flushing frequency.
+#
+# For related information, see MEMORY CONFIGURATION, see SECTION 8.5.4, "OPTIMIZING INNODB REDO LOGGING"
+#
+# 15.6 INNODB ON-DISK STRUCTURES
+#
+# 15.6.1 TABLES
+# 15.6.2 INDEXES
+#
+# 15.6.3 TABLESPACES
+# 15.6.4 DOUBLEWRITE BUFFER
+#
+# 15.6.5 REDO LOG
+# 15.6.6 UNDO LOGS
+#
+# This section describes InnoDB on-disk structures and related topics.
+#
+# 15.6.1 TABLES
+#
+# 15.6.1.1 CREATING INNODB TABLES
+# 15.6.1.2 MOVING OR COPYING INNODB TABLES
+#
+# 15.6.1.3 CONVERTING TABLES FROM MYISAM TO INNODB
+# 15.6.1.4 AUTO_INCREMENT HANDLING IN INNODB
+#
+# 15.6.1.5 INNODB AND FOREIGN KEY CONSTRAINTS
+# 15.6.1.6 LIMITS ON INNODB TABLES
+#
+# This section covers topics related to InnoDB tables.
+#
+# 15.6.1.1 CREATING INNODB TABLES
+#
+# To create an InnoDB table, use the CREATE_TABLE statement
+#
+# 		CREATE TABLE t1 (a INT, b CHAR (20), PRIMARY KEY (a)) ENGINE=InnoDB;
+#
+# You do not need to specify the ENGINE=InnoDB clause if InnoDB is defined as the default
+# storage engine, which it is by default.
+#
+# To check the default storage engine, issue the following statement:
+#
+# 		SELECT @@default_storage_engine;
+# 		+------------------------------+
+# 		| @@default_storage_engine 	 |
+# 		+------------------------------+
+# 		| InnoDB 							 |
+# 		+------------------------------+
+#
+# You might still use ENGINE=InnoDB clause if you plan to use mysqldump or replication to replay the
+# CREATE_TABLE statement on a server where the default storage engine is not InnoDB.
+#
+# An InnoDB table and its indexes can be created in the system tablespace, in a file-per-table
+# tablespace, or in a general tablespace.
+#
+# When innodb_file_per_table is enabled, which is the default, an InnoDB table is implicitly created
+# in an individual file-per-table tablespace.
+#
+# Conversely, when innodb_file_per_table is disabled, an InnoDB table is implicitly created in the
+# InnoDB system tablespace.
+#
+# To create a table in a general tablespace, use CREATE_TABLE_---_TABLESPACE syntax.
+#
+# For more information, see SECTION 15.6.3.3, "GENERAL TABLESPACES"
+#
+# When you create a table in a file-per-table tablespace, MySQL creates an .ibd tablespace file in
+# a database directory under the MySQL data directory, by default.
+#
+# A table created in the InnoDB system tablespace is created in an existing ibdata file, which resides
+# in the MySQL data directory.
+#
+# A table created in a general tablespace is created in an existing general tablespace .ibd file.
+#
+# General tablespace files can be created inside or outside of the MySQL data directory.
+#
+# For more information, see SECTION 15.6.3.3, "GENERAL TABLESPACES"
+#
+# Internally, InnoDB adds an entry for each table to the data dictionary.
+#
+# The entry includes the database name. For example, if table t1 is created in the
+# test database, the data dictionary entry for the database name is 'test/t1'
+#
+# This means you can create a table of the same name (t1) in a different database,
+# and the table names do not collide inside InnoDB.
+#
+# INNODB TABLES AND ROW FORMATS
+#
+# The default row format for InnoDB tables is defined by the innodb_default_row_format configuration
+# option, which has a default value of DYNAMIC.
+#
+# Dynamic and Compressed row format allow you to take advantage of InnoDB features such as table
+# compression and efficient off-page storage of long column values.
+#
+# To use these row formats, innodb_file_per_table must be enabled (the default)
+#
+# 		SET GLOBAL innodb_file_per_table=1;
+# 		CREATE TABLE t3 (a INT, b CHAR (20), PRIMARY KEY (a)) ROW_FORMAT=DYNAMIC;
+# 		CREATE TABLE t4 (a INT, b CHAR (20), PRIMARY KEY (a)) ROW_FORMAT=COMPRESSED;
+#
+# Alternatively, you can use CREATE_TABLE_---_TABLESPACE syntax to create an InnoDB table in
+# a general tablespace.
+#
+# General tablespaces support all row formats. For more information, see SECTION 15.6.3.3, "GENERAL TABLESPACES"
+#
+# 		CREATE TABLE t1 (c1 INT PRIMARY KEY) TABLESPACE ts1 ROW_FORMAT=DYNAMIC;
+#
+# CREATE_TABLE_---_TABLESPACE syntax can also be used to create InnoDB tables with a Dynamic row format
+# in the system tablespace, alongside tables with a Compact or Redundant row format.
+#
+# 		CREATE TABLE t1 (c1 INT PRIMARY KEY) TABLESPACE = innodb_system ROW_FORMAT=DYNAMIC;
+#
+# For more information about InnoDB row formats, see SECTION 15.10, "InnoDB ROW FORMATS"
+#
+# For how to determine the row format of an InnoDB table and the physical characteristics
+# of InnoDB row formats, see SECTION 15.10, "InnoDB ROW FORMATS"
+#
+# InnoDB TABLES AND PRIMARY KEYS
+#
+# Always define a primary key for an InnoDB table, specifying the column or columns that:
+#
+# 		) Are referenced by the most important queries
+#
+# 		) Are never left blank
+#
+# 		) Never have duplicate values
+#
+# 		) Rarely if ever change value once inserted
+#
+# For example, in a table containing information about people, you would not create a primary key
+# on (firstname, lastname) because more than one person can have the same name, some people have
+# blank last names, and sometimes people change their names.
+#
+# With so many constraints, often there is not an obvious set of columns to use as a primary key,
+# so you create a new column with a numeric ID to serve as all or part of the primary key.
+#
+# You can declare an auto-increment column so that ascending values are filled in automatically
+# as rows are inserted:
+#
+# 		#The value of ID can act like a pointer between related items in different tables
+# 		CREATE TABLE t5 (id INT AUTO_INCREMENT, b CHAR (20), PRIMARY KEY (id));
+#
+# 		#The primary key can consist of more than one column. Any autoinc column must come first.
+# 		CREATE TABLE t6 (id INT AUTO_INCREMENT, a INT, b CHAR (20), PRIMARY KEY (id,a));
+#
+# Although the table works correctly without defining a primary key, the primary key is involved
+# with many aspects of performance and is a crucial design aspect for any large or frequently
+# used table.
+#
+# It is recommended that you always specify a primary key in the CREATE_TABLE statement.
+#
+# If you create the table, load data, and then run ALTER_TABLE to add a primary key later,
+# that operation is much slower than defining the primary key when creating the table.
+#
+# VIEWING INNODB TABLE PROPERTIES
+#
+# To view the properties of an InnoDB table, issue a SHOW_TABLE_STATUS statement:
+#
+# 		SHOW TABLE STATUS FROM test LIKE 't%' \G;
+# 		****************************** 1. row *******************************
+# 						Name: t1
+# 					 Engine: InnoDB
+# 					Version: 10
+# 				Row_format: Compact
+# 						Rows: 0
+# 		  Avg_row_length: 0
+# 			 Data_length : 16384
+# 		Max_data_length : 0
+# 			Index_length : 0
+# 				Data_free : 0
+# 		Auto_increment  : NULL
+# 			Create_time  : 2015-03-16 15:13:31
+# 			Update_time  : NULL
+# 			 Check_time  : NULL
+# 				Collation : utf8mb4_0900_ai_ci
+# 				 Checksum : NULL
+# 		Create_options  : 
+# 				Comment   : 
+#
+# For information about SHOW_TABLE_STATUS output, see SECTION 13.7.6.36, "SHOW TABLE STATUS SYNTAX"
+#
+# InnoDB table properties may also be queried using the InnoDB Information Schema system tables:
+#
+# 		SELECT * FROM INFORMATION_SCHEMA.INNODB_TABLES WHERE NAME='test/t1' \G
+# 		******************************* 1. row ***************************************
+# 					TABLE_ID: 45
+# 						NAME : test/t1
+# 						FLAG : 1
+# 					 N_COLS : 5
+# 						SPACE: 35
+# 				ROW_FORMAT : Compact
+# 			ZIP_PAGE_SIZE : 0
+# 				SPACE_TYPE : Single
+#
+# For more information, see SECTION 15.14.3, "INNODB INFORMATION_SCHEMA SCHEMA OBJECT TABLES"
+#
+# 15.6.1.2 MOVING OR COPYING INNODB TABLES
+#
+# This section describes techniques for moving or copying some or all InnoDB tables to a different
+# server or instance.
+#
+# For example, you might move an entire MySQL instance to a larger, faster server; you might clone an
+# entire MySQL instance to a new replication slave server; you might copy individual tables to another
+# instance to develop and test an app - Or to a data warehouse server to produce reports.
+#
+# On Windows, InnoDB always stores database and table names internally in lowercase.
+#
+# To move databases in a binary format from Unix to Windows or from Windows to Unix, create all
+# databases and tables using lowercase names.
+#
+# A convenient way to accomplish this is to add the following line to the [mysqld] section of your
+# my.cnf or my.ini file before creating any databases or tables:
+#
+# 		[mysqld]
+# 		lower_case_table_names=1
+#
+# NOTE:
+#
+# 		It is prohibited to start the server with a lower_case_table_names setting that is different
+# 		from the setting used when the server was initialized.
+#
+# Techniques for moving or copying InnoDB tables include:
+#
+# 		) Transportable Tablespaces
+#
+# 		) MySQL Enterprise Backup
+#
+# 		) Copying Data Files (Cold Backup Method)
+#
+# 		) Export and Import (mysqldump)
+#
+# TRANSPORTABLE TABLESPACES
+#
+# The transportable tablespaces features uses FLUSH_TABLES_---_FOR_EXPORT to ready
+# InnoDB tables for copying from one server instnace to another.
+#
+# To use this feature, InnoDB tables must be created with innodb_file_per_table
+# set to ON so that each InnoDB table has its own tablespace.
+#
+# For usage information, see SECTION 15.6.3.7, "COPYING TABLESPACES TO ANOTHER INSTANCE"
+#
+# MYSQL ENTERPRISE BACKUP
+#
+# The MySQL Enterprise Backup product lets you back up a running MySQL database with minimal
+# disruption to operations while producing a consistent snapshot of the database.
+#
+# When MySQL Enterprise Backup is copying tables, reads and writes can continue.
+#
+# In addition, MySQL Enterprise Backup can create compressed backup files, and back
+# up subsets of tables.
+#
+# In conjunction with the MySQL binary log, you can perform point-in-time recovery.
+#
+# MySQL Enterprise Backup is included as part of the MySQL Enterprise Subscription.
+#
+# For more details about MySQL Enterprise Backup, see SECTION 30.2, "MySQL ENTERPRISE BACKUP OVERVIEW"
+#
+# COPYING DATA FILES (COLD BACKUP METHOD)
+#
+# You can move an InnoDB database simply by copying all the relevant files listed under "Cold Backups"
+# in SECTION 15.17.1, "INNODB BACKUP"
+#
+# InnoDB data and log files are binary-compatible on all platforms having the same floating-point number
+# format.
+#
+# If the floating-point formats differ but you have not used FLOAT or DOUBLE data types in your tables,
+# then the procedure is the same: simply copy the relevant files.
+#
+# When you move or copy file-per-table .ibd files, the database directory name must be the same on the
+# source and destination systems.
+#
+# The table definition stored in the InnoDB shared tablespace includes the database name.
+#
+# The transaction IDs and log sequence numbers stored in the tablespace files also differ
+# between databases.
+#
+# To move an .ibd file and the associated table from one database to another, use a RENAME_TABLE
+# statement:
+#
+# 		RENAME TABLE db1.tbl_name TO db2.tbl_name;
+#
+# If you have a "clean" backup of an .ibd file, you can restore it to the MySQL installation from which
+# it originated as follows:
+#
+# 		1. The table must not have been dropped or truncated since you copied the .ibd file, because doing so
+# 			changes the table ID stored inside the tablespace.
+#
+# 		2. Issue this ALTER_TABLE statement to delete the current .ibd file:
+#
+# 			ALTER TABLE tbl_name DISCARD TABLESPACE;
+#
+# 		3. Copy the backup .ibd file to the proper database directory
+#
+# 		4. Issue this ALTER_TABLE statement to tell InnoDB to use the new .ibd file for the table:
+#
+# 			ALTER TABLE tbl_name IMPORT TABLESPACE;
+#
+# NOTE:
+#
+# 		The ALTER_TABLE_---_IMPORT_TABLESPACE feature does not enforce foreign key constraints on imported data.
+#
+# In this context, a "clean" .ibd file backup is one for which the following requirements are satisfied:
+#
+# 		) There are no uncommitted modifications by transactions in the .ibd file
+#
+# 		) There are no unmerged insert buffer entries in the .ibd file
+#
+# 		) Purge has removed all delete-marked index records from the .ibd file
+#
+# 		) mysqld has flushed all modified pages of the .ibd file from the buffer pool to the file
+#
+# You can make a clean backup .ibd file using the following method:
+#
+# 		1. Stop all activity from the mysqld server and commit all transactions.
+#
+# 		2. Wait until SHOW_ENGINE_INNODB_STATUS shows that there are no active transactions
+# 			in the database, and the main thread status of InnoDB is Waiting for server activity.
+#
+# 			Then you can make a copy of the .ibd file
+#
+# Another method for making a clean copy of an .ibd file is to use the MySQL Enterprise Backup product:
+#
+# 		1. Use MySQL Enterprise Backup to back up the InnoDB installation
+#
+# 		2. Start a second mysqld server on the backup and let it clean up the .ibd files in the backup
+#
+# EXPORT AND IMPORT (MYSQLDUMP)
+#
+# You can use mysqldump to dump your tables on one machine and then import the dump files on
+# the other machine.
+#
+# Using this method, it does not matter whether the formats differ or if your tables contain floating-point data.
+#
+# One way to increase the performance of this method is to switch off autocommit mode when importing data,
+# assuming that the tablespace has enough space for the big rollback segment that the import transactions
+# generate.
+#
+# Do the commit only after importing a whole table or a segment of a table.
+#
+# 15.6.1.3 CONVERTING TABLES FROM MYISAM TO INNODB
+#
+# If you have MyISAM tables that you want to convert to InnoDB for better reliability and scalability,
+# review the following guidelines and tips before converting.
+#
+# NOTE:
+#
+# 		Partitioned MyISAM tables created in previous versions of MySQL are not compatible with MySQL 8.0
+#
+# 		Such tables must be prepared prior to upgrade, either by removing the partitioning, or by converting
+# 		them to InnoDB.
+#
+# 		See SECTION 23.6.2, "PARTITIONING LIMITATIONS RELATING TO STORAGE ENGINES", for more information.
+#
+# 		) ADJUSTING MEMORY USAGE FOR MYISAM AND INNODB
+#
+# 		) HANDLING TOO-LONG OR TOO-SHORT TRANSACTIONS
+#
+# 		) HANDLING DEADLOCKS
+#
+# 		) PLANNING THE STORAGE LAYOUT
+#
+# 		) CONVERTING AN EXISTING TABLE
+#
+# 		) CLONING THE STRUCTURE OF A TABLE
+#
+# 		) TRANSFERRING EXISTING DATA
+#
+# 		) STORAGE REQUIREMENTS
+#
+# 		) DEFINING A PRIMARY KEY FOR EACH TABLE
+#
+# 		) APPLICATION PERFORMANCE CONSIDERATIONS
+#
+# 		) UNDERSTANDING FILES ASSOCIATED WITH INNODB TABLES
+#
+# ADJUSTING MEMORY USAGE FOR MYISAM AND INNODB
+#
+# As you transition away from MyISAM tables, lower the value of the key_buffer_size configuration
+# option to free memory no longer needed for caching results.
+#
+# Increase the value of the innodb_buffer_pool_size configuration option, which performs a similar
+# role of allocating cache memory for InnoDB tables.
+#
+# The InnoDB buffer pool caches both table data and index data, speeding up lookups for queries
+# and keeping query results in memory for reuse.
+#
+# For guidance regarding buffer pool size configuration, see SECTION 8.12.3.1, "HOW MYSQL USES MEMORY"
+#
+# HANDLING TOO-LONG OR TOO-SHORT TRANSACTIONS
+#
+# Because MyISAM tables do not support transactions, you might not have paid much attention to the
+# autocommit configuration option and the COMMIT and ROLLBACK statements.
+#
+# These keywords are important to allow multiple sessions to read and write InnoDB tables concurrently,
+# providing substantial scalability benefits in write-heavy workloads.
+#
+# While a transaction is open, the system keeps a snapshot of the data as seen at the beginning of the
+# transaction, which can cause substantial overhead if the system inserts, updates and deletes millions
+# of rows while a stray transaction keeps running.
+#
+# Thus, take care to avoid transactions that run for too long:
+#
+# 		) If you are using a mysql session for interactive experiments, always COMMIT (to finalize the changes)
+# 			or ROLLBACK (to undo the changes) when finished.
+#
+# 			Close down interactive sessions rather than leave them open for long periods, to avoid keeping
+# 			transactions open for long periods by accident.
+#
+# 		) Make sure that any error handlers in your application also ROLLBACK incomplete changes or COMMIT completed changes
+#
+# 		) ROLLBACK is a relatively expensive operation, because INSERT, UPDATE and DELETE operations are written to InnoDB
+# 			tables prior to the COMMIT, with the expectation that most changes are committed successfully and rollbacks are
+# 			rare.
+#
+# 			When experimenting with large volumes of data, avoid making changes to large numbers of rows and then rolling
+# 			back those changes.
+#
+# 		) When loading large volumes of data with a sequence of INSERT statements, periodically COMMIT the results to avoid
+# 			having transactions that last for hours.
+#
+# 			In typical load operations for data warehousing, if something goes wrong, you truncate the table (using TRUNCATE_TABLE)
+# 			and start over from the beginning rather than doing a ROLLBACK
+#
+# The preceding tips save memory and disk space that can be wasted during too-long transactions.
+#
+# When transactions are shorter than they should be, the problem is excessive I/O. With each COMMIT,
+# MySQL makes sure each change is safely recorded to disk, which involves some I/O
+#
+# 		) For most operations on InnoDB tables, you should use the setting autocommit=0 
+#
+# 			From an efficiency perspective, this avoids unnecessary I/O when you issue large
+# 			numbers of consecutive INSERT, UPDATE or DELETE statements.
+#
+# 			From a safety perspective, this allows you to issue a ROLLBACK statement to recover
+# 			lost or garbled data if you make a mistake on the mysql command line, or in an exception
+# 			handler in your application.
+#
+# 		) The time when autocommit=1 is suitable for InnoDB tables is when running a sequence of queries
+# 			for generating reports or analyzing statistics.
+#
+# 			In this situation, there is no I/O penalty related to COMMIT or ROLLBACK, and InnoDB can 
+# 			automatically optimize the read-only workload
+#
+# 		) If you make a series of related changes, finalize all the changes at once with a single COMMIT at the end.
+#
+# 			For example, if you insert related pieces of information into several tables, do a single COMMIT
+# 			after making all the changes.
+#
+# 			Or if you run many consecutive INSERT statements, do a single COMMIT after all the data is loaded;
+# 			if you are doing millions of INSERT statements, perhaps split up the huge transaction by issuing
+# 			a COMMIT every ten thousand or hundred thousand records, so the transaction does not grow too large.
+#
+# 		) Remember that even a SELECT statement opens a transaction, so after running some report or debugging
+# 			queries in an interactive mysql session, either issue a COMMIT or close the mysql session
+#
+# HANDLING DEADLOCKS
+#
+# You might see warning messages referring to "deadlocks" in the MySQl error log, or the output of
+# SHOW_ENGINE_INNODB_STATUS
+#
+# Despite the scary-sounding name, a deadlock is not a serious issue for InnoDB tables, and often does not
+# require any corrective action.
+#
+# When two transactions start modifying multiple tables, accessing the tables in a different order, they
+# can reach a state where each transaction is waiting for the other and neither can proceed.
+#
+# When deadlock detection is enabled (the default), MySQL immediately detects this condition and cancels
+# (rolls back) the "smaller" transaction, allowing the other to proceed.
+#
+# If deadlock detection is disabled using the innodb_deadlock_detect configuration option, InnoDB
+# relies on the innodb_lock_wait_timeout setting to roll back transactions in case of a deadlock.
+#
+# Either way, your applications need error-handling logic to restart a transaction that is forcibly
+# cancelled due to a deadlock.
+#
+# When you re-issue the same SQL statements as before, the original timing issue no longer applies.
+#
+# Either the other transaction has already finished and yours can proceed, or the other transaction
+# is still in progress and your transaction waits until it finishes.
+#
+# If deadlock warnings occur constantly, you might review the application code to reorder the SQL
+# operations in a consistent way, or to shorten the transactions.
+#
+# You can test with the innodb_print_all_deadlocks option enabled to see all deadlock warnings
+# in the MySQL error log, rather than only the last warning in the SHOW_ENGINE_INNODB_STATUS
+# output.
+#
+# For more information, see SECTION 15.7.5, "DEADLOCKS IN INNODB"
+#
+# PLANNING THE STORAGE LAYOUT
+#
+# To get the best performance from InnoDB tables, you can adjust a number of parameters related
+# to storage layout.
+#
+# When you convert MyISAM tables that are large, frequently accessed and hold vital data - investigate
+# and consider the innodb_file_per_table and innodb_page_size configuration options, and the ROW_FORMAT
+# and KEY_BLOCK_SIZE clauses of the CREATE_TABLE statement.
+#
+# During your initial experiments, the most important setting is innodb_file_per_table
+#
+# When this setting is enabled, which is the default, new InnoDB tables are implicitly
+# created in file-per-table tablespaces.
+#
+# In contrast with the InnoDB system tablespace, file-per-table tablespaces allow disk space
+# to be reclaimed by the operating system when a table is truncated or dropped.
+#
+# File-per-table tablespaces also support DYNAMIC and COMPRESSED row formats and associated
+# features such as table compression, efficient off-page storage for long variable-length
+# columns, and large index prefixes.
+#
+# For more information, see SECTION 15.6.3.2, "FILE-PER-TABLE TABLESPACES"
+#
+# You can also store InnoDB tables in a shared general tablespace, which support multiple
+# tables and all row formats.
+#
+# For more information, see SECTION 15.6.3.3, "GENERAL TABLESPACES"
+#
+# CONVERTING AN EXISTING TABLE
+#
+# TO convert a non-InnoDB table to use InnoDB use ALTER_TABLE:
+#
+# 		ALTER TABLE table-name ENGINE=InnoDB;
+#
+# CLONING THE STRUCTURE OF A TABLE
+#
+# You might make an InnoDB table that is a clone of a MyISAM table, rather than using
+# ALTER_TABLE to perform conversion, to test the old and new table side-by-side before
+# switching.
+#
+# Create an empty InnoDB table with identical column and index definitions.
+#
+# Use SHOW CREATE TABLE table_name\G to see the full CREATE_TABLE statement to use.
+#
+# Change the ENGINE clause to ENGINE=INNODB
+#
+# TRANSFERRING EXISTING DATA
+#
+# To transfer a large volume of data into an empty InnoDB table created as shown in the previous section,
+# insert the rows with INSERT INTO innodb_table SELECT * FROM myisam_table ORDER BY primary_key_columns
+#
+# You can also create the indexes for the InnoDB table after inserting the data.
+#
+# Historically, creating a new secondary indexes was a slow operation for InnoDB, but now you can
+# create the indexes after the data is loaded with relatively little overhead from the index
+# creation step.
+#
+# If you have UNIQUE constraints on secondary keys, you can speed up a table import by turning
+# off the unqiueness checks temporarily during the import operation:
+#
+# 		SET unique_checks=0;
+# 		------ IMPORT OPERATION -------
+# 		SET unique_checks=1;
+#
+# For big tables, this saves disk I/O because InnoDB can use its change buffer to write secondary
+# index records as a batch.
+#
+# Be certain that the data contains no duplicate keys.
+#
+# unique_checks permits but does not require storage engines to ignore duplicate keys.
+#
+# For better control over the insertion process, you can insert big tables in pieces:
+#
+# 		INSERT INTO newtable SELECT * FROM oldtable
+# 			WHERE yourkey > something AND yourkey <= somethingelse;
+#
+# After all records are inserted, you can rename the tables.
+#
+# During the conversion of big tables, increase the size of the InnoDB buffer pool to reduce
+# disk I/O, to a maximum of 80% of physical memory.
+#
+# You can also increase the size of InnoDB log files.
+#
+# STORAGE REQUIREMENTS
+#
+# If you intend to make several temporary copies of your data in InnoDB tables during the conversion
+# process, it is recommended that you create the tables in file-per-table tablespaces so that you
+# can reclaim the disk space when you drop the tables.
+#
+# When the innodb_file_per_table configuration option is enabled (the default), newly created InnoDB
+# tables are implicitly created in file-per-table tablespaces.
+#
+# Whether you convert the MyISAM table directly or create a cloned InnoDB table, make sure that you
+# have sufficient disk space to hold both the old and new tables during the process.
+#
+# InnoDB tables require more disk space than MyISAM tables.
+#
+# If an ALTER_TABLE operation runs out of space, it starts a rollback, and that can take hours
+# if it is disk-bound.
+#
+# For inserts, InnoDB uses the insert buffer to merge secondary index records to indexes in batches.
+#
+# That saves a lot of disk I/O.
+#
+# For rollback, no such mechanism is used and the rollback can take 30 times longer than the insertion.
+#
+# In the case of a runaway rollback, if you do not have valuable data in your database, it may be advisable
+# to kill the database process rather than wait for millions of disk I/O operations to complete.
+#
+# For the complete procedure, see SECTION 15.20.2, "FORCING INNODB RECOVERY"
+#
+# DEFINING A PRIMARY KEY FOR EACH TABLE
+#
+# The PRIMARY KEY clause is a critical factor affecting the performance of MySQL queries and the space
+# usage for tables and indexes.
+#
+# THe primary key uniquely identifies a row in a table.
+#
+# Every row in the table must have a primary key value, and no two rows can have the same primary key value.
+#
+# THese are guidelines for the primary key, followed by more detailed explanations.
+#
+# 		) Declare a PRIMARY KEY for each table. Typically, it is the most important column that you refer to in
+# 			WHERE clauses when looking up a single row.
+#
+# 		) Declare the PRIMARY KEY clause in the original CREATE_TABLE statement, rather than adding it later
+# 			through an ALTER_TABLE statement
+#
+# 		) Choose the column and its data type carefully. Prefer numeric columns over character or string ones.
+#
+# 		) Consider using an auto-increment column if there is not another stable, unique, non-null, numeric column to use
+#
+# 		) An auto-increment column is also a good choice if there is any doubt whether the value of the primary key
+# 			column could ever change.
+#
+# 			Changing the value of a primary key column is an expensive operation, possibly involving rearraging data within
+# 			the table and within each secondary index.
+#
+# Consider adding a primary key to any table that does not already have one.
+#
+# Use the smallest practical numerical type based on the maximum projected size of the table.
+#
+# This can make each row slightly more compact, which can yield substantial space savings for
+# large tables.
+#
+# The space savings are multiplied if the table has any secondary indexes, because the primary key
+# value is repeated in each secondary index entry.
+#
+# In addition to reducing data size on disk, a small primary key also lets more data fit into
+# the buffer pool, speeding up all kinds of operations and improving concurrency.
+#
+# If the table already has a primary key on some longer column, such as a VARCHAR, consider adding
+# a new unsigned AUTO_INCREMENT column and switching the primary key to that, even if that column
+# is not referenced in queries.
+#
+# This design change can produce substantial space savings in the secondary indexes.
+#
+# You can designate the former primary key columns as UNIQUE NOT NULL to enforce the same constraints
+# as the PRIMARY KEY clause, that is, to prevent duplicate or null values across all those columns.
+#
+# If you spread related information across multiple tables, typically each table uses the same column
+# for its primary key.
+#
+# For example, a personnel database might have several tables, each with a primary key of employee number.
+#
+# A sales database might have some tables with a primary key of customer number, and other tables
+# with a primary key of order number.
+#
+# Because lookups using the primary key are very fast, you can construct efficient join queries
+# for such tables.
+#
+# If you leave the PRIMARY KEY clause out entirely, MySQL creates an invisible one for you.
+#
+# It is a 6-byte value that might be longer than you need, thus wasting space.
+#
+# Because it is hidden, you cannot refer to it in queries.
+#
+# APPLICATION PERFORMANCE CONSIDERATIONS
+#
+# The reliability and scalability features of InnoDB require more disk storage than equivalent
+# MyISAM tables.
+#
+# You might change the column and index definitions slightly, for better space utilization,
+# reduced I/O and memory consumption when processing result sets, and better query optimization
+# plans making efficient use of index lookups.
+#
+# If you do set up a numeric ID column for the primary key, use that value to cross-reference
+# with related values in any other tables, particularly for join queries.
+#
+# For example, rather than accepting a country name as input and doing queries searching for the
+# same name, do one lookup to determine the country ID, then do other queries (or a single join query)
+# to look up relevant information across several tables.
+#
+# Rather than storing a customer or catalog item number as a string of digits, potentially using up
+# several bytes, convert it to a numeric ID for storing and querying.
+#
+# A 4-byte unsigned INT column can index over 4 billion items (with the US meaning of BIllion: 1k Mils)
+#
+# For the ranges of the different integer types, see SECTION 11.2.1, "INTEGER TYPES (EXACT VALUE) - INTEGER, INT, SMALLINT,
+# TINYINT, MEDIUMINT, BIGINT"
+#
+# UNDERSTANDING FILES ASSOCIATED WITH INNODB TABLES
+#
+# InnoDB files require more care and planning than MyISAM files do.
+#
+# 		) You must not delete the ibdata files that represent the InnoDB system tablespace
+#
+# 		) Methods of moving or copying InnoDB tables to a different server are described in SECTION 15.6.1.2, "MOVING OR COPYING INNODB TABLES"
+#
+# 15.6.1.4 AUTO_INCREMENT HANDLING IN INNODB
+#
+# InnoDB provides a configurable locking mechanism that can significantly improve scalability and performance
+# of SQL statements that add rows to tables with AUTO_INCREMENT columns.
+#
+# To use the AUTO_INCREMENT mechanism with an InnoDB table, an AUTO_INCREMENT column must be defined as part
+# of an index such that it is possible to perform the equivalent of an indexed SELECT MAX(ai_col) lookup on
+# the table to obtain the maximum column value.
+#
+# Typically, this is achieved by making the column the first column of some table index.
+#
+# This section describes the behavior of AUTO_INCREMENT lock modes, usage implications for different
+# AUTO_INCREMENT lock mode settings, and how InnoDB initializes the AUTO_INCREMENT counter.
+#
+# 		) InnoDB AUTO_INCREMENT LOCK MODES
+#
+# 		) InnoDB AUTO_INCREMENT LOCK MODE USAGE IMPLICATIONS
+#
+# 		) InnoDB AUTO_INCREMENT COUNTER INITIALIZATION
+#
+# InnoDB AUTO_INCREMENT LOCK MODES
+#
+# This section describes the behavior of AUTO_INCREMENT lock modes used to generate auto-increment values,
+# and how each lock mode affects replication.
+#
+# Auto-increment lock modes are configured at startup using the innodb_autoinc_lock_mode configuration
+# parameter.
+#
+# The following terms are used in describing innodb_autoinc_lock_mode settings:
+#
+# 		) "INSERT-like" statements
+#
+# 			All statements that generate new rows in a table, including INSERT, INSERT_---_SELECT, REPLACE,
+# 			REPLACE_---_SELECT and LOAD_DATA
+#
+# 			Includes "simple-inserts", "bulk-inserts" and "mixed-mode" inserts
+#
+# 		) "Simple inserts"
+#
+# 			Statements for which the number of rows to be inserted can be determined in advance (when the statement
+# 			is initially processed)
+#
+# 			This includes single-row and multiple-row INSERT and REPLACE statements that do not have a nested
+# 			subquery, but not INSERT_---_ON_DUPLICATE_KEY_UPDATE
+#
+# 		) "Bulk Inserts"
+#
+# 			Statements for which the number of rows to be inserted (and the number of required auto-increment values)
+# 			is not known in advance.
+#
+# 			This includes INSERT_---_SELECT, REPLACE_---_SELECT and LOAD_DATA statements, but not plain INSERT.
+
+# 			InnoDB assigns new values for the AUTO_INCREMENT column one at a time as each row is processed.
+#
+# 		) "Mixed-mode inserts"
+#
+# 			These are "simple insert" statements that specify the auto-increment value for some (but not all)
+# 			of the new rows.
+#
+# 			An example follows, where c1 is an AUTO_INCREMENT column of table t1:
+#
+# 				INSERT INTO t1 (c1,c2) VALUES (1,'a'), (NULL,'b'), (5,'c'), (NULL,'d');
+#
+# 			Another type of "mixed-mode insert" is INSERT_---_ON_DUPLICATE_KEY_UPDATE, which in the worst
+# 			case is in effect an INSERT followed by a UPDATE, where the allocated value for the AUTO_INCREMENT
+# 			column may or may not be used during the update phase.
+#
+# There are three possible settings for the innodb_autoinc_lock_mode configuration parameter.
+#
+# The settings are 0, 1, or 2 for "traditional", "consecutive" or "interleaved" lock mode, respectively.
+#
+# As of MySQL 8.0, interleaved lock mode (innodb_autoinc_lock_mode=2) is the default setting
+#
+# Prior to MySQL 8.0, consecutive lock mode is the default (innodb_autoinc_lock_mode=1)
+#
+# The default setting of interleaved lock mode in MySQL 8.0 reflects the change from statement-based
+# replication to row based replication as the default replication type.
+#
+# Statement-based replication requires the consecutive auto-increment lock mode to ensure that auto-increment
+# values are assigned in a predictable and repeatable order for a given sequence of SQL statements, whereas
+# row-based replication is not sensitive to the execution order of SQL statements.
+#
+# 		) innodb_autoinc_lock_mode = 0 ("traditional" lock mode)
+#
+# 			The traditional lock mode provides the same behavior that existed before the innodb_autoinc_lock_mode
+# 			configuration parameter was introduced in MySQL 5.1
+#
+# 			The traditional lock mode option is provided for backward compatibility, performance testing,
+# 			and working around issues with "mixed-mode inserts", due to possible differences in semantics.
+#
+# 			In this lock mode, all "INSERT-like" statements obtain a special table-level AUTO-INC lock
+# 			for inserts into tables with AUTO_INCREMENT columns.
+#
+# 			This lock is normally held to the end of the statement (not to the end of the transaction)
+# 			to ensure that auto-increment values are assigned in a predictable and repeatable order for
+# 			a given sequence of INSERT statements, and to ensure that auto-increment values assigned by
+# 			any given statement are consecutive.
+#
+# 			In the case of statement-based replication, this means that when an SQL statement is replicated
+# 			on a slave server, the same values are used for the auto-increment column as on the master server.
+#
+# 			The result of execution of multiple INSERT statements is deterministic, and the slave reproduces
+# 			the same data as on the master.
+#
+# 			If auto-increment value generated by multiple INSERT statements were interleaved, the result of
+# 			two concurrent INSERT statements would be nondeterministic, and could not reliably be propagated
+# 			to a slave server using statement-based replication.
+#
+# 			To make this clear, consider an example that uses this table:
+#
+# 				CREATE TABLE t1 (
+# 					c1 INT(11) NOT NULL AUTO_INCREMENT,
+# 					c2 VARCHAR(10) DEFAULT NULL,
+# 					PRIMARY KEY (c1)
+# 				) ENGINE=InnoDB;
+#
+# 			Suppose that there are two transactions running, each inserting rows into a table with an
+# 			AUTO_INCREMENT column.
+#
+# 			One transaction is using an INSERT_---_SELECT statement that inserts 1000 rows, and another
+# 			is using a simple INSERT statement that inserts one row:
+#
+# 				Tx1: INSERT INTO t1 (c2) SELECT 1000 ROWS FROM another TABLE ---
+# 				Tx2: INSERT INTO t1 (c2) VALUES ('xxx');
+#
+# 			InnoDB cannot tell in advance how many rows are retrieved from the SELECT in the INSERT
+# 			statement in Tx1, and it assigns the auto-increment values one at a time as the statement
+# 			proceeds.
+#
+# 			With a table-level lock, held to the end of the statement, only one INSERT statement referring
+# 			to table t1 can execute at a time, and the generation of auto-increment numbers by different
+# 			statements is not interleaved.
+#
+# 			The auto-increment value generated by the Tx1 INSERT_---_SELECT statement are consecutive,
+# 			and the (single) auto-increment value used by the INSERT statement in Tx2 are either smaller
+# 			or larger than all those used for Tx1, depending on which statement executes first.
+#
+# 			As long as the SQL statements execute in the same order when replayed from the binary log
+# 			(when using statement-based replication, or in recovery scenarios), the results are the same
+# 			as they were when Tx1 and Tx2 first ran.
+#
+# 			Thus, table-level locks held until the end of a statement make INSERT statements using auto-increment
+# 			safe for use with statement-based replication.
+#
+# 			However, those table-level locks limit concurrency and scalability when multiple transactions
+# 			are executing insert statements at the same time.
+#
+# 			In the preceding example, if there were no table-level lock, the value of the auto-increment
+# 			column used for the INSERT in Tx2 depends on precisely when the statement executes.
+#
+# 			If the INSERT of Tx2 executes while the INSERT of Tx1 is running (rather than before it starts
+# 			or after it completes), the specific auto-increment value assigned by the two INSERT statements
+# 			are nondeterministic, and may vary from run to run.
+#
+# 			Under the consecutive lock mode, InnoDB can avoid using table-level AUTO-INC locks for 
+# 			"simple insert" statements where the number of rows is known in advance, and still preserve
+# 			deterministic execution and safety for statement-based replication.
+#
+# 			If you are not using the binary log to replay SQL statements as part of recovery or replication,
+# 			the interleaved lock mode can be used to eliminate all use of table-level AUTO-INC locks for even
+# 			greater concurrency and performance, at hte cost of permitting gaps in auto-increment numbers assigned
+# 			by a statement and potentially having the numbers assigned by concurrently executing statements interleaved.
+#
+# 		) innodb_autoinc_lock_mode = 1 ("consecutive" lock mode)
+#
+# 			In this mode, "bulk inserts" use the special AUTO-INC table-level lock and hold it until the end
+# 			of the statement.
+#
+# 			This applies to all INSERT_---_SELECT, REPLACE_---_SELECT and LOAD_DATA statements.
+#
+# 			Only one statement holding the AUTO-INC lock can execute at a time.
+#
+# 			If the source table of the bulk insert operation is different from the target table,
+# 			the AUTO-INC lock on the target table is taken after a shared lock is taken on the first
+# 			row selected from the source table.
+#
+# 			If the source and target of the bulk insert operation are the same table, the AUTO-INC
+# 			lock is taken after shared locks are taken on all selected rows.
+#
+# 			"Simple inserts" (for which the number of rows to be inserted is known in advanced) avoid table
+# 			level AUTO-INC locks by obtaining the required number of auto-increment values under the
+# 			control of a mutex (a light-weight lock) that is only held for the duration of the allocation
+# 			process, not until the statement completes.
+#
+# 			No table-level AUTO-INC lock is used unless an AUTO-INC lock is held by another transaction.
+#
+# 			If another transaction holds an AUTO-INC lock, a "simple insert" waits for the AUTO-INC lock,
+# 			as if it were a "bulk insert"
+#
+# 			This lock mode ensures that, in the presence of INSERT statements where the number of rows
+# 			is not known in advance (and where auto-increment numbers are assigned as the statement
+# 			progresses), all auto-increment values assigned by any "INSERT-like" statement are consecutive,
+# 			and operations are safe for statement-based replication.
+#
+# 			Simply put, this lock mode significantly improves scalability while being safe for use with
+# 			statement-based replication.
+#
+# 			Further, as with "traditional" lock mode, auto-increment numbers assigned by any given statement
+# 			are consecutive.
+#
+# 			There is no change in semantics compared to "traditional" mode for any statement that uses
+# 			auto-increment, with one important exception.
+#
+# 			The exception is for "mixed-mode inserts", where the user provides explicit values for an
+# 			AUTO_INCREMENT column for some, but not all, rows in a multiple-row "simple insert".
+#
+# 			For such inserts, InnoDB allocates more auto-increment values than the number of rows to be
+# 			inserted.
+#
+# 			However, all values automatically assigned are consecutively generated (and thus higher than)
+# 			the auto-increment value generated by the most recently executed previous statement.
+#
+# 			"Excess" numbers are lost.
+#
+# 		) innodb_autoinc_lock_mode = 2 ("interleaved" lock mode)
+#
+# 			In this lock mode, no "INSERT-like" statements use the table-level AUTO-INC lock, and
+# 			multiple statements can execute at the same time.
+#
+# 			This is the fastest and most scalable lock mode, but it is not safe when using statement-based
+# 			replication or recovery scenarios when SQL statements are replayed from the binary log.
+#
+# 			In this lock mode, auto-increment values are guaranteed to be unique and monotonically increasing
+# 			across all concurrently executing "INSERT-like" statements.
+#
+# 			However, because multiple statements can be generating numbers at the same time (that is, allocation
+# 			of numbers is interleaved across statements), the values generated for the rows inserted by any given
+# 			statement may not be consecutive.
+#
+# 			If the only statements executing are "simple inserts" where the number of rows to be inserted
+# 			is known ahead of time, there are no gaps in the numbers generated for a single statement,
+# 			except for "mixed-mode inserts"
+#
+# 			However, when "bulk inserts" are executed, there may be gaps in the auto-increment values
+# 			assigned by any given statement.
+#
+# INNODB AUTO_INCREMENT LOCK MODE USAGE IMPLICATIONS
+#
+# 		) Using auto-increment with replication
+#
+# 			If you are using statement-based replication, set innodb_autoinc_lock_mode to 0 or 1
+# 			and use the same value on the master and its slaves.
+#
+# 			Auto-increment values are not ensured to be the same on the slaves as on the master
+# 			if you use innodb_autoinc_lock_mode = 2 ("interleaved") or configurations where the
+# 			master and slaves do not use the same lock mode.
+#
+# 			If you are using row-based or mixed-format replication, all of the auto-increment lock
+# 			modes are safe, since row-based replication is not sensitive to the order of execution
+# 			of the SQL statements (and the mixed format uses row-based replication for any statements
+# 			that are unsafe for statement-based replication)
+#
+# 		) "Lost" auto-increment values and sequence gaps
+#
+# 			In all lock modes (0, 1, 2) if a transaction that generated auto-increment values rolls back,
+# 			those auto-increment values are "lost".
+#
+# 			Once a value is generated for an auto-increment column, it cannot be rolled back, whether or
+# 			not the "INSERT-like" statement is completed, and whether or not the containing transaction
+# 			is rolled back.
+#
+# 			Such lost values are not reused. Thus, there may be gaps in the values stored in an AUTO_INCREMENT
+# 			column of a table.
+#
+# 		) Specifying NULL or 0 for the AUTO_INCREMENT column
+#
+# 			In all lock modes (0, 1, and 2), if a user specifies NULL or 0 for the AUTO_INCREMENT
+# 			column in an INSERT, InnoDB treats the row as if the value was not specified and generates
+# 			a new value for it.
+#
+# 		) Assigning a negative value to the AUTO_INCREMENT column
+#
+# 			In all lock modes (0, 1, and 2), the behavior of the auto-increment mechanism
+# 			is not defined if you assign a negative value to the AUTO_INCREMENT column.
+#
+# 		) If the AUTO_INCREMENT value becomes larger than the maximum integer for the specified integer type
+#
+# 			In all lock modes (0, 1, and 2), the behavior of the auto-increment mechanism is not defined
+# 			if the value becomes larger than the maximum integer that can be stored in the specified
+# 			integer type.
+#
+# 		) Gaps in auto-increment values for "bulk inserts"
+#
+# 			With innodb_autoinc_lock_mode set to 0 ("traditional") or 1 ("consecutive"), the auto-increment
+# 			values generated by any given statement are consecutive, without gaps, because the table-level
+# 			AUTO-INC lock is held until the end of the statement, and only one such statement can execute
+# 			at a time.
+#
+# 			With innodb_autoinc_lock_mode set to 2 ("interleaved"), there may be gaps in the auto-increment
+# 			values generated by "bulk inserts", but only if there are concurrently executing "INSERT-like"
+# 			statements.
+#
+# 			For lock modes 1 or 2, gaps may occur between successive statements because for bulk inserts
+# 			the exact number of auto-increment values required by each statement may not be known and
+# 			overestimation is possible.
+#
+# 		) Auto-increment values assigned by "mixed-mode inserts"
+#
+# 			Consider a "mixed-mode insert", where a "simple insert" specifies the auto-increment value
+# 			for some (but not all) resulting rows.
+#
+# 			Such a statement behaves differently in lock modes 0, 1 and 2.
+#
+# 			For example, assume c1 is an AUTO_INCREMENT column of table t1, and that the most
+# 			recent automatically generated sequence number is 100.
+#
+# 				CREATE TABLE t1 (
+# 					c1 INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+# 					c2 CHAR(1)
+# 				) ENGINE = INNODB;
+#
+# 			Now, consider the following "mixed-mode insert" statement:
+#
+# 				INSERT INTO t1 (c1, c2) VALUES (1,'a'), (NULL, 'b'), (5,'c'), (NULL,'d');
+#
+# 			With innodb_autoinc_lock_mode set to 0 ("traditional"), the four new rows are:
+#
+# 				SELECT c1, c2 FROM t1 ORDER BY c2;
+# 				+------+---------+
+# 				| c1   | c2 	  |
+# 				+------+---------+
+# 				| 1 	 | a 		  |
+# 				| 101  | b 		  |
+# 				| 5 	 | c 		  |
+# 				| 102  | d 		  |
+# 				+------+---------+
+#
+# 			The next available auto-increment value is 103 because the auto-increment values
+# 			are allocated one at a time, not all at once at the beginning of statement execution.
+#
+# 			This result is true whether or not there are concurrently executing "INSERT-like"
+# 			statements (of any type)
+#
+# 			With innodb_autoinc_lock_mode set to 1 ("consecutive"), the four new rows are also:
+#
+# 				SELECT c1, c2 FROM t1 ORDER BY c2;
+# 				+-----+------+
+# 				| c1  | c2 	 |
+# 				+-----+------+
+# 				| 1   | a    |
+# 				| 101 | b 	 |
+# 				| 5 	| c 	 |
+# 				| 102 | d 	 |
+# 				+-----+------+
+#
+# 			However, in this case, the next available auto-increment value is 105, not 103, because
+# 			four auto-increment values are allocated at the time the statement is processed, but
+# 			only two are used.
+#
+# 			The result is true whether or not there are concurrently executing "INSERT-like" statements
+# 			(of any type)
+#
+# 			With innodb_autoinc_lock_mode set to mode 2 ("interleaved"), the four new rows are:
+#
+# 				SELECT c1, c2 FROM t1 ORDER BY c2;
+# 				+------+------+
+# 				| c1   | c2   |
+# 				+------+------+
+# 				| 1 	 | a 	  |
+# 				| x    | b 	  |
+# 				| 5    | c 	  |
+# 				| y 	 | d 	  |
+# 				+------+------+
+#
+# 			The values of x and y are unique and larger than any previously generated rows.
+#
+# 			However, the specific values of x and y depend on the number of auto-increment
+# 			values generated by concurrently executing statements.
+#
+# 			Finally, consider the following statement, issued when the most-recently generated
+# 			sequence number is 100:
+#
+# 				INSERT INTO t1 (c1, c2) VALUES (1, 'a'), (NULL, 'b'), (101, 'c'), (NULL, 'd');
+#
+# 			With any innodb_autoinc_lock_mode setting, this statement generates a duplicate-key error
+# 			23000 (Can't write; duplicate key in table) because 101 is allocated for the row (NULL, 'b'),
+# 			and insertion of the row (101, 'c') fails.
+#
+# 		) Modifying AUTO_INCREMENT column values in the middle of a sequence of INSERT statements
+#
+# 			In MySQL 5.7 and earlier, modifying an AUTO_INCREMENT column value in the middle of a sequence
+# 			of INSERT statements could lead to "Duplicate entry" errors.
+#
+# 			For example, if you performed an UPDATE operation that changed an AUTO_INCREMENT column value
+# 			to a value larger than the current maximum auto-increment value, subsequent INSERT operations
+# 			that did not specify an unused auto-increment value could encounter "Duplicate entry" errors.
+#
+# 			In MySQL 8.0 and later, if you modify an AUTO_INCREMENT column value to a value larger than the
+# 			current maximum auto-increment value, the new value is persisted, and subsequent INSERT operations
+# 			allocate auto-increment values starting from the new, larger value.
+#
+# 			This behavior is demonstrated in the following example.
+#
+# 				CREATE TABLE t1 (
+# 					c1 INT NOT NULL AUTO_INCREMENT,
+# 					PRIMARY KEY (c1)
+# 					) ENGINE = InnoDB;
+#
+# 				INSERT INTO t1 VALUES(0), (0), (3);
+#
+# 				SELECT c1 FROM t1;
+# 				+-----+
+# 				| c1  |
+# 				+-----+
+# 				| 1   |
+# 				| 2   |
+# 				| 3   |
+# 				+-----+
+#
+# 				UPDATE t1 SET c1 = 4 WHERE c1 = 1;
+#
+# 				SELECT c1 FROM t1;
+# 				+----+
+# 				| c1 |
+# 				+----+
+# 				| 2  |
+# 				| 3  |
+# 				| 4  |
+# 				+----+
+#
+# 				INSERT INTO t1 VALUES(0);
+#
+# 				SELECT c1 FROM t1;
+# 				+----+
+# 				| c1 |
+# 				+----+
+# 				| 2  |
+# 				| 3  |
+# 				| 4  |
+# 				| 5  |
+# 				+----+
+#
+# InnoDB AUTO_INCREMENT COUNTER INITIALIZATION
+#
+# This section describes how InnoDB initializes AUTO_INCREMENT counters.
+#
+# If you specify an AUTO_INCREMENT column for an InnoDB table, the in-memory table object
+# contains a special counter called the auto-increment counter that is used when assigning
+# new values for the column.
+#
+# In MySQl 5.7 and earlier, the auto-increment counter is stored only in main memory, not on disk.
+#
+# To initialize an auto-increment counter after a server restart, InnoDB would execute the equivalent
+# of the following statement on the first insert into a table containing an AUTO_INCREMENT column.
+#
+# 		SELECT MAX(ai_col) FROM table_name FOR UPDATE;
+#
+# In MySQL 8.0, this behavior is changed.
+#
+# The current maximum auto-increment counter value is written to the redo log each time it changes
+# and is saved to an engine-private system table on each checkpoint.
+#
+# These changes make the current maximum auto-increment counter value persistent across server
+# restarts.
+#
+# On a server restart following a normal shutdown, InnoDB initializes the in-memory auto-increment
+# counter using the current maximum auto-increment value stored in the data dictionary system table.
+#
+# On a server restart during crash recovery, InnoDB initializes the in-memory auto-increment counter
+# using the current maximum auto-increment value stored in the data dictionary system table and scans
+# the redo log for auto-increment counter values written since the last checkpoint.
+#
+# If a redo-logged value is greater than the in-memory counter value, the redo-logged value is applied.
+#
+# However, in the case of a server crash, reuse of a previously allocated auto-increment value
+# cannot be guaranteed.
+#
+# Each time the current maximum auto-increment value is changed due to an INSERT or UPDATE operation,
+# the new value is written to the redo log, but if the crash occurs before the redo log is flushed
+# to disk, the previously allocated value could be reused when the auto-increment counter is initialized
+# after the server is restarted.
+#
+# The only circumstance in which InnoDB uses the equivalent of a SELECT MAX(ai_col) FROM table_name FOR UPDATE
+# statement in MySQL 8.0 and later to initialize an auto-increment counter is when importing a tablespace
+# without a .cfg metadata file.
+#
+# Otherwise, the current maximum auto-increment counter value is read from the .cfg metadata file.
+#
+# In MysQL 5.7 and earlier, a server restart cancels the effect of the AUTO_INCREMENT = N table option,
+# which may be used in a CREATE TABLE or ALTER TABLE statement to set an intiial counter value or
+# alter the existing counter value, respectively.
+#
+# In MySQL 8.0, a server restart does not cancel the effect of the AUTO_INCREMENT = N table
+# option.
+#
+# If you initialize the auto-increment counter to a specific value, or if you alter the auto-increment
+# counter value to a larger value, the new value is persisted across server restarts.
+#
+# NOTE:
+#
+# 		https://dev.mysql.com/doc/refman/8.0/en/innodb-auto-increment-handling.html
+#
+#
+# 
