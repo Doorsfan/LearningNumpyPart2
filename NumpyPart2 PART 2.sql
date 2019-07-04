@@ -38660,7 +38660,730 @@
 #
 # NOTE:
 #
-# 		https://dev.mysql.com/doc/refman/8.0/en/innodb-auto-increment-handling.html
+#		ALTER_TABLE_..._AUTO_INCREMENT_=_N can only change the auto-increment counter value to a value
+# 		larger than the current maximum.
+#
+# In MySQL 5.7 and earlier, a server restart immediately following a ROLLBACK operation could
+# result in the reuse of auto-increment values that were previously allocated to the rolled-back
+# transaction, effectively rolling back the current maximum auto-increment value.
+#
+# In MySQL 8.0, the current maximum auto-increment value is persisted, preventing the reuse of
+# previously allocated values.
+#
+# If a SHOW_TABLE_STATUS statement examines a table before the auto-increment counter is initialized,
+# InnoDB opens the table and initializes the counter value using the current maximum auto-increment
+# value that is stored in the data dictionary system table.
+#
+# The value is stored in memory for use by later inserts or updates. Initialization of the counter-value
+# uses a normal exclusive-locking read on the table which lasts to the end of the transaction.
+
+# InnoDB follows the same procedure when intitializing the auto-increment counter for a newly created
+# table that has a user-specified auto-increment value that is greater than 0.
+#
+# After the auto-increment counter is initialized, if you do not explicitly specify an auto-increment
+# value when inserting a row, InnoDB implicitly increments the counter and assigns the new value to the
+# column.
+
+# If you insert a row that explicitly specifies an auto-increment column value, and the value is greater
+# than the current maximum counter value, the counter is set to the specified value.
+#
+# InnoDB uses the in-memory auto-increment counter as long as the server runs. When the server is stopped
+# and restarted, InnoDB reinitializes the auto-increment counter, as described earlier.
+#
+# The auto_increment_offset configuration option determines the starting point for the AUTO_INCREMENT
+# column value.
+#
+# The default setting is 1.
+#
+# The auto_increment_increment configuration option controls the interval between successive column values.
+# THe default setting is 1.
+#
+# 15.6.1.5 InnoDB AND FOREIGN KEY CONSTRAINTS
+#
+# How the InnoDB storage engine handles foreign key constraints is described under the following topics in this section:
+#
+# 		) Foreign Key Definitions
+
+# 		) Referential Actions
+#
+# 		) Foreign Key Restrictions for Generated Columns and Virtual Indexes
+#
+# For foreign key usage information and examples, see Section 13.1.20.6, "Using FOREIGN KEY Constarints"
+#
+# Foreign Key Definitions
+#
+# Foreign key definitions for InnoDB tables are subject to the following conditions:
+#
+# 	) InnoDB permits a foreign key to reference any index column or group of columns.
+#
+# 		However, in the referenced table, there must be an index where the referenced
+# 		columns are the first columns in the same order. Hidden columns that InnoDB adds
+# 		to an index are also considered (see Section 15.6.2.1, "Clustered and Secondary Indexes")
+#
+# 	) InnoDB does not currently support foreign keys for tables with user-defined partitioning.
+#
+# 		This means that no user-partitioned InnoDB table may contain foreign key references
+# 		or columns referenced by foreign keys.
+#
+# 	) InnoDB allows a foreign key constraint to reference a nonunique key. This is an InnoDB extension to standard SQL.
+#
+# Referential Actions
+#
+# 	Referential actions for foreign keys of InnoDB tables are subject to the following conditions:
+#
+# 		) While SET DEFAULT is allowed by the MySQL server, it is rejected as invalid by InnoDB. CREATE_TABLE and ALTER_TABLE
+# 			statements using this clause are not allowed for InnoDB tables.
+#
+# 		) 	If there are several rows in the parent table that have the same referenced key value, InnoDB acts in foreign key checks
+# 			as if the other parent rows with the same key value does not exist.
+#
+# 			For example, if you have defined a RESTRICT type constraint, and there is a child row with several parent rows, InnoDB
+# 			does not permit the deletion of any of those parent rows.
+#
+# 		) InnoDB performs cascading operations through a depth-first algorithm, based on records in the indexes corresponding to the
+# 			foreign key constraints.
+#
+# 		) If ON UPDATE CASCADE or ON UPDATE SET NULL recurses to update the same table it has previously updated during the cascade, it acts
+# 			like RESTRICT.
+#
+# 			This means that you cannot use self-referential ON UPDATE CASCADE or ON UPDATE SET NULL operations.
+#
+# 			This is to prevent infinite loops resulting from cascaded updates. A self-referential ON DELETE SET NULL, on the other hand,
+# 			is possible, as is a self-referential ON DELETE CASCADE.
+#
+# 			Cascading operations may not be nested more than 15 levels deep.
+#
+# 		) Like MySQL in general, in an SQL statement that inserts, deletes, or updates many rows, InnoDB checks UNIQUE and FOREIGN KEY
+# 			constraints row-by-row.
+#
+# 			When performing foreign key checks, InnoDB sets shared row-level locks on child or parent records it has to look at .
+#
+# 			InnoDB checks foreign key constraints immediately; the check is not deferred to transaction commit. According to the SQL standard,
+# 			the default behavior should be deferred checking.
+#
+# 			That is, constraints are only checked after the entire SQL statement has been processed.
+
+# 			Until InnoDB implements deferred constraint checking, some things are impossible, such as deleting a record that
+# 			refers to itself using a foreign key.
+#
+# Foreign Key Restrictions for Generated Columns and Virtual Indexes
+#
+# 	) A foreign key constraint on a stored generated column cannot use CASCADE, SET NULL, or SET DEFAULT as ON UPDATE referential
+# 		actions, nor can it use SET NULL or SET DEFAULT as ON DELETE referential actions.
+#
+#  ) A foreign key constraint on the base column of a stored generated column cannot use CASCADE, SET NULL, or SET DEFAULT as ON UPDATE
+# 		or ON DELETE referential actions.
+#
+# 	) A foreign key constraint cannot reference a virtual generated column.
+#
+# 	) Prior to MySQL 8.0, a foreign key constraint cannot reference a secondary index defined on a virtual generated column.
+#
+# 15.6.1.6 Limits on InnoDB Tables
+#
+# Limits on InnoDB tables are described under the following topics in this section:
+#
+# 		) Maximums and Minimums
+#
+# 		) Restrictions on InnoDB Tables
+#
+# 		) Locking and Transactions
+#
+# 		Warning:
+#
+# 			Before using NFS with InnoDB, review potential issues outlined in Using NFS with MySQL.
+#
+# Maximums and Minimums
+#
+# 	) A table can contain a maximum of 1017 columns. Virtual generated columns are included in this limit.
+#
+# 	) A table can contain a maximum of 64 secondary indexes.
+#
+# 	) The index key prefix length limit is 3072 bytes for InnoDB tables that use DYNAMIC or COMPRESSED row format.
+#
+# 		The index key prefix length limit is 767 bytes for InnoDB tables that use REDUNDANT or COMPACT row format.
+#
+# 		For example, you might hit this limit with a column prefix index of more than 191 characters on a TEXT
+# 		or VARCHAR column, assuming a utf8mb4 character set and the maximum of 4 bytes for each character.
+#
+# 		Attempting to use an index key prefix length that exceeds the limit returns an error.
+#
+# 		The limits that apply to index key prefixes also apply to full-column index keys.
+#
+# 	) If you reduce the InnoDB page size to 8kb or 4kb by specifying the innodb_page_size option when creating
+# 		the MySQL instance, the maximum length of the index key is lowered proportionally, based on the limit of
+# 		3072 bytes for a 16kb page size.
+#
+# 		That is, the maximum index key length is 1536 bytes when the page size is 8kb, and 768 bytes when the
+# 		page size is 4kb.
+#
+# 	) A maximum of 16 columns is permitted for multicolumn indexes. Exceeding the limit returns an error.
+#
+# 		ERROR 1070 (42000): Too many key parts specified; max 16 parts allowed
+#
+# 	) The maximum row length, except for variable-length columns (VARBINARY, VARCHAR, BLOB and TEXT), is slightly
+# 		less than half of a page for 4kb, 8kb, 16kb and 32kb page sizes.
+#
+# 		For example, the maximum row length for the default innodb_page_size of 16kb is about 8000 bytes.
+#
+# 		However, for an InnoDB page size of 64kb, the maximum row length is approximately 16k bytes.
+#
+# 		LONGBLOB and LONGTEXT columns must be less than 4GB, and the total row length, including BLOB and TEXT
+# 		columns, must be less than 4GB.
+#
+# 		If a row is less than half a page long, all of it is stored locally within the page.
+#
+# 		If it exceeds half a page, variable-length columns are chosen for external off-page storage until
+# 		the row fits within half a page, as described in Section 15.11.2, "File Space Management"
+#
+# 	) Although InnoDB supports row sizes larger than 65,535 bytes internally, MySQL itself imposes a row-size limit
+# 		of 65,535 for the combined size of all columns:
+#
+# 		CREATE TABLE t (a VARCHAR(8000), b VARCHAR(10000),
+# 		c VARCHAR(10000), d VARCHAR(10000), e VARCHAR(10000),
+# 		f VARCHAR(10000), g VARCHAR(10000)) ENGINE=InnoDB;
+# 		ERROR 1118 (42000): Row size too large. The maximum row size for the
+# 		used table type, not counting BLOBs, is 65535. You have to change some
+# 		columns to TEXT or BLOBs.
+#
+# 		See SECTION C.10.4, "LIMITS ON TABLE COLUMN COUNT AND ROW SIZE"
+#
+# 	) On some older operating systems, files must be less than 2GB. This is not a limitation
+# 		of InnoDB itself, but if you require a large tablespace, configure it using several
+# 		smaller data files rather than one large data file.
+#
+# 	) The combined size of the InnoDB log files can be up to 512GB.
+#
+# 	) The minimum tablespace size is slightly larger than 10MB. The maximum tablespace size depends
+# 		on the InnoDB page size.
+#
+# 		Table 15.3 InnoDB Maximum Tablespace Size
+#
+# 			InnoDB Page Size 		Maximum Tablespace Size
+#
+# 			4kb 						16TB
+# 			8kb 						32TB
+# 			16kb 						64TB
+# 			32kb 						128TB
+# 			64kb 						256TB
+#
+# 		The maximum tablespace size is also the maximum size for a table.
+#
+# 	) The path of a tablespace file, including the file name, cannot exceed the MAX_PATH limit on Windows.
+#
+# 		Prior to Windows 10, the MAX_PATH limit is 260 characters. As of Windows 10, version 1607, MAX_PATH
+# 		limitations are removed from common Win32 file and directory functions, but you must enable the new
+# 		behavior.
+#
+# 	) The default page size in InnoDB is 16kb. You can increase or decrease the page size by configuring the innodb_page_Size
+# 		option when creating the MySQL instance.
+#
+# 		32kb and 64kb page sizes are supported, but ROW_FORMAT=COMPRESSED is unsupported for page sizes greater than
+# 		16kb. For both 32KB and 64KB page sizes, the maximum record size is 16kb.
+#
+# 		For innodb_page_size = 32kb, extent size is 2MB.
+#
+# 		For innodb_page_size=64kb, extent size is 4MB.
+#
+# 		A MySQL instance using a particular InnoDB page size cannot use data files or log files from an instance
+# 		that uses a different page size.
+#
+# Restrictions on InnoDB Tables
+#
+# 	) ANALYZE_TABLE determines index cardinality (as displayed in the Cardinality column of SHOW_INDEX output)
+# 		by performing random dives on each of the index trees and updating index cardinality estimates accordingly.
+#
+# 		Because these are only estimates, repeated runs of ANALYZE_TABLE could produce different numbers.
+#
+# 		This makes ANALYZE_TABLE fast on InnoDB tables but not 100% accurate because it does not take all rows
+# 		into account.
+#
+# 		You can make the statistics collected by ANALYZE_TABLE more precise and more stable by turning on the
+# 		innodb_stats_persistent configuration option, as explained in Section 15.8.10.1, "Configuring Persistent
+# 		Optimizer Statistics Parameters"
+#
+# 		When that setting is enabled, it is important to run ANALYZE_TABLE after major changes to indexed column
+# 		data, because the statistics are not recalculated periodically (such as after a server restart)
+#
+# 		If the persistent statistics setting is enabled, you can change the number of random dives by modifying
+# 		the innodb_stats_persistent_sample_pages system variable.
+#
+# 		If the persistent statistics setting is disabled; modify the innodb_stats_transient_sample_pages system
+# 		variable instead.
+#
+# 		MySQL uses index cardinality estimates in join optimization. If a join is not optimized in the right way,
+# 		try using ANALYZE_TABLE.
+#
+# 		In the few cases that ANALYZE_TABLE does not produce values good enough for your particular tables, you can
+# 		use FORCE INDEX with your queries to force the use of a particular index, or set the max_seeks_for_key
+# 		system variable to ensure that MySQL prefers index lookups over table scans.
+#
+# 		See SECTION B.4.5, "Optimizer-Related Issues"
+#
+# 	) If statements or transactions are running on a table, and ANALYZE_TABLE is run on the same table followed by a 
+# 		second ANALYZE_TABLE operation, the second ANALYZE_TABLE operation is blocked until the statements or transactions
+# 		are completed.
+#
+# 		This behavior occurs because ANALYZE_TABLE marks the currently loaded table definition as obsolete when ANALYZE_TABLE
+# 		is finished running.
+#
+# 		New statements or transactions (including a second ANALYZE_TABLE statement) must load the new table definition into the
+# 		table cache, which cannot occur until currently running statements or transactions are completed and the old table
+# 		definition is purged.
+#
+# 		Loading multiple concurrent table definitions is not supported.
+#
+# ) SHOW_TABLE_STATUS does not give accurate statistics on InnoDB tables except for the physical size reserved by the table.
+
+# 		The row count is only a rough estimate used in SQL optimization.
+#
+# ) InnoDB does not keep an internal count of rows in a table because concurrent transactions might "see" different number
+# 		of rows at the same time.
+#
+# 		Consequently, SELECT COUNT(*) statements only count rows visible to the current transaction.
+#
+# 		For information about how InnoDB proceses SELECT COUNT(*) statements, refer to the COUNT() description in 
+# 		Section 12.20.1, "Aggregate (GROUP BY) Function Descriptions"
+#
+# ) On Windows, InnoDB always stores database and table names internally in lowercase. To move database in a binary format
+#   from Unix to Windows or from Windows to Unix, create all databases and tables using lowercase names.
+#
+# ) An AUTO_INCREMENT column ai_col must be defined as part of an index such that it is possible to perform the equivalent
+# 	of an indexed SELECT MAX(ai_col) lookup on the table to obtain the maximum column value.
+#
+#  Typically, this is achieved by making the column the first column of some table index.
+#
+# ) InnoDB sets an exclusive lock on the end of the index associated with the AUTO_INCREMENT column while initializing a previously
+# 	specified AUTO_INCREMENT column on a table.
+#
+# With innodb_autoinc_lock_mode=0, InnoDB uses a special AUTO-INC table lock mode where the lock is obtained and held to the end
+# of the current SQL statement while accessing the auto-increment counter.
+#
+# Other clients cannot insert into the table while the AUTO-INC table lock is held. The same behavior occurs for "bulk inserts"
+# with innodb_autoinc_lock_mode=1.
+#
+# Table-level AUTO-INC locks are not used with innodb_autoinc_lock_mode=2. For more information, see Section 15.6.1.4, "AUTO_INCREMENT
+# Handling in InnoDB"
+#
+# ) When an AUTO_INCREMENT integer column runs out of values, a subsequent INSERT operation returns a duplicate-key error.
+#
+# This is general MySQL behavior.
+#
+# ) DELETE FROM tbl_name does not regenerate the table but instead deletes all rows, one by one.
+#
+# ) Cascaded foreign key actions do not activate triggers.
+#
+# ) You cannot create a table with a column name that matches the name of an internal INnoDB column (including DB_ROW_ID, DB_TRX_ID, DB_ROLL_PTR and DB_MIX_ID)
+# 		This restriction applies to use of the names in any letter case.
+#
+# 		CREATE TABLE t1 (c1 INT, db_row_id INT) ENGINE=INNODB;
+# 		ERROR 1166 (42000): Incorrect column name 'db_row_id'
+#
+# Locking and Transactions
+#
+# ) LOCK_TABLES acquires two locks on each table if innodb_table_locks=1 (the default). In addition to a table lock on the MySQL layer, it also
+# 	acquires an InnoDB table lock.
+#
+#  Versions of MySQL before 4.1.2 did not acquire InnoDB table locks; the old behavior can be selected by setting innodb_table_locks=0.
+
+#  If no InnoDB table lock is acquired, LOCK_TABLES completes even if some records of the tables are being locked by other transactions.
+#
+# In MySQL 8.0, innodb_table_locks=0 has no effect for tables locked explicitly with LOCK_TABLES_..._WRITE. It does have an effect for tables
+# locked for read or write by LOCK_TABLES_..._WRITE implicitly (for example, through triggers) or by LOCK_TABLES_..._READ.
+#
+# ) All InnoDB locks held by a transaction are released when the transaction is committed or aborted. Thus, it does not make much sense to invoke
+# 	LOCK_TABLES on InnoDB tables in autocommit=1 mode because the acquired InnoDB table locks would be released immediately.
+#
+# ) You cannot lock additional tables in the middle of a transaction because LOCK_TABLES performs an implicit COMMIT and UNLOCK_TABLES
+#
+# ) For limits associated with concurrent read-write transactions, see SECTION 15.6.6, "Undo logs"
+#
+# 15.6.2 INDEXES
+#
+# 15.6.2.1 Clustered and Secondary Indexes
+# 15.6.2.2 The Physical Structure of an InnoDB Index
+# 15.6.2.3 Sorted Index Builds
+# 15.6.2.4 InnoDB FULLTEXT Indexes
+#
+# This section covers topics related to InnoDB indexes.
+#
+# 15.6.2.1 Clustered and Secondary Indexes
+#
+# Every InnoDB table has a special index called the clustered index where the data for the rows is stored.
+#
+# Typically, the clustered index is synonymous with the primary key. To get hte best performance from queries,
+# inserts, and other database operations, you must understand how InnoDB uses the clustered index to optimize the
+# most common lookup and DML operations for each table.
+#
+# 	) When you define a PRIMARY KEY on your table, InnoDB uses it as the clustered index. Define a primary key for each table
+# 		that you create.
+#
+# 		If there is no logical unique and non-null column or set of columns, add a new auto-increment column, whose values
+# 		are filled in automatically.
+#
+# 	) If you do not define a PRIMARY KEY for your table, MySQL locates the first UNIQUE index where all the key columns are NOT NULL
+# 		and InnoDB uses it as the clustered index.
+#
+# 	) If the table has no PRIMARY KEY or suitable UNIQUE index, InnoDB internally generates a hidden clustered index named GEN_CLUST_INDEX
+# 		on a synthetic column containing row ID values.
+#
+# 		The rows are ordered by the ID that InnoDB assigns to the rows in such a table.
+#
+# 		The row ID is a 6-byte field that increases monotonically as new rows are inserted.
+# 		Thus, the rows ordered by the row ID are physically in insertion order.
+#
+# How the clustered Index speeds up Queries
+#
+# Accessing a row through the clustered index is fast because the index search leads directly to the page with all the row data.
+# If a table is large, the clustered index architechture often saves a disk I/O operation when compared to storage organizations
+# that store row data using a different page from the index record.
+#
+# How Secondary INdexes Relate to the Clustered Index
+#
+# All indexes other than the clustered index are known as secondary indexes. In InnoDB, each record in a secondary index contains the
+# primary key columns for the row, as well as the columns specified for the secondary index.
+#
+# InnoDB uses this primary key value to search for the row in the clustered index.
+#
+# If the primary key is long, the secondary indexes use more space, so it is advantageous to have a short primary key.
+#
+# For guidelines to take advantage of InnoDB clustered and secondary indexes, see Section 8.3, "Optimization and Indexes"
+#
+# 15.6.2.2 THE PHYSICAL STRUCTURE OF AN INNODB INDEX
+#
+# With the exception of spatial indexes, InnoDB indexes are B-tree data structures. Spatial indexes use R-trees, which are specialized
+# data structures for indexing multi-dimensional data.
+#
+# Index records are stored in the leaf pages of their B-tree or R-tree data structure. The default size of an index page is 16kb.
+#
+# When new records are inserted into an InnoDB clustered index, InnoDB tries to leave 1/16 of the page free for future insertions
+# and updates of the index records.
+#
+# If index records are inserted in a sequential order (ascending or descending), the resulting index pages are about 15/16 full.
+#
+# If records are inserted in a random order, the pages are from 1/2 to 15/16 full.
+#
+# InnoDB performs a bulk load when creating or rebuilding B-tree indexes. This method of index creation is known as a sorted index build.
+#
+# The innodb_fill_factor configuration option defines the percentage of space on each B-tree page that is filled during a sorted index build,
+# with the remaining space reserved for future index growth.
+#
+# Sorted index builds are not supported for spatial indexes. For more information, see Section 15.6.2.3, "Sorted Index Builds"
+#
+# An innodb_fill_factor setting of 100 leaves 1/16 of the space in clustered index pages free for future index growth.
+#
+# If the fill factor of an InnoDB index page drops below the MERGE_THRESHOLD, which is 50% by default if not specified, InnoDB
+# tries to contract the index tree to free the page.
+#
+# The MERGE_THRESHOLD setting applies to both B-tree and R-tree indexes. For more information, see SECTION 15.8.11, "Configuring the Merge Threshold for Index Pages"
+#
+# You can define the page size for all InnoDB tablespaces in a MySQL instance by setting the innodb_page_size configuration option prior to initializing the MySQL
+# instance.
+#
+# Once the page size for an instance is defined, you cannot change it without reinitializing the instance. Supported sizes are 64kb, 32kb, 16kb (default), 8kb and 4kb.
+#
+# A MySQL instance using a particular InnoDB page size cannot use data files or log files from an instance that uses a different page size.
+#
+# 15.6.2.3 SORTED INDEX BUILDS
+#
+# InnoDB performs a bulk load instead of inserting one index record at a time when creating or rebuilding indexes. 
+#
+# This method of index creation is also known as a sorted index build. Sorted index builds are not supported for spatial indexes.
+#
+# There are three phases to an index build. In the first phase, the clustered index is scanned, and index entries are generated and
+# added to the sort buffer.
+#
+# When the sort buffer becomes full, entries are sorted and written out to a temporary intermediate file.
+#
+# THis process is also known as a "run". In the second phase, with one or more runs written ot the temporary
+# intermediate files, a merge sort is performed on all entries in the file.
+#
+# In the third and final phase, the sorted entries are inserted into the B-Tree.
+#
+# Prior to the introduction of sorted index builds, index entries were inserted into the B-tree one record at a time using insert APIs.
+#
+# This method involved opening a B-tree cursor to find the insert pos and then inserting entries into a B-tree page using an optimistic
+# insert.
+#
+# If an insert failed due to page being full, a pessimistic insert would be performed, which involves opening a B-tree cursor and splitting
+# and merging B-tree nodes as necessary to find space for the entry.
+#
+# The drawbacks of this "top-down" method of building an index are the cost of searching for an insert position and the constant splitting
+# and merging of B-tree nodes.
+#
+# Sorted index builds use a "bottom-up" approach to building an index. With this approach, a reference to the right-most leaf page is held
+# at all levels of the B-tree.
+#
+# The right-most leaf page at the necessary B-tree depth is allocated and entries are inserted according to their sorted order.
+#
+# Once a leaf page is full, a node pointer is appended to the parent page and a sibling leaf page is allocated for the next insert.
+#
+# This process continues until all entries are inserted, which may result in inserts up to the root level.
+#
+# When a sibling page is allocated, the reference to the previously pinned leaf page is released, and the newly allocated leaf page becomes
+# the right-most leaf page and new default insert location.
+#
+# RESERVING B-TREE PAGE SPACE FOR FUTURE INDEX GROWTH
+#
+# To set aside space for future index growth, you can use the innodb_fill_factor configuration option to reserve a percentage of
+# B-tree page space. For example, setting innodb_fill_factor to 80 reserves 20 percent of the space in B-tree pages during a sorted
+# index build.
+#
+# This setting applies to both B-tree leaf and non-leaf pages. It does not apply to external pages used for TEXT or BLOB entries.
+#
+# The amount of space that is reserved may not be exactly as configured, as the innodb_fill_factor value is interpreted as a hint
+# rather than a hard limit.
+#
+# SORTED INDEX BUILDS AND FULL-TEXT INDEX SUPPORT
+#
+# Sorted index builds are supported for fulltext indexes. Previously, SQL was used to insert entries into a fulltext index.
+#
+# SORTED INDEX BUILDS AND COMPRESSED TABLES
+#
+# For compressed tables, the previous index creation method appended entries to both compressed and uncompressed pages.
+# When the modification log (representing free space on the compressed page) became full, the compressed page would be
+# recompressed.
+#
+# If compression failed due to a lack of space, the page would be split.
+#
+# With sorted index builds, entries are only appended to uncompressed pages. When an uncompressed page becomes full,
+# it is compressed.
+#
+# Adaptive padding is used to ensure that compression succeeds in most cases, but if compression fails, the page is split
+# and compression is attempted again.
+#
+# This process continues until compression is successful.
+#
+# For more information about compression of B-tree pages, see SECTION 15.9.1.5, "HOW COMPRESSION WORKS FOR INNODB TABLES"
+#
+# SORTED INDEX BUILDS AND REDO LOGGING
+#
+# Redo logging is disabled during a sorted index build. Instead, there is a checkpoint to ensure that the index build
+# can withstand a crash or failure.
+#
+# The checkpoint forces a write of all dirty pages to disk. During a sorted index build, the page cleaner thread is signaled
+# periodically to flush dirty pages to ensure that the checkpoint operation can be processed quickly.
+#
+# Normally, the page cleaner thread flushes dirty pages when the number of clean pages falls below a set threshold.
+#
+# For sorted index builds, dirty pages are flushed promptly to reduce checkpoint overhead and to parallelize I/O and CPU
+# activity.
+#
+# SORTED INDEX BUILDS AND OPTIMIZER STATISTICS
+#
+# Sorted index builds may result in optimizer statistics that differ from those generated by the previous method of index creation.
+# The difference in statistics, which is not expected to affect workload performance, is due to the different algorithm
+# used to populate the index.
+#
+# 15.6.2.4 InnoDB FULLTEXT INDEXES
+#
+# FULLTEXT indexes are created on text-based columns (CHAR, VARCHAR or TEXT columns) to help speed up queries and DML operations
+# on data contained within those columns, omitting any words that are defined as stopwords.
+#
+# A FULLTEXT index is defined as part of a CREATE_TABLE statement or added to an existing table using ALTER_TABLE or CREATE_INDEX.
+#
+# Full-text search is performed using MATCH()_..._AGAINST syntax. For usage information, see SECTION 12.9, "FULL-TEXT SEARCH FUNCTIONS".
+#
+# InnoDB FULLTEXT indexes are described under the following topics in this section:
+#
+# 		) InnoDB Full-Text Index Design
+#
+# 		) InnoDB Full-Text Index Tables
+#
+# 		) InnoDB Full-Text Index Cache
+#
+# 		) InnoDB Full-Text Index Document ID and FTS_DOC_ID Column
+#
+# 		) InnoDB Full-Text Index Deletion Handling
+#
+# 		) InnoDB Full-Text Index Transaction Handling
+#
+# 		) Monitoring InnoDB Full-Text Indexes
+#
+# InnoDB Full-Text Index Design
+#
+# InnoDB FULLTEXT indexes have an inverted index design. Inverted indexes store a list of words, and for each word, a list of
+# documents that the word appears in.
+#
+# To support proximity search, position information for each word is also stored, as a byte offset.
+#
+# InnoDB Full-Text index Tables
+#
+# When creating an InnoDB FULLTEXT index, a set of index tables is created, as shown in the following example:
+#
+# 		CREATE TABLE opening_lines (
+# 			id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
+# 			opening_line TEXT(500),
+# 			author VARCHAR(200),
+# 			title VARCHAR(200),
+# 			FULLTEXT idx (opening_line)
+# 			) ENGINE=InnoDB;
+#
+# 		SELECT table_id, name, space from INFORMATION_SCHEMA.INNODB_TABLES WHERE name LIKE 'test/%';
+# 		+-----------+---------------------------------------------------------+-------------+
+# 		| table_id  | name 																    | space 	   |
+# 		+-----------+---------------------------------------------------------+-------------+
+# 		| 333 		| test/fts_000000000000000000000147_0000000001c9_index_1  | 289 			|
+# 		etc.
+#
+# The first six tables represent the inverted index and are referred to as auxilliary index tables.
+#
+# When incoming documents are tokenized, the individual words (also referred to as "tokens") are inserted
+# into the index tables along with position information and the associated Document ID (DOC_ID).
+#
+# The words are fully sorted and partitioned among the six index tables based on the character set sort
+# weight of the word's first character.
+#
+# The inverted index is partitioned into six auxiliary index tables to support parallel index creation.
+#
+# By default, two threads tokenize, sort, and insert words and associated data into the index tables.
+#
+# The number of threads is configurable using the innodb_ft_sort_pll_degree option.
+#
+# Consider increasing the number of threads when creating FULLTEXT indexes on large tables.
+#
+# Auxiliary index table names are prefixed with fts_ and postfixed with index_*.
+
+# Each index table is associated with the indexed table by a hex value in the index table name
+# that matches the table_id of the indexed table.
+#
+# For example, the table_id of the test/opening_lines table is 327, for which the hex value is
+# 0x147.
+#
+# As shown in the preceding example, the "147" hex value appears in the names of index tables
+# that are associated with the test/opening_lines table.
+#
+# A hex value representing the index_id of the FULLTEXT index also appears in auxiliary index table names.
+# For example, in the auxiliary table name test/fts_00000000000147_000000000001c9_index_1, the hex value
+# 1c9 has a decimal value of 457.
+#
+# The index defined on the opening_lines table (idx) can be identified by querying the INFORMATION_SCHEMA.INNODB_INDEXES
+# table for this value (457)
+#
+# SELECT index_id, name, table_id, space FROM INFORMATION_SCHEMA.INNODB_INDEXES
+# WHERE index_id=457;
+# 	+-----------+----------+--------------+-------------+
+#  | index_id  | name 	  | table_id 	  | space 		 |
+# 	+-----------+----------+--------------+-------------+
+# 	| 457 	   | idx 	  | 327 			  | 283 			 |
+# 	+-----------+----------+--------------+-------------+
+#
+# Index tables are stored in their own tablespace if the primary table is created in a file-per-table tablespace.
+#
+# The other index tables shown in the preceding example are referred to as common index tables and are used
+# for deletion handling and storing the internal state of FULLTEXT indexes.
+#
+# Unlike the inverted index tables, which are created for each full-text index, this set of tables is common to
+# all full-text indexes created on a particular table.
+#
+# Common auxiliary tables are retained even if full-text indexes are dropped. When a full-text index is dropped,
+# the FTS_DOC_ID column that was created for the index is retained, as removing the FTS_DOC_ID column would
+# require rebuilding the table.
+#
+# Common axiliary tables are required to manage the FTS_DOC_ID column.
+#
+# 	) fts_*_deleted and fts_*_deleted_cache
+#
+# 		Contain the document IDs (DOC_ID) for documents that are deleted but whose data is not yet removed from the full-text index.
+#
+# 		The fts_*_deleted_cache is in the in-memory version of the fts_*_deleted table.
+#
+# 	) fts_*_being_deleted and fts_*_being_deleted_cache
+#
+# 		Contain the document IDs (DOC_ID) for documents that are deleted and whose data is currently in the process of being
+# 		removed from the full-text index.
+#
+# 		The fts_*_being_deleted_cache table is the in-memory version of the fts_*_being_deleted table.
+#
+# 	) fts_*_config
+#
+# 		Stores information about the internal state of the FULLTEXT index. Most importantly, it stores the FTS_SYNCED_DOC_ID,
+# 		which identifies documents that have been parsed and flushed to disk.
+#
+# 		In case of crash recovery, FTS_SYNCED_DOC_ID values are used to identify documents that have not been flushed to disk
+# 		so that the documents can be re-parsed and added back to the FULLTEXT index cache.
+#
+# 		To view the data in this table, query the INFORMATION_SCHEMA.INNODB_FT_CONFIG table.
+#
+# InnoDB Full-Text Index Cache
+#
+# When a document is inserted, it is tokenized, and the individual words and associated data are inserted into the
+# FULLTEXT index.
+#
+# This process, even for small documents, could result in numerous small insertions into the auxiliary index tables,
+# making concurrent access to these tables a point of contention.
+#
+# To avoid this problem, InnoDB uses a FULLTEXT index cache to temporarily cache index table insertions for recently
+# inserted rows.
+#
+# This in-memory cache structure holds insertions until the cache is full and then batch flushes them to disk
+# (to the auxiliary index tables)
+#
+# You can query the INFORMATION_SCHEMA.INNODB_FT_INDEX_CACHE table to view tokenized data for recently inserted rows.
+#
+# The caching and batch flushing behavior avoids frequent updates to auxiliary index tables, which could result in 
+# concurrent access issues during busy insert and update times.
+#
+# The batching technique also avoids multiple insertions for the same word, and minimizes duplicate entries.
+#
+# Instead of flushing each word individually, insertions for the same word are merged and flushed to disk as a 
+# single entry, improving insertion efficiency while keeping auxiliary index tables as small as possible.
+#
+# The innodb_ft_cache_size variable is used to configure the full-text index cache size (on a per-table basis),
+# which affects how often the full-text index cache is flushed.
+#
+# You can also define a global full-text index cache size limit for all tables in a given instance using the
+# innodb_ft_total_cache_size option.
+#
+# THe full-text index cache stores the same information as auxiliary index tables. However, the full-text index
+# cache only caches tokenized data for recently inserted rows.
+#
+# The data that is already flushed to disk (to the full-text auxiliary tables) is not brought back into the full-text
+# index cache when queries.
+#
+# The data in auxiliary index tables is queried directly, and results from the auxiliary index tables are merged with
+# results from the full-text index cache before being returned.
+#
+# InnoDB Full-Text Index Document ID and FTS_DOC_ID Column
+#
+# InnoDB uses a unique document identifier referred to as a Document ID (DOC_ID) to map words in the full-text index to
+# document records where the word appears.
+#
+# The mapping requires an FTS_DOC_ID column on the indexed table. If an FTS_DOC_ID column is not defined,, InnoDB
+# automatically adds a hidden FTS_DOC_ID column when the full-text index is created.
+#
+# The following example demonstrates this behavior.
+#
+# The following table definition does not include an FTS_DOC_ID Column:
+#
+# 		CREATE TABLE opening_lines (
+# 			id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
+# 			opening_line TEXT(500),
+# 			author VARCHAR(200),
+# 			title VARCHAR(200),
+# 			) ENGINE=InnoDB;
+#
+# When you create a full-text index on the table using CREATE FULLTEXT INDEX syntax, a warning is returned which reports
+# that InnoDB is rebuilding the table to add the FTS_DOC_ID column.
 #
 #
-# 
+# 		CREATE FULLTEXT INDEX idx ON opening_lines(opening_line);
+# 		Query OK, 0 rows affected, 1 warning (0.19 sec)
+# 		Records: 0 Duplicates: 0 Warnings: 1
+#
+# 		SHOW WARNINGS;
+# 		+------------+-----------+----------------------------------------------------+
+# 		| Level 	    | Code 		 | Message 														   |
+# 		+------------+-----------+----------------------------------------------------+
+# 		| Warning 	 | 124 		 | InnoDB rebuilding table to add column: FTS_DOC_ID  |
+# 		+------------+-----------+----------------------------------------------------+
+#
+# The same warning is returned when using ALTER_TABLE to add a full-text index to a table that does not have an 
+# FTS_DOC_ID column.
+#
+# If you create a full-text index at CREATE_TABLE time and do not specify an FTS_DOC_ID column, InnoDB adds a hidden
+# FTS_DOC_ID column, without warning.
+#
+# https://dev.mysql.com/doc/refman/8.0/en/innodb-fulltext-index.html
+#
+#
+#
