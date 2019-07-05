@@ -39383,7 +39383,817 @@
 # If you create a full-text index at CREATE_TABLE time and do not specify an FTS_DOC_ID column, InnoDB adds a hidden
 # FTS_DOC_ID column, without warning.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/innodb-fulltext-index.html
+# Defining an FTS_DOC_ID column at CREATE_TABLE time is less expensive than creating a full-text index on a table
+# that is already loaded with data.
 #
+# If an FTS_DOC_ID column is defined on a table prior to loading data, the table and its indexes do not have to be
+# rebuilt to add the new column.
+#
+# If you are not concerned with CREATE FULLTEXT INDEX performance, leave out the FTS_DOC_ID column to have InnoDB
+# create it for you.
+#
+# InnoDB creates a hidden FTS_DOC_ID column along with a unique index (FTS_DOC_ID_INDEX) on the FTS_DOC_ID column.
+#
+# If you want to create your own FTS_DOC_ID column, the column must be defined as BIGINT UNSIGNED NOT NULL and
+# name FTS_DOC_ID (all upper case), as in the following example:
+#
+# 		Note:
+#
+# 			The FTS_DOC_ID column does not need to be defined as an AUTO_INCREMENT column, but AUTO_INCREMENT could make
+# 			loading data easier.
+#
+# CREATE TABLE opening_lines (
+# FTS_DOC_ID BIGINT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
+# opening_line TEXT(500),
+# author VARCHAR(200),
+# title VARCHAR(200)
+# ) ENGINE=InnoDB;
+#
+# If you choose to define the FTS_DOC_ID column yourself, you are responsible for managing the column to avoid empty
+# or duplicate values.
+#
+# FTS_DOC_ID values cannot be reused, which means FTS_DOC_ID values must be ever increasing.
+#
+# Optionally, you can create the required unique FTS_DOC_ID_INDEX (all upper case) on the FTS_DOC_ID column.
+#
+# CREATE UNIQUE INDEX FTS_DOC_ID_INDEX on opening_lines(FTS_DOC_ID);
+#
+# If you do not create the FTS_DOC_ID_INDEX, InnoDB creates it automatically.
+#
+# Note:
+#
+# 		FTS_DOC_ID_INDEX cannot be defined as a descending index because the InnoDB SQL parser does not use descending indexes.
+#
+# The permitted gap between the largest used FTS_DOC_ID value and new FTS_DOC_ID value is 65535.
+#
+# To avoid rebuilding the table, the FTS_DOC_ID column is retained when dropping a full-text index.
+#
+# InnoDB Full-Text Index Deletion Handling
+#
+# Deleting a record that has a full-text index column could result in numerous small deletions in the auxiliary index tables,
+# making concurrent access to these tables a point of contention.
+#
+# To avoid this problem, the Document ID (DOC_ID) of a deleted document is logged in a special FTS_*_DELETED table whenever
+# a record is deleted from an indexed table, and the indexed record remains in the full-text index.
+#
+# Before returning query results, information in the FTS_*_DELETED table is used to filter out deleted Document IDs.
+#
+# The benefit of this design is that deletions are fast and inexpensive. The drawback is that the size of the index is not
+# immediately reduced after deleting records.
+#
+# To remove full-text index entries for deleted records, run OPTIMIZE TABLE on the indexed table with innodb_optimize_fulltext_only=ON
+# to rebuild the full-text index.
+#
+# For more information, see Optimizing InnoDB Full-Text indexes.
+#
+# INNODB FULL-TEXT INDEX TRANSACTION HANDLING
+#
+# InnoDB FULLTEXT indexes have special transaction handling characteristics due to its caching and batch processing behavior.
+#
+# Specifically, updates and insertions on a FULLTEXT index are processed at transaction commit time, which means that a FULLTEXT
+# search can only see committed data.
+#
+# The following example demonstrates this behavior.
+#
+# The FULLTEXT search only returns a result after the inserted lines are committed.
+#
+# CREATE TABLE opening_lines (
+# 		id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
+# 		opening_line TEXT(500),
+# 		author VARCHAR(200),
+# 		title VARCHAR(200),
+# 		FULLTEXT idx (opening_line)
+# 		) ENGINE=InnoDB;
+#
+# BEGIN;
+#
+# INSERT INTO opening_lines(opening_line,author,title) VALUES
+# 		(// String values to insert//);
+#
+# SELECT COUNT(*) FROM opening_lines WHERE MATCH(opening_line) AGAINST (//STring value//);
+# +-----------+
+# | COUNT(*)  |
+# +-----------+
+# | 0 		  |
+# +-----------+
+#
+# COMMIT;
+#
+# SELECT COUNT(*) FROM opening_lines WHERE MATCH(opening_line) AGAINST('//string value//');
+# +-----------+
+# | COUNT(*)  |
+# +-----------+
+# | 1 		  |
+# +-----------+
+#
+# MONITORING INNODB FULL-TEXT INDEXES
+#
+# You can monitor and examine the special text-processing aspects of InnoDB FULLTEXT indexes by querying the following
+# INFORMATION_SCHEMA tables:
+#
+# 		) INNODB_FT_CONFIG
+#
+# 		) INNODB_FT_INDEX_TABLE
+#
+# 		) INNODB_FT_INDEX_CACHE
+#
+# 		) INNODB_FT_DEFAULT_STOPWORD
+#
+# 		) INNODB_FT_DELETED
+#
+# 		) INNODB_FT_BEING_DELETED
+#
+# You can also view basic information for FULLTEXT indexes and tables by querying INNODB_INDEXES and INNODB_TABLES
+#
+# For more information, see SECTION 15.14.4, "InnoDB INFORMATION_SCHEMA FULLTEXT INDEX TABLES"
+#
+# 15.6.3 TABLESPACES
+#
+# 15.6.3.1 The System Tablespace
+# 15.6.3.2 File-Per-Table Tablespaces
+# 15.6.3.3 General Tablespaces
+# 15.6.3.4 Undo Tablespaces
+# 15.6.3.5 Temporary Tablespaces
+# 15.6.3.6 Creating a Tablespace Outside of the Data Directory
+# 15.6.3.7 Copying Tablespaces to Another Instance
+# 15.6.3.8 Moving Tablespace Files While the Server is Offline
+# 15.6.3.9 InnoDB Data-at-Rest Encryption
+#
+# This section covers topics related to InnoDB tablespaces.
+#
+# 15.6.3.1 The System Tablespace
+#
+# The InnoDB system tablespace is the storage area for the doublewrite buffer and the change buffer.
+#
+# The system tablespace also contains table and index data for user-created tables created in the system
+# tablespace.
+#
+# In previous releases, the system tablespace contained the InnoDB data dictionary.
+#
+# In MySQL 8.0, InnoDB stores metadata in the MySQL data dictionary. See Chapter 14, MySQL Data Dictionary
+#
+# The system tablespace can have one or more data files. By default, one system tablespace data file, named ibdata1,
+# is created in the data directory.
+#
+# The size and number of system tablespace data files is controlled by the innodb_data_file_path startup option.
+#
+# For related information, see System Tablespace Data File Configuration.
+#
+# Resizing the System Tablespace
+#
+# This section describes how to increase or decrease the size of the InnoDB system tablespace.
+#
+# Increasing the Size of the InnoDB System Tablespace
+#
+# The easiest way to increase the size of the InnoDB system tablespace is to configure it from the beginning
+# to be auto-extending.
+#
+# Specify the autoextend attribute for the last data file in the tablespace definition.
+#
+# Then InnoDB increases the size of that file automatically in 64MB increments when it runs out of space.
+#
+# The increment size can be changed by setting the value of the innodb_autoextend_increment system variable,
+# which is measured in megabytes.
+#
+# You can expand the system tablespace by a defined amount by adding another data file:
+#
+# 	1. Shut down the MySQL Server.
+#
+# 	2. If the previous last data file is defined with the keyword autoextend, change its definition to use a fixed size,
+# 		based on how large it has actually grown.
+#
+# 		Check the size of the data file, round it down to the closest multiple of 1024 x 1024 bytes (= 1MB), and specify this
+# 		rounded size explicitly in innodb_data_file_path.
+#
+# 	3. Add a new data file to the end of innodb_data_file_path, optionally making that file auto-extending. Only the last data file
+# 		in the innodb_data_file_path can be specified as auto-extending.
+#
+# 	4. Start the MySQL server again.
+#
+# For example, this tablespace has just one auto-extending data file ibdata1:
+#
+# 		innodb_data_home_dir =
+# 		innodb_data_file_path = /ibdata/ibdata1:10M:autoextend
+#
+# Suppose that this data file, over time, has grown to 988MB. Here is the configuration line after modifying the original data file
+# to use a fixed size and adding a new auto-extending data file:
+#
+# 		innodb_data_home_dir =
+# 		innodb_data_file_path = /ibdata/ibdata1:988M;/disk2/ibdata2:50M:autoextend
+#
+# When you add a new data file to the system tablespace configuration, make sure that the filename does not refer to an existing
+# file.
+#
+# InnoDB creates and initializes the file when you restart the server.
+#
+# Decreasing The Size of the InnoDB System Tablespace
+#
+# You cannot remove a data file from the system tablespace. To decrease the system tablespace size, use this procedure:
+#
+# 		1. Use mysqldump to dump all your InnoDB tables, including InnoDB tables located in the MySQL database.
+#
+# 			SELECT TABLE_NAME from INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='mysql' and ENGINE='InnoDB';
+# 			+----------------------------------+
+# 			| TABLE_NAME 							  |
+# 			+----------------------------------+
+# 			| columns_priv 						  |
+# 			| / etc /
+# 	
+# 		2. Stop the server
+#
+# 		3. Remove all the existing tablespace files (*.ibd), including the ibdata and ib_log files. Do not forget to remove *.ibd files
+# 			for tables located in the MySQL database.
+#
+# 		4. Configure a new tablespace.
+#
+# 		5. Restart the server
+#
+# 		6. Import the dump files
+#
+# NOTE:
+#
+# 		If your databases only use the InnoDB engine, it may be simpler to dump all databases, stop the server, remove all databases and
+# 		InnoDB log files, restart the server, and import the dump files.
+#
+# USING RAW DISK PARTITIONS FOR THE SYSTEM TABLESPACE
+#
+# You can use raw disk partitions as data files in the InnoDB system tablespace. This technique enables nonbuffered I/O on Windows and
+# on some Linux and Unix systems without file system overhead.
+#
+# Perform tests with and without raw partitions to verify whether this change actually improves performance on your system.
+#
+# When you use a raw disk partition, ensure that the user ID that runs the MySQL server has read and write privileges for that
+# partition.
+#
+# For example, if you run the server as the mysql user, the partition must be readable and writable by mysql.
+#
+# If you run the server with the --memlock option, the server must be run as root, so the partition must be readable
+# and writable by root.
+#
+# The procedures described below involve option file modification. For additional information, see Section 4.2.2.2, "Using OPtion Files"
+#
+# Allocating A Raw Disk Partition on Linux and Unix Systems
+#
+# 1. When you create a new data file, specify the keyword newraw immediately after the data file size for the innodb_data_file_path option.
+#
+# 		The partition must be at least as large as the size that you specify.
+#
+# 		Note that 1MB in InnoDB is 1024 x 1024 bytes, whereas 1MB in Disk specs usually means 1 mil bytes
+#
+# 			[mysqld]
+# 			innodb_data_home_dir=
+# 			innodb_data_file_path=/dev/hdd1:3Gnewraw;/dev/hdd2:2Gnewraw
+#
+# 2. Restart the server.
+#
+# 		InnoDB notices the newraw keyword and initializes the new partition. However, do not create or change any InnoDB
+# 		tables yet.
+#
+# 		Otherwise, when you next restart the server, InnoDB reinitializes the partition and your changes are lost.
+#
+# 		(As a safety measure InnoDB prevents users from modifying data when any partition with newraw is specified)
+#
+# 3. After InnoDB has initialized the new partition, stop the server, change newraw in the data file specification to raw:
+#
+# 		[mysqld]
+# 		innodb_data_home_dir=
+# 		innodb_data_file_path=/dev/hdd1:3Graw;/dev/hdd2:2Graw
+#
+# 4. Restart the server. InnoDB now permits changes to be made.
+#
+# Allocating a Raw Disk Partition on Windows
+#
+# On Windows systems, the same steps and accompanying guidelines described for Linux and Unix systems apply except that
+# the innodb_data_file_path setting differs slightly on Windows.
+#
+# 1. When you create a new data file, specify the keyword newraw immediately after the data file size for the innodb_data_file_path option:
+#
+# 		[mysqld]
+# 		innodb_data_home_dir=
+# 		innodb_data_file_path=//./D::10Gnewraw
+#
+# 		The //./ corresponds to the Windows syntax of \\.\ for accessing physical drives. In the example above, D: is the drive letter of the partition.
+#
+# 2. Restart the server. InnoDB notices the newraw keyword and initializes the new partition.
+#
+# 3. After InnoDB has initialized the new partition, stop the server, change newraw in the data file specification to raw:
+#
+# 		[mysqld]
+# 		innodb_data_home_dir=
+# 		innodb_data_file_path=//./D::10Graw
+#
+# 4. Restart the server. InnoDB now permits changes to be made.
+#
+# 15.6.3.2 File-Per-Table Tablespaces
+#
+# Historically, InnoDB tables were stored in the system tablespace.
+#
+# This monolithic approach was targeted at machines dedicated to database processing, with carefully
+# planned data growth, where any disk storage allocated to MySQL would never be needed for other purposes.
+#
+# The file-per-table tablespace feature provides a more flexible alternative, where each InnoDB table is stored
+# in its own tablespace data file (.ibd file).
+#
+# This feature is controlled by the innodb_file_per_table configuration option, which is enabled by default.
+#
+# Advantages 
+#
+# 	) You can reclaim disk space when truncating or dropping a table stored in a file-per-table tablespace.
+#
+# 		Truncating or dropping tables stored in the shared system tablespace creates free space internally
+# 		in the system tablespace data files (ibdata files) which can only be used for new InnoDB data.
+#
+# 		Similarly, a table-copying ALTER_TABLE operation on table that resides in a shared tablespace can
+# 		increase the amount of space used by the tablespace.
+#
+# 		Such operations may require as much additional space as the data in the table plus indexes.
+#
+# 		The additional space required for the table-copying ALTER_TABLE operation is not released
+# 		back to the OS as it is for file-per-table tablespaces.
+#
+# ) The TRUNCATE_TABLE operation is faster when run on tables stored in file-per-table tablespaces.
+#
+# ) You can store specific tables on separate storage devices, for I/O optimization, space management, or backup
+# 		purposes by specifying the location of each table using the syntax:
+#
+# 			CREATE TABLE ... DATA DIRECTORY = absolute_path_to_directory
+#
+# 		as explained in SECTION 15.6.3.6, "Creating a Tablespace Outside of the Data Directory"
+#
+# ) You can run OPTIMIZE_TABLE to compact or recreate a file-per-table tablespace. When you run an OPTIMIZE_TABLE,
+# 		InnoDB creates a new .ibd file with a temporary name, using only the space required to store actual data.
+#
+# 		When the optimization is complete, InnoDB removes the old .ibd file and replaces it with the new one.
+#
+# 		If the previous .ibd file grew significantly but the actual data only accounted for a portion of its size,
+# 		running OPTIMIZE_TABLE can reclaim the unused space.
+#
+# ) You can move individual InnoDB tables rather than entire databases.
+#
+# ) You can copy individual InnoDB tables from one MySQL instance to another (known as the transportable tablespace feature)
+#
+# ) Tables created in file-per-table tablespaces support features associated with compressed and dynamic row formats.
+#
+# ) You can enable more efficient storage for tables with large BLOB or TEXT columns using the dynamic row format.
+#
+# ) File-per-table tablespaces may improve chances for a successful recovery and save time when a corruption occurs,
+# 		when a server cannot be restarted, or when backup and binary logs are unavailable.
+#
+# ) You can back up or restore individual tables quickly using the MySQL Enterprise Backup product, without interrupting the
+# 		use of other InnoDB tables.
+#
+# 		This is beneficial if you have tables that require backup less frequently or on a different backup schedule.
+#
+# 		See Making a Partial Backup for details.
+#
+# ) File-per-table tablespaces are convenient for per-table status reporting when copying or backing up tables.
+#
+# ) You can monitor table size at a file system level without accessing MySQL.
+#
+# ) Common Linux file systems do not permit concurrent writes to a single file when innodb_flush_method is set to O_DIRECT.
+# 		As a result, there are possible performance improvements when using file-per-table tablespaces in conjunction
+# 		with innodb_flush_method
+#
+# ) The system tablespace stores the data dictionary and undo logs, and is limited in size by InnoDB tablespace size limits.
+#
+# 		See Section 15.6.1.6, "Limits on InnoDB Tables"
+#
+# 		With file-per-table tablespaces, each table has its own tablespace, which provides room for growth.
+#
+# Potential Disadvantages
+#
+# 	) With file-per-table tablespaces, each table may have unused space, which can only be utilized by rows of the same table.
+#
+# 		This could lead to wasted space if not properly managed.
+#
+# 	) fsync operations must run on each open table rather than on a single file.
+#
+# 		Because there is a separate fsync operation for each file, write operations on multiple tables cannot be combined
+# 		into a single I/O operation.
+#
+# 		THis may require InnoDB to perform a higher total number of fsync operations.
+#
+# ) mysqld must keep one open file handle per table, which may impact performance if you have numerous tables in file-per-table tablespaces.
+#
+# ) More file descriptors are used.
+#
+# ) innodb_file_per_table is enabled by default in MySQL 5.6 and higher. You may consider disabling it if backward compatibility
+# 		with earlier versions of MySQL is a concern.
+#
+# ) If many tables are growing there is potential for more fragmentation which can impede DROP_TABLE and table scan performance.
+#
+# 		However, when fragmentation is managed, having files in their own tablespace can improve performance.
+#
+# ) The buffer pool is scanned when dropping a file-per-table tablespace, which can take several seconds for buffer pools that are
+# 		tens of gigabytes in size.
+#
+# 		The scan is performed with a broad internal lock, which may delay other operations.
+#
+# 		Tables in the system tablespace are not affected.
+#
+# ) The innodb_autoextend_increment variable, which defines increment size (in MB) for extending the size of an auto-extending
+# 		shared tablespace file when it becomes full, does not apply to file-per-table tablespace files, which are auto-extending
+# 		regardless of the innodb_autoextend_increment setting.
+#
+# 		The initial extensions are by small amounts, after which extensions occur in increments of 4MB.
+#
+# ENABLING FILE-PER-TABLE TABLESPACES
+#
+# The innodb_file_per_table option is enabled by default.
+#
+# To set the innodb_file_per_table option at startup, start the server with the --innodb_file_per_table command-line option,
+# or add this line to the [mysqld] section of my.cnf:
+#
+# 		[mysqld]
+# 		innodb_file_per_table=1
+#
+# You can also set innodb_file_per_table dynamically, while the server is running:
+#
+# 		SET GLOBAL innodb_file_per_table=1;
+#
+# With innodb_file_per_table enabled, you can store InnoDB tables in a tbl_name.ibd file.
+#
+# Unlike the MyISAM storage engine, with its separate tbl_name.MYD and tbl_name.MYI files
+# for indexes and data, InnoDB stores the data and the indexes together in a single .ibd file.
+#
+# If you disable innodb_file_per_table in your startup options and restart the server, or disable it
+# with the SET GLOBAL command, InnoDB creates new tables inside the system tablespace unless you have
+# explicitly placed the table in file-per-table tablespace or general tablespace using the CREATE_TABLE_..._TABLESPACE
+# option.
+#
+# You can always read and write any InnoDB tables, regardless of the file-per-table setting.
+#
+# To move a table from the system tablespace to its own tablespace, change the innodb_file_per_table setting and rebuild the table:
+#
+# 		SET GLOBAL innodb_file_per_table=1;
+# 		ALTER TABLE table_name ENGINE=InnoDB;
+#
+# Tables added to the system tablespace using CREATE_TABLE_..._TABLESPACE or ALTER_TABLE_..._TABLESPACE syntax are not affected
+# by the innodb_file_per_table setting.
+#
+# To move these tables from the system tablespace to a file-per-table tablespace, they must be moved explicitly using ALTER_TABLE_..._TABLESPACE
+# syntax.
+#
+# Note:
+#
+# 		InnoDB always needs the system tablespace because it puts its internal data dictionary and undo logs there.
+# 		The .ibd files are not sufficient for InnoDB to operate.
+#
+# 		When a table is moved out of the system tablespace into its own .ibd file, the data files that make up the system
+# 		tablespace remain the same size.
+#
+# 		The space formerly occupied by the table can be reused for new InnoDB data, but is not reclaimed for use by the OS.
+# 
+# 		When moving large InnoDB tables out of the system tablespace, where disk space is limited, you may prefer to enable
+# 		innodb_file_per_table and recreate the entire instance using the mysqldump command.
+#
+# 		As mentioned above, tables added to the system tablespace using CREATE_TABLE_..._TABLESPACE or ALTER_TABLE_..._TABLESPACE
+# 		syntax are not affected by the innodb_file_per_table setting.
+#
+# 		These tables must be moved individually.
+#
+# 	15.6.3.3 GENERAL TABLESPACES
+#
+# A general tablespace is a shared InnoDB tablespace that is created using CREATE_TABLESPACE syntax.
+#
+# General tablespace capabilities and features are described under the following topics in this section:
+#
+# 		) General Tablespace Capabilities
+#
+# 		) Creating a General Tablespace
+#
+# 		) Adding Tables to a General Tablespace
+#
+# 		) General Tablespace Row Format Support
+#
+# 		) Moving Tables Between Tablespaces Using ALTER TABLE
+#
+# 		) Renaming a General Tablespace
+#
+# 		) Dropping a General Tablespace
+#
+# 		) General Tablespace Limitations
+#
+# General Tablespace Capabilities
+#
+# The general tablespace feature provides the following capabilities:
+#
+# 		) Similar to the system tablespace, general tablespaces are shared tablespaces that can store data for multiple tables.
+#
+# 		) General tablespaces have a potential memory advantage over file-per-table tablespaces.
+#
+# 			The server keeps tablespace metadata in memory for the lifetime of a tablespace.
+#
+# 			Multiple tables in fewer general tablespaces consume less memory for tablespace metadata than the same number
+# 			of tables in separate file-per-table tablespaces.
+#
+# 		) General tablespace data files may be placed in a directory relative to or independent of the MySQL data directory,
+# 			which provides you with many of the data file and storage management capabilities of file-per-table tablespaces.
+#
+# 			As with file-per-table tablespaces, the ability to place data files outside of the MySQL data directory
+# 			allows you to manage performance of critical tables separately, setup RAID or DRBD for specific tables,
+# 			or bind tables to particular disks, for example.
+#
+# 		) General tablespaces support both Antelope and barracuda file formats, and therefore support all table row formats
+# 			and associated features.
+#
+# 			With support for both file formats, general tablespaces have no dependence on innodb_file_format or innodb_file_per_table
+# 			settings, nor do these variables have any effect on general tablespaces.
+#
+# 		) The TABLESPACE option can be used with CREATE_TABLE to create tables in a general tablespaces, file-per-table tablespace,
+# 			or in the system tablespace.
+#
+# 		) The TABLESPACE option can be used with ALTER_TABLE to move tables between general tablespaces, file-per-table tablespaces,
+# 			and the system tablespace.
+#
+# 			Previously, it was not possible to move a table from a file-per-table tablespace to the system tablespace.
+#
+# 			With the general tablespace feature, you can now do so.
+#
+# Creating a General Tablespace
+#
+# General tablespaces are created using CREATE_TABLESPACE syntax.
+#
+# 		CREATE TABLESPACE tablespace_name
+# 			[ADD DATAFILE 'file_name']
+# 			[FILE_BLOCK_SIZE = value]
+# 				[ENGINE [=] engine_name]
+#
+# A general tablespace can be created in the data directory or outside of it.
+#
+# To avoid conflicts with implicitly created file-per-table tablespaces, creating a general tablespace
+# in a subdirectory under the data directory is not supported.
+#
+# When creating a general tablespace outside of the data directory, the directory must exist and must be
+# known to InnoDB prior to creating the tablespace.
+#
+# To make an unknown directory known to InnoDB, add the directory to the innodb_directories argument value.
+#
+# innodb_directories is a read-only startup option. Configuring it requires restarting the server.
+#
+# Examples:
+#
+# 	Creating a general tablespace in the data directory:
+#
+# 		CREATE TABLESPACE `ts1` ADD DATAFILE 'ts1.ibd' Engine=InnoDB;
+#
+#  or
+#
+# 		CREATE TABLESPACE `ts1` Engine=InnoDB;
+#
+#
+# The ADD DATAFILE clause is optional as of MySQL 8.0.14 and required before that. if the ADD DATAFILE clause is not specified
+# when creating a tablespace, a tablespace data file with a unique file name is created implicitly.
+#
+# The unique file name is a 128 bit UUID formatted into five groups of hexadecimal numbers separated by dashes
+# (aaaaaaaa-bbbb-cccc-dddd-eeeeeeee).
+#
+# General tablespace data files include an .ibd file extension. In a replication environment, the data file name created on the
+# master is not the same as the data file name created on the slave.
+#
+# Creating a general tablespace in a directory outside of the data directory:
+#
+# 		CREATE TABLESPACE `ts1` ADD DATAFILE '/my/tablespace/directory/ts1.ibd' Engine=InnoDB;
+#
+# You can specify a path that is relative to the data directory as long as the tablespace directory is not under the data
+# directory.
+#
+# In this example, the my_tablespace directory is at the same level as the data directory:
+#
+# 		CREATE TABLESPACE `ts1` ADD DATAFILE '../my_tablespace/ts1.ibd' Engine=InnoDB;
+#
+# Note:
+#
+# 		The ENGINE = InnoDB clause must be defined as part of the CREATE_TABLESPACE statement, or InnoDB must be defined
+# 		as the default storage engine (default_storage_engine=InnoDB).
+#
+# Adding Tables to a General Tablespace
+#
+# After creating an InnoDB general tablespace, you can use CREATE_TABLE_tbl_name_..._TABLESPACE_[=]_tablespace_name or
+# ALTER_TABLE_tbl_name_TABLESPACE_[=]_tablespace_name to add tables to the tablespace, as shown in the following examples:
+#
+# 		CREATE_TABLE
+#
+# 			CREATE TABLE t1 (c1 INT PRIMARY KEY) TABLESPACE ts1;
+#
+# 		ALTER_TABLE
+#
+# 			ALTER TABLE t2 TABLESPACE ts1;
+#
+# NOTE:
+#
+# 		Support for adding table partitions to shared tablespaces was deprecated in MySQl 5.7.24 and removed in MySQL 8.0.13.
+#
+# 		Shared tablespaces include the InnoDB system tablespace and general tablespaces.
+#
+# For detailed syntax information, see CREATE_TABLE and ALTER_TABLE
+#
+# General Tablespace Row Format Support
+#
+# General tablespaces support all table row formats (REDUNDANT, COMPACT, DYNAMIC, COMPRESSED) with the caveat that compressed
+# and uncompressed tables cannot coexist in the same general tablespace due to different physical page sizes.
+#
+# For a general tablespace to contain compressed tables (ROW_FORMAT=COMPRESSED), FILE_BLOCK_SIZE must be specified, and the
+# FILE_BLOCK_SIZE value must be a valid compressed page size in relation to the innodb_page_size value.
+#
+# Also, the physical page size of the compressed table (KEY_BLOCK_SIZE) must be equal to FILE_BLOCK_SIZE/1024.
+#
+# For example, if innodb_page_size=16kb and FILE_BLOCK_SIZE=8k, the KEY_BLOCK_SIZE of the table must be 8.
+#
+# The following table shows permitted innodb_page_size, FILE_BLOCK_SIZE, and KEY_BLOCK_SIZE combinations. FILE_BLOCK_SIZE
+# values may also be specified in bytes.
+#
+# To determine a valid KEY_BLOCK_SIZE value for a given FILE_BLOCK_SIZE, divide the FILE_BLOCK_SIZE value by 1024.
+#
+# Table compression is not supported for 32k and 64k InnoDB page sizes.
+#
+# For more information about KEY_BLOCK_SIZE, see CREATE_TABLE, and Section 15.9.1.2, "Creating Compressed Tables"
+#
+# Table 15.4 Permitted Page Size, FILE_BLOCK_SIZE, and KEY_BLOCK_SIZE Combinations for Compressed Tables
+#
+# InnoDB Page Size (innodb_page_size) 			Permitted FILE_BLOCK_SIZE Value 				Permitted KEY_BLOCK_SIZE Value
+#
+# 		64KB 														64k (65536) 											Compression is not supported
+#
+# 		32kb 														32k (32768) 											Compression is not supported
+#
+# 		16kb 														16k (16384) 											N/A: If innodb_page_size is equal to FILE_BLOCK_SIZE,
+# 																																the tablespace cannot contain a compressed table.
+#
+# 		16kb 														8k (8192) 												8
+#
+# 		16kb 														4k (4096) 												4
+#
+# 		16kb 														2k (2048) 												2
+#
+# 		16kb 														1k (1024) 												1
+#
+# 		8kb 														8K (8192) 												N/A: If innodb_page_size is equal to FILE_BLOCK_SIZE,
+# 																																the tablespace cannot contain a compressed table
+#
+# 		8kb 														4k (4096) 												4
+#
+# 		8kb 														2k (2048) 												2
+#
+# 		8kb 														1k (1024) 												1
+#
+# 		4kb 														4k (4096) 												N/A: If innodb_page_size is equal to FILE_BLOCK_SIZE,
+# 																																the tablespace cannot contain a compressed table.
+#
+# 		4kb 														2k (2048) 												2
+#
+# 		4kb 														1k (1024) 												1
+#
+# This example demonstrates creating a general tablespace and adding a compressed table. The example assumes a default innodb_page_size of 16kb.
+#
+# The FILE_BLOCK_SIZE of 8192 requires that the compressed table have a KEY_BLOCK_SIZE of 8.
+#
+# 		CREATE TABLESPACE `ts2` ADD DATAFILE 'ts2.ibd' FILE_BLOCK_SIZE = 8192 Engine=InnoDB;
+#
+# 		CREATE TABLE t4 (c1 INT PRIMARY KEY) TABLESPACE ts2 ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
+#
+# If you do not specify FILE_BLOCK_SIZE when creating a general tablespace, FILE_BLOCK_SIZE defaults to innodb_page_size.
+#
+# When FILE_BLOCK_SIZE is equal to innodb_page_size, the tablespace may only contain tables with an uncompressed row format
+# (COMPACT, REDUNDANT, and DYNAMIC row formats)
+#
+# Moving Tables Between Tablespaces using ALTER TABLE
+#
+# You can use ALTER_TABLE with the TABLESPACE option to move a table to an existing general tablespace, to a new file-per-table tablespace,
+# or to the system tablespace.
+#
+# Note:
+#
+# 		Support for placing table partitions in shared tablespaces was deprecated in MySQL 5.7.24 and removed MySQL 8.0.13.
+#
+# 		Shared tablespaces include the InnoDB system tablespace and general tablespaces.
+#
+# To move a table from a file-per-table tablespace or from the system tablespace to a general tablespace, specify the name
+# of the genral tablespace.
+#
+# The general tablesapce must exist. See CREATE_TABLESPACE for more information.
+#
+# 		ALTER TABLE tbl_name TABLESPACE [=] tablespace_name;
+#
+# To move a table from a general tablespace or file-per-table tablespace to the system tablespace, specify innodb_system as the
+# tablespace name.
+#
+# 		ALTER TABLE tbl_name TABLESPACE [=] innodb_system;
+#
+# To move a table from the system tablespace or a general tablespace to a file-per-table tablespace, specify innodb_file_per_table
+# 	as the tablespace name.
+#
+# 		ALTER TABLE tbl_name TABLESPACE [=] innodb_file_per_table;
+#
+# ALTER TABLE ... TABLESPACE operations always cause a full table rebuild, even if the TABLESPACE attribute has not changed from
+# its previous value.
+#
+# ALTER TABLE ... TABLESPACE syntax does not support moving a table from a temporary tablespace to a persistent tablespace.
+#
+# The DATA DIRECTORY clause is permitted with CREATE TABLE ... TABLESPACE=innodb_file_per_table but is otherwise not supported
+# for use in combination with the TABLESPACE option.
+#
+# Restrictions apply when moving tables from encrypted tablespaces. See Encryption Limitations.
+#
+# Renaming a General Tablespace
+#
+# Renaming a general tablespace is supported using ALTER_TABLESPACE_..._RENAME_TO syntax
+#
+# 		ALTER TABLESPACE s1 RENAME TO s2;
+#
+# The CREATE_TABLESPACE privilege is required to rename a general tablespace.
+#
+# RENAME TO operations are implicitly performed in autocommit mode, regardless of the autocommit setting.
+#
+# A RENAME TO operation cannot be performed while LOCK_TABLES or FLUSH_TABLES_WITH_READ_LOCK is in effect for
+# tables that reside in the tablespace.
+#
+# Exclusive metadata locks are taken on tables within a general tablespace while the tablespace is renamed,
+# which prevents concurrent DDL.
+#
+# Concurrent DML is supported.
+#
+# Dropping a General Tablespace
+#
+# the DROP_TABLESPACE statement is used to drop an InnoDB general tablespace.
+#
+# All tables must be dropped from the tablespace prior to a DROP_TABLESPACE operaiton.
+#
+# If the tablespace is not empty, DROP_TABLESPACE returns an error.
+#
+# Use a query similar to the following to identify tables in a general tablespace.
+#
+# 		SELECT a.NAME AS space_name, b.NAME AS table_name FROM INFORMATION_SCHEMA.INNODB_TABLESPACES a,
+# 		INFORMATION_SCHEMA.INNODB_TABLES b WHERE a.SPACE=b.SPACE AND a.NAME LIKE 'ts1';
+#
+# 		+-------------+-------------+
+# 		| space_name  | table_name  |
+# 		+-------------+-------------+
+# 		| ts1 		  | test/t1 	 |
+# 		| ts1 		  | test/t2 	 |
+# 		| ts1 		  | test/t3 	 |
+# 		+-------------+-------------+
+#
+# A general InnoDB tablespace is not deleted automatically when the last table in the tablespace is dropped.
+#
+# The tablespace must be dropped explicitly using DROP_TABLESPACE_tablespace_name
+#
+# A general tablespace does not belong to any particular database. A DROP_DATABASE operation can drop tables
+# that belong to a general tablespace but it cannot drop the tablespace, even if the DROP_DATABASE operation
+# drops all tables that belong to the tablespace.
+#
+# A general tablespace must be dropped explicitly using DROP_TABLESPACE tablespace_name.
+#
+# SImilar to the system tablespace, truncating or dropping tables stored in a general tablespace creates free
+# space internally in the general tablespace .ibd data file which can onl be used for new InnoDB data.
+#
+# Space is not released back to the OS as it is when a file-per-table tablespace is deleted during a DROP_TABLE
+# operation.
+#
+# This example demonstrates how to drop an InnoDB general tablespace. The general tablespace ts1 is created
+# with a single table.
+#
+# The table must be dropped before dropping the tablespace.
+#
+# CREATE TABLESPACE `ts1` ADD DATAFILE 'ts1.ibd' Engine=InnoDB;
+#
+# CREATE TABLE t1 (c1 INT PRIMARY KEY) TABLESPACE ts10 Engine=InnoDB;
+#
+# DROP TABLE t1;
+#
+# DROP TABLESPACE ts1;
+#
+# NOTE:
+#
+# 		tablespace_name is a case-sensitive identifier in MySQL
+#
+# GENERAL TABLESPACE LIMITATIONS
+#
+# ) A generated or existing tablespace cannot be changed to a general tablespace.
+#
+# ) Creation of temporary general tablespaces is not supported
+#
+# ) General tablespaces do not support temporary tables
+#
+# ) Similar to the system tablespace, truncating or dropping tables stored in a general tablespace creates free space internally
+# 		in the general tablespace .ibd data file which can only be used for new InnoDB data.
+#
+# 		Space is not released back to the OS as it is for file-per-table tablespaces.
+#
+# 		Additionally, a table-copying ALTER_TABLE operation on table that resides in a shared tablespace (a general tablespace or the system
+# 		tablespace) can increase the amount of space used by the tablespace.
+#
+# 		Such operations require as much additional space as the data in the table plus indexes.
+#
+# 		The additional space required for the table-copying ALTER_TABLE operation is not released back to the
+# 		OS as it is for file-per-table tablespaces.
+#
+# ) ALTER_TABLE_..._DISCARD_TABLESPACE and ALTER_TABLE_..._IMPORT_TABLESPACE are not supported for tables that belong to a general tablespace.
+#
+# ) Support for placing table partitions in general tablespaces was deprecated in MySQl 5.7.24 and removed in MySQL 8.0.13
+#
+# 15.6.3.4 UNDO TABLESPACES
+#
+# https://dev.mysql.com/doc/refman/8.0/en/innodb-undo-tablespaces.html
 #
 #
