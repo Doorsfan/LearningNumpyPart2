@@ -40667,6 +40667,962 @@
 #
 # 15.6.3.6 Creating a Tablespace Outside of the Data Directory
 #
-# https://dev.mysql.com/doc/refman/8.0/en/tablespace-placing.html
-# 
+# The CREATE_TABLE_..._DATA_DIRECTORY clause permits creating a file-per-table tablespace outside of the data directory.
+#
+# For example, you can use the DATA DIRECTORY clause to create a tablespace on a separate storage device with particular
+# performance or capacity characteristics, such as a fast SSD or a high-capacity HDD.
+#
+# Be sure of the location that you choose. The DATA DIRECTORY clause cannot be used with ALTER_TABLE to change the location later.
+#
+# The tablespace data file is created in the specified directory, within in a subdirectory named for the schema to which the table
+# belongs.
+#
+# The following example demonstrates creating a file-per-table tablespace outside of the data directory. It is assumed that the
+# innodb_file_per_table variable is enabled.
+#
+# USE test;
+# Database changed
+#
+# CREATE TABLE t1 (c1 INT PRIMARY KEY) DATA DIRECTORY = '/remote/directory';
+#
+# #MySQL creates the tablespace file in a subdirectory that is named 
+# # for the schema to which the table belongs
+#
+# shell> cd /remote/directory/test
+# shell> ls
+# t1.ibd
+#
+# When creating a tablespace outside of the data directory, ensure that the directory is known to InnoDB.
+#
+# Otherwise, if the server halts unexpectedly before tablespace data file pages are fully flushed, startup
+# fails when the tablespace is not found during the pre-recovery discovery phase that searches known directories
+# for tablespace data files (see Tablespace discovery during Crash Recovery)
+#
+# To make a directory known, add it to the innodb_directories argument value. innodb_directories is a read-only
+# startup option that defines directories to scan at startup for tablespace data files.
+#
+# Configuring it requires restarting the server.
+#
+# CREATE_TABLE_..._TABLESPACE syntax can also be used in combination with the DATA DIRECTORY clause to create a
+# file-per-table tablespace outside of the data directory.
+#
+# To do so, specify innodb_file_per_table as the tablespace name.
+#
+# 		CREATE TABLE t2 (c1 INT PRIMARY KEY) TABLESPACE = innodb_file_per_table
+# 		DATA DIRECTORY = '/remote/directory';
+#
+# The innodb_file_per_table variable does not need to be enabled when using this method.
+#
+# USAGE NOTES:
+#
+# 		) MySQL initially holds the tablespace data file open, preventing you from dismounting the device, but might eventually close
+# 			the table if hte server is busy.
+#
+# 			Be careful not to accidentally dismount an external device while MySQL is running, or start MySQL while the device is disconnected.
+#
+# 			Attempting to access a table when the associated tablespace data file is missing causes a serious error that requires a server restart.
+#
+# 			A server restart issues errors and warnings if the tablespace data file is not at the expected path. In this case, you can restore the
+# 			tablespace data file from a backup or drop the table to remove the information about it from the data dictionary.
+#
+# 		) Before placing a tablespace on an NFS-mounted volume, review potential issues outlined in Using NFS with MySQL.
+#
+# 		) If using an LVM snapshot, file copy or other file based mechanisms to back up the tablespace data file, always use the FLUSH_TABLE_..._FOR_EXPORT
+# 			statement first to ensure that all changes buffered in memory are flushed to disk before the backup occurs.
+#
+# 		) Using the DATA DIRECTORY clause is an alternative to using symbolic links, which is not supported.
+#
+# 15.6.3.7 COPYING TABLESPACES TO ANOTHER INSTANCE
+#
+# This section describes how to copy a file-per-table tablespaces from one MySQL instance to another, otherwise known as the
+# Transportable Tablespaces feature.
+#
+# This feature also supports partitioned InnoDB tables and individual InnoDB table partitions and subpartitions.
+#
+# For information about other InnoDB table copying methods, see SECTION 15.6.1.2, "MOVING OR COPYING InnoDB TABLES"
+#
+# There are many reasons why you might copy an InnoDB file-per-table tablespace to a different instance:
+#
+# 		) To run reports without putting extra load on a production server.
+#
+# 		) To set up identical data for a table on a new slave server.
+#
+# 		) To restore a backed-up version of a table or partition after a problem or mistake.
+#
+# 		) As a faster way of moving data around than importing the results of a mysqldump command.
+#
+# 			The data is available immediately, rather than having to be re-inserted and the indexes rebuilt.
+#
+# 		) To move a file-per-table tablespace to a server with storage medium that better suits system requirements.
+#
+# 			For example, you may want to have busy tables on an SSD device, or large tables on a high-capacity HDD device.
+#
+# Limitations and Usage Notes
+#
+# ) The tablespace copy procedure is only possible when innodb_file_per_table is enabled, which is the default setting.
+#
+# 		Tables residing in the shared system tablespace cannot be quiesced.
+#
+# ) When a table is queisced, only read-only transactions are allowed on the affected table.
+#
+# ) When importing a tablespace, the page size must match the page size of the importing instance.
+#
+# ) ALTER_TABLE_..._DISCARD_TABLESPACE is supported for partitioned InnoDB tables, and ALTER_TABLE_..._DISCARD_PARTITION_..._TABLESPACE
+# 		is supported for InnoDB table partitions.
+#
+# ) DISCARD TABLESPACE is not supported for tablespaces with a parent-child (primary-key-foreign key) relationship when foreign_key_checks
+# 		is set to 1.
+#
+# 		Before discarding a tablespace for parent-child tables, set foreign_key_checks=0. Partitioned InnoDB tables do not support foreign keys.
+#
+# ) ALTER_TABLE_..._IMPORT_TABLESPACE does not enforce foreign key constraints on imported data.
+#
+# 		If there are foreign key constraints between tables, all tables should be exported at the same (logical) point in time.
+#
+# 		Partitioned InnoDB tables do not support foreign keys.
+#
+# ) ALTER_TABLE_..._IMPORT_TABLESPACE and ALTER_TABLE_..._IMPORT_PARTITION_..._TABLESPACE do not require a .cfg metadata file to import
+# 		a tablespace.
+#
+# 		However, metadata checks are not performed when importing without a .cfg file, and a warning similar to the following is issued:
+#
+# 			Message: InnoDB: IO Read error: (2, No such file or Directory) Error opening '.\
+# 			test\t.cfg', will attempt to import without schema verification 
+# 			1 row in set (0.00 sec)
+#
+# 		The ability to import without a .cfg file may be more convenient when no schema mismatches are expected.
+#
+# 		Additionally, the ability to import without a .cfg file could be useful in crash recovery scenarios in which
+# 		metadata cannot be collected from an .ibd file
+#
+# 		If no .cfg file is used, InnoDB uses the equivalent of a SELECT MAX(ai_col) FROM table_name FOR UPDATE statement
+# 		to initialize the in-memory auto-increment counter that is used in assigning values for to an AUTO_INCREMENT column.
+#
+# 		Otherwise, the current maximum auto-increment counter value is read from the .cfg metadata file.
+#
+# 		For related information, see InnoDB AUTO_INCREMENT Counter Initialization
+#
+# ) Due to a .cfg metadata file limitation, schema mismatches are not reported for partition type or partition definition
+# 		differences when importing tablespace files for partitioned tables.
+#
+# 		Column differences are reported.
+#
+# ) When running ALTER_TABLE_..._DISCARD_PARTITION_..._TABLESPACE and ALTER_TABLE_..._IMPORT_PARTITION_..._TABLESPACE on subpartitioned
+# 		tables, both partition and subpartition table names are allowed.
+#
+# 		When a partition name is specified, subpartitions of that partition are included in the operation.
+#
+# ) Importing a tablespace file from another MySQL server instance works if both instances have GA (General Availability) status
+# 		and the server instance into which the file is imported is at the same or higher release level within the same release series.
+#
+# 		Importing a tablespace file into a server instance running an earlier release of MySQL is not supported.
+#
+# ) In replication scenarios, innodb_file_per_table must be set to ON on both the master and slave.
+#
+# ) On Windows, InnoDB stores database, tablespace and table names internally in lowercase.
+#
+# 		To avoid import problems on case-sensitive OS systems such as Linux and UNIX, create all databases, tablespaces,
+# 		and tables using lowercase names.
+#
+# 		A convenient way to accomplish this is to add the following line to the [mysqld] section of your my.cnf or my.ini
+# 		file before creating databases, tablespaces, or tables:
+#
+# 			[mysqld]
+# 			lower_case_table_names=1
+#
+# 		NOTE:
+#
+# 			It is prohibited to start the server with a lower_case_table_names setting that is different from the setting
+# 			used when the server was initialized.
+#
+# 	) ALTER_TABLE_..._DISCARD_TABLESPACE and ALTER_TABLE_..._IMPORT_TABLESPACE are not supported with tables that belong to an InnoDB
+# 		general tablespace.
+#
+# 		For more information, see CREATE_TABLESPACE.
+#
+# ) The default row format for InnoDB tables is configurable using the innodb_default_row_format configuration option.
+#
+# 		Attempting to import a table that does not explicitly define a row format (ROW_FORMAT), or that uses ROW_FORMAT=DEFAULT,
+# 		could result in a schema mismatch error if the innodb_default_row_format setting on the source instance differs from
+# 		the setting on the destination instance.
+#
+# 		For related information, see Defining the Row Format of a Table.
+#
+# ) When exporting an encrypted tablespace, InnoDB generates a .cfp file in addition to a .cfg metadata file.
+#
+# 		The .cfp file must be copied to the destination instance together with the .cfg file and tablesapce file before
+# 		performing the ALTER_TABLE_..._IMPORT_TABLESPACE operation on the destination instance.
+#
+# 		The .cfp file contains a transfer key and an encrypted tablespace key. 
+#
+# 		On import, InnoDB uses the transfer key to decrypt the tablespace key. For related information, see
+# 		Section 15.6.3.9, "InnoDB Data-at-Rest Encryption"
+#
+# ) FLUSH_TABLES_..._FOR_EXPORT is not supported on tables that have a FULLTEXT index.
+#
+# 		Full-text search auxiliary tables are not flushed. After importing a table with a FULLTEXT index,
+# 		run OPTIMIZE_TABLE to rebuild the FULLTEXT indexes.
+#
+# 		Alternatively, drop FULLTEXT indexes before the export operation and recreate them after importing the
+# 		table on the destination instance.
+#
+# 15.6.3.7.1 Transportable Tablespace Examples
+#
+# 		Note:
+#
+# 			If you are transporting tables that are encrypted using the InnoDB tablespace encryption, see Limitations and Usage notes
+# 			before you begin for additional procedural information.
+#
+# Example 1: Copying an InnoDB Table to Another Instance
+#
+# 		This procedure demonstrates how to copy a regular InnoDB table from a running MySQL server instance to another running instance.
+#
+# 		The same procedure with minor adjustments can be used to perform a full table restore on the same instance.
+#
+# 		1. On the source instance, create a table if one does not exist:
+#
+# 			USE test;
+# 			CREATE TABLE t(c1 INT) ENGINE=InnoDB;
+#
+# 		2. On the destination instance, create a table if one does not exist:
+#
+# 			USE test;
+# 			CREATE TABLE t(c1 INT) ENGINE=InnoDB;
+#
+# 		3. On the destination instance, discard the existing tablespace. (Before a tablespace can be imported, InnoDB must discard
+# 			the tablespace that is attached to the receiving table.)
+#
+# 				ALTER TABLE t DISCARD TABLESPACE;
+#
+# 		4. On the source instance, run FLUSH_TABLES_..._FOR_EXPORT to quiesce the table and create the .cfg metadata file:
+#
+# 			USE test;
+#  		FLUSH TABLES t FOR EXPORT;
+#
+# 			The metadata (.cfg) is created in the InnoDB data directory.
+#
+# 			NOTE:
+#
+# 				The FLUSH_TABLES_..._FOR_EXPORT statement ensures that changes to the named table have been flushed to disk
+# 				so that a binary table copy can be made while the instance is running.
+#
+# 				When FLUSH_TABLES_..._FOR_EXPORT is run, InnoDB produces a .cfg file in the same database directory
+# 				as the table. The .cfg file contains metadata used for schema verification when importing the tablespace file.
+#
+# 		5. Copy the .ibd file and .cfg metadata file from the source instance to the destination instance. For example:
+#
+# 			scp /path/to/datadir/test/t.{ibd,cfg} destination-server:/path/to/datadir/test
+#
+# 			NOTE:
+#
+# 				The .ibd file and .cfg file must be copied before releasing the shared locks, as described in the next step.
+#
+# 		6. On the source instance, use UNLOCK_TABLES to release the locks acquired by FLUSH_TABLES_..._FOR_EXPORT:
+#
+# 			USE test;
+# 			UNLOCK TABLES;
+#
+# 		7. On the destination instance, import the tablespace:
+#
+# 			USE test;
+# 			ALTER TABLE t IMPORT TABLESPACE;
+#
+# 			NOTE:
+#
+# 				The ALTER_TABLE_..._IMPORT_TABLESPACE feature does not enforce foreign key constraints on imported data.
+#
+# 				If there are foreign key constraints between tables, all tables should be exported at the same (logical)
+# 				point in time.
+#
+# 				In this case you would stop updating the tables, commit all transactions, acquire shared locks on the
+# 				tables, and then perform the export operation.
+#
+# EXAMPLE 2: Copying an InnoDB Partitioned Table to Another Instance
+#
+# This procedure demonstrates how to copy a partitioned InnoDB table from a running MySQL server instance to another
+# running instance.
+#
+# The same procedure with minor adjustments can be used to perform a full restore of a partitioned InnoDB table on
+# the same instance.
+#
+# 		1. On the source instance, create a partitioned table if one does not exist. In the following example, a table with three
+# 			partitions (p0, p1, p2) is created:
+#
+# 				USE test;
+# 				CREATE TABLE t1 (i int) ENGINE = InnoDB PARTITION BY KEY (i) PARTITIONS 3;
+#
+# 			In the /datadir/test directory, there is a separate tablespace (.ibd) file for each of the three partitions.
+#
+# 				mysql> \! ls /path/to/datadir/test/
+# 				t1#P#p0.ibd t1#P#p1.ibd t1#P#p2.ibd
+#
+# 		2. On the destination instance, create the same partitioned table:
+#
+# 			mysql> USE test;
+# 			mysql> CREATE TABLE t1 (i int) ENGINE = InnoDB PARTITION BY KEY (i) PARTITIONS 3;
+#
+# 			In the /datadir/test directory, there is a separate tablespace (.ibd) file for each of the three partitions.
+#
+# 				mysql> \! ls /path/to/datadir/test/
+# 				t1#P#p0.ibd t1#P#p1.ibd t1#P#p2.ibd
+#
+# 		3. On the destination instance, discard the tablespace for the partitioned table.
+#
+# 			(Before the tablespace can be imported on the destination instance, the tablespace that is attached
+# 			to the receiving table must be discarded.)
+#
+# 				mysql> ALTER TABLE t1 DISCARD TABLESPACE;
+#
+# 			The three .ibd files that make up the tablespace for the partitioned table are discarded from the /datadir/test directory.
+#
+# 		4. On the source instance, run FLUSH_TABLES_..._FOR_EXPORT to quiesce the partitioned table and create the .cfg metadata files:
+#
+# 			mysql> USE test;
+# 			mysql> FLUSH TABLES t1 FOR EXPORT;
+#
+# 			Metadata (.cfg) files, one for each tablespace (.ibd) file, are created in the /datadir/test directory on the source instance:
+#
+# 				mysql> \! ls /path/to/datadir/test/
+# 				t1#P#p0.ibd t1#P#p1.ibd t1#P#p2.ibd
+# 				t1#P#p0.cfg t1#P#p1.cfg t1#P#p2.cfg
+#
+# 			NOTE:
+#
+# 				FLUSH_TABLES_..._FOR_EXPORT statement ensures that changes to the named table have been flushed to disk so that binary
+# 				table copy can be made while the instance is running.
+#
+# 				When FLUSH_TABLES_..._FOR_EXPORT is run, InnoDB produces a .cfg metadata file for the table's tablespace files in the same
+# 				database directory as the table.
+#
+# 				The .cfg files contain metadata used for schema verification when importing tablespace files.
+#
+# 				FLUSH_TABLES_..._FOR_EXPORT can only be run on the table, not on individual table partitions.
+#
+# 		5. Copy the .ibd and .cfg files from the source instance database directory to the destination instance database directory. For example:
+#
+# 			shell>scp /path/to/datadir/test/t1*.{ibd,cfg} destination-server:/path/to/datadir/test
+#
+# 			NOTE:
+#
+# 				The .ibd and .cfg files must be copied before releasing the shared locks, as described in the next step.
+#
+# 		6. On the source instance, use UNLOCK_TABLES to release the locks acquired by FLUSH_TABLES_..._FOR_EXPORT
+#
+# 			mysql> USE test;
+# 			mysql> UNLOCK TABLES;
+#
+# 		7. On the destination instance, import the tablespace for the partitioned table:
+#
+# 			mysql> USE test;
+# 			mysql> ALTER TABLE t1 IMPORT TABLESPACE;
+#
+# Example 3: Copying InnoDB Table Partitions to Another Instance
+#
+# This procedure demonstrates how to copy InnoDB table partitions from a running MySQL server instance to another
+# running instance.
+#
+# The same procedure with minor adjustments can be used to perform a restore of InnoDB table partitions on the same instance.
+#
+# In the following example, a partitioned table with four partitions (p0,p1,p2,p3) is created on the source instance.
+#
+# Two of the partitions (p2 and p3) are copied to the destination instance.
+#
+# 		1. On the source instance, create a partitioned table if one does not exist. In the following example, a table with
+# 			four partitions (p0,p1,p2,p3) is created:
+#
+# 				mysql> USE test;
+# 				mysql> CREATE TABLE t1 (i int) ENGINE = InnoDB PARTITION BY KEY (i) PARTITIONS 4;
+#
+# 			In the /datadir/test directory, there is a separate tablespace (.ibd) file for each of the four partitions.
+#
+# 				mysql> \! ls /path/to/datadir/test/
+# 				t1#P#p0.ibd t1#P#p1.ibd t1#P#p2.ibd  t1#P#p3.ibd
+#
+# 		2. On the destination instance, create the same partitioned table:
+#
+# 			mysql> USE test;
+# 			mysql> CREATE TABLE t1 (i int) ENGINE = InnoDB PARTITION BY KEY (i) PARTITIONS 4;
+#
+# 			In the /datadir/test directory, there is a separate tablespace (.ibd) file for each of the four partitions.
+#
+# 				mysql> \! ls /path/to/datadir/test/
+# 				t1#P#p0.ibd 	t1#P#p1.ibd 	t1#P#p2.ibd 	t1#P#p3.ibd
+#
+# 		3. On the destination instance, discard the tablespace partitions that you plan to import from the source instance.
+#
+# 			(Before tablespace partitions can be imported on the destination instance, the corresponding partitions that are attached
+# 			to the receiving table must be discarded)
+#
+# 				mysql> ALTER TABLE t1 DISCARD PARTITION p2, p3 TABLESPACE;
+#
+# 			The .ibd files for the two discarded partitions are removed from the /datadir/test directory on the destination instance,
+# 			leaving the following files:
+#
+# 				mysql> \! ls /path/to/datadir/test/
+# 				t1#P#p0.ibd 	t1#P#p1.ibd
+#
+# 			NOTE:
+#
+# 				When ALTER_TABLE_..._DISCARD_PARTITION_..._TABLESPACE is run on subpartitioned tables, both partition and subpartition
+# 				table names are allowed.
+#
+# 				When a partition name is specified, subpartitions of that partition are included in the operation.
+#
+# 		4. On the source instance, run FLUSH_TABLES_..._FOR_EXPORT to quiesce the partitioned table and create the .cfg metadata files.
+#
+# 			mysql> USE test;
+# 			mysql> FLUSH TABLES t1 FOR EXPORT;
+#
+# 			The metadata files (.cfg files) are created in the /datadir/test directory on the source instance.
+#
+# 			There is a .cfg file for each tablespace (.ibd) file.
+#
+# 				mysql> \! ls /path/to/datadir/test/
+# 				t1#P#p0.ibd 	t1#P#p1.ibd 	t1#P#p2.ibd 	t1#P#p3.ibd
+# 				t1#P#p0.cfg 	t1#P#p1.cfg 	t1#P#p2.cfg 	t1#P#p3.cfg
+#
+# 			NOTE:
+#
+# 				FLUSH_TABLES_..._FOR_EXPORT statements ensure that changes to the named tables have been flushed to disk
+# 				so that binary table copy can be made while the instance is running.
+#
+# 				When FLUSH_TABLES_..._FOR_EXPORT is run, InnoDB produces a .cfg metadata file for the table's tablespace
+# 				files in the same database directory as the table.
+#
+# 				The .cfg files contain metadata used for schema verification when importing tablespace files.
+#
+# 				FLUSH_TABLES_..._FOR_EXPORT can only be run on the table, not on individual table partitions.
+#
+# 		5. Copy the .ibd and .cfg files from the source instance database directory to the destination instance
+# 			database directory. For example:
+#
+# 				shell>scp /path/to/datadir/test/t1*.{ibd,cfg} destination-server:/path/to/datadir/test
+#
+# 			NOTE:
+#
+# 				The .ibd and .cfg files must be copied before releasing the shared locks, as described in
+# 				the next step.
+#
+# 		6. On the source instance, use UNLOCK_TABLES to release the locks acquired by FLUSH_TABLES_..._FOR_EXPORT:
+#
+# 			mysql> USE test;
+# 			mysql> UNLOCK TABLES;
+#
+# 		7. On the destination instance, import the tablespace for the partitioned table:
+#
+# 			mysql> USE test;
+# 			mysql> ALTER TABLE t1 IMPORT TABLESPACE;
+#
+# Example 3: Copying InnoDB Table partitions to Another Instance
+#
+# This procedure demonstrates how to copy InnoDB table partitions from a running MySQL server instance to another running
+# instance.
+#
+# The same procedure with minor adjustments can be used to perform a restore of InnoDB table partitions on the same instance.
+#
+# In the following example, a partitioned table with four partitions (p0,p1,p2,p3) is created on the source instance.
+#
+# Two of the partitions (p2 and p3) are copied to the destination instance.
+#
+# 		1. On the source instance, create a partitioned table if one does not exist. In the following example, a table with
+# 			four partitions (p0,p1,p2,p3) is created:
+#
+# 				mysql> USE test;
+# 				mysql> CREATE TABLE t1 (i int) ENGINE = InnoDB PARTITION BY KEY (i) PARTITIONS 4;
+#
+# 			In the /datadir/test directory, there is a separate tablespace (.ibd) file for each of the four partitions.
+#
+# 				mysql> \! ls /path/to/datadir/test/
+# 				t1#P#p0.ibd t1#P#p1.ibd t1#P#p2.ibd t1#P#p3.ibd
+#
+# 		2. On the destination instance, create the same partitioned table:
+#
+# 				mysql> USE test;
+# 				mysql> CREATE TABLE t1 (i int) ENGINE = InnoDB PARTITION BY KEY (i) PARTITIONS 4;
+#
+# 			In the /datadir/test directory, there is a separate tablespace (.ibd) file for each of the four partitions.
+#
+# 				mysql> \! ls /path/to/datadir/test/
+# 				t1#P#p0.ibd  t1#P#p1.ibd 	t1#P#p2.ibd 	t1#P#p3.ibd
+#
+# 		3. On the destination instance, discard the tablespace partitions that you plan to import from the source instance.
+#
+# 			(Before tablespace partitions can be imported on the destination instance, the corresponding partitions that are
+# 			attached to the receiving table must be discarded)
+#
+# 				mysql> ALTER TABLE t1 DISCARD PARTITION p2, p3 TABLESPACE;
+#
+# 			The .ibd files for the two discarded partitions are removed from the /datadir/test directory on the destination instance,
+# 			leaving the following files:
+#
+# 				mysql> \! ls /path/to/datadir/test/
+# 				t1#P#p0.ibd 	t1#P#p1.ibd
+#
+# 			NOTE:
+#
+# 				When ALTER_TABLE_..._DISCARD_PARTITION_..._TABLESPACE is run on subpartitioned tables, both partition and subpartition
+# 				table names are allowed.
+#
+# 				When a partition name is specified, subpartitions of that partition are included in the operation.
+#
+# 		4. On the source instance, run FLUSH_TABLES_..._FOR_EXPORT to quiesce the partitioned table and create the .cfg metadata files.
+#
+# 				mysql> USE test;
+# 				mysql> FLUSH TABLES t1 FOR EXPORT;
+#
+# 			The metadata files (.cfg files) are created in the /datadir/test directory on the source instance.
+# 			There is a .cfg file for each tablespace (.ibd) file
+#
+# 				mysql> \! ls /path/to/datadir/test/
+# 				t1#P#p0.ibd 	t1#P#p1.ibd 	t1#P#p2.ibd 	t1#P#p3.ibd
+# 				t1#P#p0.cfg 	t1#P#p1.cfg 	t1#P#p2.cfg 	t1#P#p3.cfg
+#
+# 			NOTE:
+#
+# 				FLUSH_TABLES_..._FOR_EXPORT statement ensures that changes to the named table have been flushed
+# 				to disk so that binary table copy can be made while the instance is running.
+#
+# 				When FLUSH_TABLES_..._FOR_EXPORT is run, InnoDB produces a .cfg metadata file for the table's
+# 				tablespace files in the same database directory as the table.
+#
+# 				The .cfg files contain metadata used for schema verification when importing tablespace files.
+#
+# 				FLUSH_TABLES_..._FOR_EXPORT can only be run on the table, not on individual table partitions.
+#
+# 		5. Copy the .ibd and .cfg files from the source instance database directory to the destination instance database directory.
+#
+# 			In this example, only the .ibd and .cfg files for partition 2 (p2) and partition 3 (p3) are copied to the data directory
+# 			on the destination instance.
+#
+# 			Partition 0 (p0) and partition 1 (p1) remain on the source instance.
+#
+# 				shell> scp t1#P#p2.ibd 	t1#P#p2.cfg 	t1#P#p3.ibd 	t1#P#p3.cfg 	destination-server:/path/to/datadir/test
+#
+# 			NOTE:
+#
+# 				The .ibd files and .cfg files must be copied before releasing the shared locks, as described in the next step.
+#
+# 		6. On the source instance, use UNLOCK_TABLES to release the locks acquired by FLUSH_TABLES_..._FOR_EXPORT
+#
+# 				mysql> USE test;
+# 				mysql> UNLOCK TABLES;
+#
+# 		7. ON the destination instance,, import the tablespace partitions (p2 and p3):
+#
+# 				mysql> USE test;
+# 				mysql> ALTER TABLE t1 IMPORT PARTITION p2, p3 TABLESPACE;
+#
+# 			NOTE:
+#
+# 				When ALTER_TABLE_..._IMPORT_PARTITION_..._TABLESPACE is run on subpartitioned tables, both partition
+# 				and subpartition table names are allowed.
+#
+# 				When a partition name is specified, subpartitions of that partition are included in the operation.
+#
+# 15.6.3.7.2 Transportable Tablespace INternals
+#
+# The following information describes internals and error log messaging for the transportable tablespaces copy procedure
+# for a regular InnoDB table.
+#
+# When ALTER_TABLE_..._DISCARD_TABLESPACE is run on the destination instance:
+#
+# 		) The table is locked in X mode
+#
+# 		) The tablespace is detached from the table.
+#
+# When FLUSH_TABLES_..._FOR_EXPORT is run on the source instance:
+#
+# 		) The table being flushed for export is locked in shared mode
+#
+# 		) The purge coordinator thread is stopped
+#
+# 		) Dirty pages are synchronized to disk
+#
+# 		) Table metadata is written to the binary .cfg file
+#
+# Expected error log messages for this operation:
+#
+# 		2013-09-24T13:10:19.<etc> 2 [Note] InnoDB: Sync to disk of '"test"."t"' started:
+# 		2013-09-24T13:10:19.<etc> 2 [Note] InnoDB: Stopping purge
+# 		2013-09-24T13:10:19.<etc> 2 [Note] InnoDB: Writing table metadata to './test/t.cfg'
+# 		2013-09-24T13.10.19.<etc> 2 [Note] InnoDB: Table '"test"."t"' flushed to disk
+#
+# When UNLOCK_TABLES is run on the source instance:
+#
+# 		) The binary .cfg file is deleted.
+#
+# 		) The shared lock on the table or tables being imported is released and the purge coordinator thread is restarted.
+#
+# Expected error log messages for this operation:
+#
+# 		2013-09-24T13:10:21.<etc> 2 [Note] InnoDB: Deleting the meta-data file './test/t.cfg'
+# 		2013-09-24T13:10:21.<etc> 2 [Note] InnoDB: Resuming purge
+#
+# When ALTER_TABLE_..._IMPORT_TABLESPACE is run on the destination instance, the import algorithm performs the following
+# operations for each tablespace being imported:
+#
+# 		) Each tablespace page is checked for corruption
+#
+# 		) The space ID and log sequence numbers (LSNs) on each page are updated
+#
+# 		) Flags are validated and LSN updated for the header page.
+#
+# 		) Btree pages are updated.
+#
+# 		) The page state is set to dirty so that it is written to disk.
+#
+# Expected error log messages for this operation:
+#
+# 		2013-07-18 15:15:01 34960 [Note] InnoDB: Importing tablespace for table 'test/t' that was exported from host 'ubuntu'
+# 		2013-07-18 15:15:01 34960 [Note] InnoDB: Phase I - Update all pages
+# 		2013-07-18 15:15:01 34960 [Note] InnoDB: Sync to disk
+# 		2013-07-18 15:15:01 34960 [Note] InnoDB: Sync to disk - done!
+# 		2013-07-18 15:15:01 34960 [Note] InnoDB: Phase III - Flush changes to disk
+# 		2013-07-18 15:15:01 34960 [Note] InnoDB: Phase IV - Flush complete
+#
+# NOTE:
+#
+# 		You may also receive a warning that a tablespace is discarded (if you discarded the tablespace for the destination table)
+# 		and a message stating that statistics could not be calculated due to a missing .ibd file:
+#
+# 			2013-07-18 15:14:38 34960 [Warning] InnoDB: Table "test"."t" tablespace is set as discarded.
+# 			2013-07-18 15:14:38 7f34d9a37700 InnoDB: cannot calculate statistics for table "test"."t"
+# 			because the .ibd file is missing. For help, please refer to 
+# 			http://dev.mysql.com/doc/refman/8.0/en/innodb-troubleshooting.html
+#
+# 15.6.3.8 Moving Tablespace Files While the Server is Offline
+#
+# The innodb_directories option, which defines directories to scan at startup for tablespace files, supports moving or
+# restoring tablespace files to a new location while the server is offline.
+#
+# During startup, discovered tablespace files are used instead those referenced in the data directory, and the data
+# dictionary is updated to reference the relocated files.
+#
+# If duplicate tablespace files are discovered by the scan, startup fails with an error indicating that multiple files
+# were found for the same tablespace ID.
+#
+# The directories defined by the innodb_data_home_dir, innodb_undo_directory, and datadir configuration options are
+# automatically appended to the innodb_directories argument value.
+#
+# These directories are scanned at startup regardless of whether the innodb_directories option is specified explicitly.
+#
+# The implicit addition of these directories permits moving system tablespace files, the data directory, or undo tablespace
+# files without configuring the innodb_directories setting.
+#
+# However, settings must be updated when directories change. For example, after relocating the data directory, you must
+# update the --datadir setting before restarting the server.
+#
+# The innodb_directories option may be specified in a startup command or MySQL option file.
+#
+# Quotes are used around the argument value because otherwise a semicolon (;) is interpreted as a special
+# character by some command interpreters. (Unix shells treat it as a command terminator, for example)
+#
+# Startup command:
+#
+# 		mysqld --innodb-directories="directory_path_1;directory_path_2"
+#
+# MySQL option file:
+#
+# 		[mysqld]
+# 		innodb_directories="directory_path_1;directory_path_2"
+#
+# The following procedure is applicable to moving individual file-per-table and general tablespace files, system tablespace files,
+# undo tablespace files, or the data directory.
+#
+# Before moving files or directories, review the usage notes that follow.
+#
+# 	1. Stop the server
+#
+# 	2. Move the tablespace files or directories
+#
+# 	3. Make the new directory known to InnoDB.
+#
+# 		) If moving individual file-per-table or general tablespace files, add unknown directories to the innodb_directories value.
+#
+# 			) The directories defined by the innodb_data_home_dir, innodb_undo_directory, and datadir configuration options are automatically
+# 				appended to the innodb_directories argument value, so you need not specify these.
+#
+# 			) A file-per-table tablespace file can only be moved to a directory with same name as the schema. For example, if the actor
+# 				table belongs to the sakila schema, then the actor.ibd data file can only be moved to a directory named sakila.
+#
+# 			) General tablespace files cannot be moved to the data directory or a subdirectory of the data directory.
+#
+# 		) If moving system tablespace files, undo tablespaces, or the data directory, update the innodb_data_home_dir, innodb_undo_directory,
+# 			and datadir settings, as necessary.
+#
+# 	4. Restart the server.
+#
+# USAGE NOTES
+#
+# ) Wildcard expressions cannot be used in the innodb_directories argument value.
+#
+# ) The innodb_directories scan also traverses subdirectories of specified directories. Duplicate directories and subdirectories are discarded
+# 		from the list of directories to be scanned.
+#
+# ) The innodb_directories option only supports moving InnoDB tablespace files. Moving files that belong to a storage engine other than InnoDB
+# 		is not supported.
+#
+# 		This restriction also applies when moving the entire data directory.
+#
+# ) The innodb_directories option supports renaming of tablespace files when moving files to a scanned directory.
+#
+# 		It also supports moving tablespaces files to other supported OS's.
+#
+# ) When moving tablespace files to a different OS, ensure that tablespace file names do not include prohibit chars or chars with a special
+# 		meaning on the destination OS.
+#
+# ) When moving a data directory from a Windows OS to a Linux OS, modify the binary log file paths in the binary log index file to use 
+# 		backward slashes instead of forward slashes.
+#
+# 		By default, the binary log index file has the same base name as the binary log file, with the extension '.index'
+#
+# 		The location of the binary log index file is defined by --log-bin. The default location is the data directory.
+#
+# ) If moving tablespace files to a different OS introduces cross-platform replication, it is the responisbility of the DB admin to ensure
+# 		proper replication of DDL statements that contain platform-specific DIrs.
+#
+# 		Statements that permit specifying dirs include CREATE_TABLE_..._DATA_DIRECTORY and CREATE_TABLESPACE.
+#
+# ) The directory of file-per-table and general tablespace files created with an absolute path or in a location outside of the data
+# 		directory should be added to the innodb_directories argument value.
+#
+# 		Otherwise, InnoDB is not able to locate these files during recovery.
+#
+# 		CREATE_TABLE_..._DATA_DIRECTORY and CREATE_TABLESPACE permit creation of tablespace files with absolute paths.
+#
+# 		CREATE_TABLESPACE also permits tablespace file directories that are relative to the data directory.
+#
+# 		To view tablespace file locations, query the INFORMATION_SCHEMA.FILES table:
+#
+# 			mysql> SELECT TABLESPACE_NAME, FILE_NAME FROM INFORMATION_SCHEMA.FILES \G
+#
+# ) CREATE_TABLESPACE requires that the target directory exists and is known to InnoDB. Known directories include those implicitly and explicitly
+# 		defined by the innodb_directories option.
+#
+# 15.6.3.9 InnoDB Data-at-Rest Encryption
+#
+# InnoDB supports data-at-rest encryption for file-per-table tablespaces, general tablespaces, the mysql system tablespace, redo logs, and undo logs.
+#
+# As of MySQL 8.0.16, setting an encryption default for schemas and general tablespaces is also supported, which permits DBAs to control whether
+# tables created in those schemas and tablespaces are encrypted.
+#
+# InnoDB data-at-rest encryption features and capabilities are described under the following topics in this section.
+#
+# 		) About Data-at-Rest Encryption
+#
+# 		) Encryption Prerequisites
+#
+# 		) Defining an Encryption Default for Schemas and General Tablespaces
+#
+# 		) File-Per-Table tablespace encryption
+#
+# 		) General Tablespace Encryption
+#
+# 		) mysql System Tablespace Encryption
+#
+# 		) Redo Log Encryption
+#
+# 		) Undo Log Encryption
+#
+# 		) Master Key Rotation
+#
+# 		) Encryption and Recovery
+#
+# 		) Exporting Encrypted Tablespaces
+#
+# 		) Encryption and Replication
+#
+# 		) Identifying Encrypted Tablespaces and Schemas
+#
+# 		) Monitoring Encryption Progress
+#
+# 		) Encryption Usage Notes
+#
+# 		) Encryption Limitations
+#
+# ABOUT DATA-AT-REST ENCRYPTION
+#
+# InnoDB uses a two tier encryption key architechture, consisting of a master encryption key and tablespace keys.
+#
+# When a tablespace is encrypted, a tablespace key is encrypted and stored in the tablespace header.
+#
+# When an application or authenticated user wants to access encrypted tablespace data, InnoDB uses a master encryption
+# key to decrypt the tablespace key. The decrypted version of a tablespace key never changes, but the master encryption
+# key can be changed as required.
+#
+# This action is referred to as master key rotation.
+#
+# The data-at-rest encryption feature relies on a keyring plugin for master encryption key management.
+#
+# All MySQL editions provide a keyring_file plugin, which stores keyring data in a file local to the server host.
+#
+# MySQL Enterprise Edition offers additional keyring plugins:
+#
+# 		) The keyring_encrypted_file plugin, which stores keyring data in an encrypted file local to the server host.
+#
+# 		) The keyring_okv plugin, which includes a KMIP client (KMIP 1.1) that uses a KMIP-compatible product as a back end
+# 			for keyring storage.
+#
+# 			Supported KMIP-compatibble products include centralized key management solutions such as Oracle Key Vault,
+# 			Gemalto KeySecure, etc.
+#
+# 		) The keyring_aws plugin, which communicates with the Amazon Web Services Key Management Service (AWS KMS) as
+# 			a back end for key generation and uses a local file for key storage.
+#
+# 			WARNING:
+#
+# 				The keyring_file and keyring_encrypted file plugins are not intended as regulatory compliance solutions.
+#
+# 				Security standards such as PCI, FIPS, and others require use of key management systems to secure, manage,
+# 				and protect encryption keys in key vaults or hardware security modules (HSMs)
+#
+# A secure and robust encryption key management solution is critical for security and for compliance with various
+# security standards.
+#
+# When the data-at-rest encryption feature uses a centralized key management solution, the feature is referred to
+# as "MySQL Enterprise Transparent Data Encryption (TDE)"
+#
+# The data-at-rest encryption feature supports the Advanced Encryption Standard (AES) block-based encryption algorithm.
+#
+# It uses Electronic Codebook (ECB) block encryption mode for tablespace key encryption and Cipher Block Chaining
+# (CBC) block encryption mode for data encryption.
+#
+# For frequently asked questions about the data-at-rest Encryption feature, see SECTION A.16, "MySQL 8.0 FAQ: InnoDB Data-At-Rest Encryption"
+#
+# Encryption Prerequisites
+#
+# 		) A keyring plugin must be installed and configured. Keyring plugin installation is performed at startup using the early-plugin-load option.
+#
+# 			Early loading ensures that the plugin is available prior to initialization of the InnoDB storage engine.
+#
+# 			For keyring plugin installation and configuration instructions, see SECTION 6.4.4, "The MySQL Keyring"
+#
+# 			Only one keyring plugin can be enabled at a time. Enabling multiple keyring plugins is not supported.
+#
+# 			IMPORTANT:
+#
+# 				Once encrypted tablespaces are created in a MySQL instance, the keyring plugin that was loaded when creating
+# 				the encrypted tablespace must continue to be loaded at startup using the early-plugin-load option.
+#
+# 				Failing to do so results in errors when starting the server and during InnoDB recovery.
+#
+# To verify that a keyring plugin is active, use the SHOW_PLUGINS statement or query the INFORMATION_SCHEMA.PLUGINS table.
+#
+# For example:
+#
+# 		SELECT PLUGIN_NAME, PLUGIN_STATUS
+# 		FROM INFORMATION_SCHEMA.PLUGINS
+# 		WHERE PLUGIN_NAME LIKE 'keyring%';
+# 		+--------------+----------------+
+# 		| PLUGIN_NAME  | PLUGIN_STATUS  |
+# 		+--------------+----------------+
+# 		| keyring_file | ACTIVE 		  |
+# 		+--------------+----------------+
+#
+# 	) When encrypting production data, ensure that you take steps to prevent loss of the master encryption key.
+#
+# 		If the master encryption key is lost, data stored in encrypted tablespace files is unrecoverable. If you 
+# 		use the keyring_file or keyring_encrypte_file plugin, create a backup of the keyring data file immedaitely
+# 		after creating the first encrypted tablespace, before master key rotation, and after master key rotation.
+#
+# 		The keyring_file_data configuration option defines the keyring data file location for the keyring_file plugin.
+#
+# 		The keyring_encrypted_file_data configuration option defines the keyring data file location for the 
+# 		keyring_encrypted_file plugin. If you use the keyring_okv or keyring_aws plugin, ensure that you have
+# 		performed the necessary configuration.
+#
+# 		For instructions, see SECTION 6.4.4, "The MySQL Keyring"
+#
+# DEFINING AN ENCRYPTION DEFAULT FOR SCHEMAS AND GENERAL TABLESPACES
+#
+# As of MySQL 8.0.16, the default_table_encryption variable defines the default encryption setting for schemas and general
+# tablespaces.
+#
+# CREATE_TABLESPACE and CREATE_SCHEMA operations apply the default_table_encryption setting when an ENCRYPTION clause is not
+# specified explicitly.
+#
+# ALTER_SCHEMA and ALTER_TABLESPACE operations do not apply the default_table_encryption setting. An ENCRYPTION clause must be
+# specified explicitly to alter the encryption of an existing schema or general tablespace.
+#
+# The default_table_encryption variable can be set for an individual client connection or globally using SET syntax.
+#
+# For example, the following statement enables default schema and tablespace encryption globally:
+#
+# 		mysql> SET GLOBAL default_table_encryption=ON;
+#
+# The default encryption setting for a schema can also be defined using the DEFAULT ENCRYPTION clause when creating
+# or altering a schema, as in this example:
+#
+# 		mysql> CREATE SCHEMA test DEFAULT ENCRYPTION = 'Y';
+#
+# If the DEFAULT ENCRYPTION clause is not specified when creating a schema, the default_table_encryption setting is applied.
+#
+# The DEFAULT ENCRYPTION clause must be specified to alter the default encryption of an existing schema.
+#
+# Otherwise, the schema retains its current encryption setting.
+#
+# By default, a table inherits the encryption setting of the schema or general tablespace it is created in. For example,
+# a table created in an encryption-enabled schema is encrypted by default.
+#
+# This behavior enables a DBA to control table encryption usage by defining and enforcing schema and general tablesapce
+# encryption defaults.
+#
+# Encryption defaults are enforced by enabling the table_encryption_privilege_check variable. When table_encryption_privilege_check
+# is enabled, a privilege check occurs when creating or altering a schema or general tablespace with an encryption setting that
+# differs from the default_table_encryption setting, or when creating or altering a table with an encryption setting that differs
+# from the default schema encryption.
+#
+# When table_encryption_privilege_check is disabled (the default), the privilege check does not occur and the previously
+# mentioned operations are permitted to proceed with a warning.
+#
+# The TABLE_ENCRYPTION_ADMIN privilege is required to override default encryption settings when table_encryption_privilege_check
+# is enabled.
+#
+# A DBA can grant this privilege to enable a user to deviate from the default_table_encryption setting when creating or altering
+# a schema or general tablespace, or to deviate from the default schema encryption when creating or altering a table.
+#
+# This privilege does not permit deviating from the encryption of a general tablespace when creating or altering a table.
+#
+# A table must have the same encryption setting as the general tablespace it resides in.
+#
+# FILE-PER-TABLE TABLESPACE ENCRYPTION
+#
+# As of MySQL 8.0.16, a file-per-table tablespace inherits the default encryption of the schema in which the table is created
+# unless an ENCRYPTION clause is specified explicitly in the CREATE_TABLE statement.
+#
+# Prior to MySQL 8.0.16, the ENCRYPTION clause must be specified to enable encryption.
+#
+# 	mysql> CREATE TABLE t1 (c1 INT) ENCRYPTION = 'Y';
+#
+# To alter the encryption of an existing file-per-table tablespace, an ENCRYPTION clause must be specified.
+#
+# 	mysql> ALTER TABLE t1 ENCRYPTION = 'Y';
+#
+# As of MySQL 8.0.16, if the table_encryption_privilege_check variable is enabled, specifying an ENCRYPTION clause
+# with a setting that differs from the default schema encryption requires the TABLE_ENCRYPTION_ADMIN privilege.
+#
+# See Defining an Encryption Default for Schemas and General Tablespaces
+#
+# General Tablespace Encryption
+#
+# 		As of MySQL 8.0.16, the default_table_encryption variable determines the encryption of a newly created tablespace
+# 		unless an ENCRYPTION clause is specified explicitly in the CREATE_TABLESPACE statement.
+#
+# 		Prior to MySQL 8.0.16, an ENCRYPTION clause must be specified to enable encryption.
+#
+# 			mysql> CREATE TABLESPACE `ts1` ADD DATAFILE 'ts1.ibd' ENCRYPTION = 'Y' Engine=InnoDB;
+#
+# 		To alter the encryption of an existing general tablespace, an ENCRYPTION clause must be specified.
+#
+# 			mysql> ALTER TABLESPACE ts1 ENCRYPTION = 'Y';
+#
+# As of MySQL 8.0.16, if the table_encryption_privilege_check variable is enabled, specifying an ENCRYPTION
+# clause with a setting that differs from the default_table_encryption setting requires the TABLE_ENCRYPTION_ADMIN
+# privilege.
+#
+# See Defining an Encryption Default for Schemas and General Tablespaces.
+#
+# Mysql System Tablespace Encryption
+#
+# https://dev.mysql.com/doc/refman/8.0/en/innodb-tablespace-encryption.html
 #
