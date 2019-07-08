@@ -41624,5 +41624,736 @@
 #
 # Mysql System Tablespace Encryption
 #
-# https://dev.mysql.com/doc/refman/8.0/en/innodb-tablespace-encryption.html
+# Encryption support for the mysql system tablespace is available as of MySQL 8.0.16
 #
+# The mysql system tablespace contains the mysql system database and MySQL data dictionary tables. It is unencrypted
+# by default.
+#
+# To enable encryption for the mysql system tablespace, specify the tablespace name and the ENCRYPTION option in an
+# ALTER_TABLESPACE statement.
+#
+# 		mysql> ALTER TABLESPACE mysql ENCRYPTION = 'Y';
+#
+# To disable encryption for the mysql system tablespace, set ENCRYPTION = 'N' using an ALTER_TABLESPACE statement.
+#
+# 		mysql> ALTER TABLESPACE mysql ENCRYPTION = 'N';
+#
+# Enabling or disabling encryption for the mysql system tablespace requires the CREATE_TABLESPACE privilege on all tables
+# in the instance (CREATE TABLESPACE on *.*)
+#
+# Redo Log Encryption
+#
+# Redo log data encryption is enabled using the innodb_redo_log_encrypt configuration option. Redo log encryption is disabled
+# by default.
+#
+# As with tablespace data, redo log data encryption occurs when redo log data is written to disk, and decryption occurs when redo
+# log data is read from disk.
+#
+# Once redo log data is read into memory, it is in unencrypted form. Redo log data is encrypted and decrypted using the tablespace
+# encryption key.
+#
+# When innodb_redo_log_encrypt is enabled, unencrypted redo log pages that are present on disk remain unencrypted, and new redo log
+# pages are written to disk in encrypted form.
+#
+# Likewise, when innodb_redo_log_encrypt is disabled, encrypted redo log pages that are present on disk remain encrypted, and new redo
+# log pages are written to disk in unencrypted form.
+#
+# Redo log encryption metadata, including the tablespace encryption key, is stored in the header of the first redo log file (ib_logfile0).
+#
+# if this file is removed, redo log encryption is disabled.
+#
+# Once redo log encryption is enabled, a normal restart without the keyring plugin or without the encryption key is not possible,
+# as InnoDB must be able to scan redo pages during startup, which is not possible if redo log pages are encrypted.
+#
+# Without the keyring plugin or the encryption key, only a forced startup without the redo logs (SRV_FORCE_NO_LOG_REDO) is possible.
+#
+# See SECTION 15.20.2, "Forcing InnoDB Recovery"
+#
+# UNDO LOG ENCRYPTION
+#
+# Undo log data encryption is enabled using the innodb_undo_log_encrypt configuration option. Undo log encryption applies to undo logs
+# that reside in undo tablespaces.
+#
+# See SECTION 15.6.3.4, "UNDO TABLESPACES". Undo log data encryption is disabled by default.
+#
+# As with tablespace data, undo log data encryption occurs when undo log data is written to disk, and decryption occurs when undo log
+# data is read from disk.
+#
+# Once undo log data is read into memory, it is in unencrypted form. Undo log data is encrypted and decrypted using the tablespace
+# encryption key.
+#
+# When innodb_undo_log_encrypt is enabled, unencrypted undo log pages that are present on disk remain unencrypted, and new undo log pages
+# are writen to disk in encrypted form.
+#
+# Likewise, when innodb_undo_log_encrypt is disabled, encrypted undo log pages that are present on disk remain encrypted, and new undo
+# log pages are written to disk in unencrypted form.
+#
+# Undo log encryption metadata, including the tablespace encryption key, is stored in the header of the undo log file.
+#
+# MASTER KEY ROTATION
+#
+# The master encryption key should be rotated periodically and whenever you suspect that the key has been compromised.
+#
+# Master key rotation is an atomic, instance-level operation. Each time the master encryption key is rotated, all tablespace keys
+# in the MySQL instance are re-encrypted and saved back to their respective tablespace headers.
+#
+# As an atomic operation, re-encryption must succeed for all tablespace keys once a rotation operation is initiated.
+#
+# If master key rotation is interrupted by a server failure, InnoDB rolls the operation forward on server restart.
+#
+# For more information, see Encryption and Recovery.
+#
+# Rotating the master encryption key only changes the master encryption key and re-encrypts tablespace keys. It does not
+# decrypt or re-encrypt associated tablespace data.
+#
+# Rotating the master encryption key requires the ENCRYPTION_KEY_ADMIN or SUPER privilege.
+#
+# To rotate the master encryption key, run:
+#
+# 		mysql> ALTER INSTANCE ROTATE INNODB MASTER KEY;
+#
+# ALTER_INSTANCE_ROTATE_INNODB_MASTER_KEY supports concurrent DML. however, it cannot be run concurrently with tablespace
+# encryption operations, and locks are taken to prevent conflicts that could arise from concurrent execution.
+#
+# If an ALTER_INSTANCE_ROTATE_INNODB_MASTER_KEY operation is running, it must finish before a tablespace encryption
+# operation can proceed, and vice versa.
+#
+# ENCRYPTION AND RECOVERY
+#
+# If a server failure occurs during an encryption operation, the operation is rolled forward when the server is restarted.
+#
+# For general tablespaces, the encryption operation is resumed in a background thread from the last processed page.
+#
+# If a server failure occurs during master key rotation, InnoDB continues the operation on server restart.
+#
+# The keyring plugin must be loaded prior to storage engine initialization so that the information necessary to decrypt
+# tablespace data pages can be retrieved from tablespace headers before InnoDB initialization and recovery activities
+# access tablespace data.
+#
+# (See Encryption Prerequisites)
+#
+# When InnoDB initialization and recovery begin, the master key rotation operation resumes. Due to the server failure,
+# some tablespace keys may already be encrypted using the new master encryption key.
+#
+# InnoDB reads the encryption data from each tablesapce header, and if the data indicates that the tablespace key is
+# encrypted using the old master encryption key, InnoDB retrieves the old key from the keyring and uses it to decrypt
+# the tablespace key.
+#
+# InnoDB then re-encrypts the tablespace key using the new master encryption key and saves the re-encrypted tablespace
+# key back to the tablespace header.
+#
+# EXPORTING ENCRYPTED TABLESPACES
+#
+# Tablespace export is only supported for file-per-table tablespaces.
+#
+# When an encrypted tablespace is exported, InnoDB generates a transfer key that is used to encrypt the tablespace key.
+#
+# The encrypted tablespace key and transfer key are stored in a tablespace_name.cfp file.
+#
+# This file together with the encrypted tablespace file is required to perform an import operation.
+#
+# On import, InnoDB uses the transfer key to decrypt the tablespace key in the tablespace_name.cfp file.
+#
+# For related information, see SECTION 15.6.3.7, "COPYING TABLESPACES TO ANOTHER INSTANCE"
+#
+# ENCRYPTION AND REPLICATION
+#
+# 		) The ALTER_INSTANCE_ROTATE_INNODB_MASTER_KEY statement is only supported in replication environments where the master
+# 			and slaves run a version of MySQL that supports tablespace encryption.
+#
+# 		) Successful ALTER_INSTANCE_ROTATE_INNODB_MASTER_KEY statements are written to the binary log for replication on slaves.
+#
+# 		) If an ALTER_INSTANCE_ROTATE_INNODB_MASTER_KEY statement fails, it is not logged to the binary log and is not replicated on slaves.
+#
+# 		) Replication of an ALTER_INSTANCE_ROTATE_INNODB_MASTER_KEY operation fails if the keyring plugin is installed on the master but not on the slave.
+#
+# 		) If the keyring_file or keyring_encrypted_file plugin is installed on both the master and slave but the slave does not have a keyring data file,
+# 			the replicated ALTER_INSTANCE_ROTATE_INNODB_MASTER_KEY statement creates the keyring data file on the slave, assuming the keyring file data is
+# 			not cached in memory.
+#
+# 			ALTER_INSTANCE_ROTATE_INNODB_MASTER_KEY uses keyring file data that is cached in memory, if available.
+#
+# IDENTIFYING ENCRYPTED TABLESPACES AND SCHEMAS
+#
+# The INFORMATION_SCHEMA.INNODB_TABLESPACES table, introduced in MySQL 8.0.13, includes an ENCRYPTION column that can be used to identify encrypted tablespaces.
+#
+# 		SELECT SPACE, NAME, SPACE_TYPE, ENCRYPTION FROM INFORMATION_SCHEMA.INNODB_TABLESPACES
+# 		WHERE ENCRYPTION='Y'\G
+# 		************************* 1. row **********************************
+# 			SPACE: 4294967294
+# 			NAME: mysql
+# 			SPACE_TYPE: General
+# 			ENCRYPTION: Y
+#
+# 		************************* 2. row ***********************************
+# 			SPACE: 2
+# 			NAME:  test/t1
+# 			SPACE_TYPE: Single
+# 			ENCRYPTION: Y
+# 		************************* 3. row ***********************************
+# 			SPACE: 3
+# 			NAME: ts1
+# 			SPACE_TYPE: General
+# 			ENCRYPTION: Y
+#
+# When the ENCRYPTION option is specified in a CREATE_TABLE or ALTER_TABLE statement, it is recorded in the CREATE_OPTIONS
+# column of INFORMATION_SCHEMA.TABLES
+#
+# This column can be queried to identify tables that reside in encrypted file-per-table tablespaces.
+#
+# 		SELECT TABLE_SCHEMA, TABLE_NAME, CREATE_OPTIONS FROM INFORMATION_SCHEMA.TABLES
+# 		WHERE CREATE_OPTIONS LIKE '%ENCRYPTION%';
+# 		+--------------------+------------------+-------------------------------+
+# 		| TABLE_SCHEMA 	   | TABLE_NAME 	    | CREATE_OPTIONS 					|
+# 		+--------------------+------------------+-------------------------------+
+# 		| test 					| t1 					 | ENCRYPTION="Y" 					|
+# 		+--------------------+------------------+-------------------------------+
+#
+# Query INFORMATION_SCHEMA.INNODB_TABLESPACES to retrieve information about the tablespace associated with a particular
+# schema and table.
+#
+# 		SELECT SPACE, NAME, SPACE_TYPE FROM INFORMATION_SCHEMA.INNODB_TABLESPACES WHERE NAME='test/t1';
+# 		+-----------+------------+----------------+
+# 		| SPACE 	   | NAME 		 | SPACE_TYPE 	   |
+# 		+-----------+------------+----------------+
+# 		| 3 			| test/t1 	 | Single 			|
+# 		+-----------+------------+----------------+
+#
+# You can identify encryption-enabled Schemas by querying the INFORMATION_SCHEMA.SCHEMATA table.
+#
+# 		SELECT SCHEMA_NAME, DEFAULT_ENCRYPTION FROM INFORMATION_SCHEMA.SCHEMATA
+# 		WHERE DEFAULT_ENCRYPTION='YES';
+# 		+---------------+---------------------+
+# 		| SCHEMA_NAME   | DEFAULT_ENCRYPTION  |
+# 		+---------------+---------------------+
+# 		| test 			 | YES 					  |
+# 		+---------------+---------------------+
+#
+# SHOW_CREATE_SCHEMA also shows the DEFAULT ENCRYPTION clause.
+#
+# MONITORING ENCRYPTION PROGRESS
+#
+# You can monitor general tablespace and mysql system tablespace encryption progress using Performance Schema.
+#
+# The stage/innodb/alter tablespace (encryption) stage event instrument reports WORK_ESTIMATED and WORK_COMPLETED information
+# for general tablespace encryption operations.
+#
+# The following example demonstrates how to enable the stage/innodb/alter tablespace (encryption) stage event instrument
+# and related consumer tables to monitor general tablespace or mysql system tablespace encryption progress.
+#
+# For information about Performance Schema stage event instruments and related consumers, see SECTION 26.12.5, "PERFORMANCE
+# 	SCHEMA STAGE EVENT TABLES"
+#
+# 		1. Enable the stage/innodb/alter tablespace (encryption) instrument:
+#
+# 				USE performance_schema;
+# 				UPDATE setup_instruments SET ENABLED = 'YES'
+# 				WHERE NAME LIKE 'stage/innodb/alter tablespace (encryption)';
+#
+# 		2. Enable the stage event consumer tables, which include events_stages_current, events_stages_history and events_stages_history_long
+#
+# 				UPDATE setup_consumers SET ENABLED = 'YES' WHERE NAME LIKE '%stages%';
+#
+# 		3. Run a tablespace encryption operation. In this example, a general tablespace named ts1 is encrypted.
+#
+# 				ALTER TABLESPACE ts1 ENCRYPTION = 'Y';
+#
+# 		4. Check the progress of the encryption operation by querying the Performance Schema events_stages_current table.
+#
+# 			WORK_ESTIMATED reports the total number of pages in the tablespace. WORK_COMPLETED reports the number of pages processed.
+#
+# 				SELECT EVENT_NAME, WORK_ESTIMATED, WORK_COMPLETED FROM events_stages_current;
+#
+# 				+--------------------------------------------+-----------------+------------------------+
+# 				| EVENT_NAME 									      | WORK_COMPLETED  | WORK_ESTIMATED 			 |
+# 				+--------------------------------------------+-----------------+------------------------+
+# 				| stage/innodb/alter tablespace (encryption) | 1056 				| 1407 						 |
+# 				+--------------------------------------------+-----------------+------------------------+
+#
+# 			The events_stages_current table returns an empty set if the encryption operation has completed.
+#
+# 			In this case, you can check the events_stages_history table to view event data for the completed
+# 			operation. For example:
+#
+# 				SELECT EVENT_NAME, WORK_COMPLETED, WORK_ESTIMATED FROM events_stages_history;
+# 				+---------------------------------------------+------------------+--------------------+
+# 				| EVENT_NAME 											 | WORK_COMPLETED   | WORK_ESTIMATED 	  |
+# 				+---------------------------------------------+------------------+--------------------+
+# 				| stage/innodb/alter tablespace (encryption)  | 1407 				  | 1407 				  |
+# 				+---------------------------------------------+------------------+--------------------+
+#
+# ENCRYPTION USAGE NOTES
+#
+# ) Plan appropriately when altering an existing file-per-table tablespace with the ENCRYPTION option.
+#
+# 		Tables residing in file-per-table tablespace are rebuilt using the COPY algorithm.
+# 		The INPLACE algorithm is used when altering the ENCRYPTION attribute of a general tablespace or the
+# 		mysql system tablespace.
+#
+# 		The INPLACE algorithm permits concurrent DML on tables that reside in the general tablespace.
+#
+# 		Concurrent DDL is blocked.
+#
+# ) When a general tablespace or the mysql system tablespace is encrypted, all tables residing in the tablespace
+# 		are encrypted.
+#
+# 		Likewise, a table created in an encrypted tablesapce is encrypted.
+#
+# ) If the server exits or is stopped during normal operation, it is recommended to restart the server using the same
+# 		encryption settings that were configured previously.
+#
+# ) The first master encryption key is generated when the first new or existing tablespace is encrypted.
+#
+# ) Master key rotation re-encrypts tablespaces keys but does not change the tablespace key itself. To change a tablespace
+# 		key, you must disable and re-enable encryption.
+#
+# 		For file-per-table tablespaces, re-encrypting the tablespace is an ALGORITHM=COPY operation that rebuilds the table.
+#
+# 		For general tablespaces and the mysql system tablespace, it is an ALGORITHM=INPLACE operation, which does not require
+# 		rebuilding tables that reside in the tablespace.
+#
+# ) If a table is created with both the COMPRESSION and ENCRYPTION options, compression is performed before tablespace data is encrypted.
+#
+# ) If a keyring data file (the file named by keyring_file_data or keyring_encrypted_file_data) is empty or missing, the first execution
+# 		of ALTER_INSTANCE_ROTATE_INNODB_MASTER_KEY creates a master encryption key.
+#
+# ) Uninstalling the keyring_file or keyring_encrypted_file plugin does not remove an existing keyring data file.
+#
+# ) It is recommended that you do not place a keyring data file under the same directory as tablespace data files.
+#
+# ) Modifying the keyring_file_data or keyring_encrypted_file_data setting at runtime or when restarting the server can cause
+# 		previously encrypted tablespaces to become inaccessible, resulting in lost data.
+#
+# ENCRYPTION LIMITATIONS
+#
+# ) Advanced Encryption Standard (AES) is the only supported encryption algorithm. InnoDB tablespace encryption uses Electronic Codebook (ECB) block
+# 		encryption mode for tablespace key encryption and Cipher Block Chaining (CBC) block encryption mode for data encryption.
+#
+# ) Encryption is only supported for file-per-table tablespaces, general tablespaces, and the mysql system tablespace.
+#
+# 		Encryption support for general tablespaces was introduced in MySQL 8.0.13. Encryption support for the mysql system tablespace
+# 		is available as of MySQL 8.0.16. Encryption is not supported for other tablespace types including the InnoDB system tablespace.
+#
+# ) You cannot move or copy a table from an encrypted file-per-table tablespace, general tablespace or the mysql system tablespace to a tablespace
+# 		type that does not support encryption.
+#
+# ) You cannot move or copy a table from an encrypted tablespace to an unencrypted tablespace. However, moving a table from an unencrypted tablespace
+# 		to an encrypted one is permitted.
+#
+# 		For example, you can move or copy a table from a unencrypted file-per-table or general tablespace to an encrypted general tablesapce.
+#
+# ) By default, tablespace encryption only applies to data in the tablespace. Redo log and undo log data can be encrypted by enablibg innodb_redo_log_encrypt
+# 		and innodb_undo_log_encrypt. See Redo Log Encryption, and Undo Log Encryption. Binary log data is not encrypted.
+#
+# ) It is not permitted to change the storage engine of a table that resides in, or previously resided in, an encrypted tablesapce.
+#
+# 15.6.4 DOUBLEWRITE BUFFER
+#
+# The doublewrite buffer is a storage area located in the system tablespace where InnoDB writes pages that are flushed from teh InnoDB
+# buffer pool, before the pages are written to their proper positions in the data file.
+#
+# Only after flushing and writing pages to the doublewrite buffer, does InnoDB write pages to their proper positions.
+#
+# If there is an OS, storage subsystem or mysqld process crash in the middle of a page write, InnoDB can later find a good copy
+# of the page from the doublewrite buffer during crash recovery.
+#
+# Although data is always written twice, the doublewrite buffer does not require twice as much I/O overhead or twice as many I/O
+# operations.
+#
+# Data is written to the doublewrite buffer itself as a large sequential chunk, with a single fsync() call to the OS.
+#
+# The doublewrite buffer is enabled by default in most cases. To disable the doublewrite buffer, set innodb_doublewrite to 0.
+#
+# If system tablespace files ("ibdata files") are located on Fusion-io devices that support atomic writes, doublewrite buffering
+# is automatically disabled and Fusion-io atomic writers are used for all data files.
+#
+# Because the doublewrite buffer setting is global, doublewrite buffering is also disabled for data files residing on non-Fusion-io
+# hardware.
+#
+# This feature is only supported on Fusion-io hardware and is only enabled for Fusion-io NVMFS on Linux.
+#
+# To take full advantage of this feature, an innodb_flush_method setting of O_DIRECT is recommended.
+#
+# 15.6.5 REDO LOG
+#
+# The redo log is a disk-based data structure used during crash recovery to correct data written by incomplete transactions.
+#
+# During normal operations, the redo log encodes requests to change table data that result from SQL statements or low-level API
+# calls.
+#
+# Modifications that did not finish updating the data files before an unexpected shutdown are replayed automatically during initialization,
+# and before the connections are accepted.
+#
+# For information about the role of the redo log in crash recovery, see SECTION 15.17.2, "InnoDB Recovery"
+#
+# By default, the redo log is physically represented on disk by two files named ib_logfile0 and ib_logfile1.
+#
+# MySQL writes to the redo log files in a circular fashion. Data in the redo log is encoded in terms of records affected;
+# this data is collectively referred to as redo. The passage of data through the redo log is represented by an ever-increasing
+# LSN value.
+#
+# For related information, see Redo Log File Configuration, and Section 8.5.4, "Optimizing InnoDB Redo Logging"
+#
+# For information about data-at-rest encryption for redo logs, see Redo Log Encryption.
+#
+# CHANGING THE NUMBER or SIZE OF REDO LOG FILES
+#
+# To change the number or the size of redo log files, perform the following steps:
+#
+# 		1. Stop the MySQL server and make sure that it shuts down without errors.
+#
+# 		2. Edit my.cnf to change the log file configuration. To change the log file size, configure innodb_log_file_size.
+#
+# 			To increase the number of log files, configure innodb_log_files_in_group.
+#
+# 		3. Start the MySQL server again.
+#
+# If InnoDB detects that the innodb_log_file_size differs from the redo log file size, it writes a log checkpoint, closes
+# and removes the old log files, creates new log files at the requested size, and opens the new log files.
+#
+# GROUP COMMIT FOR REDO LOG FLUSHING
+#
+# InnoDB, like any other ACID-compliant database engine, flushes the redo log of a transaction before it is committed.
+#
+# InnoDB uses group commit functionality to group multiple such flush requests together to avoid one flush for each commit.
+#
+# With group commit, InnoDB issues a single write to the log file to perform the commit action for multiple user transactions
+# that commit at about the same time, significantly improving throughput.
+#
+# For more information about performance of COMMIT and other transactional operations, see SECTION 8.5.2, "Optimizing InnoDB Transaction Management"
+#
+# 15.6.6 Undo Logs
+#
+# An undo log is a collection of undo log records associated with a single read-write transaction. An undo log record contains information about how
+# to undo the latest change by a transaction to a clustered index record.
+#
+# If another transaction needs to see the original data as part of a consistent read operation, the unmodified data is retrieved from undo log records.
+#
+# Undo logs exist within undo log segments, which are contained within rollback segments. Rollback segments reside in undo tablespaces
+# and in the global temporary tablespace.
+#
+# Undo logs that reside in the global temporary tablespace are used for transactions that modify data in user-defined temporary tables.
+#
+# These undo logs are not redo-logged, as they are not required for crash recovery. They are used only for rollback while the server is
+# running.
+#
+# This type of undo log benefits performance by avoiding redo logging I/O.
+#
+# For information about data-at-rest encryption for undo logs, see Undo Log Encryption.
+#
+# Each undo tablespace and the global temporary tablespace individually support a maximum of 128 rollback segments.
+#
+# The innodb_rollback_segments variable defines the number of rollback segments.
+#
+# The number of transactions that a rollback segment supports depends on the number of undo slots in the rollback segment
+# and the number of undo logs required by each transaction.
+#
+# The number of undo slots in a rollback segment differs according to InnoDB page size.
+#
+# 		InnoDB Page Size 					Number of Undo Slots in a Rollback Segment (InnoDB Page Size / 16)
+#
+# 		4096 (4kb) 							256
+#
+# 		8192 (8kb) 							512
+#
+# 		16384 (16kb) 						1024
+#
+# 		32768 (32kb) 						2048
+#
+# 		65536 (64kb) 						4096
+#
+# A transaction is assigned up to four undo logs, one for each of the following operation types:
+#
+# 		1. INSERT operations on user-defined tables
+#
+# 		2. UPDATE and DELETE operations on user-defined tables
+#
+# 		3. INSERT operations on user-defined temporary tables
+#
+# 		4. UPDATE and DELETE operations on user-defined temporary tables
+#
+# Undo logs are assigned as needed. For example, a transaction that performs INSERT, UPDATE and DELETE operations on regular
+# and temporary tables requires a full assignment of four undo logs.
+#
+# A transaction that performs only INSERT operations on regular tables requires a single undo log.
+#
+# A transaction that performs operations on regular tables is assigned undo logs from an assigned undo tablespace rollback segment.
+#
+# A transaction that performs operations on temporary tables is assigned undo logs from an assigned global temporary tablespace rollback segment.
+#
+# An undo log assigned to a transaction remains tied to the transaction for its duration. For example, an undo log assigned to a transaction for
+# an INSERT operation on a regular table is used for all INSERT operations on regular tables performed by that transaction.
+#
+# Given the factors described above, the following formulas can be used to estimate the number of concurrent read-write transactions that InnoDB
+# is capable of supporting.
+#
+# 		NOTE:
+#
+# 			A transaction can encounter a concurrent transaction limit error before reaching the number of concurrent read-write transactions
+# 			that InnoDB is capable of supporting.
+#
+# 			This occurs when a rollback segment assigned to a transaction runs out of undo slots.
+#
+# 			In such cases, try rerunning the transaction.
+#
+# 			When transactions perform operations on temporary tables, the number of concurrent read-write transactions that InnoDB is capable
+# 			of supporting is constrained by the number of rollback segments allocated to the global temporary tablespace, which is 128 by default.
+#
+# 		) If each transaction performs either an INSERT or an UPDATE or DELETE operation, the number of concurrent read-write transactions that InnoDB
+# 			is capable of supporting is:
+#
+# 				(innodb_page_size / 16) * innodb_rollback_segments * number of undo tablespaces
+#
+# 		) If each transaction performs an INSERT and an UPDATE or DELETE operation, the number of concurrent read-write transactions that InnoDB
+# 			is capable of supporting is:
+#
+# 				(innodb_page_size / 16 / 2) * innodb_rollback_segments * number of undo tablespaces
+#
+# 		) If each transaction performs an INSERT operation on a temporary table, the number of concurrent read-write transactions that InnoDB is capable
+# 			of supporting is:
+#
+# 				(innodb_page_size / 16) * innodb_rollback_segments
+#
+# 		) If each transaction performs an INSERT and an UPDATE or DELETE operation on a temporary table, the number of concurrent read-write transactions
+# 			that InnoDB is capable of supporting is:
+#
+# 				(innodb_page_size / 16 / 2) * innodb_rollback_segments
+#
+# 15.7 InnoDB Locking and Transaction Model
+#
+# 15.7.1 InnoDB Locking
+# 15.7.2 InnoDB Transaction Model
+# 15.7.3 Locks Set by Different SQL Statements in InnoDB
+# 15.7.4 Phantom Rows
+# 15.7.5 Deadlocks in InnoDB
+#
+# To implement a large-scale, busy, or highly reliable database application, to port substantial code from a different database system, or to tune
+# MySQL performance, it is important to understand InnoDB locking and the InnoDB transaction model.
+#
+# This section discusses several topics related to InnoDB locking and the InnoDB transaction model with which you should be familiar.
+#
+# 		) Section 15.7.1, "InnoDB Locking" describes lock types used by InnoDB
+#
+# 		) Section 15.7.2, "InnoDB Transaction Model" describes transaction isolation levels and the locking strategies used by each.
+#
+# 								It also discusses the use of autocommit, consistent non-locking reads, and locking reads.
+#
+# 		) Section 15.7.3, "Locks Set by Different SQL Statements in InnoDB" discusses specific types of locks set in InnoDB for various statements.
+#
+# 		) Section 15.7.4, "Phantom Rows" describes how InnoDB uses next-key locking to avoid phantom rows.
+#
+# 		) Section 15.7.5, "Deadlocks in InnoDB" provides a deadlock example, discusses deadlock detection and rollback, and provides tips for minimizing
+# 								and handling deadlocks in InnoDB.
+#
+# 15.7.1 InnoDB Locking
+#
+# This section describes lock types used by InnoDB.
+#
+# 		) Shared and Exclusive Locks
+#
+# 		) Intention Locks
+#
+# 		) Record Locks
+#
+# 		) Gap Locks
+#
+# 		) Next-Key Locks
+#
+# 		) Insert Intention Locks
+#
+# 		) AUTO-INC Locks
+#
+# 		) Predicate Locks for Spatial Indexes
+#
+# Shared and Exclusive Locks
+#
+# InnoDB implements standard row-level locking where there are two types of locks, shared (S) locks and exclusive (X) locks.
+#
+# 	) A shared (S) lock permits the transaction that holds the lock to read a row.
+#
+# 	) An exclusive (X) lock permits the transaction that holds the lock to update or delete a row.
+#
+# If transaction T1 holds a shared (S) lock on row r, then requests from some distinct transaction T2 for a lock on row r are handled
+# as follows:
+#
+# 	) A request by T2 for an S lock can be granted immediately. As a result, both T1 and T2 hold an S lock on r.
+#
+# 	) A request by T2 for an X lock cannot be granted immediately.
+#
+# If a transaction T1 holds an exclusive (X) lock on row r, a request from some distinct transaction T2 for a lock of either type
+# on r cannot be granted immediately.
+#
+# Instead, transaction T2 has to wait for transaction T1 to release its lock on row r.
+#
+# Intention Locks
+#
+# InnoDB supports multiple granularity locking which permits coexistence of row locks and table locks.
+#
+# For example, a statement such as LOCK_TABLES_..._WRITE takes an exclusive lock (an X lock) on the specified table.
+#
+# To make locking at multiple granularity levels practical, InnoDB uses intention locks.
+#
+# Intention locks are table-level locks that indicate which type of lock (shared or exclusive) a transaction requires
+# later for a row in a table.
+#
+# There are two types of intention locks:
+#
+# 		) An intention shared lock (IS) indicates that a transaction intends to set a shared lock on individual rows in a table
+#
+# 		) An intention exclusive lock (IX) indicates that a transaction intends to set an exclusive lock on individual rows in a table.
+#
+# For example, SELECT_..._FOR_SHARE sets an IS lock, and SELECT_..._FOR_UPDATE sets an IX lock.
+#
+# The intention locking protocol is as follows:
+#
+# 		) Before a transaction can acquire a shared lock on a row in a table, it must first acquire an IS lock or stronger on the table.
+#
+# 		) Before a transaction can acquire an exclusive lock on a row in a table, it must first acquire an IX lock on the table.
+#
+# Table-level lock type compatibility is summarized in the following matrix.
+#
+# 		-/- 		X 				IX 			S 				IS
+# 	
+# 		X 			Conflict 	Conflict 	Conflict 	Conflict
+#
+# 		IX 		Conflict 	Compatible 	Conflict 	Compatible
+# 
+# 		S 			Conflict 	Conflict 	Compatible 	Compatible
+#
+# 		IS  		Conflict 	Compatible 	Compatible 	Compatible
+#
+# A lock is granted to a requesting transaction if it is compatible with existing locks, but not if it conflicts
+# with existing locks.
+#
+# A transaction waits until the conflicting existing lock is released.
+#
+# If a lock request conflicts with an existing lock and cannot be granted because it would cause deadlock, an error occurs.
+#
+# Intention locks do not block anything except full table requests (for example, LOCK_TABLES_..._WRITE). The main purpose of
+# intention locks is to show that someone is locking a row, or going to lock a row in the table.
+#
+# Transaction data for an intention lock appears similar to the following in SHOW_ENGINE_INNODB_STATUS and InnoDB monitor output:
+#
+# 		TABLE LOCK table `test`.`t` trx id 10080 lock mode IX
+#
+# Record Locks
+#
+# A record lock is a lock on an index record. For example, SELECT c1 FROM t WHERE c1 = 10 FOR UPDATE; prevents any other transaction
+# from inserting, updating, or deleting rows where the value of t.c1 is 10.
+#
+# Record locks always lock index records, even if a table is defined with no indexes. For such cases, InnoDB creates a hidden
+# clustered index and uses this index for record locking.
+#
+# See SECTION 15.6.2.1, "Clustered and Secondary Indexes"
+#
+# Transaction data for a record lock appears similar to the following in SHOW_ENGINE_INNODB_STATUS and InnoDB monitor output:
+#
+# 		RECORD LOCKS space id 58 page no 3 n bits 72 index `PRIMARY` of table `test`.`t`
+# 		trx id 10078 lock_mode X locks rec but not gap
+# 		Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
+# 			0: len 4; hex 800000000a; asc 		;;
+# 			1: len 6; hex 0000000000274f; asc 			'0;;
+# 			2: len 7; hex b600000019d0110;  asc 				;;
+#
+# GAP LOCKS
+#
+# A gap lock is a lock on a gap between index records, or a lock on the gap before the first or after the last index record.
+#
+# For example, SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE; prevents other transactions from inserting a value of
+# 15 into column t.c1, whether or not there was already any such value in the column, because the gaps between all existing
+# values in the range are locked.
+#
+# A gap might span a single index value, multiple index values, or even be empty.
+#
+# Gap locks are part of the tradeoff between performance and concurrency, and are used in some transaction isolation levels
+# and not others.
+#
+# Gap locking is not needed for statements that lock rows using a unique index to search for a unique row.
+#
+# (This does not include the case that the search condition includes only some columns of a multiple-column unique index;
+#	in that case, gap locking does occur).
+#
+# For example, if the id column has a unique index, the following statement uses only an index-record lock for the row having
+# id value 100 and it does not matter whether other sessions insert rows in the preceding gap:
+#
+# 		SELECT * FROM child WHERE id = 100;
+#
+# If id is not indexed or has a nonunique index, the statement does lock the preceding gap.
+#
+# It is also worth noting here that conflicting locks can be held on a gap by different transactions. For example, transaction A
+# can hold a shared gap lock (gap S-lock) on a gap while transaction B holds an exclusive gap lock (gap X-lock) on the same gap.
+#
+# The reason conflicting gap locks are allowed is that if a record is purged from an index, the gap locks held on the record
+# by different transactions must be merged.
+#
+# Gap locks in InnoDB are "purely inhibitive", which means that their only purpose is to prevent other transactions from inserting
+# to the gap.
+#
+# Gap locks can co-exist. 
+#
+# A gap lock taken by one transaction does not prevent another transaction from taking a gap lock on the same gap.
+#
+# There is no difference between shared and exclusive gap locks. They do not conflict with each other, and they perform
+# the same function.
+#
+# Gap locking can be disabled explicitly. This occurs if you change the transaction isolation level to READ_COMMITTED. Under these
+# circumstances, gap locking is disabled for searches and index scans and is used only for foreign-key constraint checking and
+# duplicate-key checking.
+#
+# There are also other effects of using the READ_COMMITTED isolation level. 
+#
+# Record locks for nonmatching rows are released after MySQL has evaluated the WHERE condition. For UPDATE statements, InnoDB
+# does a "semi-consistent" read, such that it returns the latest committed version to MySQL so that MySQL can determine
+# whether the row matches the WHERE condition of the UPDATE.
+#
+# NEXT-KEY lOCKS
+#
+# A next-key lock is a combination of a record lock on the index record and a gap lock on the gap before the index record.
+#
+# InnoDB performs row-level locking in such a way that when it searches or scans a table index, it sets shared or exclusive
+# locks on the index records it encounters.
+#
+# Thus, the row-level locks are actually index-record locks.
+#
+# A next-key lock on an index record also affects the "gap" before that index record. That is, a next-key lock is an index-record
+# lock plus a gap lock on the gap preceding the index record.
+#
+# If one session has a shared or exclusive lock on record R in an index, another session cannot insert a new index record in the
+# gap immediately before R in the index order.
+#
+# Suppose that an index contains the value 10, 11, 13, and 20. The possible next-key locks for this index cover the following intervals,
+# where a round bracket denotes exclusion of the interval endpoint and a square bracket denotes inclusion of the endpoint:
+#
+#  ( or ) = Exclusion of endpoint
+# 	[ or ] = INclusion of endpoint
+
+# 		(negative_infinity, 10]
+# 		(10, 11]
+# 		(11, 13]
+# 		(13, 20]
+# 		(20, positive infinity)
+#
+# For the last interval, the next-key lock locks the gap above the largest value in the index and the "supremum" pseudo-record having
+# a value higher than any value actually in the index.
+#
+# THe supremum is not a real index record, so, in effect, this next-key lock locks only the gap following the largest index value.
+#
+# By default, InnoDB operates in REPEATABLE_READ transaction isolation level. In this case, InnoDB uses next-key locks for searches
+# and index scans, which prevents phantom rows (see SECTION 15.7.4, "Phantom Rows")
+#
+# Transaction data for a next-key lock appears similar to the following in SHOW_ENGINE_INNODB_STATUS and InnoDB monitor output:
+#
+# 		RECORD LOCKS space id 58 page no 3 n bits 72 index `PRIMARY` of table `test`.`t`
+# 		trx id 10080 lock_mode X
+# 		Record lock, heap no 1 PHYSICAL RECORD: n_fields 1; compact format; info bits 0
+# 		0: len 8; hex 73757072656d756d; asc supremum;;
+#
+# 		Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
+# 		0: len 4; hex 80000000a; asc 		;;
+# 		1: len 6; hex 000000000274f; asc 		'0;;
+# 		2: len 7; hex b600000019d0110; asc 			  ;;
+#
+# INSERT INTENTION LOCKS
+#
+# https://dev.mysql.com/doc/refman/8.0/en/innodb-locking.html
+# 		
