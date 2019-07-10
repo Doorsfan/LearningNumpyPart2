@@ -43222,6 +43222,588 @@
 #
 # 15.7.4 PHANTOM ROWS
 #
-# https://dev.mysql.com/doc/refman/8.0/en/innodb-next-key-locking.html
+# The so-called phantom problem occurs within a transaction when the same query produces different sets of rows at different times.
+#
+# For example, if a SELECT is executed twice, but returns a row the second time that was not returned the first time, the row is a "phantom" row.
+#
+# Suppose that there is an index on the id column of the child table and that you want to read and lock all rows from the table having an identifier
+# value larger than 100, with the intention of updating some column in the selected rows later:
+#
+# 		SELECT * FROM child WHERE id > 100 FOR UPDATE;
+#
+# The query scans the index starting from the first record where id is bigger than 100. Let the table contain rows having id values of 90 and 102.
+#
+# If the locks set on the index records in the scanned range do not lock out inserts made in the gaps (in this case, the gap between 90 and 102), another
+# session can insert a new row into the table with an id of 101.
+#
+# If you were to execute the same SELECT within the same transaction, you would see a new row with an id of 101 (a "phantom") in the result set returned by
+# the query.
+#
+# If we regard a set of rows as a data item, the new phantom child would violate the isolation principle of transactions that a transaction should be able
+# to run so that the data it has read does not change during the transaction.
+#
+# To prevent phantoms, InnoDB uses an algorithm called next-key locking that combines index-row locking with gap locking. InnoDB performs row-level locking
+# in such a way that when it searches or scans a table index, it sets shared or exclusive locks on the index records it encounters.
+#
+# Thus, the row-level locks are actually index-record locks. In addition, a next-key lock on an index record also affects the "gap" before that index record.
+#
+# That is, a next-key lock is an index-record lock plus a gap lock on the gap preceding the index record. If one session has a shared or exclusive lock on record
+# R in an index, another session cannot insert a new index record in the gap immediately before R in the index order.
+#
+# When InnoDB scans an index, it can also lock the gap after the last record in the index. Just that happens in the preceding example:
+#
+# 		To prevent any insert into the table where id would be bigger than 100, the locks set by InnoDB include a lock on the gap following
+# 		id value 102.
+#
+# You can use next-key locking to implement a uniqueness check in your application: If you read your data in share mode and do not see a duplicate
+# for a row you are going to insert, then you can safely insert your row and know that the next-key lock set on the successor of your row during
+# the read prevents anyone meanwhile inserting a duplicate for your row.
+#
+# Thus, the next-key locking enables you to "lock" the nonexistence of something in your table.
+#
+# Gap locking can be disabled as discussed in Section 15.7.1, "InnoDB Locking". This may cause phantom problems because other sessions can insert
+# new rows into the gaps when gap locking is disabled.
+#
+# 15.7.5 DEADLOCKS IN INNODB
+#
+# 15.7.5.1 An InnoDB Deadlock Example
+# 15.7.5.2 Deadlock Detection and Rollback
+# 15.7.5.3 How to Minimize and Handle Deadlocks
+#
+# A deadlock is a situation where different transactions are unable to proceed because each holds a lock that the other needs.
+# Because both transactions are waiting for a resource to become available, neither ever release the locks it holds.
+#
+# A deadlock can occur when transaction lock rows in multiple tables (through statements such as UPDATE or SELECT_..._FOR_UPDATE),
+# but in the opposite order. A deadlock can also occur when such statements lock ranges of index records and gaps, with each transaction
+# acquiring some locks but not others due to a timing issue.
+#
+# For a deadlock example, see SECTION 15.7.5.1, "An InnoDB Deadlock Example"
+#
+# To reduce the possibility of deadlocks, use transactions rather than LOCK_TABLES statements; keep transactions that insert or update data
+# small enough that they do not stay open for long periods of time; when different transactions update multiple tables or large ranges of rows,
+# use the same order of operations (such as SELECT_..._FOR_UPDATE) in each transaction; create indexes on the columns used in SELECT_..._FOR_UPDATE
+# and UPDATE_..._WHERE statements.
+#
+# The possibility of deadlocks is not affected by the isolation level, because the isolation level changes the behavior of read operations, while
+# deadlocks occur because of write operations.
+#
+# For more information about avoiding and recovering from deadlock conditions, see SECTION 15.7.5.3, "How to Minimize and Handle Deadlocks"
+#
+# When deadlock detection is enabled (the default) and a deadlock does occur, InnoDB detects the condition and rolls back one of the transactions
+# (the victim). If deadlock detection is disabled using the innodb_deadlock_detect configuration option, InnoDB relies on the innodb_lock_wait_timeout
+# setting to roll back transactions in case of a deadlock.
+#
+# Thus, even if your application logic is correct, you must still handle the case where a transaction must be retried.
+#
+# To see the last deadlock in an InnoDB user transaction, use the SHOW_ENGINE_INNODB_STATUS command.
+#
+# If frequent deadlocks highlight a problem with transaction structure or application error handling, run with the innodb_print_all_deadlocks
+# setting enabled to print information about all deadlocks to the mysqld error log.
+#
+# For more information about how deadlocks are automatically detected and handled, see SECTION 15.7.5.2, "Deadlock Detection and Rollback"
+#
+# 15.7.5.1 An InnoDB Deadlock Example
+#
+# The following example illustrates how an error can occur when a lock request would cause a deadlock. The example involves two clients.
+# A and B.
+#
+# First, client A creates a table containing one row, and then begins a transaction. Within the transaction, A obtains an S lock on the row
+# by selecting it in share mode:
+#
+# 		mysql> CREATE TABLE t (i INT) ENGINE = InnoDB;
+# 		Query OK, 0 rows affected (1.07 sec)
+#
+# 		mysql> INSERT INTO t (i) VALUES(1);
+# 		Query OK, 1 row affected (0.00 sec)
+#
+# 		mysql> START TRANSACTION;
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		mysql> SELECT * FROM t WHERE i = 1 FOR SHARE;
+# 		+-----------+
+# 		| i 		 	|
+# 		+-----------+
+# 		| 1 			|
+# 		+-----------+
+#
+# Next, Client B begins a transaction and attempts to delete the row from the table:
+#
+# 		mysql> START TRANSACTION;
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		mysql> DELETE FROM t WHERE i = 1;
+#
+# The delete operation requires an X lock. The lock cannot be granted because it is incompatible with the S lock that client
+# A holds, so the request goes on the queue of lock requests for the row and client B blocks.
+#
+# Finally, client A also attempts to delete the row from the table:
+#
+# 		mysql> DELETE FROM t WHERE i = 1;
+# 		ERROR 1213 (40001): Deadlock found when trying to get lock;
+# 		try restarting transaction
+#
+# Deadlock occurs here because client A needs an X lock to delete the row. However, that lock request cannot be granted
+# because client B already has a request for an X lock and is waiting for client A to release its S lock.
+#
+# Nor can the S lock held by A be upgraded to an X lock because of the prior request by B for an X lock.
+#
+# As a result, InnoDB generates an error for one of the clients and releases its locks. The client returns the error:
+#
+# 		ERROR 1213 (40001): Deadlock found when trying to get lock;
+# 		try restarting transaction
+#
+# At that point, the lock request for the other client can be granted and it deletes the row from the table.
+#
+# 15.7.5.2 Deadlock Detection and Rollback
+#
+# When deadlock detection is enabled (the default), InnoDB automatically detects transaction deadlocks and rolls back
+# a transaction or transactions to break the deadlock.
+#
+# InnoDB tries to pick small transactions to roll back, where the size of a transaction is determined by the number of
+# rows inserted, updated, or deleted.
+#
+# InnoDB is aware of table locks if innodb_table_locks = 1 (the default) and autocommit_=_0, and the MySQL layer above
+# it knows about row-level locks.
+#
+# Otherwise, InnoDB cannot detect deadlocks where a table lock set by a MySQL LOCK_TABLES statement or a lock set by a storage
+# engine other than InnoDB is involved.
+#
+# Resolve these situations by setting the value of the innodb_lock_wait_timeout system variable.
+#
+# When InnoDB performs a complete rollback of a transaction, all locks set by the transaction are released. However, if just
+# a single SQL statement is rolled back as a result of an error, some of the locks set by the statement may be preserved.
+#
+# This happens because InnoDB stores row locks in a format such that it cannot know afterward which lock was set by which
+# statement.
+#
+# If a SELECT calls a stored function in a transaction, and a statement within the function fails, that statement rolls back.
+# Furthermore, if ROLLBACK is executed after that, the entire transaction rolls back.
+#
+# If the LATEST DETECTED DEADLOCK section of InnoDB Monitor output includes a message stating, 
+# "TOO DEEP OR LONG SEARCH IN THE LOCK TABLE WAITS-FOR GRAPH, WE WILL ROLL BACK FOLLOWING TRANSACTION",
+# This indicates that hte number of transactions on the wait-for list has reached a limit of 200.
+#
+# A wait-for list that exceeds 200 transactions is treated as a deadlock and the transaction attempting to check the
+# wait-for list is rolled back.
+#
+# The same error may also occur if the locking thread must look at more than 1,000,000 locks owned by transactions
+# on the wait-for list.
+#
+# For techniques to organize database operations to avoid deadlocks, see SECTION 15.7.5, "Deadlocks in InnoDB"
+#
+# DISABLING DEADLOCK DETECTION
+#
+# On high concurrency systems, deadlock detection can cause a slowdown when numerous threads wait for the same lock.
+# At times, it may be more efficient to disable deadlock detection and rely on the innodb_lock_wait_timeout setting
+# for transaction rollback when a deadlock occurs.
+#
+# Deadlock detection can be disabled using the innodb_deadlock_detect configuration option.
+#
+# 15.7.5.3 HOW TO MINIMIZE AND HANDLE DEADLOCKS
+#
+# This section builds on the conceptual information about deadlocks in Section 15.7.5.2, "Deadlock Detection and Rollback".
+#
+# It explains how to organize database operations to minimize deadlocks and the subsequent error handling required in applications.
+#
+# Deadlocks are a classic problem in transactional databases, but they are not dangerous unless they are so frequent that you cannot
+# run certain transactions at all.
+#
+# Normally, you must write your applications so that they are always prepared to re-issue a transaction if it gets rolled back because
+# of a deadlock.
+#
+# InnoDB uses automatic row-level locking. You can get deadlocks even in the case of transactions that just insert or delete a single
+# row.
+#
+# That is because these operations are not reall "atomic", they automatically set locks on the (possibly several) index records of the
+# row inserted or deleted.
+#
+# You can cope with deadlocks and reduce thhe likelihood of their occurence with the following techniques:
+#
+# 		) At any time, issue the SHOW_ENGINE_INNODB_STATUS command to determine the cause of the most recent deadlock.
+#
+# 			That can help you to tune your application to avoid deadlocks.
+#
+# 		) If frequent deadlock warnings cause concern, collect more extensive debugging information by enabling the innodb_print_all_deadlocks
+# 			configuration option.
+#
+# 			Information about each deadlock, not just the last one, is recorded in the MySQL error log. Disable this option when you are finished
+# 			debugging.
+#
+# 		) Always be prepared to re-issue a transaction if it fails due to deadlock. Deadlocks are not dangerous. Just try again.
+#
+# 		) Keep transactions small and short in duration to make them less prone to collision.
+#
+# 		) Commit transactions immediately after making a set of related changes to make them less prone to collision.
+#
+# 			In particular, do not leave an interactive mysql session open for a long time with an uncommitted transaction.
+#
+# 		) If you use locking reads (SELECT_..._FOR_UPDATE or SELECT_..._FOR_SHARE), try using a lower isolation level such as READ_COMMITTED.
+#
+# 		) When modifying multiple tables within a transaction, or different sets of rows in the same table, do those operations in a consistent
+# 			order each time.
+#
+# 			Then transactions form well-defined queues and do not deadlock. For example, organize database operations into functions within your
+# 			application, or call stored routines, rather than coding multiple similar sequences of INSERT, UPDATE and DELETE statements in different
+# 			places.
+#
+# 		) Add well-chosen indexes to your tables. Then your queries need to scan fewer index records and consequently set fewer locks.
+#
+# 			Use EXPLAIN_SELECT to determine which indexes the MySQL server regards as the most appropriate for your queries.
+#
+# 		) Use less locking. If you can afford to permit a SELECT to return data from an old snapshot, do not add the clause FOR UPDATE or FOR SHARE to it.
+#
+# 			Using the READ_COMMITTED isolation level is good here, because each consistent read within the same transaction reads from its own fresh
+# 			snapshot.
+#
+# 		) If nothing else helps, serialize your transactions with table-level locks. The correct way to use LOCK_TABLES with transactional tables, such as
+# 			InnoDB tables, is to begin a transaction with SET autocommit = 0 (not START_TRANSACTION) followed by LOCK_TABLES, and to not call UNLOCK_TABLES
+# 			until you commit the transaction explicitly.
+#
+# 			For example, if you need to write to table t1 and read from table t2, you can do this:
+#
+# 				SET autocommit=0;
+# 				LOCK TABLES t1 WRITE, t2 READ ...;
+#		 			// do something with tables t1 and t2 here //
+# 				COMMIT;
+# 				UNLOCK TABLES;
+#
+# 			Table-level locks prevent concurrent updates to the table, avoiding deadlocks at the expense of less responsiveness for a busy system.
+#
+# 		) Another way to serialize transactions is to create an auxiliary "semaphore" table that contains just a single row.
+#
+# 			Have each transaction update that row before accessing other tables. In that way, all transactions happen in a serial fashion.
+# 			Note that the InnoDB instant deadlock detection algorithm also works in this case, because the serializing lock is a row-level lock.
+#
+# 			With MySQL table-level locks, the timeout method must be used to resolve deadlocks.
+#
+# 15.8 InnoDB Configuration
+#
+# 15.8.1 InnoDB Startup Configuration
+# 15.8.2 Configuring InnoDB for Read-Only Operation
+# 15.8.3 InnoDB Buffer Pool Configuration
+# 15.8.4 Configuring Thread Concurrency for InnoDB
+# 15.8.5 Configuring the Number of Background InnoDB I/O Threads
+# 15.8.6 Using Asynchronous I/O on Linux
+# 15.8.7 Configuring the InnoDB Master Thread I/O Rate
+# 15.8.8 Configuring Spin Lock Polling
+# 15.8.9 Configuring InnoDB Purge Scheduling
+# 15.8.10 Configuring Optimizer Statistics for InnoDB
+# 15.8.11 Configuring the Merge Threshold for Index Pages
+# 15.8.12 Enabling Automatic Configuration for a Dedicated MySQL Server
+#
+# This section provides configuration information and procedures for InnoDB initialization, startup, and various components
+# and features of the InnoDB storage engine.
+#
+# For information about optimizing database operations for InnoDB tables, see Section 8.5, "Optimizing for InnoDB Tables"
+#
+# 15.8.1 InnoDB Startup Configuration
+#
+# The first decisions to make about InnoDB configuration involve the configuration of data files, log files, page size, and
+# memory buffers.
+#
+# It is recommended that you define data file, log file, and page size configuration before creating the InnoDB instance.
+#
+# Modifying data file or log file configuration after the InnoDB instance is created may involve a non-trivial procedure,
+# and page size can only be defined when the InnoDB instance is first initialized.
+#
+# In addition to these topics, this section provides information about specifying InnoDB options in a configuration file,
+# viewing InnoDB initialization information, and important storage considerations.
+#
+# 		) Specifying Options in a MySQL Configuration File
+#
+# 		) Viewing InnoDB initialization Information
+#
+# 		) Important Storage Considerations
+#
+# 		) System Tablespace Data File Configuration
+#
+# 		) Redo Log File Configuration
+#
+# 		) Undo Tablespace Configuration
+#
+# 		) Global Temporary Tablespace Configuration
+#
+# 		) Session Temporary Tablespace Configuration
+#
+# 		) Page Size Configuration
+#
+# 		) Memory Configuration
+#
+# Specifying Options in a MySQL Configuration File
+#
+# Because MySQL uses data file, log file, and page size configuration settings to initialize the InnoDB instance, it is recommended
+# that you define these settings in a configuration file that MySQL reads at startup, prior to initializing InnoDB for the first time.
+#
+# InnoDB is initialized when the MySQL server is started, and the first initialization of InnoDB normally occurs the first time
+# you start the MySQL Server.
+#
+# You can place InnoDB options in the [mysqld] group of any option file that your server reads when it starts. The locations of MySQL
+# option files are described in Section 4.2.2.2, "Using Option Files"
+#
+# To make sure that mysqld reads options only from a specific file (and mysqld-auto.cnf), use the --defaults-file option as the first
+# option on the command line when starting the server:
+#
+# 		mysqld --defaults-file=path_to_configuration_file
+#
+# Viewing InnoDB initialization Information
+#
+# To view InnoDB initialization information during the startup, start mysqld from a command prompt. When mysqld is started from a command
+# prompt, initialization information is printed to the console.
+#
+# For example, on Windows, if mysqld is located in C:\Program Files\MySQL\MySQL Server 8.0\bin, start the MySQL server like this:
+#
+# 		C:\> "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqld" --console
+#
+# On Unix-like systems, mysqld is located in the bin directory of your MySQL installation:
+#
+# 		shell> bin/mysqld --user=mysql &
+#
+# If you do not sned server output to the console, check the error log after startup to see the initialization information iNnoDB printed
+# during the startup process.
+#
+# For information about starting MySQl using other methods, see Section 2.10.5, "Starting and Stopping MySQL Automatically"
+#
+# NOTE:
+#
+# 		InnoDB does not open all user tables and associated data files at startup. However, InnoDB does check for the existence
+# 		of tablespace files (*.ibd files) that are referenced in the data dictionary.
+#
+# 		If a tablespace file is not found, InnoDB logs an error and continues the startup sequence. Tablespace files
+# 		that are referenced in the redo log may be opened during crash recovery for redo application.
+#
+# IMPORTANT STORAGE CONSIDERATIONS
+#
+# Review the following storage-related considerations before proceeding with your startup configuration.
+#
+# 		) In some cases, database performance improves if the data is not all placed on the same physical disk.
+#
+# 			Putting log files on a different disk from data is very often beneficial for performance. For example,
+# 			you can place system tablespace data files and log files on different disks.
+#
+# 			You can also use raw disk partitions (raw devices) for InnoDB data files, which may speed up I/O.
+#
+# 			See USING RAW DISK PARTITIONS FOR THE SYSTEM TABLESPACE.
+#
+# 		) InnoDB is a transaction-safe (ACID compliant) storage engine for MySQL that has commit, rollback, and crash-recovery
+# 			capabilities to protect user data.
+#
+# 			However, it cannot do so if the underlying operating system or hardware does not work as advertised.
+#
+# 			Many OS's or disk subsystems may delay or reorder write operations to improve performance. On some OS's, the very
+# 			fsync() system call that hsould wait until all unwritten data for a file has been flushed might actually be
+# 			returning before the data has been flushed to stable storage.
+#
+# 			Because of htis, an OS crash or a power outage may destroy recently committed data, or in the worst case,
+# 			even corrupt the DB because of write operations having been reordered.
+#
+# 			If data integrity is important to you, perform some "pull-the-plug" tests before using anything in production.
+#
+# 			On OS X 10.3 and higher, InnoDB uses a special fcntl() file flush method.
+#
+# 			Under Linux, it is adivsable to disable the write-back cache.
+#
+# 			On ATA/SATA disk drives, a command such as hdparm -W0 /dev/hda may work to disable the write-back cache.
+#
+# 			Beware that some drives or disk controllers may be unable to disable the write-back cache.
+#
+# 		) With regards to InnoDB recovery capabilities that protect user data, InnoDB uses a file flush technique
+# 			involving a structure called the doublewrite buffer, which is enabled by default (innodb_doublewrite=ON)
+#
+# 			The doublewrite buffer adds safety to recovery following a crash or power outage, and improves performance
+# 			on most varities of Unix by reducing the need for fsync() operations.
+#
+# 			It is recommended that the innodb_doublewrite option remains enabled if you are concerned with data integrity
+# 			or possible failures.
+#
+# 			For additional information about the doublewrite buffer, see SECTION 15.11.1, "InnoDB Disk I/O"
+#
+# 		) Before using NFS with InnoDB, review potential issues outlined in Using NFS with MySQL.
+#
+# SYSTEM TABLESPACE DATA FILE CONFIGURATION
+#
+# The innodb_data_file_path configuration option defines the name, size, and attributes of InnoDB system tablespace data
+# files.
+#
+# If you do not specify a value for innodb_data_file_path, the default behavior is to create a single auto-extending data
+# file, slightly larger than 12MB, named ibdata1.
+#
+# To specify more than one data file, separate htem by semicolon (;) characters.
+#
+# 		innodb_data_file_path=datafile_spec1[;datafile_spec2]...
+#
+# The following setting configures a single 12MB data file named ibdata1 that is auto-extending. No location for the file is given,
+# so by default, InnoDB creates it in the MySQL data directory:
+#
+# 		[mysqld]
+# 		innodb_data_file_path=ibdata1:12M:autoextend
+#
+# File size is specified using K, M, or G suffix letters to indicate units of KB, MB, or GB. If specifying the data file size in kilobytes (KB),
+# do so in multiples of 1024.
+#
+# Otherwise, KB values are rounded to nearest megabyte (MB) boundary.
+#
+# The sum of the sizes of the files must be at least slightly larger than 12MB.
+#
+# A minimum file size is enforced for the first system tablespace data file to ensure that there is enough space for doublewrite
+# buffer pages:
+#
+# 		) For an innodb_page_size value of 16kb or less, the minimum file size is 3MB.
+#
+# 		) For an innodb_page_size value of 32kb, the minimum file size is 6MB.
+#
+# 		) For an innodb_page_size value of 64kb, the minimum file size is 12MB.
+#
+# A system tablespace with a fixed-size 50MB data file named ibdata1 and a 50MB auto-extending file named ibdata2 can be configured
+# like this:
+#
+# 		[mysqld]
+# 		innodb_data_file_path=ibdata1:50M;ibdata2:50M:autoextend
+#
+# The full syntax for a data file specification includes the file name, file size and optional autoextend and max attributes:
+#
+# 		file_name:file_size[:autoextend[:max:max_file_size]]
+#
+# The autoextend and max attributes can be used only for the data file that is specified last in the innodb_data_file_path setting.
+#
+# If you specify the autoextend option for the last data file, InnoDB extends the data file if it runs out of free space in the tablespace.
+#
+# the autoextend increment is 64MB at a time by default.
+#
+# To modify the increment, change the innodb_autoextend_increment system variable.
+#
+# If the disk becomes full, you might want to add another data file on another disk. For instructions, see Resizing The System Tablespace.
+#
+# The size limit of individual files is determined by your OS. You can set the file sizes to more than 4GB on OS systems that support
+# large files.
+#
+# You can also use raw disk partitions as data files.
+#
+# InnoDB is not aware of hte file system maximum file size, so be cautious on Files sytems where the max file size is a small value
+# such as 2GB.
+
+# To specify a maximum size for an auto-extending data file, use the max attribute following the autoextend attribute.
+#
+# Use the max attribute only in cases where constraining disk usage is of critical importance, because exceeding the maximum size
+# causes a fatal error, possibly causing the server to exit.
+#
+# The following configuration permits ibdata1 to grow to a limit of 500MB:
+#
+# 		[mysqld]
+# 		innodb_data_file_path=ibdata1:12M:autoextend:max:500M
+#
+# InnoDB creates system tablespace files in the MySQL data directory by default (datadir).
+#
+# To specify a location explicitly, use the innodb_data_home_dir option. For example, to create two files
+# named ibdata1 and ibdata2 in a direcotry named myibdata, configure InnoDB like this:
+#
+# 		[mysqld]
+# 		innodb_data_home_dir = /path/to/myibdata/
+# 		innodb_data_file_path=ibdata1:50M;ibdata2:50:autoextend
+#
+# NOTE:
+#
+# 		A trailing slash is required when specifying a value for innodb_data_home_dir
+#
+# 		InnoDB does not create directories, so make sure that the myibdata directory exists before
+# 		you start the server. Use the Unix or DOS mkdir command to create dirs.
+#
+# 		Make sure that the MySQL server has the proper access rights to create files in the data direcotry.
+#
+# 		More generally, the server must have access rights in any directory where it needs to create data files.
+#
+# InnoDB forms the directory path for each data file by textually concatenating the value of innodb_data_home_dir to the
+# data file name.
+#
+# If the innodb_data_home_dir option is not specified, the defautl value is the "dot" directory ./, which means the MySQL
+# data direcotry.
+#
+# (The MySQL server changes its current working direcotry to its data direcotry when it begins executing)
+#
+# If you specify innodb_data_home_dir as an empty string, ou can specify absolute paths for data files listed in the
+# innodb_data_file_path value.
+#
+# The following example is equivalent to the preceding one:
+#
+# 		[mysqld]
+# 		innodb_data_home_dir = 
+# 		innodb_data_file_path=/path/to/myibdata/ibdata1:50M;/path/to/myibdata/ibdata2:50M:autoextend
+#
+#
+# REDO LOG FILE CONFIGURATION
+#
+# By default, InnoDB creates two 5MB redo log files in teh data direcotry named ib_logfile0 and ib_logfile1
+#
+# The following options can be used to modify the default configuration:
+#
+# 		) innodb_log_group_home_dir defines directory path to the INnoDB log files (the redo logs)
+#
+# 			If this option is not configured, InnoDB log files are created in the MySQL data directory (datadir)
+#
+# 			oyu might use this option to place InnoDB log files in a different physical storage location than InnoDB
+# 			data files to avoid potential I/O resource conflicts.
+#
+# 			For example:
+#
+# 				[mysqld]
+# 				innodb_log_group_home_dir = /dr3/iblogs
+#
+# 			NOTE:
+#
+# 				InnoDB does not create directories, so make sure that the log directory exists before you
+# 				start the server.
+#
+# 				Use the Unix or DOS mkdir command to create any necessary directories.
+#
+# 				Make sure that the MySQL server has the proper access rights to create files in the log direcotry.
+# 				More generally, the server must have access rights in any directory where it needs to create log files.
+#
+# 		) innodb_log_files_in_group defines the number of log files in the log group. The default and recommended value is 2.
+#
+# 		) innodb_log_file_size defines the size in bytes of each log file in the log group. The combined size of log files (innodb_log_file_size *
+# 			innodb_log_files_in_group) cannot exceed a maximum value that is slightly less than 512Gb.
+#
+# 			A pair of 255GB log files, for example, approaches the limit but does not exceed it.
+#
+# 			The default log file size is 48MB.
+#
+# 			Generally, the combined size of the log files hsould be large enough that hte server can smooth out peaks and throughs in
+# 			workload activity, which often means that there is enough redo log spaces to handle more than an hour of write activity.
+#
+# 			The larger the value, the less checkpoint flush activity is needed in the buffer pool, saving disk I/O.
+#
+# 			For additional info, see Section 8.5.4, "OPTIMIZING InnoDB REDO lOGGING"
+#
+# UNDO TABLESPACE CONFIGURATION
+#
+# By default, undo logs reside in two undo tablespaces that are created when the MySQL instance is initialized. The I/O patterns
+# for undo logs make undo tablespaces good candidates for SSD storage.
+#
+# The innodb_undo_directory variable defines the path where InnoDB creates default undo tablespaces. If that variable is undefined,
+# default undo tablespaces are created in the data directory.
+#
+# The innodb_undo_directory variable is not dynamic. Configuring it requires restarting the server.
+#
+# For information about configuring additional undo tablespaces, see SECTION 15.6.3.4, "UNDO TABLESPACES"
+#
+# GLOBAL TEMPORARY TABLESPACE CONFIGURATION
+#
+# The global temporary tablespace stores rollback segments for changes made to user-created temporary tables.
+#
+# By default, InnoDB creates a single auto-extending global temporary tablespace data file named ibtmp1 in the innodb_data_home_dir
+# directory.
+#
+# The initial file size is slightly larger than 12MB.
+#
+# The innodb_temp_data_file_path variable specifies the path, file name, and file size for global temporary tablespace data files.
+# File size is specified in KB, MB or GB by appending K, M, or G to the size value.
+#
+# The sum of the sizes of the files must be slightly larger than 12MB.
+#
+# To specify an alternate location for global temporary tablespace data files, configure the innodb_temp_data_file_path variable
+# at startup.
+#
+# SESSION TEMPORARY TABLESPACE CONFIGURATION
+#
+# https://dev.mysql.com/doc/refman/8.0/en/innodb-init-startup-configuration.html
 #
 #
