@@ -43804,6 +43804,707 @@
 #
 # SESSION TEMPORARY TABLESPACE CONFIGURATION
 #
-# https://dev.mysql.com/doc/refman/8.0/en/innodb-init-startup-configuration.html
+# In MySQL 8.0.15 and earlier, session temporary tablespaces store user-created temporary tables and internal temporary tables created
+# by the optimizer when InnoDB is configured as the on-disk storage engine for internal temporary tables (internal_tmp_disk_storage_engine=InnoDB)
 #
+# In MySQL 8.0.16 and later, the InnoDB storage engine is always used for internal temporary tables on disk.
+#
+# The innodb_temp_tablespaces_dir variable defines the location where InnoDB creates session temporary tablespaces.
+#
+# The default location is the #innodb_temp directory in the data directory.
+#
+# To specify an alternate location for session temporary tablespaces, configure the innodb_temp_tablespaces_dir variable at startup.
+# A fully qualified path or path relative to the data directory is permitted.
+#
+# PAGE SIZE CONFIGURATION
+#
+# The innodb_page_size option specifies the page size for all InnoDB tablespaces in a MySQL instance.
+#
+# This value is set when the instance is created and remains constant afterward. Valid values are 64kb, 32kb, 16kb (the default),
+# 8kb and 4kb.
+#
+# Alternatively, you can specify page size in bytes (65536, 32768, 16384, 8192, 4096)
+#
+# The default page size of 16kb is appropriate for a wide range of workloads, particularly for queries involving table scans and
+# DML operations involving bulk updates.
+#
+# Smaller page sizes might be more efficient for OLTP workloads involving many small writes, where contention can be an issue
+# when a single page contains many rows.
+#
+# Smaller pages might also be efficient with SSD storage devices, which typically use small block sizes. Keeping the InnoDB
+# page size close to the storage device block size minimizes the amount of unchanged data that is rewritten to disk.
+#
+# MEMORY CONFIGURATION
+#
+# MySQL allocates memory to various caches and buffers to improve performance of database operations. When allocating memory for
+# InnoDB, always consider memory required by the operating system, memory allocated to other applications, and memory allocated
+# for other MySQL buffers and caches.
+#
+# For example, if you use MyISAM tables, consider the amount of memory allocated for the key buffer (key_buffer_size).
+#
+# For an overview of MySQL buffers and caches, see Section 8.12.3.1, "How MySQL Uses Memory"
+#
+# Buffers specific to InnoDB are configured using the following parameters:
+#
+# 		) innodb_buffer_pool_size defines size of the buffer pool, which is the memory area that holds cached data for InnoDB tables,
+# 			indexes, and other auxiliary buffers.
+#
+# 			The size of the buffer pool is important for system performance, and it is typically recommended that innodb_buffer_pool_size
+# 			is configured to 50 to 75 percent of system memory.
+#
+# 			The default buffer size is 128MB. For additional guidance, see SECTION 8.12.3.1, "How MySQL Uses Memory".
+#
+# 			For information about how to configure InnoDB buffer pool size, see SECTION 15.8.3.1, "Configuring InnoDB Buffer Pool Size"
+#
+# 			Buffer pool size can be configured at startup or dynamically.
+#
+#			On systems with a large amount of memory, you can improve concurrency by dividing the buffer pool into multiple buffer pool
+# 			instances.
+#
+# 			The number of buffer pool instances is controlled by the by innodb_buffer_pool_instances option. By default, InnoDB creates
+# 			one buffer pool instance. The number of buffer pool instances can be configured at startup.
+#
+# 			For more information, see SECTION 15.8.3.2, "Configuring Multiple Buffer Pool Instances"
+#
+# 		) innodb_log_buffer_size defines the size in bytes of the buffer that INnoDB uses to write to the log files on disk.
+#
+# 			The default size is 16MB. A large log buffer enables large transactions to run without a need to write the log to disk
+# 			before the transactions commit.
+#
+# 			If you have transactions that update, insert, or delete many rows, you might consider increasing the size of the log
+# 			buffer to save disk I/O. Innodb_log_buffer_size can be configured at startup. For related information, see Section 8.5.4,
+# 			"Optimizing InnoDB Redo Logging"
+#
+# 				WARNING:
+#
+# 					On 32-bit GNU/Linux x86, be careful not to set memory usage too high. glibc may permit the process heap to grow over thread
+# 					stacks, which crashes your server.
+#
+# 					It is a risk if the memory allocated to the mysqld process for global and per-thread buffers and caches is close to or
+# 					exceeds 2GB.
+#
+# 					A formula similar to the following that calculates global and per-thread memory allocation for MySQL can be used to estimate
+# 					MySQL memory usage.
+#
+# 					You may need to modify the formula to account for buffers and caches in your MySQL version and configuration.
+#
+# 					For an overview of MySQL buffers and caches. see SECTION 8.12.3.1, "How MySQL Uses Memory"
+#
+# 						innodb_buffer_pool_size
+# 						+ key_buffer_size
+# 						+ max_connections*(sort_buffer_size+read_buffer_size+binlog_cache_size)
+# 						+ max_connections*2MB
+#
+# 					Each thread uses a stack (often 2MB, but only 256kb in MySQl binaries provided by oracle corp) and in the worst
+# 					case also uses sort_buffer_size + read_buffer_size additional memory.
+#
+# 	On Linux, if the kernel is enabled for large page support, InnoDB can use large pages to allocate memory for its buffer pool.
+#
+# See SECTION 8.12.3.2, "ENABLING LARGE PAGE SUPPORT"
+#
+# 15.8.2 CONFIGURING INNODB FOR READ-ONLY OPERATION
+#
+# You can now query InnoDB tables where the MySQL data directory is on read-only media, by enabling the --innodb-read-only configuration
+# option at server startup.
+#
+# HOW TO ENABLE
+#
+# To prepare an instance for read-only operation, make sure all the necessary information is flushed to the data files before storing
+# it on the read-only medium.
+#
+# Run the server with change buffering disabled (innodb_change_buffering=0) and do a slow shutdown.
+#
+# To enable read-only mode for an entire MySQL instance, specify the following configuration options at server startup:
+#
+# 		) --innodb-read-only=1
+#
+# 		) If the instance is on read-only media such as DVD or CD, or the /var dir is not writable by all: --pid-file=path_on_writeable_media and
+# 			--event-scheduler=disabled
+#
+# 		) --innodb-temp-data-file-path. This option specifies the path, file name, and file size for InnoDB temporary tablespace data files.
+#
+# 			The default setting is ibtmp1:12M:autoextend, which creates the ibtmp1 temporary tablespace data file in the data directory.
+# 			To prepare an instance for read-only operation, set innodb_temp_data_file_path to a location outside of the data directory.
+#
+# 			The path must be relative to the data directory. For example:
+#
+# 				--innodb-temp-data-file-path=../../../tmp/ibtmp1:12M:autoextend
+#
+# As of MySQL 8.0, enabling innodb_read_only prevents the table creation and drop operations for all storage engines.
+#
+# These operations modify data dictionary tables in the mysql system database, but those tables use the InnoDB storage engine
+# and cannot be modified when innodb_read_only is enabled.
+#
+# The same restriction applies to any operation that modifies data dictionary tables, such as ANALYZE_TABLE and ALTER_TABLE_tbl_name_ENGINE=engine_name
+#
+# In addition, other tables in the mysql system database use the InnoDB storage engine in MySQL 8.0. Making those tables read only 
+# results in restrictions on operations that modify them.
+#
+# For example, CREATE_USER, GRANT, REVOKE and INSTALL_PLUGIN operations are not permitted in read-only mode.
+#
+# USAGE SCENARIOS
+#
+# This mode of operation is appropriate in situations such as:
+#
+# 		) Distibuting a MySQL application, or a set of MySQL data, on a read-only storage medium such as a DVD or CD.
+#
+# 		) Multiple MySQL instances querying the same data directory simultaneously, typically in a data warehousing configuraiton.
+#
+# 			You might use this technique to avoid bottlenecks that can occur with a heavily loaded MySQL instance, or you might use
+# 			different configuration options for the various instances to tune each one for particular kinds of queries.
+#
+# 		) Querying data that has been put into a read-only state for security or data integrity reasons, such as archived backup data.
+#
+# 			NOTE:
+#
+# 				This feature is mainly intended for flexibility in distirbution and deployment, rather than raw performance based on the
+# 				read-only aspect.
+#
+# 				See SECTION 8.5.3, "Optimizing InnoDB Read-Only Transactions" for ways to tune the performance of read-only queries, which
+# 				do not require making the entire server read-only.
+#
+# HOW IT WORKS
+#
+# When the server is run in read-only mode through the --innodb-read-only option, certain InnoDB features and components are reduced
+# or turned off entirely:
+#
+# 		) No change buffering is done, in particular no merges from the change buffer. To make sure the change buffer is empty when you
+# 			prepare the instance for read-only operation, disable change buffering (innodb_change_buffering=0) and do a slow shutdown first.
+#
+# 		) There is no crash recovery phase at startup. The instance must have performed a slow shutdown before being put into the read-only state.
+#
+# 		) Because the redo log is not used in read-only operation, you can set innodb_log_file_size to the smallest size possible (1 MB) before making
+# 			the instance read-only.
+#
+# 		) All background threads other than I/O read threads are turned off. As a consequence, a read-only instance cannot encounter any deadlock.
+#
+# 		) Information about deadlocks, monitor output and so on is not written to temporary files. As a consequence, SHOW_ENGINE_INNODB_STATUS does
+# 			not produce any output.
+#
+# 		) Changes to configuration option settings that would normally change the behavior of write operations, have no effect when the server is in
+# 			read-only mode.
+#
+# 		) The MVCC processing to enforce isolation levels is turned off. All queries read the latest version of a record, because update and deletes
+# 			are not possible.
+#
+# 		) The undo log is not used. Disable any settings for the innodb_undo_tablespaces and innodb_undo_directory configuration options.
+#
+# 15.8.3 InnoDB BUFFER POOL CONFIGURATION
+#
+# 15.8.3.1 Configuring InnoDB Buffer Pool Size
+# 15.8.3.2 Configuring Multiple Buffer Pool Instances
+# 15.8.3.3 Making the Buffer Pool Scan resistant
+# 15.8.3.4 Configuring InnoDB Buffer Pool Prefetching (Read-Ahead)
+# 15.8.3.5 Configuring InnoDB Buffer Pool Flushing
+# 15.8.3.6 Fine-tuning INnoDB BUffer Pool Flushing
+# 15.8.3.7 Saving and Restoring the Buffer Pool State
+# 15.8.3.8 Excluding Buffer Pool Pages from Core Files
+#
+# This section provides configuration and tuning information for the INnoDB buffer pool.
+#
+# 15.8.3.1 Configuring InnoDB Buffer Pool Size
+#
+# You can configure InnoDB buffer pool size offline (at startup) or online, while the server is running. Behavior described
+# in this section applies to both methods.
+#
+# For additional information about configuring buffer pool size online, see Configuring InnoDB Buffer Pool Size Online.
+#
+# When increasing or decreasing innodb_buffer_pool_size, the operation is performed in chunks. Chunk size is defined by the
+# innodb_buffer_pool_chunk_size configuration option, which has a default of 128M.
+#
+# For more information, see Configuring InnoDB Buffer Pool Chunk Size.
+#
+# Buffer pool size must always be equal to or a multiple of innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances.
+#
+# If you configure innodb_buffer_pool_size to a value that is not equal to or a multiple of innodb_buffer_pool_chunk_size *
+# innodb_buffer_pool_instances, buffer pool size is automatically adjusted to a value that is equal to or a multiple of
+# innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances.
+#
+# In the following example, innodb_buffer_pool_size is set to 8G, and innodb_buffer_pool_instances is set to 16.
+#
+# Innodb_buffer_pool_chunk_size is 128M, which is the default value.
+#
+# 8G is a valid innodb_buffer_pool_size value because 8G is a multiple of innodb_buffer_pool_instances=16 * innodb_buffer_pool_chunk_size=128M,
+# which is 2G.
+#
+# 		shell> mysqld --innodb-buffer-pool-size=8G --innodb-buffer-pool-instances=16
+#
+# 		mysql> SELECT @@innodb_buffer_pool_size/1024/1024/1024;
+# 		+-------------------------------------------+
+# 		| @@innodb_buffer_pool_size/1024/1024/1024  |
+# 		+-------------------------------------------+
+# 		| 						8.0000000000 				  |
+# 		+-------------------------------------------+
+#
+# IN this example, innodb_buffer_pool_size is set to 9G, and innodb_buffer_pool_instances is set to 16.
+#
+# innodb_buffer_pool_chunk_size is 128M, which is the default value.
+#
+# In this case, 9G is not a multiple of innodb_buffer_pool_instances=16 * innodb_buffer_pool_chunk_size=128M,
+# so innodb_buffer_pool_size is adjusted to 10G, which is a multiple of innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances.
+#
+# 		shell> mysqld --innodb-buffer-pool-size=9G --innodb-buffer-pool-instances=16
+#
+# 		mysql> SELECT @@innodb_buffer_pool_size/1024/1024/1024;
+# 		+------------------------------------------+
+# 		| @@innodb_buffer_pool_size/1024/1024/1024 |
+# 		+------------------------------------------+
+# 		| 			10.00000000000000000000 			 |
+# 		+------------------------------------------+
+#
+# CONFIGURING InnoDB BUFFER POOL CHUNK SIZE
+#
+# innodb_buffer_pool_chunk_size can be increased or decreased in 1MB (1048576 bytes) units but can only be modified at startup,
+# in a command line string or in a MySQL config file.
+#
+# Command line:
+#
+# 		shell> mysqld --innodb-buffer-pool-chunk-size=134217728
+#
+# Configuration file:
+#
+# 		[mysqld]
+# 		innodb_buffer_pool_chunk_size=134217728
+#
+# The following conditions apply when altering innodb_buffer_pool_chunk_size:
+#
+# 		) If the new innodb_buffer_pool_chunk_size value * innodb_buffer_pool_instances is larger than the current buffer pool size
+# 			when the buffer pool is initialized, innodb_buffer_pool_chunk_size is truncated to innodb_buffer_pool_size / innodb_buffer_pool_instances.
+#
+# 			For example, if the buffer pool is initialized with a size of 2GB (2147483648 bytes), 4 buffer pool instances, and a chunk size of 1GB
+# 			(1073741824 bytes), chunk size is truncated to a value equal to innodb_buffer_pool_size / innodb_buffer_pool_instances, as shown below:
+#
+# 				shell> mysqld --innodb-buffer-pool-size=2147483648 --innodb-buffer-pool-instances=4
+# 				--innodb-buffer-pool-chunk-size=1073741824;
+#
+# 				mysql> SELECT @@innodb_buffer_pool_size;
+# 				+---------------------------------+
+# 				| @@innodb_buffer_pool_size 		 |
+# 				+---------------------------------+
+# 				| 2147483648 							 |
+# 				+---------------------------------+
+#
+# 				mysql> SELECT @@innodb_buffer_pool_instances;
+# 				+---------------------------------+
+# 				| @@innodb_buffer_pool_instances  |
+# 				+---------------------------------+
+# 				| 	4 										 |
+# 				+---------------------------------+
+#
+# 				# Chunk size was set to 1GB (1073741824 bytes) on startup but was
+# 				# truncated to innodb_buffer_pool_size / innodb_buffer_pool_instances
+#
+# 				mysql> SELECT @@innodb_buffer_pool_chunk_size;
+# 				+---------------------------------+
+# 				| @@innodb_buffer_pool_chunk_size |
+# 				+---------------------------------+
+# 				|  		536870912 					 |
+# 				+---------------------------------+
+#
+# 		) Buffer pool size must always be equal to or a multiple of innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances.
+#
+# 			If you alter innodb_buffer_pool_chunk_size, innodb_buffer_pool_size is automatically adjusted to a value that is equal
+# 			to or a multiple of innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances.
+#
+# 			The adjustment occurs when the buffer pool is initialized. This behavior is demonstrated in the following example:
+#
+# 				# The buffer pool has a default size of 128MB (134217728 bytes)
+#
+# 				mysql> SELECT @@innodb_buffer_pool_size;
+# 				+-----------------------------------+
+# 				| @@innodb_buffer_pool_size 			|
+# 				+-----------------------------------+
+# 				| 134217728 								|
+# 				+-----------------------------------+
+#
+# 				# The chunk size is also 128MB (134217728 bytes)
+#
+# 				mysql> SELECT @@innodb_buffer_pool_chunk_size;
+# 				+-----------------------------------+
+# 				| @@innodb_buffer_pool_chunk_size   |
+# 				+-----------------------------------+
+# 				|  	134217728 							|
+# 				+-----------------------------------+
+#
+# 				# There is a single buffer pool instance
+#
+# 				mysql> SELECT @@innodb_buffer_pool_instances;
+# 				+-----------------------------------+
+# 				| @@innodb_buffer_pool_instances 	|
+# 				+-----------------------------------+
+# 				| 				1 								|
+# 				+-----------------------------------+
+#
+# 				# Chunk size is decreased by 1MB (1048576 bytes) at startup
+# 				# (134217728 - 1048576 = 133169152):
+#
+# 				shell> mysqld --innodb-buffer-pool-chunk-size=133169152
+#
+# 				mysql> SELECT @@innodb_buffer_pool_chunk_size;
+# 				+--------------------------------------+
+# 				| @@innodb_buffer_pool_chunk_size 		|
+# 				+--------------------------------------+
+# 				| 				133169152 						|
+# 				+--------------------------------------+
+#
+# 				# Buffer pool size increases from 134217728 to 266338304
+# 				# Buffer pool size is automatically adjusted to a value that is equal to
+# 				# or a multiple of innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances
+#
+# 				mysql> SELECT @@innodb_buffer_pool_size;
+# 				+-----------------------------+
+# 				| @@innodb_buffer_pool_size   |
+# 				+-----------------------------+
+# 				| 266338304 						|
+# 				+-----------------------------+
+#
+# 	This example demonstrates the same behavior but with multiple buffer pool instances:
+#
+# 		# The buffer pool has a default size of 2GB (2147483648 bytes)
+#
+# 		mysql> SELECT @@innodb_buffer_pool_size;
+# 		+----------------------------+
+# 		| @@innodb_buffer_pool_size  |
+# 		+----------------------------+
+# 		|  	2147483648 				  |
+# 		+----------------------------+
+#
+# 		# The chunk size is .5 GB (536870912 bytes)
+#
+# 		mysql> SELECT @@innodb_buffer_pool_chunk_size;
+# 		+---------------------------------+
+# 		| @@innodb_buffer_pool_chunk_size |
+# 		+---------------------------------+
+# 		|  	536870912 						 |
+# 		+---------------------------------+
+#
+# 		# There are 4 buffer pool instances
+#
+# 		mysql> SELECT @@innodb_buffer_pool_instances;
+# 		+---------------------------------+
+# 		| @@innodb_buffer_pool_instances  |
+# 		+---------------------------------+
+# 		| 				4 							 |
+# 		+---------------------------------+
+#
+# 		# Chunk size is decreased by 1MB (1048576 bytes) at startup
+# 		# (536870912 - 1048576 = 535822336):
+#
+# 		shell> mysqld --innodb-buffer-pool-chunk-size=535822336
+#
+# 		mysql> SELECT @@innodb_buffer_pool_chunk_size;
+# 		+----------------------------------+
+# 		| @@innodb_buffer_pool_chunk_size  |
+# 		+----------------------------------+
+# 		| 	535822336 							  |
+# 		+----------------------------------+
+#
+# 		# Buffer pool size increases from 2147483648 to 4286578688
+# 		# Buffer pool size is automatically adjusted to a value that is equal to
+# 		# or a multiple of innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances
+#
+# 		mysql> SELECT @@innodb_buffer_pool_size;
+# 		+----------------------------------+
+# 		| @@innodb_buffer_pool_size 		  |
+# 		+----------------------------------+
+# 		| 	4286578688 							  |
+# 		+----------------------------------+
+#
+# Care should be taken when changing innodb_buffer_pool_chunk_size, as changing this value can increase the size
+# of the buffer pool, as shown in the examples above.
+#
+# Before you can change innodb_buffer_pool_chunk_size, calculate the effect on innodb_buffer_pool_size to ensure that
+# the resulting buffer pool size is acceptable.
+#
+# NOTE:
+#
+# 		To avoid potential performance issues, the number o chunks (innodb_buffer_pool_size / innodb_buffer_pool_chunk_size)
+# 		should not exceed 1000.
+#
+# Configuring InnoDB Buffer Pool Size Online
+#
+# The innodb_buffer_pool_size configuration option can be set dynamically using a SET statement, allowing you to resize
+# the buffer pool without restarting the server.
+#
+# For example:
+#
+# 		mysql> SET GLOBAL innodb_buffer_pool_size=402653184;
+#
+# Active transactions and operations performed through InnoDB APIs should be completed before resizing the buffer pool.
+#
+# When initiating a resizing operation, the operation does not start until all active transactions are completed.
+#
+# Once the resizing operation is in progress, new transactions and operations that require access to the buffer pool
+# must wait until the resizing operation finishes.
+#
+# The exception to the rule is that concurrent access to the buffer pool is permitted while the buffer pool is defragmented
+# and pages are withdrawn when buffer pool size is decreased.
+#
+# A drawback of allowing concurrent access is that it could result in a temporary shortage of available pages while
+# pages are being withdrawn.
+#
+# 		NOTE:
+#
+# 			Nested transactions could fail if initiated after the buffer pool resizing operation begins.
+#
+# MONITORING ONLINE BUFFER POOL RESIZING PROGRESS
+#
+# The Innodb_buffer_pool_resize_status reports buffer pool resizing progress. For example:
+#
+# 		mysql> SHOW STATUS WHERE Variable_name='InnoDB_buffer_pool_resize_status';
+# 		+----------------------------------+---------------------------------------+
+# 		| Variable_name 					     | Value 											 |
+# 		+----------------------------------+---------------------------------------+
+# 		| Innodb_buffer_pool_resize_status | Resizing also other hash tables 		|
+# 		+----------------------------------+---------------------------------------+
+#
+# Buffer pool resizing progress is also logged in the server error log. This example shows notes that
+# are logged when increasing the size of the buffer pool:
+#
+# 		[Note] InnoDB: Resizing buffer pool from 134217728 to 4294967296. (unit=134217728)
+# 		[Note] InnoDB: disabled adaptive hash index.
+# 		[Note] InnoDB: buffer pool 0: 31 chunks (253952 blocks) was added
+# 		[Note] InnoDB: buffer pool 0: hash tables were resized
+# 		[Note] InnoDB: Resized hash tables at lock_sys, adaptive hash index, dictionary.
+# 		[Note] InnoDB: completed to resize buffer pool from 134217728 to 4294967296.
+# 		[Note] InnoDB: re-enabled adaptive hash index
+#
+# This example shows notes that are logged when decreasing the size of the buffer pool:
+#
+# 		[Note] InnoDB: Resizing buffer pool from 4294967296 to 134217728. (unit=134217728)
+# 		[Note] InnoDB: disabled adaptive hash index.
+# 		[Note] InnoDB: buffer pool 0 : start to withdraw the last 253952 blocks.
+# 		[Note] InnoDB: buffer pool 0 : withdrew 253952 blocks from free list. tried to relocate 0 pages.
+# 		(253952/253952)
+# 		[Note] InnoDB: buffer pool 0 : withdrawn target 253952 blocks.
+# 		[Note] InnoDB: buffer pool 0 : 31 chunks (253952 blocks) was freed.
+# 		[Note] InnoDB: buffer pool 0 : hash tables were resized.
+# 		[Note] InnoDB: Resized hash tables at lock_sys, adaptive hash index, dictionary.
+# 		[Note] InnoDB: completed to resize buffer pool from 4294967296 to 134217728.
+# 		[Note] InnoDB: re-enabled adaptive hash index
+#
+# ONLINE BUFFER POOL RESIZING INTERNALS
+#
+# The resizing operation is performed by a background thread. When increasing the size of the buffer pool, the resizing operation:
+#
+# 		) Adds pages in chunks (chunk size is defined by innodb_buffer_pool_chunk_size)
+# 		
+# 		) Coverts hash tables, lists, and pointers to use new addresses in memory.
+#
+# 		) Adds new pages to the free list.
+#
+# Whilst these operations are in progress, other threads are blocked from accessing the buffer pool.
+#
+# When decreasing the size of the buffer pool, the resizing operation:
+#
+# 		) Defragments the buffer pool and withdraws (frees) pages
+#
+# 		) Removes pages in chunks (chunk size is defined by innodb_buffer_pool_chunk_size)
+#
+# 		) Converts hash tables, lists, and pointers to use new addresses in memory
+#
+# Of these operations, only defragmenting the buffer pool and withdrawing pages allow other threads to access to the buffer
+# pool concurrently.
+#
+# 15.8.3.2 CONFIGURING MULTIPLE BUFFER POOL INSTANCES
+#
+# For systems with buffer pools in the multi-gigabyte range, dividing the buffer pool into separate instances can improve concurrency,
+# by reducing contention as different threads read and write to cached pages.
+#
+# This feature is typically intended for systems with a buffer pool size in the multi-gigabyte range. Multiple buffer pool instances are
+# configured using the innodb_buffer_pool_instances configuration option, and you might also adjust the innodb_buffer_pool_size value.
+#
+# When the InnoDB buffer pool is large, many data requests can be satisfied by retrieving from memory. You might encounter bottlenecks
+# from multiple threads trying to access the buffer pool at once.
+#
+# You can enable multiple buffer pools to minimize this contention. Each page that is stored in or read from the buffer pool is assigned to
+# one pool.
+#
+# Prior to MySQL 8.0, each buffer pool was protected by its own buffer pool mutex. In MySQL 8.0 and later, the buffer pool mutex was replaced
+# by several list and hash protecting mutexes, to reduce contention.
+#
+# To enable multiple buffer pool instances, set the innodb_buffer_pool_instances configuration option to a value greater than 1 (the default)
+# up to 64 (the maximum).
+#
+# This option takes effect only when you set innodb_buffer_pool_size to a size of 1GB or more. The total size you specify is divided among all
+# the buffer pools.
+#
+# For best efficiency, specify a combination of innodb_buffer_pool_instances and innodb_buffer_pool_size so that each buffer pool instance is
+# at least 1GB.
+#
+# For information about modifying InnoDB buffer pool size, see SECTION 15.8.3.1, "Configuring InnoDB Buffer Pool Size"
+#
+# 15.8.3.3 MAKING THE BUFFER POOL SCAN RESISTANT
+#
+# Rather than using a strict LRU algorithm, InnoDB uses a technique to minimize the amount of data that is brought into the buffer pool
+# and never accessed again.
+#
+# The goal is to make sure that frequently accessed ("hot") pages remain in the buffer pool, even as read-ahead and full table scans bring
+# in new blocks that might or might not be accessed afterward.
+#
+# Newly read blocks are inserted into the middle of the LRU list. All newly read pages are inserted at a location that by default is 3/8
+# from the tail of the LRU list.
+#
+# The pages are moved to the front of the list (the most-recently used end) when they are accessed in the buffer pool for the first time.
+#
+# Thus, pages that are never accessed never make it to the front portion of the LRU list, and "age out" sooner than with a strict LRU approach.
+#
+# This arrangement divides the LRU list into two segments, where the pages downstream of the insertion point are considered "old" and are
+# desirable victims for LRU eviction.
+#
+# For an explanation of the inner workings of the InnoDB buffer pool and specifics about the LRU algorithm, see SECTION 15.5.1, "Buffer Pool"
+#
+# You can control the insertion point in the LRU list and choose whether InnoDB applies the same optimization to blocks brought into the buffer
+# pool by table or index scans.
+#
+# The configuration parameter innodb_old_blocks_pct controls the percentage of "old" blocks in the LRU list. The default value of innodb_old_blocks_pct
+# is 37, corresponding to the original fixed ratio of 3/8.
+#
+# The value range is 5 (new pages in the buffer pool age out very quickly) to 95 (only 5% of the buffer pool is reserved for hot pages, making
+# the algorithm close to the familiar LRU strategy)
+#
+# The optimization that keeps the buffer pool from being chruned by read-head can avoid similar problems due to table or index scans.
+#
+# In these scans, a data page is typically accessed a few times in quick succession and is never touched again. The configuration parameter
+# innodb_old_blocks_time specifies the time window (in miliseconds) after the first access to a page during which it can be accessed without
+# being moved to the front (most-recently used end) of the LRU list.
+#
+# The default value of innodb_old_blocks_time is 1000. Increasing this value makes more and more blocks likely to age out faster from the buffer pool.
+#
+# Both innodb_old_blocks_pct and innodb_old_blocks_time can be specified in the MySQL option file (my.cnf or my.ini) or changed at runtime with the
+# SET_GLOBAL statement.
+#
+# Changing the value at runtime requires privileges sufficient to set global system variables. See SECTION 5.1.9.1, "System Variable Privileges"
+#
+# To help you gauge the effect of setting these parameters, the SHOW ENGINE INNODB STATUS command reports buffer pool statistics. For details,
+# see Monitoring the Buffer Pool Using the InnoDB Standard Monitor.
+#
+# Because the effects of these parameters can vary widely based on your hardware configuration, your data and the details of your workload,
+# always benchmark to verify the effectiveness before changing these settings in any performance-critical or production environment.
+#
+# In mixed workloads where most of the activity is OLTP type with periodic batch reporting queries which result in large scans, setting the value
+# of innodb_old_blocks_time during the batch runs can help keep the working set of the normal workload in the buffer pool.
+#
+# When scanning large tables that cannot fit entirely in the buffer pool, setting innodb_old_blocks_pct to a small value keeps the data that is
+# only read once from consuming a significant portion of the buffer pool.
+#
+# For example, setting innodb_old_blocks_pct=5 restricts this data that is only read once to 5% of the buffer pool.
+#
+# When scanning small tables that do fit into memory, there is less overhead for moving pages around within the buffer pool, so you can leave
+# innodb_old_blocks_pct at its default value, or even higher, such as innodb_old_blocks_pct=50.
+#
+# The effect of the innodb_old_blocks_time parameter is harder to predict than the innodb_old_blocks_pct parameter, is relatively small and
+# varies more with the workload.
+#
+# To arrive at an optimal value, conduct your own benchmarks if the performance improvement from adjusting innodb_old_blocks_pct is not sufficient.
+#
+# 15.8.3.4 CONFIGURING InnoDB BUFFER POOL PREFETCHING (Read-Ahead)
+#
+# A read-ahead request is an I/O request to prefetch multiple pages in the buffer pool asynch, in anticipation that these pages will be needed
+# soon.
+#
+# The requests bring in all the pages in one extent. InnoDB uses two read-ahead algorithms to improve I/O performance:
+#
+# 		Linear read-ahead is a technique that predicts what pages might be needed soon based on pages in the buffer pool being accessed sequentially.
+#
+# 		You control when InnoDB performs a read-ahead operation by adjusting the number of sequential page accesses required to trigger an asynch read 
+# 		request, using the configuration parameter innodb_read_ahead_threshold.
+#
+# 		Before this parameter was added, InnoDB would only calculate whether to issue an asynch prefetch request for the entire next
+# 		extent when it read the last page of the current extent.
+#
+# 		The configuration parameter innodb_read_ahead_threshold controls how sensitive InnoDB is in detecting patterns of sequential page access.
+#
+# 		If the number of pages read sequentially from an extent is greater than or equal to innodb_read_ahead_threshold, InnoDB initiates an asynch
+# 		read-ahead operation of hte entire following extent.
+#
+# 		innodb_read_ahead_threshold can be set to any value from 0-64. The default value is 56. The higher the value, the more strict the access pattern
+# 		check.
+#
+# 		For example, if you set the value to 48, InnoDB triggers a linear read-ahead request only when 48 pages in the current extent have been accessed
+# 		sequentially.
+#
+# 		If the value is 8, InnoDB triggers an asynch read-ahead even if as few as 8 pages in the extent are accessed sequentially.
+#
+# 		You can set the value of this parameter in the MySQL configuration file, or change it dynamically with the SET_GLOBAL statement,
+# 		which requires privileges sufficient to set global system variables.
+#
+# 		See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 		Random read-ahead is a technique that predicts when pages might be needed soon based on pages already in the buffer pool, regardless of
+# 		the order in which those pages were read.
+#
+# 		If 13 consecutive pages from the same extent are found in the buffer pool, InnoDB asynch issues a request to prefetch the remaining pages
+# 		of the extent.
+#
+# 		To enable this feature, set the configuration variable innodb_random_read_ahead to ON.
+#
+# 		The SHOW ENGINE INNODB STATUS command displays statistics to help you evaluate the effectiveness of the read-ahead algorithm.
+#
+# 		Statistics include counter information for the following global status variables:
+#
+# 			) Innodb_buffer_pool_read_ahead
+#
+# 			) Innodb_buffer_pool_read_ahead_evicted
+#
+# 			) Innodb_buffer_pool_read_ahead_rnd
+#
+# 		This information can be useful when fine-tuning the innodb_random_read_ahead setting.
+#
+# 		For more information about I/O performance, see SECTION 8.5.8, "Optimizing InnoDB Disk I/O" and Section 8.12.1, "Optimizing Disk I/O"
+#
+# 15.8.3.5 Configuring InnoDB Buffer Pool Flushing
+#
+# InnoDB performs certain tasks in the background, including flushing of dirty pages (those pages that have been changed but are not yet written
+# to the database files) from the buffer pool.
+#
+# InnoDB starts flushing buffer pool pages when the percentage of dirty pages in the buffer pool reaches the low water mark setting defined by
+# innodb_max_dirty_pages_pct_lwm.
+#
+# This option is intended to control the ratio of dirty pages in the buffer pool and ideally prevent the percentage of dirty pages from
+# reaching innodb_max_dirty_pages_pct. 
+
+# If the percentage of dirty pages in the buffer pool exceeds innodb_max_dirty_pages_pct, InnoDB begins to aggressively flush buffer pool pages.
+#
+# InnoDB uses an algorithm to estimate the required rate of flushing, based on the speed of redo log generation and the current rate of flushing.
+#
+# The intent is to smooth overall performance by ensuring that buffer flush activity keeps up with the need to keep the buffer pool "clean".
+#
+# Automatically adjusting the rate of flushing can help to avoid sudden dips in throughput, when excessive buffer pool flushing limits the I/O
+# capacity available for ordinary read and write activity.
+#
+# InnoDB uses its log files in a circular fashion. Before reusing a portion of a log file, InnoDB flushes to disk all dirty buffer pool pages whose
+# redo entries are contained in that portion of the log file, a process known as a sharp checkpoint.
+#
+# If a workload is write-intensive, it generates a lot of redo information, all written to the log file.
+#
+# If all available space in the log files is used up, a sharp checkpoint occurs, causing a temporary reduction in throughput.
+#
+# This situation can happen even if innodb_max_dirty_pages_pct is not reached.
+#
+# InnoDB uses a heuristic-based algorithm to avoid such a scenario, by measuring the number of dirty pages in teh buffer pool and the rate at which
+# redo is being generated.
+#
+# Based on these numbers, InnoDB decides how many dirty pages to flush from the buffer pool each second.
+#
+# This self-adapting algorithm is able to deal with sudden changes in workload.
+#
+# Internal benchmarking has shown that this algorithm not only maintains throughput over time, but can also improve overall throughput significantly.
+#
+# Because adaptive flushing can significantly affect the I/O pattern of a workload, the innodb_adaptive_flushing configuration parameter lets you
+# turn off this feature.
+#
+# The default value for innodb_adaptive_flushing is ON, enabling the adaptive flushing algorithm. You can set the value of this parameter in the MySQL
+# option file (my.cnf or my.ini) or change it dynamically with the SET_GLOBAL statement, which requires privileges sufficient to set global system
+# variables.
+#
+# See SECTION 5.1.9.1, "System Variable Privileges"
+#
+# For information about fine-tuning InnoDB buffer pool flushing behavior, see SECTION 15.8.3.6, "Fine-tuning InnoDB Buffer Pool Flushing"
+#
+# For more information about InnoDB I/O performance, see Section 8.5.8, "Optimizing InnoDB DISK I/O"
+#
+# 15.8.3.6 Fine-Tuning InnoDB Buffer Pool Flushing
+#
+# https://dev.mysql.com/doc/refman/8.0/en/innodb-lru-background-flushing.html
 #
