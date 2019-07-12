@@ -44506,5 +44506,807 @@
 #
 # 15.8.3.6 Fine-Tuning InnoDB Buffer Pool Flushing
 #
-# https://dev.mysql.com/doc/refman/8.0/en/innodb-lru-background-flushing.html
+# The configuration options innodb_flush_neighbors and innodb_lru_scan_depth let you fine-tune aspects of the
+# flushing process for the InnoDB buffer pool.
 #
+# 		) innodb_flush_neighbors
+#
+# 			Specifies whether flushing a page from the buffer pool also flushes other dirty pages in the same extent.
+# 			When the table data is stored on a traditional HDD storage device, flushing neighbor pages in one operation
+# 			reduces I/O overhead (primarily for disk seek operations) compared to flushing individual pages at different
+# 			times.
+#
+# 			For table data stored on SSD, seek time is not a significant factor and you can disable this setting to spread
+# 			out write operations.
+#
+# 		) innodb_lru_scan_depth
+#
+# 			Specifies, per buffer pool instance, how far down the buffer pool LRU list the page cleaner thread scans looking
+# 			for dirty pages to flush.
+#
+# 			This is a background operation performed once per second.
+#
+# These options primarily help write-intensive workloads. With heavy DML activity, flushing can fall behind if it is not aggressive
+# enough, resulting in excssive memory use in the buffer pool; or, disk writes due to flushing can saturate your I/O capacity if that
+# mechanism is too aggressive.
+#
+# The ideal settings depend on your workload, data access patterns and storage configuration (for example, whether data is stored on HDD,
+# or SSD devices)
+#
+# For systems with constant heavy workloads, or workloads that fluctuate widely, several configuration options let you fine-tune the flushing
+# behavior for InnoDB tables:
+#
+# 		) innodb_adaptive_flushing_lwm
+#
+# 		) innodb_max_dirty_pages_pct_lwm
+#
+# 		) innodb_io_capacity_max
+#
+# 		) innodb_flushing_avg_loops
+#
+# These options feed into the formula used by the innodb_adaptive_flushing option.
+#
+# The innodb_adaptive_flushing, innodb_io_capacity and innodb_max_dirty_pages_pct options are limited or extended by the following
+# options:
+#
+# 		) innodb_adaptive_flushing_lwm
+#
+# 		) innodb_io_capacity_max
+#
+# 		) innodb_max_dirty_pages_pct_lwm
+#
+# The InnoDB adaptive flushing mechanism is not appropriate in all cases. It gives the most benefit when the redo log is in danger
+# of filling up.
+#
+# The innodb_adaptive_flushing_lwm option specifies a "low water mark" percentage of redo log capacity; when that threshold is crossed,
+# InnoDB turns on adaptive flushing even if not specified by the innodb_adaptive_flushing option.
+#
+# If flushing activity falls far behind, InnoDB can flush more aggressively than specified by innodb_io_capacity, innodb_io_capacity_max
+# represents an upper limit on the I/O capacity used in such emergency situations, so that the spike in I/O does not consume all the
+# capacity of the server.
+#
+# InnoDB tries to flush data from the buffer pool so that the percentage of dirty pages does not exceed the value of innodb_max_dirty_pages_pct.
+#
+# The default value for innodb_max_dirty_pages_pct is 75.
+#
+# 	NOTE:
+#
+# 		The innodb_max_dirty_pages_pct setting establishes a target for flushing activity. It does not affect the rate of flushing.
+#
+# 		For information about managing the rate of flushing, see SECTION 15.8.3.5, "CONFIGURING InnoDB BUFFER POOL FLUSHING"
+#
+# The innodb_max_dirty_pages_pct_lwm option specifies a "low water mark" value that represents the percentage of dirty pages where
+# pre-flushing is enabled to control the dirty page ratio and ideally prevent the percentage of dirty pages from reaching innodb_max_dirty_pages_pct.
+#
+# A value of innodb_max_dirty_pages_pct_lwm=0 disables the "pre-flushing" behavior.
+#
+# Most of the options referenced above are most applicable to servers that run write-heavy workloads for long periods of time and have little reduced
+# load time to catch up with changes waiting to be written to disk.
+#
+# innodb_flushing_avg_loops defines the number of iterations for which InnoDB keeps the previously calculated snapshot of the flushing state, which
+# controls how quickly adaptive flushing responds to foreground load changes. Setting a high value for innodb_flushing_avg_loops means that InnoDB
+# keeps the previously calculated snapshot longer, so adaptive flushing responds more slowly.
+#
+# A high value also reduces positive feedback between foreground and background work, but when setting a high value it is important to ensure that
+# InnoDB redo log utilization does not reach 75% (the hardcoded limit at which async flushing starts) and that the innodb_max_dirty_pages_pct setting
+# keeps the number of dirty pages to a level that is appropriate for the workload.
+#
+# Systems with consistent workloads, a large innodb_log_file_size, and small spikes that do not reach 75% redo log space utilization should use a high
+# innodb_flushing_avg_loops value to keep flushing as smooth as possible.
+#
+# For systems with extreme load spikes or log files that do not provide a lot of space, consider a smaller innodb_flushing_avg_loops value.
+#
+# A smaller value allows flushing to closely track the load and helps avoid reaching 75% redo log space utilization.
+#
+# 15.8.3.7 SAVING AND RESTORING THE BUFFER POOL STATE
+#
+# To reduce the warmup period after restarting the server, InnoDB saves a percentage of the most recently used pages for each buffer pool
+# at server shutdown and restores these pages at server startup.
+#
+# The percentage of recently used pages that is stored is defined by the innodb_buffer_pool_dump_pct configuration option.
+#
+# After restarting a busy server, there is typically a warmup period with steadily increasing throughput, as disk pages that were in the buffer
+# pool are brought back into memory (as the same data is queried, updated and so on). The ability to restore the buffer pool at startup shortens
+# the warmup period by reloading disk pages that were in the buffer pool before the restart rather than waiting for DML operations to access
+# corresponding rows.
+#
+# Also, I/O requests can be performed in large batches, making the overall I/O faster. Page loading happens in the background, and does not delay
+# database startup.
+#
+# In addition to saving the buffer pool state at shutdown and restoring it at startup, you can save and restore the buffer pool state at any time,
+# while the server is running.
+#
+# For example, you can save the state of the buffer pool after reaching a stable throughput under a steady workload. You could also restore the previous
+# buffer pool state after running reports or maintenance jobs that bring data pages into the buffer pool that are only required for those operations,
+# or after running some other non-typical workload.
+#
+# Even though a buffer pool can be many gigabytes in size, the buffer pool data that InnoDB saves to disk is tiny by comparison.
+# Only tablespace IDs and page IDs necessary to locate the appropriate pages are saved to disk.
+#
+# This information is derived from the INNODB_BUFFER_PAGE_LRU INFORMATION_SCHEMA table. By default, tablespace ID and page ID data is
+# saved in a file named ib_buffer_pool, which is saved to the InnoDB data directory. The file name and location can be modified using
+# the innodb_buffer_pool_filename configuration parameter.
+#
+# Because data is cached in and aged out of the buffer pool as it is with regular database operations, there is no problem if the disk
+# pages are recently updated, or if a DML operation involves data that has not yet been loaded.
+#
+# The loading mechanism skips requested pages that no longer exist.
+#
+# The underlying mechanism involves a background thread that is dispatched to perform the dump and load operations.
+#
+# Disk pages from compressed tables are loaded into the buffer pool in their compressed form. Pages are uncompressed
+# as usual when page contents are accessed during DML operations.
+#
+# Because uncompressing pages is a CPU-intensive process, it is more efficient for concurrency to perform the operation
+# in a connection thread rather than in the single thread that performs the buffer pool restore operation.
+#
+# Operations related to saving and restoring the buffer pool state are described in the following topics:
+#
+# 		) Configuring the Dump Percentage for Buffer Pool Pages
+#
+# 		) Saving the Buffer Pool State at Shutdown and Restoring it at Startup
+#
+# 		) Saving and Restoring the Buffer Pool State Online
+#
+# 		) Displaying Buffer Pool Dump Progress
+#
+# 		) Displaying Buffer Pool Load Progress
+#
+# 		) Aborting a Buffer Pool Load Operation
+#
+# 		) Monitoring Buffer Pool Load Progress Using Performance Schema
+#
+# CONFIGURING THE DUMP PERCENTAGE FOR BUFFER POOL PAGES
+#
+# Before dumping pages from the buffer pool, you can configure the percentage of most-recently-used buffer pool pages
+# that you want to dump by setting the innodb_buffer_pool_dump_pct option.
+#
+# If you plan to dump buffer pool pages while the server is running, you can configure the option dynamically:
+#
+# 		SET GLOBAL innodb_buffer_pool_dump_pct=40;
+#
+# If you plan to dump buffer pool pages at server shutdown, set innodb_buffer_pool_dump_pct in your configuration file.
+#
+# 		[mysqld]
+# 		innodb_buffer_pool_dump_pct=40
+#
+# The innodb_buffer_pool_dump_pct default value is 25 (dump 25% of most-recently-used pages)
+#
+# SAVING THE BUFFER POOL STATE AT SHUTDOWN AND RESTORING IT AT STARTUP
+#
+# To save the state of the buffer pool at server shutdown, issue the following statement prior to shutting down the server:
+#
+# 		SET GLOBAL innodb_buffer_pool_dump_at_shutdown=ON;
+#
+# innodb_buffer_pool_dump_at_shutdown is enabled by default.
+#
+# To restore the buffer pool state at server startup, specify the --innodb-buffer-pool-load-at-startup option when starting
+# the server:
+#
+# 		mysqld --innodb-buffer-pool-load-at-startup=ON;
+#
+# innodb_buffer_pool_load_at_startup is enabled by default.
+#
+# SAVING AND RESTORING THE BUFFER POOL STATE ONLINE
+#
+# To save the state of the buffer pool while MySQL server is running, issue the following statement:
+#
+# 		SET GLOBAL innodb_buffer_pool_dump_now=ON;
+#
+# To restore the buffer pool state while MySQL is running, issue the following statement:
+#
+# 		SET GLOBAL innodb_buffer_pool_load_now=ON;
+#
+# DISPLAYING BUFFER POOL DUMP PROGRESS
+#
+# To display the progress when saving the buffer pool state to disk, issue the following statement:
+#
+# 		SHOW STATUS LIKE 'Innodb_buffer_pool_dump_status';
+#
+# If the operation has not yet started, "not started" is returned. If the operation is complete, the completion time is
+# printed (e.g Finished at 110505 12:18:02). If the operation is in progress, status information is provided (e.g Dumping buffer pool 5/7, page 237/2873)
+#
+# DISPLAYING BUFFER POOL LOAD PROGRESS
+#
+# To display progress when loading the buffer pool, issue the following statement:
+#
+# 		SHOW STATUS LIKE 'Innodb_buffer_pool_load_status';
+#
+# If the operation has not yet started, "not started" is returned. If the operation is complete, the completion time is printed
+# (e.g Finished at 110505 12:23:24).
+#
+# If the operation is in progress, status information is provided (e.g Loaded 123/22301 pages)
+#
+# ABORTING A BUFFER POOL LOAD OPERATION
+#
+# To abort a buffer pool load operation, issue the following statement:
+#
+# 		SET GLOBAL innodb_buffer_pool_load_abort=ON;
+#
+# MONITORING BUFFER POOL LOAD PROGRESS USING PERFORMANCE SCHEMA
+#
+# You can monitor buffer pool load progress using Performance Schema.
+#
+# The following example demonstrates how to enable the stage/innodb/buffer pool load stage event instrument and related consumer
+# tables to monitor buffer pool load progress.
+#
+# For information about buffer pool dump and load procedures used in this example, see SECTION 15.8.3.7, "Saving and Restoring the Buffer Pool State"
+#
+# For information about Performance Schema stage event instruments and related consumers, see SECTION 26.12.5, "Performance Schema Stage Event Tables"
+#
+# 		1. Enable the stage/innodb/buffer pool load instrument:
+#
+# 				mysql> UPDATE performance_schema.setup_instruments SET ENABLED = 'YES'
+# 						 WHERE NAME LIKE 'stage/innodb/buffer%';
+#
+# 		2. Enable the stage event consumer tables, which include events_stages_current, events_stages_history, and events_stages_history_long
+#
+# 				mysql> UPDATE performance_schema.setup_consumers SET ENABLED = 'YES'
+# 						 WHERE NAME LIKE '%stages%';
+#
+# 		3. Dump the current buffer pool state by enabling innodb_buffer_pool_dump_now
+#
+# 				mysql> SET GLOBAL innodb_buffer_pool_dump_now=ON;
+#
+# 		4. Check the buffer pool dump status to ensure that the operation has completed.
+#
+# 				mysql> SHOW STATUS LIKE 'Innodb_buffer_pool_dump_status'\G
+# 				************************** 1. row ******************************
+# 				Variable_name: Innodb_buffer_pool_dump_status
+# 						  Value: Buffer pool(s) dump completed at 150202 16:38:58
+#
+# 		5. Load the buffer pool by enabling innodb_buffer_pool_load_now
+#
+# 				mysql> SET GLOBAL innodb_buffer_pool_load_now=ON;
+#
+# 		6. Check the current status of the buffer pool load operation by querying the Performance Schema events_stages_current table.
+#
+# 			The WORK_COMPLETED column shows the number of buffer pool pages loaded. The WORK_ESTIMATED column provides an estimate of the
+# 			remaining work, in pages.
+#
+# 				mysql> SELECT EVENT_NAME, WORK_COMPLETED, WORK_ESTIMATED
+# 				FROM performance_schema.events_stages_current;
+# 				+-------------------------------+-------------------+------------------------+
+# 				| EVENT_NAME 						  | WORK_COMPLETED 	 | WORK_ESTIMATED 		  |
+# 				+-------------------------------+-------------------+------------------------+
+# 				| stage/innodb/buffer pool load | 		5353 			 | 		7167 				  |
+# 				+-------------------------------+-------------------+------------------------+
+#
+# 			The events_stages_current table returns an empty set if the buffer pool load operation has completed.
+#
+# 			In this case, you can check the events_stages_history table to view data for the completed event.
+#
+# 			For example:
+#
+# 				mysql> SELECT EVENT_NAME, WORK_COMPLETED, WORK_ESTIMATED
+# 				FROM performance_schema.events_stages_history;
+# 				+-----------------------------------+----------------------+---------------------------+
+# 				| EVENT_NAME 								| WORK_COMPLETED 		  | WORK_ESTIMATED 				|
+# 				+-----------------------------------+----------------------+---------------------------+
+# 				| stage/innodb/buffer pool load 		| 		7167 				  | 		7167 					   |
+# 				+-----------------------------------+----------------------+---------------------------+
+#
+# 			NOTE:
+#
+# 				You can also monitor buffer pool load progress using Performance Schema when loading the buffer pool
+# 				at startup using innodb_buffer_pool_load_at_startup.
+#
+# 				In this case, the stage/innodb/buffer pool load instrument and related consumers must be enabled at
+# 				startup.
+#
+# 				For more information, see SECTION 26.3, "PERFORMANCE SCHEMA STARTUP CONFIGURATION"
+#
+# 15.8.3.8 EXCLUDING BUFFER POOL PAGES FROM CORE FILES
+#
+# A core file records the status and memory image of a running process. Because the buffer pool resides in main memory,
+# and the memory image of a running process is dumped to the core file, systems with large buffer pools can produce
+# large core files when the mysqld process dies.
+#
+# Large core files can be problematic for a number of reasons including the time it takes to write them, the amount of disk
+# space they consume, and the challenges associated with transferring large files.
+#
+# To reduce core file size, you can disable the innodb_buffer_pool_in_core_file variable to omit buffer pool pages from
+# core dumps.
+#
+# The innodb_buffer_pool_in_core_file variable was introduced in MySQL 8.0.14 and is enabled by default.
+#
+# Excluding buffer pool pages may also be desirable from a security perspective if you have concerns about dumping database
+# pages to core files that may be shared inside or outside of your organization for debugging purposes.
+#
+# NOTE:
+#
+# 		Access to the data present in buffer pool pages at the time the mysqld process died may be beneficial in some debugging
+# 		scenarios. If in doubt whether to include or exclude buffer pool pages, consult MySQL support.
+#
+# Disabling innodb_buffer_pool_in_core_file takes effect only if the core_file variable is enabled and the operating system
+# supports the MADV_DONTDUMP non-POSIX extension to the madvise() system call, which is supported in Linux 3.4 and later.
+#
+# The MADV_DONTDUMP extension causes pages in a specified range to be excluded from core dumps.
+#
+# Assuming the operating system supports the MADV_DONTDUMP extension, start the server with the --core-file and --innodb-buffer-pool-in-core-file=OFF
+# options to generate core files without buffer pool pages.
+#
+# 		shell> mysqld --core-file --innodb-buffer-pool-in-core-file=OFF
+#
+# The core_file variable is read only and disabled by default. It is enabled by specifying the --core-file option at startup.
+#
+# The innodb_buffer_pool_in_core_file variable is dynamic. It can be specified at startup or configured at runtime using a SET
+# statement.
+#
+# 		mysql> SET GLOBAL innodb_buffer_pool_in_core_file=OFF;
+#
+# If the innodb_buffer_pool_in_core_file variable is disabled but MADV_DONTDUMP is not supported by the operating system, or an
+# madvise() failure occurs, a warning is written to the MySQL server error log and the core_file variable is disabled to prevent
+# writing core files that unintentionally include buffer pool pages.
+#
+# If the read-only core_file variable becomes disabled, the server must be restarted to enable it again.
+#
+# The following table shows configuration and MADV_DONTDUMP support scenarios that determine whether core files are generated
+# and whether they include buffer pool pages.
+#
+# TABLE 15.5 CORE FILE CONFIGURATION SCENARIOS
+#
+# 	core_file VARIABLE 			innodb_buffer_pool_in_core_file VARIABLE 			madvise() MADV_DONTDUMP SUPPORT 							OUTCOME
+#
+# 	OFF (default) 					Not relevant to outcome 								Not relevant to outcome 									Core file is not generated
+#
+# 	ON 								ON (default) 												Not relevant to outcome 									Core file is generated with buffer pool pages
+#
+# 	ON 								OFF 															Yes 																Core file is generated without buffer pool pages
+#
+# 	ON 								OFF 															No 																Core file is not generated, core_file is disabled,
+# 																																											and a warning is written to the server error log
+#
+# The reduction in core file size achieved by disabling the innodb_buffer_pool_in_core_file variable depends on the size of the buffer pool, but it is also affected
+# by the InnoDB page size.
+#
+# A smaller page size means more pages are required for the same amount of data, and more pages means more page metadata. The following table
+# provides size reduction examples that you might see for a 1GB buffer pool with different pages sizes.
+#
+# TABLE 15.6 Core File Size with Buffer Pool Pages Included and Excluded
+#
+# 		innodb_page_size SETTING 						BUFFER POOL PAGES INCLUDED (innodb_buffer_pool_in_core_file=ON) 		BUFFER POOL PAGES EXCLUDED (innodb_buffer_pool_in_core_file=OFF)
+#
+# 			4kb 													2.1GB 																					0.9GB
+#
+# 			64kb 													1.7GB 																					0.7GB
+#
+# 15.8.4 Configuring Thread Concurrency for InnoDB
+#
+# InnoDB uses operating system threads to process requests from user transactions. (Transactions may issue many requests to InnoDB before they
+# commit or roll back).
+#
+# On modern operating systems and servers with multi-core processors, where context switching is efficient, most workloads run well without any
+# limit on the number of concurrent threads.
+#
+# In situations where it is helpful to minimize context switching between threads, InnoDB can use a number of techniques to limit the number
+# of concurrently executing operating system threads (and thus the number of requests that are processed at any one time).
+#
+# When InnoDB receives a new request from a user session, if the number of threads concurrently executing is at a pre-defined limit, the new
+# request sleeps for a short time before it tries again.
+#
+# A request that cannot be rescheduled after the sleep is put in a first-in/first-out queue and eventually is processed.
+#
+# Threads waiting for locks are not counted in the number of concurrently executing threads.
+#
+# You can limit the number of concurrent threads by setting the configuration parameter innodb_thread_concurrency. Once the number of
+# executing threads reaches this limit, additional threads sleep for a number of microseconds, set by the configuration parameter
+# innodb_thread_sleep_delay, before being placed into the queue.
+#
+# You can set the configuration option innodb_adaptive_max_sleep_delay to the highest value you would allow for innodb_thread_sleep_delay,
+# and InnoDB automatically adjusts innodb_thread_sleep_delay up or down depending on the current thread-scheduling activity.
+#
+# This dynamic adjustment helps the thread scheduling mechanism to work smoothly during times when the system is lightly loaded and when
+# it is operating near full capacity.
+#
+# The default value for innodb_thread_concurrency and the implied default limit on the number of concurrent threads has been changed in 
+# various releases of MySQL and InnoDB.
+#
+# The default value of innodb_thread_concurrency is 0, so that by default there is no limit on the number of concurrently executing threads.
+#
+# InnoDB causes threads to sleep only when the number of concurrent threads is limited. When there is no limit on the number of threads,
+# all contend equally to be scheduled.
+#
+# That is, if innodb_thread_concurrency is 0, the value of innodb_thread_sleep_delay is ignored.
+#
+# When there is a limit on the number of threads (when innodb_thread_concurrency is > 0), InnoDB reduces context switching overhead
+# by permitting multiple requests made during the execution of a single SQL statement to enter InnoDB without observing the limit set
+# by innodb_thread_concurrency.
+#
+# Since an SQL statement (such as a join) may comprise multiple row operations within InnoDB, InnoDB assigns a specified number of "tickets"
+# that allow a thread to be scheduled repeatedly with minimal overhead.
+#
+# When a new SQL statement starts, a thread has no tickets, and it must observe innodb_thread_concurrency. Once the thread is entitled to enter
+# InnoDB, it is assigned a number of tickets that it can use for subsequently entering InnoDB to perform row operations.
+#
+# If the tickets run out, the thread is evicted, and innodb_thread_concurrency is observed again which may place the thread back into the first-in/first-out
+# queue of waiting threads.
+#
+# When the thread is once again entitled to enter InnoDB, tickets are assigned again. The number of tickets assigned is specified by the global option
+# innodb_concurrency_tickets, which is 5000 by default.
+#
+# A thread that is waiting for a lock is given one ticket once the lock becomes available.
+#
+# The correct values of these variables depend on your environment and workload. Try a range of different values to determine what value works for your
+# applications.
+#
+# Before limiting the number of concurrently executing threads, review configuration options that may improve the performance of InnoDB on multi-core and
+# multi-processor computers, such as innodb_adaptive_hash_index.
+#
+# For general performance information about MySQL thread handling, see SECTION 8.12.4.1, "HOW MYSQL HANDLES CLIENT CONNECTIONS"
+#
+# 15.8.5 CONFIGURING THE NUMBER OF BACKGROUND INNODB I/O THREADS
+#
+# InnoDB uses background threads to service various types of I/O requests. You can configure the number of background threads that service
+# read and write I/O on data pages using the innodb_read_io_threads and innodb_write_io_threads configuration parameters.
+#
+# These parameters signify the number of background threads used for read and write requests, respectively.
+#
+# They are effective on all supported platforms. You can set values for these parameters in the MySQL option file (my.cnf or
+# my.ini); you cannot change values dynamically.
+#
+# The default value for these parameters is 4 and permissible values range from 1-64.
+#
+# The purpose of these configuration options to make InnoDB more scalable on high end systems. Each background thread can handle up to 256
+# pending I/O requests.
+#
+# A major source of background I/O is read-ahead requests. InnoDB tries to balance the load of incoming requests in such a way that most background
+# threads share work equally.
+#
+# InnoDB also attempts to allocate read requests from the same extent to the same thread, to increase the chances of coalescing the requests.
+#
+# If you have a high end I/O subsystem and you see more than 64 x innodb_read_io_threads pending read requests in SHOW ENGINE INNODB STATUS output,
+# you might improve performance by increasing the value of innodb_read_io_threads.
+#
+# On Linux systems, InnoDB uses the asynch I/O subsystem by default to perform read-ahead and write requests for data file pages, which changes
+# the way that InnoDB background threads service these types of I/O requests.
+#
+# For more information, see SECTION 15.8.6, "USING ASYNCH I/O ON LINUX"
+#
+# For more information about InnoDB I/O performance, see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 15.8.6 USING ASYNCH I/O ON LINUX
+#
+# InnoDB uses the asynch I/O subsystem (native AIO) on Linux to perform read-ahead and write requests for data file pages.
+#
+# This behavior is controlled by the innodb_use_native_aio configuration option, which applies to Linux systems only and is
+# enabled by default. On other Unix-like systems, InnoDB uses synchronous I/O only.
+#
+# Historically, InnoDB only used asynch I/O on Windows systems. Using the asynch I/O subsystem on Linux requires the libaio library.
+#
+# With synchronous I/O, query threads queue I/O requests, and InnoDB background threads retrieve the queued requests one at a time,
+# issuing a synchronous I/O call for each.
+#
+# When an I/O request is completed and the I/O call returns, the InnoDB background thread that is handling the request calls an I/O
+# completion routine and returns to process the next request.
+#
+# The number of requests that can be processed in parallel is n, where n is the number of InnoDB background threads.
+#
+# The number of InnoDB background threads is controlled by innodb_read_io_threads and innodb_write_io_threads.
+#
+# See SECTION 15.8.5, "Configuring the Number of Background InnoDB I/O Threads"
+#
+# With native AIO, query threads dispatch I/O requests directly to the operating system, thereby removing the limit imposed
+# by the number of background threads.
+#
+# InnoDB background threads wait for I/O events to signal completed requests. When a request is completed, a background thread calls
+# an I/O completion routine and resumes waiting for I/O events.
+#
+# The advantage of native AIO is scalability for heavily I/O-bound systems that typically show many pending reads/writes in SHOW ENGINE 
+# INNODB STATUS\G output.
+#
+# The increase in parallel processing when using native AIO means that the type of I/O scheduler or properties of the disk array controller
+# have a greater influence on I/O performance.
+#
+# A potential disadvantage of native AIO for heavily I/O-bound systems is lack of control over the number of I/O write requests dispatched to
+# the operating system at once.
+#
+# Too many I/O write requests dispatched to the operating system for parallel processing could, in some cases, result in I/O read starvation,
+# depending on the amount of I/O activity and system capabilities.
+#
+# If a problem with the asynch I/O subsystem in the OS prevents InnoDB from starting, you can start the server with innodb_use_native_aio=0.
+#
+# This option may also be disabled automatically during startup if InnoDB detects a potential problem such as a combination of tmpdir location,
+# tmpfs file system, and Linux kernel that does not support asynch I/O on tmpfs.
+#
+# 15.8.7 CONFIGURING THE INNODB MASTER THREAD I/O RATE
+#
+# The master thread in InnoDB is a thread that performs various tasks in the background. Most of these tasks are I/O related, such as flushing
+# dirty pages from the buffer pool or writing changes from the insert buffer to the appropriate secondary indexes.
+#
+# The master thread attempts to perform these tasks in a way that does not adversely affect the normal working of the server.
+#
+# It tries to estimate the free I/O bandwidth available and tune its activities to take advantage of this free capacity.
+#
+# Historically, InnoDB has used a hard coded value of 100 IOPs (input/output operations per second) as the total I/O capacity
+# of the server.
+#
+# The parameter innodb_io_capacity indicates the overall I/O capacity available to InnoDB. This parameter should be set to approximately
+# the number of I/O operations that the system can perform per second.
+#
+# The value depends on your system configuration. When innodb_io_capacity is set, the master threads estimates the I/O bandwidth
+# available for background tasks based on the set value. Setting the value to 100 reverts to the old behavior.
+#
+# You can set the value of innodb_io_capacity to any number 100 or greater. The default value is 200, reflecting that the performance
+# of typical modern I/O devices is higher than in the early days of MySQL.
+#
+# Typically, values around the previous default of 100 are appropriate for consumer-level storage devices, such as hard drives up to
+# 7200 RPMs.
+#
+# Faster hard drives, RAID configurations, and SSDs benefit from higher values.
+#
+# The innodb_io_capacity setting is a total limit for all buffer pool instances. When dirty pages are flushed, the innodb_io_capacity
+# limit is divided equally among buffer pool instances.
+#
+# For more information, see the innodb_io_capacity system variable description.
+#
+# You can set the value of this parameter in the MySQL option file (my.cnf or my.ini) or change it dynamically with the SET_GLOBAL
+# statement, which requires privileges sufficient to set global system variables. See SECTION 5.1.9.1, "System Variable Privileges"
+#
+# The innodb_flush_sync configuration option causes the innodb_io_capacity setting to be ignored during bursts of I/O activity
+# that occur at checkpoints.
+#
+# innodb_flush_sync is enabled by default.
+#
+# In earlier MySQL releases, the InnoDB master thread also performed any needed purge operations. Those I/O operations are now
+# performed by other background threads, whose number is controlled by the innodb_purge_threads configuration option.
+#
+# For more information about InnoDB I/O performance, see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 15.8.8 CONFIGURING SPIN LOCK POLLING
+#
+# InnoDB mutexes and rw-locks are typically reserved for short intervals. On a multi-core system, it can be more efficient
+# for a thread to continuously check if it can acquire a mutex or rw-lock for a period of time before it sleeps.
+#
+# If the mutex or rw-lock becomes available during this period, the thread can continue immediately, in the same time
+# slice.
+#
+# However, too-frequent polling of a shared object such as a mutex or rw-lock by multiple threads can cause "cache ping pong",
+# which results in processors invalidating portions of each other's cache.
+#
+# InnoDB minimizes this issue by forcing a random delay between polls to desynchronize polling activity.
+#
+# The random delay is implemented as a spin-wait loop.
+#
+# The duration of a spin-wait loop is determined by the number of PAUSE instructions that occur in the loop. That number is generated
+# by randomly selecting an integer ranging from 0 up to but not including the innodb_spin_wait_delay value, and multiplying that value
+# by 50.
+#
+# (The multiplier value, 50 is hardcoded before MySQL 8.0.16, and configurable thereafter).
+#
+# For example, an integer is randomly selected from the following range for an innodb_spin_wait_delay setting of 6:
+#
+# 		{0,1,2,3,4,5}
+#
+# The selected integer is multiplied by 50, resulting in one of six possible PAUSE instruction values:
+#
+# 		{0,50,100,150,200,250}
+#
+# For that set of values, 250 is the maximum number of PAUSE instructions that can occur in a spin-wait loop. An innodb_spin_wait_delay
+# setting of 5 results in a set of five possible values {0,50,100,150,200}, where 200 is the maximum number of PAUSE instructions, and so
+# on.
+#
+# In this way, the innodb_spin_wait_delay setting controls the maximum delay between spin lock polls.
+#
+# On a system where all processor cores share a fast cache memory, you might reduce the maximum delay or disable the busy loop altogether
+# by setting innodb_spin_wait_delay=0.
+#
+# On a system with multiple processor chips, the effect of cache invalidation can be more significant and you might increase the maximum
+# delay.
+#
+# In the 100MHz Pentium era, an innodb_spin_wait_delay unit was calibrated to be equivalent to one microsecond. That time equivalence did 
+# not hold, but PAUSE instruction duration remained fairly constant in terms of processor cycles relative to other CPU instructions until
+# the introduction of the Skylake generation of processors, which have a comparatively longer PAUSE instruction.
+#
+# The innodb_spin_wait_pause_multiplier variable was introduced in MySQL 8.0.16 to provide a way to account for differences in PAUSE
+# instruction duration.
+#
+# The innodb_spin_wait_pause_multiplier variable controls the size of PAUSE instruction values.
+#
+# For example, assuming an innodb_spin_wait_delay setting of 6, decreasing the innodb_spin_wait_pause_multiplier value from
+# 50 (the default and previously hardcoded value) to 5 generates a set of smaller PAUSE instruction values:
+#
+# 		{0,5,10,15,20,25}
+#
+# The ability to increase or decrease PAUSE instruction values permits fine tuning InnoDB for different processor architechtures.
+#
+# Smaller PAUSE instruction values would be appropriate for processor architechtures with a comparatively longer PAUSE instruction,
+# for example.
+#
+# The innodb_spin_wait_delay and innodb_spin_wait_pause_multiplier variables are dynamic. They can be specified in a MySQL option
+# file or modified at runtime using a SET_GLOBAL statement.
+#
+# Modifying the variables at runtime requires privileges sufficient to set global system variables. See SECTION 5.1.9.1, "System Variable Privileges"
+#
+# 15.8.9 CONFIGURING INNODB PURGE SCHEDULING
+#
+# The purge operations (a type of garbage collection) that InnoDB performs automatically may be performed by one or more 
+# separate threads rather than as part of the master thread.
+#
+# The use of separate threads improves scalability by allowing the main database operations to run independently from maintenance
+# work happening in the background.
+#
+# To control this feature, increase the value of the configuration option innodb_purge_threads.
+#
+# If DML action is concentrated on a single table or a few tables, keep the setting low so that the threads do not contend with 
+# each other for access to the busy tables.
+#
+# If DML operations are spread across many tables, increase the setting. Its maximum is 32. innodb_purge_threads is a non-dynamic
+# configuration option, which means it cannot be configured at runtime.
+#
+# There is another related configuration option, innodb_purge_batch_size with a default value of 300 and maximum value of 5000.
+#
+# This option is mainly intended for experimentation and tuning of purge operations, and should not be interesting to typical users.
+#
+# For more information about InnoDB I/O performance, see SECTION 8.5.8, "Optimizing InnoDB Disk I/O"
+#
+# 15.8.10 CONFIGURING OPTIMIZER STATISTICS FOR INNODB
+#
+# 15.8.10.1 Configuring Persistent Optimizer Statistics Parameters
+# 15.8.10.2 Configuring Non-Persistent Optimizer Statistics Parameters
+# 15.8.10.3 Estimating ANALYZE TABLE Complexity for InnoDB Tables
+#
+# This section describes how to configure persistent and non-persistent optimizer statistics for InnoDB tables.
+#
+# Persistent optimizer statistics are persisted across server restarts, allowing for greater plan stability and more consistent
+# query performance.
+#
+# Persistent optimizer statistics also provide control and flexibility with these additional benefits:
+#
+# 		) You can use the innodb_stats_auto_recalc configuration option to control whether statistics are updated automatically after
+# 			substantial changes to a table.
+#
+# 		) You can use the STATS_PERSISTENT, STATS_AUTO_RECALC, and STATS_SAMPLE_PAGE clauses with CREATE_TABLE and ALTER_TABLE statements
+# 			to configure optimizer statistics for individual tables.
+#
+# 		) You can query optimizer statistics data in the mysql.innodb_table_stats and mysql.innodb_index_stats tables
+#
+# 		) You can view the last_update column of the mysql.innodb_table_stats and mysql.innodb_index_stats tables to see when statistics were last updated.
+#
+# 		) You can manually modify the mysql.innodb_table_stats and mysql.innodb_index_stats tables to force a specific query optimization plan or to test
+# 			alternative plans without modifying the database.
+#
+# The persistent optimizer statistics feature is enabled by default (innodb_stats_persistent=ON)
+#
+# Non-persistent optimizer statistics are cleared on each server restart and after some other operations, and recomputed on the next table access.
+# As a result, different estimates could be produced when recomputing statistics, leading to different choices in execution plans and variations
+# in query performance.
+#
+# This section also provides information about estimating ANALYZE_TABLE complexity, which may be useful when attempting to achieve a balance between
+# accurate statistics and ANALYZE_TABLE execution time.
+#
+# 15.8.10.1 CONFIGURING PERSISTENT OPTIMIZER STATISTICS PARAMETERS
+#
+# The persistent optimizer statistics feature improves plan stability by storing statistics to disk and making them persistent
+# across server restarts so that the optimizer is more likely to make consistent choices each time for a given query.
+#
+# Optimizer statistics are persisted to disk when innodb_stats_persistent=ON or when individual tables are created or altered with
+# STATS_PERSISTENT=1.
+#
+# innodb_stats_persistent is enabled by default.
+#
+# Formerly, optimizer statistics were cleared on each server restart and after some other operations, and recomputed on the next table
+# access. Consequently, different estimates could be produced when recalculating statistics, leading to different choices in query
+# execution plans and thus variations in query performance.
+#
+# Persistent statistics are stored in the mysql.innodb_table_stats and mysql.innodb_index_stats tables, as described in 
+# SECTION 15.8.10.1.5, "InnoDB Persistent Statistics Tables"
+#
+# To revert to using non-persistent optimizer statistics, you can modify tables using an ALTER TABLE tbl_name STATS_PERSISTENT=0 statement.
+#
+# For related information, see SECTION 15.8.10.2, "Configuring Non-Persistent Optimizer Statistics Parameters"
+#
+# 15.8.10.1.1 CONFIGURING AUTOMATIC STATISTICS CALCULATION FOR PERSISTENT OPTIMIZER STATISTICS
+#
+# The innodb_stats_auto_recalc configuration option, which is enabled by default, determines whether statistics are calculated automatically
+# whenever a table undergoes substantial changes (to more than 10% of the rows).
+#
+# You can also configure automatic statistics recalculation for individual tables using a STATS_AUTO_RECALC clause in a 
+# CREATE_TABLE or ALTER_TABLE statement. innodb_stats_auto_recalc is enabled by default.
+#
+# Because of the asynch nature of automatic statistics recalculation (which occurs in the background), statistics may not be
+# recalculated instantly after running a DML operation that affects more than 10% of a table, even when innodb_stats_auto_recalc
+# is enabled.
+#
+# In some cases, statistics recalculation may be delayed by a few seconds.
+#
+# If up-to-date statistics are required immediately after changing significant portions of a table, run ANALYZE_TABLE to initiate
+# a synch (foreground) recalculations of Stats.
+#
+# If innodb_stats_auto_recalc is disabled, ensure the accuracy of optimizer stats by issuing the ANALYZE_TABLE statement for each applicable
+# table after making substantial changes to indexed columns.
+#
+# You might run this statement in your setup scripts after representative data has been loaded into the table, and run it periodically 
+# after DML operations significantly change the contents of indexed columns, or on a schedule at times of low activity.
+#
+# When a new index is added to an existing table, or a column is added or dropped, index statistics are calculated and added to the
+# innodb_index_stats table regardless of the value of innodb_stats_auto_recalc.
+#
+# 		CAUTION:
+#
+# 			To ensure statistics are gathered when a new index is created, either enable the innodb_stats_auto_recalc option, or run
+# 			ANALYZE_TABLE after creating each new index when the persistent statistics mode is enabled.
+#
+# 15.8.10.1.2 CONFIGURING OPTIMIZER STATISTICS PARAMETERS FOR INDIVIDUAL TABLES
+#
+# innodb_stats_persistent, innodb_stats_auto_recalc and innodb_stats_persistent_sample_pages are global configuration options.
+#
+# To override these system-wide settings and configure optimizer statistics parameters for individual tables, you can define STATS_PERSISTENT,
+# STATS_AUTO_RECALC and STATS_SAMPLE_PAGES clauses in CREATE_TABLE or ALTER_TABLE statements.
+#
+# 		) STATS_PERSISTENT specifies whether to enable persistent statistics for an InnoDB table. The value DEFAULT causes the persistent
+# 			statistics setting for the table to be determined by the innodb_stats_persistent configuration option.
+#
+# 			The value 1 enables persistent statistics for the table, while the value 0 turns off this feature.
+#
+# 			After enabling persistent statistics through a CREATE TABLE or ALTER TABLE statement, issue an ANALYZE_TABLE statement to calculate
+# 			the statistics, after loading representative data into the table.
+#
+# 		) STATS_AUTO_RECALC specifies whether to automatically recalculate persistent statistics for an InnoDB table.
+#
+# 			The value DEFAULT causes the persistent statistics setting for the table to be determined by the innodb_stats_auto_recalc configuration
+# 			option.
+#
+# 			The value 1 causes statistics to be recalculated when 10% of the data in the table has changed.
+#
+# 			The value 0 prevents automatic recalculation for this table; with this setting, issue an ANALYZE_TABLE statement to recalculate the
+# 			statistics after making substantial changes to the table.
+#
+# 		) STATS_SAMPLE_PAGES specifies the number of index pages to sample when estimating cardinality and other statistics for an indexed column,
+# 			such as those calculated by ANALYZE_TABLE.
+#
+# ALl three clauses are specified in the following CREATE_TABLE example:
+#
+# 		CREATE TABLE `t1` (
+# 			`id` int(8) NOT NULL auto_increment,
+# 			`data` varchar(255),
+# 			`date` datetime,
+# 		PRIMARY KEY (`id`),
+# 		INDEX `DATE_IX` (`date`)
+# 		) ENGINE=InnoDB,
+# 			STATS_PERSISTENT=1,
+# 			STATS_AUTO_RECALC=1,
+# 			STATS_SAMPLE_PAGES=25;
+#
+# 15.8.10.1.3 CONFIGURING THE NUMBER OF SAMPLED PAGES FOR INNODB OPTIMIZER STATISTICS
+#
+# The MySQL query optimizer uses estimated statistics about key distributions to choose the indexes for an execution plan,
+# based on the relative selectivity of the index.
+#
+# Operations such as ANALYZE_TABLE causes InnoDB to sample random pages from each index on a table to estimate the cardinality
+# of the index. (This technique is known as random dives)
+#
+# To give you control over the quality of the statistics estimate (and thus better information for the query optimizer), you can change
+# the number of sampled pages using the parameter innodb_stats_persistent_sample_pages, which can be set at runtime.
+#
+# innodb_stats_persistent_sample_pages has a default value of 20. As a general guideline, consider modifying this parameter when encountering
+# the following issues:
+#
+# 		1. Statistics are not accurate enough and the optimizer chooses suboptimal plans, as shown by EXPLAIN output.
+#
+# 			The accuracy of statistics can be checked by comparing the actual cardinality of an index (as returned by running SELECT_DISTINCT
+# 			on the index columns) with the estimates provided in the mysql.innodb_index_stats persistent statistics table.
+#
+# 			If it is determined that statistics are not accurate enough, the value of innodb_stats_persistent_sample_pages should be increased
+# 			until the statistics estimates are sufficiently accurate.
+#
+# 			Increasing innodb_stats_persistent_sample_pages too much, however, could cause ANALYZE_TABLE to run slowly.
+#
+# 		2. ANALYZE_TABLE is too slow. In this case, innodb_stats_persistent_sample_pages should be decreased until ANALYZE_TABLE
+# 			execution time is acceptable.
+#
+# 			Decreasing the value too much, however, could lead to the first problem of inaccurate statistics and suboptimal query
+# 			execution plans.
+#
+# 			If a balance cannot be achieved between accurate statistics and ANALYZE_TABLE execution time, consider decreasing the
+# 			number of indexed columns in the table or limiting the number of partitions to reduce ANALYZE_TABLE complexity.
+#
+# 			The number of columns in the table's primary key is also important to consider, as primary key columns are appended
+# 			to each nonunique index.
+#
+# 			For related information, see SECTION 15.8.10.3, "ESTIMATING ANALYZE TABLE COMPLEXITY FOR INNODB TABLES"
+#
+# 15.8.10.1.4 INCLUDING DELETE-MARKED RECORDS IN PERSISTENT STATISTICS CALCULATIONS
+#
+#
+# https://dev.mysql.com/doc/refman/8.0/en/innodb-persistent-stats.html
