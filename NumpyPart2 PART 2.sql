@@ -47783,5 +47783,756 @@
 #
 # 15.11.4 DEFRAGMENTING A TABLE
 #
-# https://dev.mysql.com/doc/refman/8.0/en/innodb-file-defragmenting.html
+# Random insertions into or deletions from a secondary index can cause the index to become fragmented. Fragmentation means that the physical ordering
+# of the index pages on the disk is not close to the index ordering of the records on the pages, or that there are many unused pages in the 64-page
+# blocks that were allocated to the index.
 #
+# One symptom of fragmentation is that a table takes more space than it "should" take. How much that is exactly, is difficult to determine. All InnoDB
+# data and indexes are stored in B-trees, and their fill factor may vary from 50% to 100%. Another symptom of fragmentation is that a table scan such
+# as this takes more time than it "should" take:
+#
+# 		SELECT COUNT(*) FROM t WHERE non_indexed_column <> 12345;
+#
+# The preceding query requires MySQL to perform a full table scan, the slowest type of query for a large table.
+#
+# To speed up index scans, you can periodically perform a "null" ALTER_TABLE operation, which causes MySQL to rebuild the table:
+#
+# 		ALTER TABLE tbl_name ENGINE=INNODB
+#
+# You can also use ALTER_TABLE_tbl_name_FORCE to perform a "null" alter operation that rebuilds the table.
+#
+# Both ALTER_TABLE_tbl_name_ENGINE=INNODB and ALTER_TABLE_tbl_name_FORCE use online DDL. For more information, see SECTION 15.12, "InnoDB and Online DDL"
+#
+# Another way to perform a defragmentation operation is to use mysqldump to dump the table to a text file, drop the table, and reload it from the dump file.
+#
+# If the insertions into an index are always ascending and records are deleted only from the end, the InnoDB filespace management algorithm guarantees
+# that fragmentation in the index does not occur.
+#
+# 15.11.5 RECLAIMING DISK SPACE WITH TRUNCATE TABLE
+#
+# To reclaim operating system disk space when truncating an InnoDB table, the table must be stored in its own .ibd file.
+#
+# For a table to be stored in its own .ibd file, innodb_file_per_table must be enabled when the table is created. Additionally, there cannot
+# be a foreign key constraint between the table being truncated and other tables, otherwise the TRUNCATE TABLE operation fails.
+#
+# A foreign key constraint between two columns in the same table, however, is permitted.
+#
+# When a table is truncated, it is dropped and re-created in a new .ibd file, and the freed space is returned to the operating system.
+# This is in contrast to truncating InnoDB tables that are stored within the InnoDB system tablespace (tables created when innodb_file_per_table=OFF),
+# and tables stored in shared general tablespaces, where only InnoDB can use the freed space after the table is truncated.
+#
+# The ability to truncate tables and return disk space to the operating system also means that physical backups can be smaller.
+#
+# Truncating tables that are stored in the system tablespace (tables created when innodb_file_per_table=OFF) or in a general tablespace leaves
+# blocks of unused space in the tablespace.
+#
+# 15.12 InnoDB AND ONLINE DDL
+#
+# 15.12.1 ONLINE DDL OPERATIONS
+# 15.12.2 ONLINE DDL PERFORMANCE AND CONCURRENCY
+# 15.12.3 ONLINE DDL SPACE REQUIREMENTS
+# 15.12.4 SIMPLIFYING DDL STATEMENTS WITH ONLINE DDL
+# 15.12.5 ONLINE DDL FAILURE CONDITIONS
+# 15.12.6 ONLINE DDL LIMITATIONS
+#
+# The online DDL feature provides support for instant and in-place table alterations and concurrent DML. Benefits of this feature include:
+#
+# 		) Improved responsiveness and availability in busy production environments, where making a table unavailable for minutes or hours is not practical.
+#
+# 		) For in-place operations, the ability to adjust the balance between performance and concurrency during DDL operations using the LOCK clause. See THE LOCK CLAUSE.
+#
+# 		) Less disk space usage and I/O overhead than the table-copy method.
+#
+# NOTE:
+#
+# 		ALGORITHM=INSTANT support is available for ADD COLUMN and other operations in MySQL 8.0.12
+#
+# Typically, you do not need to do anything special to enable online DDL. By default, MySQL performs the operation instantly or in place,
+# as permitted, with as little locking as possible.
+#
+# You can control aspects of a DDL operation using the ALGORITHM and LOCK clauses of the ALTER_TABLE statement. These clauses are placed at the end
+# of the statement, separated from the table and column specifications by commas. For example:
+#
+# 		ALTER TABLE tbl_name ADD PRIMARY KEY (column), ALGORITHM=INPLACE, LOCK=NONE;
+#
+# The LOCK clause may be used for operations that are performed in place and is useful for fine-tuning the degree of concurrent access to the table during operations.
+#
+# Only LOCK=DEFAULT is supported for operations that are performed instantly. The ALGORITHM clause is primarily intended for performance comparisons and as a fallback
+# to the older table-copying behavior in case you encounter any issues. For example:
+#
+# 		) To avoid accidentally making the table unavailable for reads, writes, or both, during an in-place ALTER_TABLE operation, specify a clause on the ALTER_TABLE statement
+# 			such as LOCK=NONE (permit reads and writes) or LOCK=SHARED (permit reads). The operation halts immediately if the requested level of concurrency is not available.
+#
+# 		) To compare performance between algorithms, run a statement with ALGORITHM=INSTANT, ALGORITHM=INPLACE and ALGORITHM=COPY. You can also run a statement with the old_alter_table
+# 			configuration option enabled to force the use of ALGORITHM=COPY
+#
+# 		) To avoid tying up the server with an ALTER_TABLE operation that copies the table, include ALGORITHM=INSTANT or ALGORITHM=INPLACE. The statement halts immediately
+# 			if it cannot use the specified algorithm.
+#
+# 15.12.1 ONLINE DDL OPERATIONS
+#
+# Online support details, syntax examples, and usage notes for DDL operations are provided under the following topics in this section.
+#
+# 		) INDEX OPERATIONS
+#
+# 		) PRIMARY KEY OPERATIONS
+#
+# 		) COLUMN OPERATIONS
+#
+# 		) GENERATED COLUMN OPERATIONS
+#
+# 		) FOREIGN KEY OPERATIONS
+#
+# 		) TABLE OPERATIONS
+#
+# 		) TABLESPACE OPERATIONS 
+#
+# 		) PARTITIONING OPERATIONS
+#
+# INDEX OPERATIONS
+#
+# The following table provides an overview of online DDL support for index operations. An asterisk indicates additional information, an exception or a dependency.
+#
+# For details, see SYNTAX AND USAGE NOTES.
+#
+# 		TABLE 15.17 ONLINE DDL SUPPORT FOR INDEX OPERATIONS
+#
+# 			OPERATION 					INSTANT 			IN PLACE 				REBUILDS TABLE 			PERMITS CONCURRENT DML 			ONLY MODIFIES METADATA
+#
+# 			Creating or adding a 	No 				Yes 						No 							Yes 									No
+# 			secondary index
+#
+# 			Dropping an index 		No 				Yes 						No 							Yes 									Yes
+#
+# 			Renaming an index 		No 				Yes 						No 							Yes 									Yes
+#
+# 			Adding a FULLTEXT index No 				Yes* 						No* 							No 									No
+#
+# 			Adding a SPATIAL index  No 				Yes 						No 							No 									No
+#
+# 			Changing the index type Yes 				Yes 						No 							Yes 									Yes
+#
+# SYNTAX AND USAGE NOTES
+#
+# 	) Creating or adding a secondary index
+#
+# 			CREATE INDEX name ON table (col_list);
+#
+# 			ALTER TABLE tbl_name ADD INDEX name (col_list);
+#
+# 		The table remains available for read and write operations while the index is being created. The CREATE_INDEX statement only finishes
+# 		after all transactions that are accessing the table are completed, so that the initial state of the index reflects the most recent
+# 		contents of the table.
+#
+# 		Online DDL support for adding secondary indexes means that you can generally speed the overall process of creating and loading a table
+# 		and associated indexes by creating the table without secondary indexes, then adding secondary indexes after the data is loaded.
+#
+# 		A newly created secondary index contains only the committed data in the table at the time in the CREATE_INDEX or ALTER_TABLE statement
+# 		finishes executing. It does not contain any uncommitted values, old versions of values, or values marked for deletion but not yet
+# 		removed from the old index.
+#
+# 		Some factors affect the performance, space usage, and semantics of this operation. For details, see SECTION 15.12.6, "ONLINE DDL LIMITATIONS"
+#
+# 	) Dropping an index
+#
+# 		DROP INDEX name ON table;
+#
+# 		ALTER TABLE tbl_name DROP INDEX name;
+#
+# 		The table remains available for read and write operations while the index is being dropped. The DROP_INDEX statement only finishes
+# 		after all transactions that are accessing the table are completed, so that the initial state of the index reflects the most recent
+# 		contents of the table.
+#
+# 	) Renaming an index
+#
+# 		ALTER TABLE tbl_name RENAME INDEX old_index_name TO new_index_name, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 	) Adding a FULLTEXT index
+#
+# 			CREATE FULLTEXT INDEX name ON table(column);
+#
+# 		Adding the first FULLTEXT index rebuilds the table if there is no user-defined FTS_DOC_ID column. Additional FULLTEXT indexes may
+# 		be added without rebuilding the table.
+#
+# 	) Adding a SPATIAL index
+#
+# 			CREATE TABLE geom (g GEOMETRY NOT NULL);
+# 			ALTER TABLE geom ADD SPATIAL INDEX(g), ALGORITHM=INPLACE, LOCK=SHARED;
+#
+# 		Adding the first FULLTEXT index rebuilds the table if there is no user-defined FTS_DOC_ID column. Additional FULLTEXT indexes may
+# 		be added without rebuilding the table.
+#
+# ) Changing the index type (USING {BTREE | HASH})
+#
+# 		ALTER TABLE tbl_name DROP INDEX i1, ADD INDEX i1(key_part,...) USING BTREE, ALGORITHM=INSTANT;
+#
+# PRIMARY KEY OPERATIONS
+#
+# The following table provides an overview of online DDL support for primary key operations. An asterisk indicates additional information,
+# an exception, or a dependency.
+#
+# See SYNTAX AND USAGE NOTES.
+#
+# 		TABLE 15.18 ONLINE DDL SUPPORT FOR PRIMARY KEY OPERATIONS
+#
+# 			OPERATION 					INSTANT 			IN PLACE 			REBUILDS TABLE 			PERMITS CONCURRENT DML 				ONLY MODIFIES METADATA
+#
+# 			Adding a primary key 	No 				Yes* 					Yes* 							Yes 										No
+#
+# 			Dropping a primary key 	No 				No 					Yes 							No 										No
+#
+# 			Dropping a primary key 	No 				Yes 					Yes 							Yes 										No
+# 			and adding another 
+#
+# SYNTAX AND USAGE NOTES
+#
+# 	) Adding a primary key
+#
+# 			ALTER TABLE tbl_name ADD PRIMARY KEY (column), ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 		Rebuilds the table in place. Data is reorganized substantially, making it an expensive operation. ALGORITHM=INPLACE is not permitted
+# 		under certain conditions if columns have to be converted to NOT NULL.
+#
+# 		Restructuring the clustered index always requires copying of table data. Thus, it is best to define the primary key when you create a table,
+# 		rather than issuing ALTER TABLE ... ADD PRIMARY KEY later.
+#
+# 		When you create a UNIQUE or PRIMARY KEY index, MySQL must do some extra work. For UNIQUE index, MySQL checks that the table contains no duplicate
+# 		values for the key.
+#
+# 		For a PRIMARY KEY index, MySQL also checks that none of the PRIMARY KEY columns contains a NULL.
+#
+# 		When you add a primary key using the ALGORITHM=COPY clause, MySQL converts NULL values in the associated columns to default values: 0 for numbers,
+# 		an empty string for character-based columns and BLOBs, and 0000-00-00 00:00:00 for DATETIME.
+#
+# 		This is a non-standard behavior that Oracle recommends you do not rely on.
+#
+# 		Adding a primary key using ALGORITHM=INPLACE is only permitted when the SQL_MODE setting includes the strict_trans_tables or strict_all_tables flags;
+# 		when the SQL_MODE setting is strict, ALGORITHM=INPLACE is permitted, but the statement can still fail if the requested primary key columns contain
+# 		NULL values.
+#
+# 		The ALGORITHM=INPLACE behavior is more standard-compliant.
+#
+# 		If you create a table without a primary key, InnoDB chooses one for you, which can be the first UNIQUE key defined on NOT NULL columns, or a system-generated
+# 		key.
+#
+# 		To avoid uncertainty and the potential space requirement for an extra hidden column, specify the PRIMARY KEY clause as part of the CREATE_TABLE statement.
+#
+# 		MySQL creates a new clustered index by copying the existing data from the original table to a temporary table that has the desired index structure.
+# 		Once the data is completely copied to the temporary table, the original table is renamed with a different temporary table name.
+#
+# 		The temporary table comprising the new clustered index is renamed with the name of the original table, and the original table is dropped from the database.
+#
+# 		The online performance enhancements that apply to operations on secondary indexes do not apply to the primary key index. The rows of an InnoDB table are
+# 		stored in a clustered index organized based on the primary key, forming what some database systems call an "index-organized table".
+#
+# 		Because the table structure is closely tied to the primary key, redefining the primary key still requires copying the data.
+#
+# 		When an operation on the primary key uses ALGORITHM=INPLACE, even though the data is still copied, it is more efficient than using ALGORITHM=COPY because:
+#
+# 			) No undo logging or associated redo logging is required for ALGORITHM=INPLACE. These operations add overhead to DDL statements that use ALGORITHM=COPY
+#
+# 			) The secondary index entries are pre-sorted, and so can be loaded in order.
+#
+# 			) The change buffer is not used, because there are no random-access inserts into the secondary indexes.
+#
+# 	) Dropping a primary key
+#
+# 			ALTER TABLE tbl_name DROP PRIMARY KEY, ALGORITHM=COPY;
+#
+# 	  Only ALGORITHM=COPY supports dropping a primary key without adding a new one in the same ALTER TABLE statement.
+#
+# 	) Dropping a primary key and adding another
+#
+# 		ALTER TABLE tbl_name DROP PRIMARY KEY, ADD PRIMARY KEY (column), ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 		Data is reorganized substantially, making it an expensive operation.
+#
+# COLUMN OPERATIONS
+#
+# The following table provides an overview of online DDL support for column operations. An asterisk indicates additional information, an exception,
+# or a dependency.
+#
+# For details, see SYNTAX AND USAGE NOTES.
+#
+# 		TABLE 15.19 ONLINE DDL SUPPORT FOR COLUMN OPERATIONS
+#
+# 			OPERATION 			INSTANT 		IN PLACE 		REBUILDS TABLE 		PERMITS CONCURRENT DML 		ONLY MODIFIES METADATA
+#
+# 			Adding a column 	Yes* 			Yes 				No* 						Yes* 								No
+#
+# 			Dropping a column No 			Yes 				Yes 						Yes 								No
+#
+# 			Renaming a column No 			Yes 				No 						Yes* 								Yes
+#
+# 			Reordering cols 	No 			Yes 				Yes 						Yes 								No
+#
+# 			Setting a col 		Yes 			Yes 				No 						Yes 								Yes 
+# 			def. value
+#
+# 			Changing the 		No 			No 				Yes 						No 								No
+# 			col data type
+#
+# 			Ext. VARCHAR 		No 			Yes 				No 						Yes 								Yes
+# 			column size
+#
+# 			Dropping the 		Yes 			Yes 				No 						Yes 								Yes
+# 			col def. val 
+#
+# 			Changing the 		No 			Yes 				No 						Yes 								No*
+# 			auto-inc.val
+#
+# 			Making a col. 		No 			Yes 				Yes* 						Yes 								No
+# 			NULL
+#
+# 			Making a col. 		No 			Yes* 				Yes* 						Yes 								No
+# 			NOT NULL
+#
+# 			Mod. the def. 		Yes 			Yes 				No 						Yes 								Yes
+# 			of an ENUM or SET
+#
+# 
+# SYNTAX AND USAGE NOTES
+#
+# 		) Adding a column
+#
+# 				ALTER TABLE tbl_name ADD COLUMN column_name column_definition, ALGORITHM=INSTANT;
+#
+# 			The following limitations apply when the INSTANT algorithm is used to add a column:
+#
+# 				) Adding a column cannot be combined in the same statement with other ALTER TABLE actions that do not support ALGORITHM=INSTANT
+#
+# 				) A column can only be added as the last column of the table. Adding a column to any other positon among other columns is not supported.
+#
+# 				) Columns cannot be added to tables that use ROW_FORMAT=COMPRESSED
+#
+# 				) Columns cannot be added to tables that include a FULLTEXT index.
+#
+# 				) Columns cannot be added to temporary tables. Temporary tables only support ALGORITHM=COPY
+#
+# 				) Columns cannot be added to tables that reside in the data dictionary tablespace.
+#
+# 				) Row size limits are not evaluated when adding a column. However, row size limits are checked during DML operations
+# 					that insert and update rows in the table.
+#
+# 			Multiple columns may be added in the same ALTER_TABLE statement. For example:
+#
+# 				ALTER TABLE t1 ADD COLUMN c2 INT, ADD COLUMN c3 INT, ALGORITHM=INSTANT;
+#
+# 			INFORMATION_SCHEMA.INNODB_TABLES and INFORMATION_SCHEMA.INNODB_COLUMNS provide metadata for instantly added columns.
+#
+# 			INFORMATION_SCHEMA.INNODB_TABLES.INSTANT_COLS shows number of columns in the table prior to adding the first instant column.
+#
+# 			INFORMATION_SCHEMA.INNODB_COLUMNS.HAS_DEFAULT and DEFAULT_VALUE provide metadata about default values for instantly added columns.
+#
+# 			Concurrent DML is not permitted when adding an auto-increment column. Data is reorganized substantially, making it an expensive
+# 			operation.
+#
+# 			At a minimum, ALGORITHM=INPLACE, LOCK=SHARED is required.
+#
+# 			The table is rebuilt if ALGORITHM=INPLACE is used to add a column.
+#
+# 		) Dropping a column
+#
+# 				ALTER TABLE tbl_name DROP COLUMN column_name, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 			Data is reorganized substantially, making it an expensive operation.
+#
+# 		) Renaming a column
+#
+# 				ALTER TABLE tbl CHANGE old_col_name new_col_name data_type, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 			To permit concurrent DML, keep the same data type and only change the column name.
+#
+# 			When you keep the same data type and [NOT] NULL attribute, only changing the column name, the operation can always be
+# 			performed online.
+#
+# 			You can also rename a column that is part of a foreign key constraint. The foreign key definition is automatically updated to use
+# 			the new column name. Renaming a column participating in a foreign key only works with ALGORITHM=INPLACE.
+#
+# 			If you use the ALGORITHM=COPY clause, or some other condition causes the command to use ALGORITHM=COPY behind the scenes,
+# 			the ALTER TABLE statement fails.
+#
+# 			ALGORITHM=INPLACE is not supported for renaming a generated column.
+#
+# 		) Reordering columns
+#
+# 			To reorder columns, use FIRST or AFTER in CHANGE or MODIFY operations.
+#
+# 				ALTER TABLE tbl_name MODIFY COLUMN col_name column_definition FIRST, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 			Data is reorganized substantially, making it an expensive operation.
+#
+# 		) Changing the column data type
+#
+# 				ALTER TABLE tbl_name CHANGE c1 c1 BIGINT, ALGORITHM=COPY;
+#
+# 			Changing the column data type is only supported with ALGORITHM=COPY
+#
+# 		) Extending VARCHAR column size
+#
+# 				ALTER TABLE tbl_name CHANGE COLUMN c1 c1 VARCHAR(255), ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 			The number of length bytes required by a VARCHAR column must remain the same. For VARCHAR columns of 0 to 255 bytes in size,
+# 			one length bytes is required to encode the value.
+#
+# 			For VARCHAR columns of 256 bytes in size or more, two length bytes are required. As a result, in-place ALTER_TABLE only supports
+# 			increasing VARCHAR column size from 0 to 255 bytes, or from 256 bytes to a greater size.
+#
+# 			In-place ALTER_TABLE does not support increasing the size of a VARCHAR column from less than 256 bytes to a size equal to or greater
+# 			than 256 bytes.
+#
+# 			In this case, the number of required length bytes changes from 1 to 2, which is only supported by a table copy (ALGORITHM=COPY)
+#
+# 			For example, attempting to change VARCHAR column size for a single byte character set from VARCHAR(255) to VARCHAR(256) using
+# 			in-place ALTER_TABLE returns this error:
+#
+# 				ALTER TABLE tbl_name ALGORITHM=INPLACE, CHANGE COLUMN c1 c1 VARCHAR(256);
+# 				ERROR 0A000: ALGORITHM=INPLACE is not supported. Reason: Cannot change column
+# 				type INPLACE. Try ALGORITHM=COPY.
+#
+# 			NOTE:
+#
+# 				The byte length of a VARCHAR column is dependant on the byte length of the character set.
+#
+# 			Decreasing VARCHAR size using in-place ALTER_TABLE is not supported. Decreasing VARCHAR size requires a table
+# 			copy (ALGORITHM=COPY)
+#
+# 		) Setting a column default value
+#
+# 				ALTER TABLE tbl_name ALTER COLUMN col SET DEFAULT literal, ALGORITHM=INSTANT;
+#
+# 			Only modifies table metadata. Default column values are stored in the data dictionary.
+#
+# 		) Dropping a column default value
+#
+# 				ALTER TABLE tbl ALTER COLUMN col DROP DEFAULT, ALGORITHM=INSTANT;
+#
+# 		) Changing the auto-increment value
+#
+# 				ALTER TABLE table AUTO_INCREMENT=next_value, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 			Modifies a value stored in memory, not the data file.
+#
+# 			In a distributed system using replication or sharding, you sometimes reset the auto-increment counter for a table to a specific value.
+#
+# 			The next row inserted into the table uses the specified value for its auto-increment column. You might also use this technique in data
+# 			warehousing environment where you periodically empty all the tables and reloads them, and restart the auto-increment sequence from 1.
+#
+# 		) Making a column NULL
+#
+# 				ALTER TABLE tbl_name MODIFY COLUMN column_name data_type NULL, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 			Rebuilds the table in place. Data is reorganized substantially, making it an expensive operation.
+#
+# 		) Making a column NOT NULL
+#
+# 				ALTER TABLE tbl_name MODIFY COLUMN column_name data_type NOT NULL, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 			Rebuilds the table in place. STRICT_ALL_TABLES or STRICT_TRANS_TABLES SQL_MODE is required for the operation to succeed.
+#
+# 			The operation fails if the column contains NULL values.
+#
+# 			The server prohibits changes to foreign key columns that have the potential to cause loss of referential integrity.
+#
+# 			See SECTION 13.1.9, "ALTER TABLE SYNTAX"
+#
+# 			Data is reorganized substantially, making it an expensive operation.
+#
+# 		) Modifying the definition of an ENUM or SET column
+#
+# 				CREATE TABLE t1 (c1 ENUM('a', 'b', 'c'));
+# 				ALTER TABLE t1 MODIFY COLUMN c1 ENUM('a', 'b', 'c', 'd'), ALGORITHM=INSTANT;
+#
+# 			Modifying the definition of an ENUM or SET column by adding new enumeration or set members to the end of the list of valid
+# 			member values may be performed instantly or in place, as long as the storage size of the data type does not change.
+#
+# 			For example, adding a member to a SET column that has 8 members changes the required storage per value from 1 byte to 2 bytes;
+# 			this requires a table copy.
+#
+# 			Adding members in the middle of the list causes renumbering of existing members, which requires a table copy.
+#
+# GENERATED COLUMN OPERATIONS
+#
+# The following table provides an overview of online DDL support for generated column operations. For details, see SYNTAX and USAGE NOTES.
+#
+# 		TABLE 15.20 ONLINE DDL SUPPORT FOR GENERATED COLUMN OPERATIONS
+#
+# 			OPERATION 						INSTANT 			IN PLACE 			REBUILDS TABLE 		PERMITS CONCURRENT DML 		ONLY MODIFIES METADATA
+#
+#			Adding a STORED column 		No 				No 					Yes 						No 								No
+#
+# 			Modifying STORED col. 		No 				No 					Yes 						No 								No
+# 			order	
+#
+# 			Dropping a STORED col 		No 				Yes 					Yes 						Yes 								No
+#
+# 			Adding a VIRTUAL col 		Yes 				Yes 					No 						Yes 								Yes
+#
+# 			Modifying VIRTUAL col 		No 				No 					Yes 						No 								No
+# 			order
+#
+# 			Dropping a VIRTUAL col 		Yes 				Yes 					No 						Yes 								Yes
+#
+# SYNTAX AND USAGE NOTES
+#
+# 		) Adding a STORED column
+#
+# 				ALTER TABLE t1 ADD COLUMN (c2 INT GENERATED ALWAYS AS (c1 + 1) STORED), ALGORITHM=COPY;
+#
+# 			ADD COLUMN is not an in-place operation for stored columns (done without using a temporary table) because the expression must be evaluated
+# 			by the server.
+#
+# 		) Modifying STORED column order
+#
+# 				ALTER TABLE t1 MODIFY COLUMN c2 INT GENERATED ALWAYS AS (c1 + 1) STORED FIRST, ALGORITHM=COPY;
+#
+# 			Rebuilds the table in place.
+#
+# 		) Dropping a STORED column
+#
+# 				ALTER TABLE t1 DROP COLUMN c2, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 			Rebuilds the table in place.
+#
+# 		) Adding a VIRTUAL column
+#
+# 				ALTER TABLE t1 ADD COLUMN (c2 INT GENERATED ALWAYS AS (c1 + 1) VIRTUAL), ALGORITHM=INSTANT;
+#
+# 			Adding a virtual column can be performed instantly or in place for non-partitioned tables.
+#
+# 			Adding a VIRTUAL is not an in-place operation for partitioned tables.
+#
+# 		) Modifying VIRTUAL column order
+#
+# 				ALTER TABLE t1 MODIFY COLUMN c2 INT GENERATED ALWAYS AS (c1 + 1) VIRTUAL FIRST, ALGORITHM=COPY;
+#
+# 		) Dropping a VIRTUAL column:
+#
+# 				ALTER TABLE t1 DROP COLUMN c2, ALGORITHM=INSTANT;
+#
+# 			Dropping a VIRTUAL column can be performed instantly or in place for non-partitioned tables.
+#
+# FOREIGN KEY OPERATIONS
+#
+# The following table provides an overview of online DDL support for foreign key operations. An asterisk indicates additional information,
+# an exception, or a dependency.
+#
+# For details, see SYNTAX AND USAGE NOTES.
+#
+# 		TABLE 15.21 ONLINE DDL SUPPORT FOR FOREIGN KEY OPERATIONS
+#
+# 			OPERATION 			INSTANT 			IN PLACE 		REBUILDS TABLE 		PERMITS CONCURRENT DML 		ONLY MODIFIES METADATA
+#
+# 			Adding a foreign 	No 				Yes* 				No 						Yes 								Yes
+# 			key constraint 
+#
+# 			Dropping a foreign No 				Yes 				No 						Yes 								Yes
+# 			key constraint
+#
+# SYNTAX AND USAGE NOTES
+#
+# 		) Adding a foreign key constraint
+#
+# 			The INPLACE algorithm is supported when foreign_key_checks is disabled. Otherwise, only the COPY algorithm is supported.
+#
+# 				ALTER TABLE tbl1 ADD CONSTRAINT fk_name FOREIGN KEY index (col1)
+# 					REFERENCES tbl2(col2) referential_actions;
+#
+# 		) Dropping a foreign key constraint
+#
+# 				ALTER TABLE tbl DROP FOREIGN KEY fk_name;
+#
+# 			Dropping a foreign key can be performed online with the foreign_key_checks option enabled or disabled.
+#
+# 			If you do not know the names of the foreign key constraints on a particular table, issue the following statement and find the
+# 			constraint name in the CONSTRAINT clause for each foreign key:
+#
+# 				SHOW CREATE TABLE table\G
+#
+# 			Or, query the INFORMATION_SCHEMA.TABLE_CONSTRAINTS table and use the CONSTRAINT_NAME and CONSTRAINT_TYPE columns to identify the
+# 			foreign key names.
+#
+# 			You can also drop a foreign key and its associated index in a single statement:
+#
+# 				ALTER TABLE table DROP FOREIGN KEY constraint, DROP INDEX index;
+#
+# 			NOTE:
+#
+# 				If foreign keys are already present in the table being altered (that is, it is a child table containing a FOREIGN KEY ... REFERENCE clause),
+# 				additional restrictions apply to online DDL operations, even those not directly involving the foreign key columns:
+#
+# 					) An ALTER_TABLE on the child table could wait for another transaction to commit, if a change to the parent table causes associated changes
+# 						in the child table through an ON UPDATE or ON DELETE clause using the CASCADE or SET NULL parameters.
+#
+# 					) In the same way, if a table is the parent table in a foreign key relationship, even though it does not contain any FOREIGN KEY clauses,
+# 						it could wait for the ALTER_TABLE to complete if an INSERT, UPDATE or DELETE statement causes an ON UPDATE or ON DELETE action in the
+# 						child table.
+#
+# TABLE OPERATIONS
+#
+# The following table provides an overview of online DDL support for table operations. An asterisk indicates additional information, an exception or
+# a dependency.
+#
+# For details, see SYNTAX AND USAGE NOTES.
+#
+# 		TABLE 15.22 ONLINE DDL SUPPORT FOR TABLE OPERATIONS
+#
+# 			OPERATION 					INSTANT 		IN PLACE 	REBUILDS TABLE 	PERMITS CONCURRENT DML 		ONLY MODIFIES METADATA
+#
+# 			Changing the ROW_FORMAT 	No 		Yes 			Yes 					Yes 								No
+#
+# 			Changing the  					No 		Yes 			Yes 					Yes 								No
+# 			KEY_BLOCK_SIZE
+#
+# 			Setting persistent 			No 		Yes 			No 					Yes 								Yes
+# 			table stats
+#
+# 			Specifying a char set 		No 		Yes 			Yes* 					No 								No
+#
+# 			Converting a char set 		No 		No 			Yes* 					No 								No
+#
+# 			Optimizing a table 			No 		Yes* 			Yes 					Yes 								No
+#
+# 			Rebuilding with the 			No 		Yes* 			Yes 					Yes 								No
+# 			FORCE option
+#
+# 			Performing a null rebuild  No 		Yes* 			Yes 					Yes 								No
+#
+# 			Renaming a table 				Yes 		Yes 			No 					Yes 								Yes
+#
+# 
+# SYNTAX AND USAGE NOTES
+#
+# 	) Changing the ROW_FORMAT
+#
+# 			ALTER TABLE tbl_name ROW_FORMAT = row_format, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 		Data is reorganized substantially, making it an expensive operation.
+#
+# 		For additional information about the ROW_FORMAT option, see TABLE OPTIONS.
+#
+# 	) Changing the KEY_BLOCK_SIZE
+#
+# 			ALTER TABLE tbl_name KEY_BLOCK_SIZE = value, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 		Data is reorganized substantially, making it an expensive operation.
+#
+# 		For additional information about the KEY_BLOCK_SIZE option, see TABLE OPTIONS.
+#
+# 	) Setting persistent table stats options
+#
+# 			ALTER TABLE tbl_name STATS_PERSISTENT=0, STATS_SAMPLE_PAGES=20, STATS_AUTO_RECALC=1, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 		Only modifies table metadata.
+#
+# 		Persistent stats includes STATS_PERSISTENT, STATS_AUTO_RECALC and STATS_SAMPLE_PAGES.
+#
+# 		For more information, see SECTION 15.8.10.1, "CONFIGURING PERSISTENT OPTIMIZER STATISTICS PARAMETERS"
+#
+# ) Specifying a character set
+#
+# 			ALTER TABLE tbl_name CHARACTER SET = charset_name, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 		Rebuilds the table if the new character encoding is different.
+#
+# ) Converting a character set
+#
+# 			ALTER TABLE tbl_name CONVERT TO CHARACTER SET charset_name, ALGORITHM=COPY;
+#
+# 		Rebuilds the table if the new character encoding is different.
+#
+# ) Optimizing a table
+#
+# 			OPTIMIZE TABLE tbl_name;
+#
+# 		In-place operation is not supported for tables with FULLTEXT indexes. The operation uses the INPLACE algorithm, but ALGORITHM
+# 		and LOCK syntax is not permitted.
+#
+# ) Rebuilding a table with the FORCE option.
+#
+# 			ALTER TABLE tbl_name FORCE, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 		Uses ALGORITHM=INPLACE as of MySQL 5.6.17. ALGORITHM=INPLACE is not supported for tables with FULLTEXT indexes.
+#
+# ) Performing a "null" rebuild
+#
+# 			ALTER TABLE tbl_name ENGINE=InnoDB, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# 		Uses ALGORITHM=INPLACE as of MySQL 5.6.17. ALGORITHM=INPLACE is not supported for tables with FULLTEXT indexes.
+#
+# ) Renaming a table
+#
+# 			ALTER TABLE old_tbl_name RENAME TO new_tbl_name, ALGORITHM=INSTANT;
+#
+# 		Renaming a table can be performed instantly or in place. MySQL renames files that correspond to the table tbl_name without
+# 		making a copy.
+#
+# 		(You can also use the RENAME_TABLE statement to rename tables. See SECTION 13.1.36, "RENAME TABLE SYNTAX")
+#
+# 		Privileges granted specifically for the renamed table are not migrated to the new name.
+#
+# 		They must be changed manually.
+#
+# TABLESPACE OPERATIONS
+#
+# The following table provides an overview of online DDL support for tablespace operations. For details, see SYNTAX AND USAGE NOTES.
+#
+# 		TABLE 15.23 ONLINE DDL SUPPORT FOR TABLESPACE OPERATIONS
+#
+# 			OPERATION 				INSTANT 			IN PLACE 			REBUILDS TABLE 		PERMITS CONCURRENT DML 			ONLY MODIFIES METADATA
+#
+# 			Renaming a general 	No 				Yes 					No 						Yes 									Yes
+# 			tablespace
+#
+# 			Enabling or disabling  No 				Yes 					No 						Yes 									No
+# 			general tablespace
+# 			encryption
+#
+# 			Enabling or disabling 	 No 			No 					Yes 						No 									No
+# 			file-per-table tablsapce
+# 			encryption
+#
+# SYNTAX AND USAGE NOTES
+#
+# 		) Renaming a general tablespace
+#
+# 				ALTER TABLESPACE tablespace_name RENAME TO new_tablespace_name;
+#
+# 			ALTER_TABLESPACE_..._RENAME_TO uses the INPLACE algorithm but does not support the ALGORITHM clause.
+#
+# 		) Enabling or disabling general tablespace encryption
+#
+# 				ALTER TABLESPACE tablespace_name ENCRYPTION='Y';
+#
+# 			ALTER_TABLESPACE_..._ENCRYPTION uses the INPLACE algorithm but does not support the ALGORITHM clause.
+#
+# 			For related information, see SECTION 15.6.3.9, "InnoDB DATA-AT-REST ENCRYPTION"
+#
+# 		) Enabling or disabling file-per-table tablespace encryption
+#
+# 				ALTER TABLE tbl_name ENCRYPTION='Y', ALGORITHM=COPY;
+#
+# 			For related information, see SECTION 15.6.3.9, "InnoDB DATA-AT-REST ENCRYPTION"
+#
+# PARTITIONING OPERATIONS
+#
+# With the exception of some ALTER_TABLE partitioning clauses, online DDL operations for partitioned INnoDB tables follow the same
+# rules that apply to regular InnoDB tables.
+#
+# Some ALTER_TABLE partitioning clauses do not go through the same internal online DDL API as regular non-partitioned InnoDB tables.
+#
+# As a result, online support for ALTER_TABLE partitioning clauses varies.
+#
+# The following table shows the online status for each ALTER TABLE partitioning statement. Regardless of the online DDL API that is
+# used, MySQL attempts to minimize data copying and locking where possible.
+#
+# ALTER_TABLE partitioning options that use ALGORITHM=COPY or that only permit "ALGORITHM=DEFAULT, LOCK=DEFAULT", repartition the table
+# using the COPY algorithm.
+#
+# IN other words, a new partitioned table is created with the new partitioning scheme. The newly created table includes any changes applied
+# by the ALTER_TABLE statement, and table data is copied into the new table structure.
+#
+# 		TABLE 15.24 ONLINE DDL SUPPORT FOR PARTITIONING OPERATIONS
+#
+# 		https://dev.mysql.com/doc/refman/8.0/en/innodb-online-ddl-operations.html
+# 		
