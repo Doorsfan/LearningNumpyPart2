@@ -48534,5 +48534,731 @@
 #
 # 		TABLE 15.24 ONLINE DDL SUPPORT FOR PARTITIONING OPERATIONS
 #
-# 		https://dev.mysql.com/doc/refman/8.0/en/innodb-online-ddl-operations.html
+# 		PARTITIONING CLAUSE 			INSTANT 		IN PLACE 		PERMITS DML 				NOTES
+#
+# 		PARTITION_BY 					No 			No 				No 							Permits ALGORITHM=COPY, LOCK={DEFAULT|SHARED|EXCLUSIVE}
+#
+# 		ADD_PARTITION 					No 			Yes* 				Yes* 							ALGORITHM=INPLACE, LOCK={DEFAULT|NONE|SHARED|EXCLUSIVE} is supported
+# 																												for RANGE and LIST partitions, ALGORITHM=INPLACE, LOCK={DEFAULT|SHARED|EXCLUSIVE}
+# 																												for HASH and KEY partitions, and ALGORITHM=COPY, LOCK={SHARED|EXCLUSIVE} for all partition types.
+#
+# 																												Does not copy existing data for tables partitioned by RANGE or LIST. Concurrent queries are permitted
+# 																												with ALGORITHM=COPY for tables partitioned by HASH or LIST, as MySQL copies the data while holding
+# 																												a shared lock.
+#
+# 		DROP_PARTITION 				No 			Yes* 				Yes* 							ALGORITHM=INPLACE, LOCK={DEFAULT|NONE|SHARED|EXCLUSIVE} is supported. Does not copy data
+# 																												for tables partitioned by RANGE or LIST.
+#
+# 																												DROP PARTTIION with ALGORITHM=INPLACE deletes data stored in the partition and drops the partition.
+# 																												However, DROP PARTITION with ALGORITHM=COPY or old_alter_table=ON rebuilds the partitioned table
+# 																												and attempts to move data from the dropped partition to another partition with a compatible PARTITION
+# 																												/etc/ VALUES definition. Data that cannot be moved to another partition is deleted.
+#
+# 		DISCARD_PARTITION 			No 			No 				No 							Only permits ALGORITHM=DEFAULT, LOCK=DEFAULT
+#
+# 		IMPORT_PARTITION 				No 			No 				No 							Only permits ALGORITHM=DEFAULT, LOCK=DEFAULT
+#
+# 		TRUNCATE_PARTITION 			No 			Yes 				Yes 							Does not copy existing data. It merely deletes rows; it does not alter the definition of the table
+# 																												itself, or of any of its partitions.
+#
+# 		COALESCE_PARTITION 			No 			Yes* 				No 							ALGORITHM=INPLACE, LOCK={DEFAULT|SHARED|EXCLUSIVE} is supported.
+#
+# 		REORGANIZE_PARTITION 		No 			Yes* 				No 							ALGORITHM=INPLACE, LOCK={DEFAULT|SHARED|EXCLUSIVE} is supported.
+#
+# 		EXCHANGE_PARTITION 			No 			Yes 				Yes 
+#
+# 		ANALYZE_PARTITION 			No 			Yes 				Yes
+#
+# 		CHECK_PARTITION 				No 			Yes 				Yes
+#
+# 		OPTIMIZE_PARTITION 			No 			No 				No 							ALGORITHM and LOCK clauses are ignored. Rebuilds the entire table. See SECTION 23.3.4, "MAINTENANCE OF PARTITIONS"
+#
+# 		REBUILD_PARTITION 			No 			Yes* 				No 							ALGORITHM=INPLACE, LOCK={DEFAULT|SHARED|EXCLUSIVE} is supported.
+#
+# 		REPAIR_PARTITION 				No 			Yes 				Yes 
+#
+# 		REMOVE_PARTITIONING 			No 			No 				No 							Permits ALGORITHM=COPY, LOCK={DEFAULT|SHARED|EXCLUSIVE}
+#
+# Non-partitioning online ALTER_TABLE operations on partitioned tables follow the same rules that apply to regular tables. However, ALTER_TABLE
+# performs online operations on each table partition, which causes increased demand on system resources due to operations being performed on
+# multiple partitions.
+#
+# For additional information about ALTER_TABLE partitioning clauses, see PARTITIONING OPTIONS, and SECTION 13.1.9.1, "ALTER TABLE PARTITION OPERATIONS".
+#
+# For information about partitioning in general, see CHAPTER 23, PARTITIONING.
+#
+# 15.12.2 ONLINE DDL PERFORMANCE AND CONCURRENCY
+#
+# 	Online DDL improves several aspects of MySQL operation:
+#
+# 		) Applications that access the table are more responsive because queries and DML operations on the table can proceed while the DDL
+# 			operation is in progress.
+#
+# 			Reduced locking and waiting for MySQL server resources leads to greater scalability, even for operations that are not involved
+# 			in the DDL operation.
+#
+# 		) Instant operations only modify metadata in the data dictionary. No metadata locks are taken on the table, and table data is unaffected,
+# 			making operations instaneous. Concurrent DML is unaffected.
+#
+# 		) Online operations avoid the disk I/O and CPU cycles associated with the table-copy method, which minimizes overall load on the database.
+# 			Minimizing load helps maintain good performance and high throughput during the DDL operation.
+#
+# 		) Online operations read less data into the buffer pool than table-copy operations, which reduces purging of frequently accessed data
+# 			from memory.
+#
+# 			Purging of frequently accessed data can cause a temporary performance dip after a DDL operation.
+#
+# THE LOCK CLAUSE
+#
+# By default, MySQL uses as little locking as possible during a DDL operation. The LOCK clause can be specified for in-place operations and some
+# copy operations to enforce more restrictive locking, if required.
+#
+# If the LOCK clause specifies a less restrictive level of locking than is permitted for a particular DDL operation, the statement fails with an
+# error.
+#
+# LOCK clauses are described below, in order of least to most restrictive:
+#
+# 		) LOCK=NONE:
+#
+# 			Permits concurrent queries and DML.
+#
+# 			For example, use this clause for tables involving customer signups or purchases, to avoid making the tables unavailable during lengthy DDL operations.
+#
+# 		) LOCK=SHARED:
+#
+# 			Permits concurrent queries but blocks DML.
+#
+# 			For example, use this clause on data warehouse tables, where you can delay data load operations until the DDL operation is finished, but queries
+# 			cannot be delayed for long periods.
+#
+# 		) LOCK=DEFAULT:
+#
+# 			Permits as much concurrency as possible (concurrent queries, DML, or both). Omitting the LOCK clause is the same as specifying LOCK=DEFAULT.
+#
+# 			Use this clause when you know that the default locking level of the DDL statement will not cause availability problems for the table.
+#
+# 		) LOCK=EXCLUSIVE
+#
+# 			Blocks concurrent queries and DML.
+#
+# 			Use this clause if the primary concern is finishing the DDL operation in teh shortest amount of time possible, and concurrent query and DML
+# 			access is not necessary.
+#
+# 			You might also use this clause if hte server is supposed to be idle, to avoid unexpected table accesses.
+#
+# ONLINE DDL AND METADATA LOCKS
+#
+# Online DDL operations can be viewed as having three phases:
+#
+# 		) Phase 1: Initialization
+#
+# 			In the initialization phase, the server determines how much concurrency is permitted during the operation, taking into account
+# 			storage engine capabilities, operations specified in the statement, and user-specified ALGORITHM and LOCK options.
+#
+# 			During this phase, a shared upgradable metadata lock is taken to protect the current table definition.
+#
+# 		) Phase 2: Execution
+#
+# 			In this phase, the statement is prepared and executed. Whether the metadata lock is upgraded to exclusive depends on the factors
+# 			assessed in the initialization phase.
+#
+# 			If an exclusive metadata lock is required, it is only taken briefly during statement preparation.
+#
+# 		) Phase 3: Commit Table Definition
+#
+# 			In the commit table definition phase, the metadata lock is upgraded to exclusive to evict the old table definition and commit the new
+# 			one.
+#
+# 			Once granted, the duration of the exclusive metadata lock is brief.
+#
+# Due to the exclusive metadata lock requirements outlined above, an online DDL operation may have to wait for concurrent transactions that hold
+# metadata locks on the table to commit or rollback.
+#
+# Transactions started before or during the DDL operation can hold metadata locks on the table being altered. In the case of a long running or
+# inactive transaction, an online DDL operation can time out waiting for an exclusive metadata lock.
+#
+# Additionally, a pending exclusive metadata lock requested by an online DDL operation blocks subsequent transactions on the table.
+#
+# The following example demonstrates an online DDL operation waiting for an exclusive metadata lock, and how a pending metadata lock blocks
+# subsequent transactions on the table.
+#
+# Session 1:
+#
+# 		mysql> CREATE TABLE t1 (c1 INT) ENGINE=InnoDB;
+# 		mysql> START TRANSACTION;
+# 		mysql> SELECT * FROM t1;
+#
+# The session 1 SELECT statement takes a shared metadata lock on table t1.
+#
+# Session 2:
+#
+# 		mysql> ALTER TABLE t1 ADD COLUMN x INT, ALGORITHM=INPLACE, LOCK=NONE;
+#
+# The online DDL operation in session 2, which requires an exclusive metadata lock on table t1 to commit table definition changes,
+# must wait for the session 1 transaction to commit or roll back.
+#
+# Session 3:
+#
+# 		mysql> SELECT * FROM t1;
+#
+# The SELECT statement issued in session 3 is blocked waiting for the exclusive metadata lock requested by the ALTER_TABLE operation
+# in session 2 to be granted.
+#
+# You can use SHOW_FULL_PROCESSLIST to determine if transactions are waiting for a metadata lock.
+#
+# 		mysql> SHOW FULL PROCESSLIST\G
+# 		/ETC/
+# 		*********************' 2. row ******************************
+# 				Id: 5
+# 				User: root
+# 				Host: localhost
+# 				db: test
+# 				Command: Query
+# 				Time: 44
+# 				State: Waiting for table metadata lock
+# 				Info: ALTER TABLE t1 ADD COLUMN x INT, ALGORITHM=INPLACE, LOCK=NONE
+# 		/ETC/
+# 		********************** 4. row ******************************
+# 				Id: 7
+# 				User: root
+# 				Host: localhost
+# 				db: test
+# 				Command: Query
+# 				Time: 5
+# 				State: Waiting for table metadata lock
+# 				Info: SELECT * FROM t1
+# 				4 rows in set (0.00 sec)
+#
+# Metadata lock information is also exposed through the Performance Schema metadata_locks table, which provides information about metadata lock
+# dependencies between sessions, the metadata lock a session is waiting for, and the session that currently holds the metadata lock.
+#
+# For more information, see SECTION 26.12.12.3, "THE METADATA_LOCKS TABLE"
+#
+# ONLINE DDL PERFORMANCE
+#
+# The performance of a DDL operation is largely determined by whether the operation is performed instantly, in place, and whether it rebuilds the table.
+#
+# To assess the relative performance of a DDL operation, you can compare results using ALGORITHM=INSTANT, ALGORITHM=INPLACE, and ALGORITHM=COPY.
+#
+# A statement can also be run with old_alter_table enabled to force the use of ALGORITHM=COPY.
+#
+# For DDL operations that modify table data, you can determine whether a DDL operation performs changes in place or performs a table copy by looking
+# at the "rows affected" value displayed after the command finishes.
+#
+# For example:
+#
+# 		) Changing the default value of a column (fast, does not affect the table data):
+#
+# 				Query OK, 0 rows affected (0.07 sec)
+#
+# 		) Adding an index (takes time, but 0 rows affected shows thta the table is not copied):
+#
+# 				Query OK, 0 rows affected (21.42 sec)
+#
+# 		) Changing the data type of a column (takes substantial time and requires rebuilding all the rows of the table):
+#
+# 				Query OK, 1671168 rows affected (1 min 35.54 sec)
+#
+# Before running a DDL operation on a large table, check whether the operation is fast or slow as follows:
+#
+# 		1. Clone the table structure
+#
+# 		2. Populate the cloned table with a small amount of data
+#
+# 		3. Run the DDL operation on the cloned table.
+#
+# 		4. Check whether the "rows affected" value is zero or not. A nonzero value means the operation copies table data, which might require special planning.
+#
+# 			For example, you might do the DDL operation during a period of scheduled downtime, or on each replication slave server one at a time.
+#
+# 			NOTE:
+#
+# 				For a greater understanding of the MySQL processing associated with a DDL operation, examine Performance Schema and INFORMATION_SCHEMA
+# 				tables related to InnoDB before and after DDL operations to see the number of physical reads, writes, memory allocations and so on.
+#
+# 				Performance Schema stage events can be used to monitor ALTER_TABLE progress. See SECTION 15.15.1, "MONITORING ALTER TABLE PROGRESS FOR INNODB
+# 				TABLES USING PERFORMANCE SCHEMA"
+#
+# Because there is some processing work involved with recording the changes made by concurrent DML operations, then applying those changes at the end,
+# an online DDL operation could take longer overall than the table-copy mechanism that blocks table access from other sessions.
+#
+# The reduction in raw performance is balanced against better responsiveness for applications that use the table. When evaluating the techniques for
+# changing table structure, consider end-user perception of performance, based on factors such as load times for web pages.
+#
+# 15.12.3 ONLINE DDL SPACE REQUIREMENTS
+#
+# Space requirements for in-place online DDL operations are outlined below. Space requirements do not apply to operations that are performed instantly.
+#
+# 		) Space for temporary log files
+#
+# 			A temporary log file records concurrent DML when an online DDL operation creates an index or alters a table. The temporary log file is extended
+# 			as required by the value of innodb_sort_buffer_size up to a maximum specified by innodb_online_alter_log_max_size.
+#
+# 			If a temporary log file exceeds the size limit, the online DDL operation fails, and uncommitted concurrent DML operations are rolled back.
+#
+# 			A large innodb_online_alter_log_max_size setting permits more DML during an online DDL operation, but it also extends the period of time at
+# 			the end of the DDL operation when the table is locked to apply logged DML.
+#
+# 			If the operation takes a long time and concurrent DML modifies the table so much that the size of the temporary log file exceeds the value of
+# 			innodb_online_alter_log_max_size, the online DDL operation fails with a DB_ONLINE_LOG_TOO_BIG error.
+#
+# 		) Space for temporary sort files
+#
+# 			Online DDL operations that rebuild the table write temporary sort files to the MySQL temporary directory ($TMPDIR on Unix, %TEMP% on Windows,
+# 			or the directory specified by --tmpdir) during index creation.
+#
+# 			Temporary sort files are not created in the directory that contains the original table. Each temporary sort file is large enough to hold
+# 			all secondary index columns plus the primary key columns of the clustered index.
+#
+# 			Temporary sort files are removed as soon as their contents are merged into the final table or index.
+#
+# 			Temporary sort files may require space equal to the amount of data in the table plus indexes. An online DDL operation that
+# 			rebuilds the table reports an error if it uses all of the available disk space on the file system where the data directory resides.
+#
+# 			If the MySQL temporary directory is not large enough to hold the sort files, set tmpdir to a different directory. Alternatively, define
+# 			a separate temporary directory for online DDL operations using innodb_tmpdir.
+#
+# 			This option was introduced to help avoid temporary directory overflows that could occur as a result of large temporary sort files.
+#
+# 		) Space for an intermediate table file
+#
+# 			Some online DDL operations that rebuild the table create a temporary intermediate table file in the same directory as the original table.
+#
+# 			An intermediate table file may require space equal to the size of the original table. Intermediate table file names begin with #sql-ib
+# 			prefix and only appear briefly during the online DDL operation.
+#
+# 			The innodb_tmpdir option is not applicable to intermediate table files.
+#
+# 15.12.4 SIMPLIFYING DDL STATEMENTS WITH ONLINE DDL
+#
+# Before the introduction of online DDL, it was common practice to combine many DDL operations into a single ALTER_TABLE statement.
+# Because each ALTER_TABLE statement involved copying and rebuilding the table, it was more efficient to make several changes to the
+# same table at once, since those changes could all be done with a single rebuild operation for the table.
+#
+# The downside was that SQL code involving DDL operations was harder to maintain and to reuse in different scripts.
+#
+# if the specific changes were different each time, you might have to construct a new complex ALTER_TABLE for each slightly different scenario.
+#
+# For DDL operations that can be done online, you can separate them into individual ALTER_TABLE statements for easier scripting and maintenance,
+# without sacrificing efficiency.
+#
+# For example, you might take a complicated statement such as:
+#
+# 		ALTER TABLE t1 ADD INDEX i1(c1), ADD UNIQUE INDEX i2(c2),
+# 			CHANGE c4_old_name c4_new_name INTEGER UNSIGNED;
+#
+# and break it down into simpler parts that can be tested and performed independently, such as:
+#
+# 		ALTER TABLE t1 ADD INDEX i1(c1);
+# 		ALTER TABLE t1 ADD UNIQUE INDEX i2(c2);
+# 		ALTER TABLE t1 CHANGE c4_old_name c4_new_name INTEGER UNSIGNED NOT NULL;
+#
+# You might still use multi-part ALTER_TABLE statements for:
+#
+# 		) Operations that must be performed in a specific sequence, such as creating an index followed by a foreign key constraint that uses that index.
+#
+# 		) Operations all using the same specific LOCK clause, that you want to either succeed or fail as a group.
+#
+# 		) Operations that cannot be performed online, that is, that still use the table-copy method.
+#
+# 		) Operations for which you specify ALGORITHM=COPY or old_alter_table=1, to force the table-copying behavior if needed for precise backward-compatibility
+# 			in specialized scenarios.
+#
+# 15.12.5 ONLINE DDL FAILURE CONDITIONS
+#
+# The failure of an online DDL operation is typically due to one of the following conditions:
+#
+# 		) An ALGORITHM clause specifies an algorithm that is not compatible with the particular type of DDL operation or storage engine
+#
+# 		) A LOCK clause specifies a low degree of locking (SHARED or NONE) that is not compatible with the particular type of DDL operation
+#
+# 		) A timeout occurs while waiting for an exclusive lock on the table, which may be needed briefly during the initial and final phases
+# 			of the DDL operation.
+#
+# 		) The tmpdir or innodb_tmpdir file system runs out of disk space, while MySQL writes temporary sort files on disk during index creation.
+#
+# 			For more information, see SECTION 15.12.3, "ONLINE DDL SPACE REQUIREMENTS"
+#
+# 		) The operation takes a long time and concurrent DML modifies the table so much that the size of the temporary online log exceeds the value of the
+# 			innodb_online_alter_log_max_size configuration option.
+#
+# 			This condition causes a DB_ONLINE_LOG_TOO_BIG error.
+#
+# 		) Concurrent DML makes changes to the table that are allowed with the original table definition, but not with the new one.
+#
+# 			The operation only fails at the very end, when MySQL tries to apply all the changes from concurrent DML statements. For example,
+# 			you might insert duplicate values into a column while a unique index is being created, or you might insert NULL values into a column
+# 			while creating a primary key index on that column.
+#
+# 			The changes made by the concurrent DML take precedence, and the ALTER_TABLE operation is effectively rolled back.
+#
+# 15.12.6 ONLINE DDL LIMITATIONS
+#
+# The following limitations apply to online DDL operations:
+#
+# 		) The table is copied when creating an index on a TEMPORARY TABLE
+#
+# 		) The ALTER_TABLE clause LOCK=NONE is not permitted if there are ON /etc/ CASCADE or ON /ETC/ SET NULL constraints on the table.
+#
+# 		) Before an in-place online DDL operation can finish, it must wait for transactions that hold metadata locks on the table to commit
+# 			or roll back.
+#
+# 			An online DDL operation may briefly require an exclusive metadata lock on the table during its execution phase, and always requires
+# 			one in the final phase of the operation when updating the table definition.
+#
+# 			Consequently, transactions holding metadata locks on the table can cause an online DDL operation to block. The transactions that hold
+# 			metadata locks on the table may have been started before or during the online DDL operation.
+#
+# 			A long running or inactive transaction that holds a metadata lock on the table can cause an online DDL operation to timeout.
+#
+# 		) When running an in-place online DDL operation, the thread that runs the ALTER_TABLE statement applies an online log of DML operations
+# 			that were run concurrently on the same table from other connection threads.
+#
+# 			When the DML operations are applied, it is possible to encounter a duplicate key entry error (ERROR 1062 (23000): Duplicate Entry),
+# 			even if the duplicate entry is only temporary and would be reverted by a later entry in the online log.
+#
+# 			This is similar to the idea of a foreign key constraint check in InnoDB in which constraints must hold during a transaction.
+#
+# 		) OPTIMIZE_TABLE for an InnoDB table is mapped to an ALTER_TABLE operation to rebuild the table and update index statistics and free unused
+# 			space in the clustered index.
+#
+# 			Secondary indexes are not created as efficiently because keys are inserted in the order they appeared in the primary key.
+#
+# 			OPTIMIZE_TABLE is supported with the addition of online DDL support for rebuilding regular and partitioned InnoDB tables.
+#
+# 		) Tables created before MySQL 5.6 that include temporal columns (DATE, DATETIME or TIMESTAMP) and have not been rebuilt using
+# 			ALGORITHM=COPY do not support ALGORITHM=INPLACE.
+#
+# 			In this case, an ALTER_TABLE_/ETC/_ALGORITHM=INPLACE operation returns the following error:
+#
+# 				ERROR 1846 (0A000): ALGORITHM=INPLACE is not supported
+# 				Reason: Cannot change column type INPLACE. Try ALGORITHM=COPY
+#
+# 		) The following limitations are generally applicable to online DDL operations on large tables that involve rebuilding the table:
+#
+# 			) There is no mechanism to pause an online DDL operation or to throttle I/O or CPU usage for an online DDL operation
+#
+# 			) Rollback of an online DDL operation can be expensive should the operation fail
+#
+# 			) Long running DDL operations can cause replication lag. An online DDL operation must finish running on the master before it
+# 				is run on the slave. Also, DML that was processed concurrently on the master is only processed on the slave after the DDL
+# 				operation on the slave is completed.
+#
+# For additional information related to running online DDL operations on large tables, see SECTION 15.12.2, "ONLINE DDL PERFORMANCE AND CONCURRENCY"
+#
+# 15.13 INNODB STARTUP OPTIONS AND SYSTEM VARIABLES
+#
+# 		) System variables that are true or false can be enabled at server startup by naming them, or disabled by using a --skip- prefix.
+#
+# 			For example, to enable or disable the InnoDB adaptive hash index, you can use --innodb-adaptive-hash-index or --skip-innodb-adaptive-hash-index
+# 			on the command line, or innodb_adaptive_hash_index or skip_innodb_adaptive_hash_index in an option file.
+#
+# 		) System variables that take a numeric value can be specified as --var-name=value on the command line or as var_name=value in option files.
+#
+# 		) Many system variables can be changed at runtime (see SECTION 5.1.9.2, "DYNAMIC SYSTEM VARIABLES")
+#
+# 		) For information about GLOBAL and SESSION variable scope modifiers, refer to the SET statement documentation.
+#
+# 		) Certain options control the locations and layout of the InnoDB data files. SECTION 15.8.1, "InnoDB STARTUP CONFIGURATION" explains how to use these options.
+#
+# 		) Some options, which you might not use initially, help tune InnoDB performance characteristics based on machine capacity and your database workload.
+#
+# 		) For more information on specifying options and system variables, see SECTION 4.2.2, "SPECIFYING PROGRAM OPTIONS"
+#
+# 	TABLE 15.25 InnoDB OPTTION AND VARIABLE REFERENCE
+#
+# 		NAME 														CMD-LINE 			OPTION FILE 			SYSTEM VAR 			STATUS VAR 		VAR SCOPE 		DYNAMIC
+#
+# 		daemon_memcached_enable_binlog 					Yes 					Yes 						Y 						- 					Global 			N
+# 		daemon_memcached_engine_lib_name 				Y 						Y 							Y 						- 					Global 			N
+# 		daemon_memcached_engine_lib_path 				Y 						Y 							Y 						- 					Global 			N
+# 		daemon_memcached_option 							Y 						Y 							Y 						- 					Global 			N
+# 		daemon_memcached_r_batch_size 					Y 						Y 							Y 						- 					Global 			N
+# 		daemon_memcached_w_batch_size 					Y 						Y 							Y 						- 					Global 			N
+# 	
+# 		foreign_key_checks 									- 						- 							Y 						- 					Both 				Y
+#
+# 		ignore-builtin-innodb 								Y 						Y 							Y 						- 					Global 			N
+# 		innodb 													Y 						Y 							- 						- 					- 					-
+# 		innodb_adaptive_flushing 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_adaptive_flushing_lwm 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_adaptive_hash_index 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_adaptive_hash_index_parts 				Y 						Y 							Y 						- 					Global 			N
+#
+# 		innodb_adaptive_max_sleep_delay 					Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_api_bk_commit_interval 					Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_api_disable_rowlock 						Y 						Y 							Y 						- 					Global 			N
+# 		innodb_api_enable_binlog 							Y 						Y 							Y 						- 					Global 			N
+# 		innodb_api_enable_mdl 								Y 						Y 							Y 						- 					Global 			N
+# 		innodb_api_trx_level 								Y  					Y 							Y 						- 					Global 			Y
+# 		innodb_autoextend_increment 						Y 						Y 							Y 						- 					Global 			Y
+#
+# 		innodb_autoinc_lock_mode 							Y 						Y 							Y 						- 					Global 			N
+# 		innodb_available_undo_logs 						- 						- 							- 						Y 					Global 			N
+# 		innodb_background_drop_list_empty 				Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_buffer_pool_bytes_data 					- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_bytes_dirty 					- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_chunk_size 					Y 						Y 							Y 						- 					Global 			N
+# 		innodb_buffer_pool_debug 							Y 						Y 							Y 						- 					Global 			N
+# 		innodb_buffer_pool_dump_at_shutdown 			Y 						Y 							Y 						- 					Global 			Y
+# 
+# 		innodb_buffer_pool_dump_now 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_buffer_pool_dump_pct 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_buffer_pool_dump_status 					- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_filename 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_buffer_pool_in_core_file 					Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_buffer_pool_instances 						Y 						Y 							Y 						- 					Global 			N
+# 		innodb_buffer_pool_load_abort 					Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_buffer_pool_load_at_startup 				Y 						Y 							Y 						- 					Global 			N
+# 		innodb_buffer_pool_load_now 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_buffer_pool_load_status  					- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_pages_data 					- 						- 							- 						Y 					Global 			N
+# 
+# 		innodb_buffer_pool_pages_dirty 					- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_pages_flushed 				- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_pages_free 					- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_pages_latched 				- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_pages_misc 					- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_pages_total 					- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_read_ahead 					- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_read_ahead_evicted 			- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_read_ahead_rnd 				- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_read_requests 				- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_reads 							- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_resize_status 				- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_size 							Y 						Y 							Y 						- 					Global 			Y
+# 
+# 		innodb_buffer_pool_wait_free 						- 						- 							- 						Y 					Global 			N
+# 		innodb_buffer_pool_write_requests 				- 						- 							- 						Y 					Global 			N
+# 		innodb_change_buffer_max_size 					Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_change_buffering 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_change_buffering_debug 					Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_checkpoint_disabled 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_checksum_algorithm 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_cmp_per_index_enabled 						Y 						Y 							Y  					- 					Global 			Y
+# 		innodb_commit_concurrency 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_compress_debug 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_compression_failure_threhsold_pct 		Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_compression_level 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_compression_pad_pct_mqx 					Y 						Y 							Y 						- 					Global 			Y
 # 		
+# 		innodb_concurrency_tickets 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_data_file_path  								Y 						Y 							Y 						- 					Global 			N
+# 		innodb_data_fsyncs 									- 						- 							- 						Y 					Global 			N
+# 		innodb_data_home_dir 								Y 						Y 							Y 						- 					Global 			N
+# 		innodb_data_pending_fsyncs 						- 						- 							- 						Y 					Global 			N
+# 		innodb_data_pending_reads 							- 						- 							- 						Y 					Global 			N
+# 		innodb_data_pending_writes 						- 						- 							- 						Y 					Global 			N
+# 		innodb_data_read 										- 						- 							- 						Y 					Global 			N
+# 		innodb_data_reads 									- 						- 							- 						Y 					Global 			N
+# 
+# 		innodb_data_writes 									- 						- 							- 						Y 					Global 			N
+# 		innodb_data_written 									- 						- 							- 						Y 					Global 			N
+# 		innodb_dblwr_pages_written 						- 						- 							- 						Y 					Global 			N
+# 		innodb_dblwr_writes 									- 						- 							- 						Y 					Global 			N
+# 		innodb_ddl_log_crash_reset_debug 				Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_deadlock_detect 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_dedicated_server 							Y 						Y 							Y 						- 					Global 			N
+# 		innodb_default_row_format 							Y 						Y 							Y  					- 					Global 			Y
+#
+# 		innodb_directories 									Y 						Y 							Y 						- 					Global 			N
+# 		innodb_disable_sort_file_cache 					Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_doublewrite 									Y 						Y 							Y  					- 					Global 			N
+# 		innodb_fast_shutdown 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_fil_make_page_dirty_debug 				Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_file_per_table 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_fill_factor 									Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_flush_log_at_timeout 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_flush_log_at_trx_commit 					Y 						Y 							Y 						- 					Global 			Y
+#
+# 		innodb_flush_method 									Y 						Y 							Y 						- 					Global 			N
+# 		innodb_flush_neighbors 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_flush_sync 									Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_flushing_avg_loops 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_force_load_corrupted 						Y 						Y 							Y 						- 					Global 			N
+# 		innodb_force_recovery 								Y 						Y 							Y 						- 					Global 			N
+# 		innodb_fsync_threshold 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_ft_aux_table 									- 						- 							Y 						- 					Global 			Y
+# 		innodb_ft_cache_size 								Y 						Y 							Y 						- 					Global 			N
+# 		innodb_ft_enable_diag_print 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_ft_enable_stopword 							Y 						Y 							Y 						- 					Both 				Y
+#
+# 		innodb_ft_max_token_size 							Y 						Y 							Y 						- 					Global 			N
+# 		innodb_ft_min_token_size 							Y 						Y 							Y 						- 					Global 			N
+# 		innodb_ft_num_word_optimize 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_ft_result_cache_limit 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_ft_server_stopword_table 					Y 						Y 							Y 						- 					Global 			Y
+#
+# 		innodb_ft_sort_pll_degree 							Y 						Y 							Y 						- 					Global 			N
+# 		innodb_ft_total_cache_size 						Y 						Y 							Y 						- 					Global 			N
+# 		innodb_ft_user_stopword_table 					Y 						Y 							Y 						- 					Both 				Y
+# 		innodb_have_atomic_builtins 						- 						- 							- 						Y 					Global 			N
+# 		innodb_io_capacity 									Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_io_capacity_max 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_limit_optimistic_insert_debug 			Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_lock_wait_timeout 							Y 						Y 							Y 						- 					Both 				Y
+# 		innodb_log_buffer_size 								Y 						Y 							Y 						- 					Global 			Varies
+#
+# 		innodb_log_checkpoint_fuzzy_now 					Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_log_checkpoint_now 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_log_checksums 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_log_compressed_pages 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_log_file_size 								Y 						Y 							Y 						- 					Global 			N
+# 		innodb_log_files_in_group 							Y 						Y 							Y 						- 					Global 			N
+# 		innodb_log_group_home_dir 							Y 						Y 							Y 						- 					Global 			N
+# 		innodb_log_spin_cpu_abs_lwm 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_log_spin_cpu_pct_hwm 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_log_wait_for_flush_spin_hwm 				Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_log_waits 										- 						- 							- 						Y 					Global 			N
+# 		innodb_log_write_ahead_size 						Y 						Y 							Y 						- 					Global 			Y
+# 		
+# 		innodb_log_write_requests 							- 						- 							- 						Y 					Global 			N
+# 		innodb_log_writes 									- 						- 							- 						Y 					Global 			N
+# 		innodb_lru_scan_depth 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_max_dirty_pages_pct 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_max_dirty_pages_pct_lwm 					Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_max_purge_lag 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_max_purge_lag_delay 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_max_undo_log_size 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_merge_threshold_set_all_debug 			Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_monitor_disable 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_monitor_enable 								Y 						Y 							Y 						- 					Global 			Y
+# 
+# 		innodb_monitor_reset 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_monitor_reset_all 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_num_open_files 								- 						- 							- 						Y 					Global 			N
+# 		innodb_numa_interleave 								Y 						Y 							Y 						- 					Global 			N
+# 		innodb_old_blocks_pct 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_old_blocks_time 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_online_alter_log_max_size 				Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_open_files 									Y 						Y 							Y 						- 					Global 			N
+# 		innodb_optimize_fulltext_only 					Y 						Y 							Y 						- 					Global 			Y
+# 
+# 		innodb_os_log_fsyncs 								- 						- 							- 						Y 					Global 			N
+# 		innodb_os_log_pending_fsyncs 						- 						- 							- 						Y 					Global 			N
+# 		innodb_os_log_pending_writes 						- 						- 							- 						Y 					Global 			N
+# 		innodb_os_log_written  								- 						- 							- 						Y 					Global 			N
+# 		innodb_page_cleaners 								Y 						Y 							Y 						- 					Global 			N
+# 		innodb_page_size 										- 						- 							-  					Y 					Global 			N
+# 		innodb_page_size 										Y 						Y 							Y 						- 					Global 			N
+# 		innodb_pages_created 								- 						- 							- 						Y 					Global 			N
+# 		innodb_pages_read 									- 						- 							-  					Y 					Global 			N
+# 		innodb_pages_written 								- 						- 							- 						Y 					Global 			N
+#
+# 		innodb_parallel_read_threads 						Y 						Y 							Y 						- 					Session 			Y
+# 		innodb_print_all_deadlocks 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_print_ddl_logs 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_purge_batch_size 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_purge_rseg_truncate_frequency 			Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_purge_threads 								Y 						Y 							Y 						- 					Global 			N
+# 		innodb_random_read_ahead 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_read_ahead_threshold 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_read_io_threads 								Y 						Y 							Y 						- 					Global 			N
+# 		innodb_read_only 										Y 						Y 							Y 						- 					Global 			N
+# 		innodb_redo_log_archive_dirs 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_redo_log_encrypt 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_replication_delay 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_rollback_on_timeout 						Y 						Y 							Y 						- 					Global 			N
+# 		innodb_rollback_segments 							Y 						Y 							Y 						- 					Global 			Y
+#
+# 		innodb_row_lock_current_waits 					- 						- 							-- 					Y 					Global 			N
+# 		innodb_row_lock_time 								- 						- 							- 						Y 					Global 			N
+# 		innodb_row_lock_time_avg 							- 						- 							- 						Y 					Global 			N
+# 		innodb_row_lock_time_max  							- 						- 							- 						Y 					Global 			N
+# 		innodb_row_lock_waits 								- 						- 							- 						Y 					Global 			N
+#
+# 		innodb_rows_deleted 									- 						- 							- 						Y 					Global 			N
+# 		innodb_rows_inserted 								- 						- 							- 						Y 					Global 			N
+# 		innodb_rows_read 										- 						- 							- 						Y 					Global 			N
+# 		innodb_rows_updated 									- 						- 							- 						Y 					Global 			N
+# 		innodb_saved_page_number_debug 					Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_scan_directories 							Y 						Y 							Y 						- 					Global 			N
+# 		innodb_sort_buffer_size 							Y 						Y 							Y 						- 					Global 			N
+# 		innodb_spin_wait_delay 								Y 						Y 							Y 						- 					Global 			Y
+#
+# 		innodb_spin_wait_pause_multiplier 				Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_stats_auto_recalc 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_stats_include_delete_marked 				Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_stats_method 									Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_stats_on_metadata 							Y 						Y 							Y 						-  				Global 			Y
+# 		innodb_stats_persistent 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_stats_persistent_sample_pages 			Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_stats_transient_sample_pages 			Y 						Y 							Y 						- 					Global 			Y
+#
+# 		innodb-status-file 									Y 						Y 							- 						-  				- 					-
+# 		innodb_status_output 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_status_output_locks 						Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_strict_mode 									Y 						Y 							Y 						- 					Both 				Y
+# 		innodb_sync_array_size 								Y 						Y 							Y 						- 					Global 			N
+# 		innodb_sync_debug 									Y 						Y 							Y 						- 					Global 			N
+# 		innodb_sync_spin_loops 								Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_table_locks 									Y 						Y 							Y 						- 					Both 				Y
+# 		innodb_temp_data_file_path 						Y 						Y 							Y 						- 					Global 			N
+# 		innodb_temp_tablespaces_dir 						Y 						Y 							Y 						- 					Global 			N
+# 		innodb_thread_concurrency 							Y 						Y 							Y 						- 					Global 			Y
+# 
+# 		innodb_thread_sleep_delay 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_tmpdir 											Y 						Y 							Y 						- 					Both 				Y
+# 		innodb_truncated_status_writes 					- 						- 							- 						Y 					Global 			N
+#
+# 		innodb_trx_purge_view_update_only_debug 		Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_trx_rseg_n_slots_debug 					Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_undo_directory 								Y 						Y 							Y  					- 					Global 			N
+# 		innodb_undo_log_encrypt 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_undo_log_truncate 							Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_undo_logs 										Y 						Y 							Y 						- 					Global 			Y
+# 		innodb_undo_tablespaces 							Y 						Y 							Y 						- 					Global 			Varies
+# 		innodb_use_native_aio 								Y 						Y 							Y 						- 					Global 			N
+# 		innodb_version 										- 						- 							Y 						- 					Global 			N
+# 		innodb_write_io_threads 							Y 						Y 							Y 						- 					Global 			N
+# 		unique_checks 											- 						- 							Y 						- 					Both 				Y
+#
+# InnoDB COMMAND OPTIONS
+#
+# 		) --ignore-builtin-innodb
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--ignore-builtin-innodb[={OFF|ON}]
+# 			Deprecated 		Yes (removed in 8.0.3)
+# 			Sys var 			ignore_builtin_innodb
+# 			Scope 			Global
+# 			Dynamic 			N
+# 			SET_VAR Hint 	N
+# 			Type 				Boolean
+#
+# 			In earlier versions of MySQL, this option caused the server to behave as if the built-in InnoDB were not present, which enabled
+# 			the InnoDB Plugin to be used instead.
+#
+# 			In MySQL 8.0, InnoDB is the default storage engine and InnoDB Plugin is not used. This option was removed in MySQL 8.0
+#
+# 		) --innodb[=value]
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--innodb[=value]
+# 			Deprecated 		Y
+# 			Type 				Enumeration
+# 			Default 			ON
+# 			Valid 			OFF ON FORCE
+#
+# 			Controls loading of the InnoDB storage engine, if the server was compiled with InnoDB support.
+#
+# 			THis option has a tristate format, with possible values of OFF, ON or FORCE.
+#
+# 			See SECTION 5.6.1, "INSTALLING AND UNINSTALLING PLUGINS"
+#
+# 			To disable InnoDB, use --innodb=OFF or --skip-innodb. IN this case, because the default storage engine is InnoDB,
+# 			the server does not start unless you also use --default-storage-engine and --default-tmp-storage-engine to set the
+# 			default to some other engine for both permanent and TEMPORARY tables.
+#
+# 			The InnoDB storage engine can no longer be disabled, and the --innodb=OFF and --skip-innodb options are deprecated and have
+# 			no effect. Their use results in a warning.
+#
+# 			These options will be removed in a future MySQL release.
+#
+# 		) --innodb-status-file
+#
+# 			https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html
+#
+#
