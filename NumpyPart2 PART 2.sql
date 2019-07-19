@@ -49259,6 +49259,711 @@
 #
 # 		) --innodb-status-file
 #
-# 			https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html
+# 			Property 		Value
+#
+# 			Cmd line 		--innodb-status-file[={OFF|ON}]
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			The --innodb-status-file startup option controls whether InnoDB creates a file named innodb_status.pid in the data directory
+# 			and writes SHOW_ENGINE_INNODB_STATUS output to it every 15 seconds, approximately.
+#
+# 			The innodb_status.pid file is not created by default. To create it, start mysqld with the --innodb-status-file option.
+#
+# 			InnoDB removes the file when the server is shut down normally. If an abnormal shutdown occurs, the status file may have
+# 			to be removed manually.
+#
+# 			The --innodb-status-file option is intended for temporary use, as SHOW_ENGINE_INNODB_STATUS output generation can affect
+# 			performance, and the innodb_status.pid file can become quite large over time.
+#
+# 			For related information, see SECTION 15.16.2, "ENABLING InnoDB MONITORS"
+#
+# 		) --skip-innodb
+#
+# 			Disable the InnoDB storage engine. See the description of --innodb.
+#
+# InnoDB SYSTEM VARIABLES
+#
+# 		) daemon_memcached_enable_binlog
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--daemon-memcached-enable-binlog[={OFF|ON}]
+# 			Sys var 			daemon_memcached_enable_binlog
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			Enable this option on the master server to use the InnoDB memcached plugin (daemon_memcached) with the MySQL binary log.
+#
+# 			This option can only be set at server startup. You must also enable the MySQL binary log on the master server using
+# 			the --log-bin option.
+#
+# 			For more information, see SECTION 15.19.7, "THE INNODB MEMCACHED PLUGIN AND REPLICATION"
+#
+# 		) daemon_memcached_engine_lib_name
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--daemon-memcached-engine-lib-name=file_name
+# 			Sys var 			daemon_memcached_engine_lib_name
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				File name
+# 			Default 			innodb_engine.so
+#
+# 			Specifies the shared library that implements the InnoDB memcached plugin.
+#
+# 			For more information, see SECTION 15.19.3, "SETTING UP THE INNODB MEMCACHED PLUGIN"
+#
+# 		) daemon_memcached_engine_lib_path
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--daemon-memcached-engine-lib-path=dir_name
+# 			Sys var 			daemon_memcached_engine_lib_path
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Dir name
+# 			Default 			NULL
+#
+# 			The path of the directory containing the shared library that implements the InnoDB memcached plugin.
+# 			The default value is NULL, representing the MySQL plugin dir.
+#
+# 			You should not need to modify this parameter unless specifying a memcached plugin for a different storage
+# 			engine that is located outside of the MySQL plugin dir.
+#
+# 			For more information, see SECTION 15.19.3, "SETTING UP THE INNODB MEMCACHED PLUGIN"
+#
+# 		) daemon_memcached_option
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--daemon-memcached-option=options
+# 			Sys var 			daemon_memcached_option
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR hint 	No
+# 			Type 				String
+# 			Default 			-
+#
+# 			Used to pass space-separated memcached options to the underlying memcached memory object caching daemon on startup.
+#
+# 			For example, you might change the port that memcached listens on, reduce the maximum number of simultaneous connections,
+# 			change the maximum memory size for a key-value pair, or enable debugging messages for the error log.
+#
+# 			See SECTION 15.19.3, "SETTING UP THE INNODB MEMCACHED PLUGIN" for usage details. For information about memcached options,
+# 			refer to the memcached man page.
+#
+# 		) daemon_memcached_r_batch_size
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--daemon-memcached-r-batch-size=#
+# 			Sys var 			daemon_memcached_r_batch_size
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			1
+#
+# 			Specifies how many memcached read operations (get operations) to perform before doing a COMMIT to start a new transaction.
+# 			Counterpart of daemon_memcached_w_batch_size.
+#
+# 			This value is set to 1 by default, so that any changes made to the table through SQL statements are immediately visible to
+# 			memcached operations.
+#
+# 			You might increase it to reduce the overhead from frequent commits on a system where the underlying table is only being accessed
+# 			through the memcached interface.
+#
+# 			If you set the value too large, the amount of undo or redo data could impose some storage overhead, as with any long-running
+# 			transaction.
+#
+# 			For more information, see SECTION 15.19.3, "SETTING UP THE INNODB MEMCACHED PLUGIN"
+#
+# 		) daemon_memcached_w_batch_size
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--daemon-memcached-w-batch-size=#
+# 			Sys var 			daemon_memcached_w_batch_size
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			1
+#
+# 			Specifies how many memcached write operations, such as add, set and incr, to perform before doing a COMMIT to start a new transaction.
+#
+# 			Counterpart of daemon_memcached_r_batch_size
+#
+# 			This value is set to 1 by default, on the assumption that data being stored is important to preserve in case of an outage and should
+# 			immediately be committed.
+#
+# 			When storing non-critical data, you might increase this value to reduce the overhead from frequent commits; but then the last N-1 
+# 			uncommitted write operations could be lost if a crash occurs.
+#
+# 			For more information, see SECTION 15.19.3, "SETTING UP THE INNODB MEMCACHED PLUGIN"
+#
+# 		) ignore_builtin_innodb
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--ignore-builtin-innodb[={OFF|ON}]
+# 			Deprecated 		Yes (removed in 8.0.3)
+# 			Sys var 			ignore_builtin_innodb
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+#
+# 			See the description of --ignore-builtin-innodb under "InnoDB Command Options" earlier in this section.
+#
+# 			This variable was removed in MySQL 8.0
+#
+# 		) innodb_adaptive_flushing
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--innodb-adaptive-flushing[={OFF|ON}]
+# 			Sys var 			innodb_adaptive_flushing
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			ON
+#
+# 			Specifies whether to dynamically adjust the rate of flushing dirty pages in the InnoDB buffer pool based on the workload.
+#
+# 			Adjusting the flush rate dynamically is intended to avoid bursts of I/O activity. This setting is enabled by default.
+#
+# 			See SECTION 15.8.3.5, "CONFIGURING INNODB BUFFER POOL FLUSHING" for more information.
+#
+# 			For general I/O tuning advice, see SECTION 8.5.8, "OPTIMIZING InnoDB DISK I/O"
+#
+# 		) innodb_adaptive_flushing_lwm
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--innodb-adaptive-flushing-lwm=#
+# 			Sys var 			innodb_adaptive_flushing_lwm
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			10
+# 			Min 				0
+# 			Max 				70
+#
+# 			Defines the low water mark representing percentage of redo log capacity at which adaptive flushing is enabled.
+#
+# 			For more information, see SECTION 15.8.3.6, "FINE-TUNING InnoDB BUFFER POOL FLUSHING"
+#
+# 		) innodb_adaptive_hash_index
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--innodb-adaptive-hash-index[={OFF|ON}]
+# 			Sys var 			innodb_adaptive_hash_index
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			ON
+#
+# 			Whether the InnoDB adaptive hash index is enabled or disabled. It may be desirable, depending on your workload, to dynamically
+# 			enable or disable adaptive hash indexing to improve query performance.
+#
+# 			Because the adaptive hash index may not be useful for all workloads, conduct benchmarks with it both enabled and disabled,
+# 			using realistic workloads. See SECTION 15.5.3, "ADAPTIVE HASH INDEX" for details.
+#
+# 			This variable is enabled by default. You can modify this parameter using the SET GLOBAL statement, without restarting the server.
+#
+# 			Changing the setting at runtime requires privileges sufficient to set global system variables. See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 			You can also use --skip-innodb-adaptive-hash-index at server startup to disable it.
+#
+# 			Disabling the adaptive hash index empties the hash table immediately. Normal operations can continue while the hash table is emptied, and executing
+# 			queries that were using the hash table access the index B-trees directly instead.
+#
+# 			When the adaptive hash index is re-enabled, the hash table is populated again during normal operation.
+#
+# 		) innodb_adaptive_hash_index_parts
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--innodb-adaptive-hash-index-parts=#
+# 			Sys var 			innodb_adaptive_hash_index_parts
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Numeric
+# 			Default 			8
+# 			Min 				1
+# 			Max 				512
+#
+# 			Partitions the adaptive hash index search system. Each index is bound to a specific partition, with each partition protected by a separate latch.
+#
+# 			The adaptive hash index search system is partitioned into 8 parts by default. The maximum setting is 512.
+#
+# 			For related information, see SECTION 15.5.3, "ADAPTIVE HASH INDEX"
+#
+# 		) innodb_adaptive_max_sleep_delay
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--innodb-adaptive-max-sleep-delay=#
+# 			Sys var 			innodb_adaptive_max_sleep_delay
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			15000
+# 			Min  				0
+# 			Max 				1000000
+#
+# 			Permits InnoDB to automatically adjust the value of innodb_thread_sleep_delay up or down according to the current workload.
+# 			Any nonzero value enables automated, dynamic adjustment of the innodb_thread_sleep_delay value, up to the maximum value specified
+# 			in the innodb_adaptive_max_sleep_delay option.
+#
+# 			The value represents the number of microseconds. This option can be useful in busy systems, with greater than 16 InnoDB threads.
+#
+# 			(In practice, it is most valuable for MySQL systems with hundreds or thousands of simultaneous connections)
+#
+# 			For more information, see SECTION 15.8.4, "CONFIGURING THREAD CONCURRENCY FOR INNODB"
+#
+# 		) innodb_api_bk_commit_interval
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--innodb-api-bk-commit-interval=#
+# 			Sys var 			innodb_api_bk_commit_interval
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			5
+# 			Min 				1
+# 			Max 				1073741824
+#
+# 			How often to auto-commit idle connections that use the InnoDB memcached interface, in seconds. For more information, 
+# 			see SECTION 15.19.6.4, "CONTROLLING TRANSACTIONAL BEHAVIOR OF THE INNODB MEMCACHED PLUGIN"
+#
+# 		) innodb_api_disable_rowlock
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--innodb-api-disable-rowlock[={OFF|ON}]
+# 			Sys var 			innodb_api_disable_rowlock
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_Var Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			Use this option to disable row locks when InnoDB memcached performs DML operations. By default, innodb_api_disable_rowlock is disabled,
+# 			which means that memcached requests row locks for get and set operations.
+#
+# 			When innodb_api_disable_rowlock is enabled, memcached requests a table lock instead of row locks.
+#
+# 			innodb_api_disable_rowlock is not dynamic. It must be specified on the mysqld command line or entered in the MySQL configuration file.
+#
+# 			Configuration takes effect when the plugin is installed, which occurs when the MySQL server is started.
+#
+# 			For more information, see SECTION 15.19.6.4, "CONTROLLING TRANSACTIONAL BEHAVIOR OF THE INNODB MEMCACHED PLUGIN"
+#
+# 		) innodb_api_enable_binlog
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--innodb-api-enable-binlog[={OFF|ON}]
+# 			Sys var 			innodb_api_enable_binlog
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			Lets you use the InnoDB memcached plugin with the MySQL binary log. For more information, see ENABLING THE INNODB MEMCACHED BINARY LOG.
+#
+# 		) innodb_api_enable_mdl
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--innodb-api-enable-mdl[={OFF|ON}]
+# 			Sys var 			innodb_api_enable_mdl
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			Locks the table used by the InnoDB memcached plugin, so that it cannot be dropped or altered by DDL through the SQL interface.
+#
+# 			For more information, see SECTION 15.19.6.4, "CONTROLLING TRANSACTIONAL BEHAVIOR OF THE INNODB MEMCACHED PLUGIN"
+#
+# 		) innodb_api_trx_level
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--innodb-api-trx-level=#
+# 			Sys var 			innodb_api_trx_level
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			0
+#
+# 			Controls the transaction isolation level on queries processed by the memcached interface.
+#
+# 			The constants corresponding to the familiar names are:
+#
+# 				) 0 = READ_UNCOMMITTED
+#
+# 				) 1 = READ_COMMITTED
+#
+# 				) 2 = REPEATABLE_READ
+#
+# 				) 3 = SERIALIZABLE
+#
+# 			For more information, see SECTION 15.19.6.4, "CONTROLLING TRANSACTIONAL BEHAVIOR OF THE INNODB MEMCACHED PLUGIN"
+#
+# 		) innodb_autoextend_increment
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--innodb-autoextend-increment=#
+# 			Sys var 			innodb_autoextend_increment
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			64
+# 			Min 				1
+# 			Max 				1000
+#
+# 			The increment size (in megabytes) for extending the size of an auto-extending InnoDB system tablespace file when it
+# 			becomes full.
+#
+# 			The default value is 64. For related information, see SYSTEM TABLESPACE DATA FILE CONFIGURATION, and RESIZING THE SYSTEM TABLESPACE.
+#
+# 			The innodb_autoextend_increment setting does not affect file-per-table tablespace files or general tablespace files.
+#
+# 			These files are auto-extending regardless of the innodb_autoextend_increment setting. The initial extensions are by small amounts,
+# 			after which extensions occur in increments of 4MB.
+#
+# 		) innodb_autoinc_lock_mode
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--innodb-autoinc-lock-mode=#
+# 			Sys var 				innodb_autoinc_lock_mode
+# 			Scope 				Global
+# 			Dynamic 				No
+# 			SET_VAR Hint 		No
+# 			Type 					Integer
+# 			Default (>= 8.0.3) 2
+# 			Default (<= 8.0.2) 1
+# 			Valid 				 0 1 2
+#
+# 			The lock mode to use for generating auto-increment values. Permissible values are 0, 1, or 2, for traditional, consecutive,
+# 			or interleaved, respectively.
+#
+# 			The default setting is 2 (interleaved) as Of MySQL 8.0, and 1 (consecutive) before that. The change to interleaved lock mode
+# 			as the default setting reflects the change from statement-based to row-based replication as the default replication type,
+# 			which occurred in MySQL 5.7.
+#
+# 			Statement-based replication requires the consecutive auto-increment lock mode to ensure that auto-increment values are assigned
+# 			in a predictable and repeatable order for a given sequence of SQL statements, whereas row-based replication is not sensitive
+# 			to the execution order of SQL statements.
+#
+# 			For the characteristics of each lock mode, see InnoDB AUTO_INCREMENT LOCK MODES
+#
+# 		) innodb_background_drop_list_empty
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--innodb-background-drop-list-empty[={OFF|ON}]
+# 			Sys var 				innodb_background_drop_list_empty
+# 			Scope 				Global
+# 			Dynamic 				Yes
+# 			SET_VAR Hint 		No
+# 			Type 					Boolean
+# 			Default 				OFF
+#
+# 			Enabling the innodb_background_drop_list_empty debug option helps avoid test case failures by delaying table creation
+# 			until the background drop list is empty.
+#
+# 			For example, if test case A places table t1 on the background drop list, test case B waits until the background drop list
+# 			is empty before creating table t1.
+#
+# 		) innodb_buffer_pool_chunk_size
+#
+# 			Property 			Value
+#
+# 			cmd line 			--innodb-buffer-pool-chunk-size=#
+# 			Sys Var 				innodb_buffer_pool_chunk_size
+# 			Scope 				Global
+# 			Dynamic 				No
+# 			SET_VAR Hint 		No
+# 			Type 					Integer
+# 			Default 				134217728
+# 			Min 					1048576
+# 			Max 					innodb_buffer_pool_size / innodb_buffer_pool_instances
+#
+# 			innodb_buffer_pool_chunk_size defines the chunk size for InnoDB buffer pool resizing operations.
+#
+# 			The innodb_buffer_pool_size parameter is dynamic, which allows you to resize the buffer pool
+# 			without restarting the server.
+#
+# 			To avoid copying all buffer pool pages during resizing operations, the operation is performed in "chunks".
+#
+# 			By default, innodb_buffer_pool_chunk_size is 128MB (134217728 bytes).
+#
+# 			The number of pages contained in a chunk depends on the value of innodb_page_size. innodb_buffer_pool_chunk_size
+# 			can be increased or decreased in units of 1MB (1048576 bytes)
+#
+# 			The following conditions apply when altering the innodb_buffer_pool_chunk_size value:
+#
+# 				) If innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances is larger than the current buffer pool size when the buffer
+# 					pool is initialized, innodb_buffer_pool_chunk_size is truncated to innodb_buffer_pool_size / innodb_buffer_pool_instances
+#
+# 				) Buffer pool size must always be equal to or a multiple of innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances.
+#
+# 					If you alter innodb_buffer_pool_chunk_size, innodb_buffer_pool_size is automatically rounded to a value that is equal to
+# 					or a multiple of innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances.
+#
+# 					The adjustment occurs when the buffer pool is initialized.
+#
+# 						IMPORTANT:
+#
+# 							Care should be taken when changing innodb_buffer_pool_chunk_size, as changing this value can automatically increase
+# 							the size of the buffer pool.
+#
+# 							Before changing innodb_buffer_pool_chunk_size, calculate the effect it will have on innodb_buffer_pool_size to ensure that
+# 							the resulting buffer pool size is acceptable.
+#
+# 					To avoid potential performance issues, the number of chunks (innodb_buffer_pool_size / innodb_buffer_pool_chunk_size) should not exceed 1000.
+#
+# 					See SECTION 15.8.3.1, "CONFIGURING INNODB BUFFER POOL SIZE" for more information.
+#
+# 				) innodb_buffer_pool_debug
+#
+# 					Property 						Value
+#
+# 					Cmd line 						--innodb-buffer-pool-debug[={OFF|ON}]
+# 					Sys Var 							innodb_buffer_pool_debug
+# 					Scope 							Global
+# 					Dynamic 							No
+# 					SET_VAR Hint 					No
+# 					Type 								Boolean
+# 					Default 							OFF
+#
+# 					Enabling this option permits multiple buffer pool instances when the buffer pool is less than 1GB in size, ignoring the 1GB minimum
+# 					buffer pool size constraint imposed on innodb_buffer_pool_instances.
+#
+# 					The innodb_buffer_pool_debug option is only available if debugging support is compiled in using the WITH_DEBUG CMake option.
+#
+# 				) innodb_buffer_pool_dump_at_shutdown
+#
+# 					Property 						Value
+#
+# 					Cmd line 						--innodb-buffer-pool-dump-at-shutdown[={OFF|ON}]
+# 					Sys var 							innodb_buffer_pool_dump_at_shutdown
+# 					Scope 							Global
+# 					Dynamic 							Yes
+# 					SET_VAR Hint 					No
+# 					Type 								Boolean
+# 					Default 							ON
+#
+# 					Specifies whether to record the pages cached in the InnoDB buffer pool when the MySQL server is shut down,
+# 					to shorten the warmup process at the next restart.
+#
+# 					Typically used in combination with innodb_buffer_pool_load_at_startup. The innodb_buffer_pool_dump_pct option defines
+# 					the percentage of most recently used buffer pool pages to dump.
+#
+# 					Both innodb_buffer_pool_dump_at_shutdown and innodb_buffer_pool_load_at_startup are enabled by default.
+#
+# 					For more information, see SECTION 15.8.3.7, "SAVING AND RESTORING THE BUFFER POOL STATE"
+#
+# 				) innodb_buffer_pool_dump_now
+#
+# 					Property 						Value
+# 			
+# 					Cmd line 						--innodb-buffer-pool-dump-now[={OFF|ON}]
+# 					Sys var 							innodb_buffer_pool_dump_now
+# 					Scope 							Global
+# 					Dynamic 							Yes
+# 					SET_VAR Hint 					No
+# 					Type 								Boolean
+# 					Default 							OFF
+#
+# 					Immediately records the pages cached in the InnoDB buffer pool. Typically used in combination
+# 					with innodb_buffer_pool_load_now.
+#
+# 					For more information, see SECTION 15.8.3.7, "SAVING AND RESTORING THE BUFFER POOL STATE"
+#
+# 				) innodb_buffer_pool_dump_pct
+#
+# 					Property 						Value
+#
+# 					Cmd line 						--innodb-buffer-pool-dump-pct=#
+# 					Sys var 							innodb_buffer_pool_dump_pct
+# 					Scope 							Global
+# 					Dynamic 							Yes
+# 					SET_VAR Hint 					No
+# 					Type 								Integer
+# 					Default 							25
+# 					Min 								1
+# 					Max 								100
+#
+# 					Specifies the percentage of the most recently used pages for each buffer pool to read out and dump.
+#
+# 					The range is 1 to 100. The default value is 25. For example, if there are 4 buffer pools with 100 pages
+# 					each, and innodb_buffer_pool_dump_pct is set to 25, the 25 most recently used pages from each buffer pool are dumped.
+#
+# 				) innodb_buffer_pool_filename
+#
+# 					Property 						Value
+#
+# 					Cmd line 						--innodb-buffer-pool-filename=file_name
+# 					Sys var 							innodb_buffer_pool_filename
+# 					Scope 							Global
+# 					Dynamic 							Yes
+# 					SET_VAR hint 					No
+# 					Type 								File name
+# 					Default value 					ib_buffer_pool
+#
+# 					Specifies the name of the file that holds the list of tablespace IDs and page IDs produced by innodb_buffer_pool_dump_at_shutdown
+# 					or innodb_buffer_pool_dump_now.
+#
+# 					Tablespace IDs and page IDs are saved in the following format:
+#
+# 						space, page_id
+#
+# 					By default, the file is named ib_buffer_pool and is located in the InnoDB data directory.
+# 					A non-default location must be specified relative to the data directory.
+#
+# 					A file name can be specified at runtime, using a SET statement:
+#
+# 						SET GLOBAL innodb_buffer_pool_filename='file_name';
+#
+# 					You can also specify a file name at startup, in a startup string or MySQL configuration file.
+#
+# 					When specifying a file name at startup, the file must exist or InnoDB will return a startup error
+# 					indicating that there is no such file or directory.
+#
+# 					For more information, see SECTION 15.8.3.7, "SAVING AND RESTORING THE BUFFER POOL STATE"
+#
+# 			) innodb_buffer_pool_in_core_file
+#
+# 					Property 					Value
+#
+# 					cmd line 					--innodb-buffer-pool-in-core-file[={OFF|ON}]
+# 					Introduced 					8.0.14
+# 					Sys var 						innodb_buffer_pool_in_core_file
+# 					Scope 						Global
+# 					Dynamic 						Yes
+# 					SET_VAR Hint 				No
+# 					Type 							Boolean
+# 					Default 						ON
+#
+# 					Disabling the innodb_buffer_pool_in_core_file variable reduces the size of core files by excluding InnoDB buffer pool pages.
+#
+# 					To use this variable, the core_file variable must be enabled and the operating system must support the MADV_DONTDUMP non-POSIX
+# 					extension to madvise(), which is supported in Linux 3.4 and later.
+#
+# 					For more information, see SECTION 15.8.3.8, "EXCLUDING BUFFER POOL PAGES FROM CORE FILES"
+#
+# 			) innodb_buffer_pool_instances
+#
+# 					Property 					Value
+#
+# 					Cmd line 					--innodb-buffer-pool-instances=#
+# 					Sys var 						innodb_buffer_pool_instances
+# 					Scope 						Global
+# 					Dynamic 						No
+# 					SET_VAR Hint 				No
+# 					Type 							Integer
+# 					Default (Other) 			8 (or 1 if innodb_buffer_pool_size < 1GB)
+# 					Default (Windows, 32-bit) (autosized)
+# 					Min 							1
+# 					Max 							64
+#
+# 					The number of regions that the InnoDB buffer pool is divided into. For systems with buffer pools in the multi-gigabyte range, dividing
+# 					the buffer pool into separate instances can improve concurrency, by reducing contention as different threads read and write to cached pages.
+#
+# 					Each page that is stored in or read from the buffer pool is assigned to one of the buffer pool instances randomly, using a hashing function.
+#
+# 					Each buffer pool manages its own free lists, flush lists, LRUs, and all other data structures connected to a buffer pool, and is protected
+# 					by its own buffer pool mutex.
+#
+# 					This option only takes effect when setting innodb_buffer_pool_size to 1GB or more. The total buffer size is divided among all the buffer pools.
+#
+# 					For best efficiency, specify a combination of innodb_buffer_pool_instances and innodb_buffer_pool_size so that each buffer pool instance is at least 1GB.
+#
+# 					The default value on 32-bit Windows systems depends on the value of innodb_buffer_pool_size, as described below:
+#
+# 						) If innodb_buffer_pool_size is greater than 1.3GB, the default for innodb_buffer_pool_instances is innodb_buffer_pool_size/128MB, with individual
+# 							memory allocation requests for each chunk.
+#
+# 							1.3GB was chosen as the boundary at which there is significant risk for 32-bit Windows to be unable to allocate the contiguous address space
+# 							needed for a single buffer pool.
+#
+# 						) Otherwise, the default is 1.
+#
+# 					On all other platforms, the default value is 8 when innodb_buffer_pool_size is greater than or equal to 1GB. Otherwise, the default is 1.
+#
+# 					For related information, see SECTION 15.8.3.1, "CONFIGURING InnoDB BUFFER POOL SIZE"
+#
+# 			) innodb_buffer_pool_load_abort
+#
+# 					Property 				Value
+#
+# 					Cmd line 				--innodb-buffer-pool-load-abort[={OFF|ON}]
+# 					Sys Var 					innodb_buffer_pool_load_abort
+# 					Scope 					Global
+# 					Dynamic 					Yes
+# 					SET_VAR Hint 			No
+# 					Type 						Boolean
+# 					Default 					OFF
+#
+# 					Interrupts the process of restoring InnoDB buffer pool contents triggered by innodb_buffer_pool_load_at_startup or innodb_buffer_pool_load_now
+#
+# 					For more information, see SECTION 15.8.3.7, "SAVING AND RESTORING THE BUFFER POOL STATE"
+#
+# 			) innodb_buffer_pool_load_at_startup
+#
+# 					Property 				Value
+#
+# 					Cmd line 				--innodb-buffer-pool-load-at-startup[={OFF|ON}]
+# 					Sys Var 					innodb_buffer_pool_load_at_startup
+# 					Scope 					Global
+# 					Dynamic 					No
+# 					SET_VAR Hint 			No
+# 					Type 						Boolean
+# 					Default 					ON
+#
+# 					Specifies that, on MySQL server startup, the InnoDB buffer pool is automatically warmed up by loading the same pages it held
+# 					at an earlier time.
+#
+# 					Typically used in combination with innodb_buffer_pool_dump_at_shutdown
+#
+# 					Both innodb_buffer_pool_dump_at_shutdown and innodb_buffer_pool_load_at_startup are enabled by default.
+#
+# 					For more information, see SECTION 15.8.3.7, "SAVING AND RESTORING THE BUFFER POOL STATE"
+#
+# 			) innodb_buffer_pool_load_now
+#
+# 					Property 				Value
+#
+# 					Cmd line 				--innodb-buffer-pool-load-now[={OFF|ON}]
+# 					Sys var 					innodb_buffer_pool_load_now
+# 					Scope 					https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html
+# 					
 #
 #
