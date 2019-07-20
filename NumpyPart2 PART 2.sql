@@ -49963,7 +49963,843 @@
 #
 # 					Cmd line 				--innodb-buffer-pool-load-now[={OFF|ON}]
 # 					Sys var 					innodb_buffer_pool_load_now
-# 					Scope 					https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html
-# 					
+# 					Scope 					Global
+# 					Dynamic 					Yes
+# 					SET_VAR Hint 			No
+# 					Type 						Boolean
+# 					Default 					OFF
 #
+# 					Immediately warms up the InnoDB buffer pool by loading a set of data pages, without waiting for a server restart.
 #
+# 					Can be useful to bring cache memory back to a known state during benchmarking, or to ready the MySQL server to resume
+# 					its normal workload after running queries for reports or maintenance.
+#
+# 					For more information, see SECTION 15.8.3.7, "SAVING AND RESTORING THE BUFFER POOL STATE"
+#
+# 			) innodb_buffer_pool_size
+#
+# 					Property 				Value
+#
+# 					Cmd line 				--innodb-buffer-pool-size=#
+# 					Sys var 					innodb_buffer_pool_size
+# 					Scope 					Global
+# 					Dynamic 					Yes
+# 					SET_VAR Hint 			No
+# 					Type 						Integer
+# 					Default 					134217728
+# 					Min 						5242880
+# 					Max value (64-bit) 	2**64-1
+# 					Max value (32-bit) 	2**32-1
+#
+# 					The size in bytes of the buffer pool, the memory area where InnoDB caches table and index data. The default value
+# 					is 134217728 bytes (128MB).
+#
+# 					The maximum value depends on the CPU architechture, the maximum is 4294967295 (2^32-1) on 32-bit systems and
+# 					18446744073709551615 (2^64-1) on 64-bit systems.
+#
+# 					On 32-bit systems, the CPU architechture and operating system may impose a lower practical maximum size than the
+# 					stated maximum.
+#
+# 					When the size of the buffer pool is greater than 1GB, setting innodb_buffer_pool_instances to a value greater than
+# 					1 can improve the scalability on a busy server.
+#
+# 					A larger buffer pool requires less disk I/O to access the same table data more than once. On a dedicated database
+# 					server, you might set the buffer pool size to 80% of the machine's physical memory size.
+#
+# 					Be aware of the following potential issues when configuring buffer pool size, and be prepared to scale back the size
+# 					of the buffer pool if necessary.
+#
+# 						) Competition for physical memory can cause paging in the operating system
+#
+# 						) InnoDB reserves additional memory for buffers and control structures, so that the total allocated space is approximately,
+# 							10% greater than the specified buffer pool size.
+#
+# 						) Address space for the buffer pool must be contiguous, which can be an issue on Windows Systems with DLLs that load at
+# 							specific addresses.
+#
+# 						) The time to initialize the buffer pool is roughly proportional to its size. On instances with large buffer pools, initialization
+# 							time might be significant.
+#
+# 							To reduce the initialization period, you can save the buffer pool state at server shutdown and restore it at server startup.
+#
+# 							See SECTION 15.8.3.7, "SAVING AND RESTORING THE BUFFER POOL STATE"
+#
+# 					When you increase or decrease buffer pool size, the operation is performed in chunks. Chunk size is defined by the innodb_buffer_pool_chunk_size
+# 					variable, which has a default value of 128 MB.
+#
+# 					Buffer pool size must always be equal to or a multiple of innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances.
+#
+# 					If you alter the buffer pool size to a value that is not equal to or a multiple of innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances,
+# 					buffer pool size is automatically adjusted to a value that is equal to or a multiple of innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances.
+#
+# 					innodb_buffer_pool_size can be set dynamically, which allows you to resize the buffer pool without restarting the server.
+#
+# 					The Innodb_buffer_pool_resize_status status variable reports the status of online buffer pool resizing operations.
+#
+# 					See SECTION 15.8.3.1, "CONFIGURING INNODB BUFFER POOL SIZE" for more information.
+#
+# 					If innodb_dedicated_server is enabled, the innodb_buffer_pool_size value is automatically configured if it is not explicitly
+# 					defined.
+#
+# 					For more information, see SECTION 15.8.12, "ENABLING AUTOMATIC CONFIGURATION FOR A DEDICATED MYSQL SERVER"
+#
+# 			) innodb_change_buffer_max_size
+#
+# 					Property 			Value
+#	
+# 					Cmd line 			--innodb-change-buffer-max-size=#
+# 					Sys var 				innodb_change_buffer_max_size
+# 					Scope 				Global
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		No
+# 					Type 					Integer
+# 					Default 				25
+# 					Min 					0
+# 					Max 					50
+#
+# 					Maximum size for the InnoDB change buffer, as a percentage of the total size of the buffer pool.
+#
+# 					You might increase this value for a MySQL server with heavy insert, update and delete activity,
+# 					or decrease it for a MySQL server with unchanging data used for reporting.
+#
+# 					For more information, see SECTION 15.5.2, "CHANGE BUFFER" 
+#
+# 					For general I/O tuning advice, see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 			) innodb_change_buffering
+#
+# 					Property 			Value
+#
+# 					Cmd line 			--innodb-change-buffering=value
+# 					Sys var 				innodb_change_buffering
+# 					Scope 				Global
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		No
+# 					Type 					Enumeration
+# 					Default 				all
+# 					Valid 				none 
+# 											inserts
+# 											deletes
+# 											changes
+# 											purges
+# 											all
+#
+# 					Whether InnoDB performs change buffering, an optimization that delays write operations to secondary indexes
+# 					so that the I/O operations can be performed sequentially.
+#
+# 					Permitted values are described in the following table. Values may also be specified numerically.
+#
+# 					TABLE 15.26 PERMITTED VALUES FOR INNODB_CHANGE_BUFFERING
+#
+# 						Value 				Numeric 				Description
+#
+# 						none 					0 						Do not buffer any operations
+# 						inserts 				1 						Buffer insert operations
+# 						deletes 				2 						Buffer delete marking operations; strictly speaking, the writes that mark index records
+# 																		for later deletion during a purge operation.
+# 						changes 				3 						Buffer inserts and delete-marking operations
+# 						purges 				4 						Buffer the physical deletion operations that happen in the background
+# 						all 					5 						The default. Buffer inserts, delete-marking operations, and purges.
+#
+# 					For more information, see SECTION 15.5.2, "CHANGE BUFFER". For general I/O tuning advice, see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 			) innodb_change_buffering_debug
+#
+# 					Property 			Value
+#
+# 					Cmd line 			--innodb-change-buffering-debug=#
+# 					Sys var 				innodb_change_buffering_debug
+# 					Scope 				Global
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		No
+# 					Type 					Integer
+# 					Default 				0
+# 					Max 					2
+#
+# 					Sets a debug flag for InnoDB change buffering. A value of 1 forces all changes to the change buffer.
+#
+# 					A value of 2 causes a crash at merge. A default value of 0 indicates that the change buffering debug
+# 					flag is not set.
+#
+# 					This option is only available when debugging support is compiled in using the WITH_DEBUG CMake option.
+#
+# 			) innodb_checkpoint_disabled
+#
+# 					Property 			Value
+#
+# 					Cmd line 			--innodb-checkpoint-disabled[={OFFON}]
+# 					Introduced 			8.0.2
+# 					Sys var 				innodb_checkpoint_disabled
+# 					Scope 				Global
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		No
+# 					Type 					Boolean
+# 					Default 				OFF
+#
+# 					This is a debug option that is only intended for expert debugging use.
+#
+# 					It disables checkpoints so that a deliberate server exit always initiates InnoDB recovery.
+#
+# 					It should only be enabled for a short interval, typically before running DML operations that write
+# 					redo log entries that would require recovery following a server exit.
+#
+# 					This option is only available if debugging support is compiled in using the WITH_DEBUG CMake option.
+#
+# 			) innodb_checksum_algorithm
+#
+# 					Property 			Value
+#
+# 					Cmd line 			--innodb-checksum-algorithm=value
+# 					Sys var 				innodb_checksum_algorithm
+# 					Scope 				Global
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		No
+# 					Type 					Enumeration
+# 					Default 				crc32
+# 					Valid Values 		innodb
+# 											crc32
+# 											none
+# 											strict_innodb
+# 											strict_crc32
+# 											strict_none
+#
+# 					Specifies how to generate and verify the checksum stored in the disk blocks of InnoDB tablespaces.
+#
+# 					The default value for innodb_checksum_algorithm is crc32.
+#
+# 					Versions of MySQL Enterprise Backup up to 3.8.0 do not support backing up tablespaces that use CRC32 checksums.
+# 					MySQL Enterprise Backup adds CRC32 checksum support in 3.8.1, with some limitations.
+#
+# 					Refer to the MySQL Enterprise Backup 3.8.1 Change History for more information
+#
+# 					The value innodb is backward-compatible with earlier versions of MySQL. The value crc32 uses an algorithm that is faster
+# 					to compute the checksum for every modified block, and to check the checksums for each disk read.
+#
+# 					It scans blocks 32 bits at a time, which is faster than the InnoDB checksum algorithm, which scans blocks 8 bits at
+# 					a time.
+#
+# 					The value none writes a constant value in the checksum field rather than computing a value based on the block data.
+#
+# 					The blocks in a tablespace can use a mix of old, new, and no checksum values, being updated gradually as the data is
+# 					modified; once blocks in a tablespace are modified to use the crc32 algorithm, the associated tables cannot be read
+# 					by earlier versions of MySQL
+#
+# 					The strict form of a checksum algorithm reports an error if it encounters a valid but non-matching checksum value in
+# 					a tablespace.
+#
+# 					It is recommended that you only use strict settings in a new instance, to set up tablespaces for the first time.
+#
+# 					Strict settings are somewhat faster, because they do not need to compute all checksum values during disk reads.
+#
+# 					The following table shows the difference between the none, innodb and crc32 option values, and their strict counterparts.
+#
+# 					none, innodb, and crc32 write the specified type of checksum value into each data block, but for compatibility accept other
+# 					checksum values when verifying a block during a read operation.
+#
+# 					Strict settings also accept valid checksum values but print an error message when a valid non-matching checksum value is
+# 					encountered. Using the strict form can make verification faster if all InnoDB data files in an instance are created
+# 					under an identical innodb_checksum_algorithm value.
+#
+# 						TABLE 15.27 PERMITTED INNODB_CHECKSUM_ALGORITHM VALUES
+#
+# 						Value 			GENERATED CHECKSUM (when writing) 												PERMITTED CHECKSUMS (when reading)
+#
+# 						None 				A constant number 																	any of the checksums generated by none, innodb or crc32.
+#
+# 						innodb 			A checksum calculated in SW, using the original algo from InnoDB  	Any of the checksums generated by none, innodb or crc32
+#
+# 						crc32 			A checksum calculated using the crc32 algo, possibly done with a  	Any of the checksums generated by none, innodb or crc32
+# 											hardware assist
+#
+# 						strict_none 	a constant number 																	Any of the checksums generated by none, innodb or crc32.
+# 																																		InnoDB prints an error message if a valid but non-matching
+# 																																		checksum is encountered.
+#
+# 						strict_innodb 	A checksum calculated in SW, using the original algo from InnoDB 		Any of the checksums generated by none, innodb or crc32.
+# 																																		InnoDB prints an error message if a valid but non-matching
+# 																																		checksum is encountered.
+#
+# 						strict_crc32 	A checksum calculated using the crc32 algorithm, possibly done 		Any of the checksums generated by none, innodb, or crc32.
+# 											with a hardware assist  															InnoDB prints an error message if a valid but non-matching
+# 																																		checksum is encountered.
+#
+# 			) innodb_cmp_per_index_enabled
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-cmp-per-index-enabled[={OFF|ON}]
+# 				Sys var 					innodb_cmp_per_index_enabled
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					OFF
+#
+# 				Enables per-index compression-related statistics in the INFORMATION_SCHEMA.INNODB_CMP_PER_INDEX table.
+#
+# 				Because these statistics can be expensive to gather, only enable this option on development, test, or
+# 				slave instances during performance tuning related to InnoDB compressed tables.
+#
+# 				For more information, see SECTION 25.39.7, "THE INFORMATION_SCHEMA INNODB_CMP_PER_INDEX AND INNODB_CMP_PER_INDEX_RESET TABLES",
+# 				and SECTION 15.9.1.4, "MONITORING INNODB TABLE COMPRESSION AT RUNTIME"
+#
+# 			) innodb_commit_concurrency
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-commit-concurrency=#
+# 				Sys var 					innodb_commit_concurrency
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					0
+# 				Min 						0
+# 				Max 						1000
+#
+# 				The number of threads that can commit at the same time. A value of 0 (the default) permits any number of
+# 				transactions to commit simultaneously.
+#
+# 				The value of innodb_commit_concurrency cannot be changed at runtime from zero to nonzero or vice versa.
+#
+# 				The vlaue can be changed from one nonzero value to another.
+#
+# 			) innodb_compress_debug
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-compress-debug=value
+# 				Sys var 					innodb_compress_debug
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Enumeration
+# 				Default 					None
+# 				Valid 					none
+# 											zlib
+# 											lz4
+# 											lz4hc
+#
+# 				Compresses all tables using a specified compression algorithm without having to define a COMPRESSION
+# 				attribute for each table.
+#
+# 				This option is only available if debugging support is compiled in using the WITH_DEBUG CMake option.
+#
+# 				For related information, see SECTION 15.9.2, "InnoDB PAGE COMPRESSION"
+#
+# 			) innodb_compression_failure_threshold_pct
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-compression-failure-threshold-pct=#
+# 				Sys var 					innodb_compression_failure_threshold_pct
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					5
+# 				Min 						0
+# 				Max 						100
+#
+# 				Defines the compression failure rate threshold for a table, as a percentage, at which point MySQL begins adding padding within
+# 				compressed pages to avoid expensive compression failures.
+#
+# 				When this threshold is passed, MySQL begins to leave additional free space within each new compressed page, dynamically adjusting
+# 				the amount of free space up to the percentage of page size specified by innodb_compression_pad_pct_max.
+#
+# 				A value of zero disables the mechanism that monitors compression efficiency and dynamically adjusts the padding amount.
+#
+# 				For more information, see SECTION 15.9.1.6, "COMPRESSION FOR OLTP WORKLOADS"
+#
+# 			) innodb_compression_level
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-compression-level=#
+# 				System Variable 		innodb_compression_level
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					6
+# 				Min 						0
+# 				Max 						9
+#
+# 				Specifies the level of zlib compression to use for InnoDB compressed tables and indexes.
+#
+# 				A higher value lets you fit more data onto a storage device, at the expense of more CPU
+# 				overhead during compression. A lower value lets you reduce CPU overhead when storage space is not critical,
+# 				or you expect the data is not especially compressible.
+#
+# 				For more information, see SECTION 15.9.1.6, "COMPRESSION FOR OLTP WORKLOADS"
+#
+# 			) innodb_compression_pad_pct_max
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-compression-pad-pct-max=#
+# 				Sys var 					innodb_compression_pad_pct_max
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						INteger
+# 				Default 					50
+# 				Min 						0
+# 				Max 						75
+#
+# 				Specifies the maximum percentage that can be reserved as free space within each compressed page, allowing room to
+# 				reorganize the data and modification log within the page when a compressed table or index is updated and the
+# 				data might be recompressed.
+#
+# 				Only applies when innodb_compression_failure_threshold_pct is set to a nonzero value, and the rate of
+# 				COMPRESSION FAILURES passes the cutoff point.
+#
+# 				For more information, see SECTION 15.9.1.6, "COMPRESSION FOR OLTP WORKLOADS"
+#
+# 			) innodb_concurrency_tickets
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-concurrency-tickets=#
+# 				Sys var 					innodb_concurrency_tickets
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					5000
+# 				Min 						1
+# 				Max 						4294967295
+#
+# 				Determines the number of threads that can enter InnoDB concurently. A thread is placed in a queue when it tries
+# 				to enter InnoDB if the number of threads has already reached the concurrency limit.
+#
+# 				When a thread is permitted to enter InnoDB, it is given a number of "tickets" equal to the value of innodb_concurrency_tickets,
+# 				and the thread can enter and leave InnoDB freely until it has used up its tickets.
+#
+# 				After that point, the thread again becomes subject to the concurrency check (and possible queuing) the next time it tries to
+# 				enter InnoDB. The default value is 5000.
+#
+# 				With a small innodb_concurrency_tickets value, small transactions that only need to process a few rows compete fairly with
+# 				larger transactions that process many rows.
+#
+# 				The disadvantage of a small innodb_concurrency_tickets value is that large transactions must loop through the queue many times
+# 				before they can complete, which extends the amount of time required to complete their task.
+#
+# 				With a large innodb_concurrency_tickets value, large transactions spend less time waiting for a position at the end of the
+# 				queue (controlled by innodb_thread_concurrency) and more time retrieving rows. Large transactions also require fewer trips
+# 				through the queue to complete their task.
+#
+# 				The disadvantage of a large innodb_concurrency_tickets value is that too many large transactions running at the same time can
+# 				starve smaller transactions by making them wait a longer time before executing.
+#
+# 				With a nonzero innodb_thread_concurrency value, you may need to adjust the innodb_concurrency_tickets value up or down to
+# 				find the optimal balance between larger and smaller transactions.
+#
+# 				The SHOW ENGINE INNODB STATUS report shows the number of tickets remaining for an executing transaction in its current pass
+# 				through the queue. This data may also be obtained from the TRX_CONCURRENCY_TICKETS column of the INFORMATION_SCHEMA.INNODB_TRX
+# 				table.
+#
+# 				For more information, see SECTION 15.8.4, "CONFIGURING THREAD CONCURRENCY FOR INNODB"
+#
+# 			) innodb_data_file_path
+#
+# 				Property 			Value
+#
+# 				Cmd line 			--innodb-data-file-path=file_name
+# 				Sys var 				innodb_data_file_path
+# 				Scope 				Global
+# 				Dynamic 				No
+# 				SET_VAR Hint 		No
+# 				Type 					String
+# 				Default 				ibdata1:12M:autoextend
+#
+# 				Defines the name, size, and attributes of InnoDB system tablespace data files. If you do not specify a value for
+# 				innodb_data_file_path, the default behavior is to create a single auto-extending data file, slightly larger
+# 				than 12MB, named ibdata1.
+#
+# 				The full syntax for a data file specification includes the file name, file size, and autoextend and max attributes:
+#
+# 					file_name:file_size[:autoextend[:max:max_file_size]]
+#
+# 				File sizes are specified KB, MB or GB (1024MB) by appending K, M or G to the size value. If specifying the data file size
+# 				in KB, do so in multiples of 1024.
+#
+# 				Otherwise, the KB values are rounded to nearest megabyte (MB) boundary. The sum of the sizes of the files must be at least
+# 				slightly larger than 12MB.
+#
+# 				A minimum file size is enforced for the first system tablespace data file to ensure that there is enough space for doublewrite
+# 				buffer pages:
+#
+# 					) For an innodb_page_size value of 16kb or less, the minimum file size is 3MB
+#
+# 					) For an innodb_page_size value of 32kb, the minimum file size is 6MB
+#
+# 					) For an innodb_page_size value of 64kb, the minimum file size is 12MB
+#
+# 				The size limit of individual files is determined by your OS. You can set the file size to more than 4GB on OS's that support
+# 				large files.
+#
+# 				You can also use raw disk partitions as data files.
+#
+# 				The autoextend and max attributes can be used only for the data file that is specified last in the innodb_data_file_path setting.
+#
+# 				For example:
+#
+# 					[mysqld]
+# 					innodb_data_file_path=ibdata1:50M;ibdata2:12M:autoextend:max:500MB
+#
+# 				If you specify the autoextend option, InnoDB extends the data file if it runs out of free space. The autoextend increment is
+# 				64MB by default.
+#
+# 				To modify the increment, change the innodb_autoextend_increment system variable.
+#
+# 				The full directory path for system tablespace data files is formed by concatenating the paths defined by innodb_data_home_dir
+# 				and innodb_data_file_path
+#
+# 				For more information about configuring system tablespace data files, see SECTION 15.8.1, "InnoDB STARTUP CONFIGURATION"
+#
+# 			) innodb_data_home_dir
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-data-home-dir=dir_name
+# 				Sys var 					innodb_data_home_dir
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Dir name
+#
+# 				The common part of the directory path for InnoDB system tablespace data files.
+#
+# 				This setting does not affect the location of file-per-table tablespaces when innodb_file_per_table is enabled.
+#
+# 				The default value is the MySQL data directory. If you specify the value as an empty string, you can specify an
+# 				absolute file paths for innodb_data_file_path.
+#
+# 				A trailing slash is required when specifying a value for innodb_data_home_dir. For example:
+#
+# 					[mysqld]
+# 					innodb_data_home_dir = /path/to/myibdata/
+#
+# 				For related information, see SECTION 15.8.1, "InnoDB STARTUP CONFIGURATION"
+#
+# 			) innodb_ddl_log_crash_reset_debug
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-ddl-log-crash-reset-debug[={OFF|ON}]
+# 				Introduced 				8.0.3
+# 				Sys var 					innodb_ddl_log_crash_reset_debug
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					OFF
+#
+# 				Enable this debug option to reset DDL log crash injection counters to 1.
+#
+# 				This option is only available when debugging support is compiled in using the WITH_DEBUG 
+# 				CMake option.
+#
+# 			) innodb_deadlock_detect
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-deadlock-detect[={OFF|ON}]
+# 				Sys var 					innodb_deadlock_detect
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					ON
+#
+# 				This option is used to disable deadlock detection. On high concurrency systems, deadlock detection can cause a slowdown
+# 				when numerous threads wait for the same lock.
+#
+# 				At times, it may be more efficient to disable deadlock detection and rely on the innodb_lock_wait_timeout setting for
+# 				transaction rollback when a deadlock occurs.
+#
+# 				For related information, see SECTION 15.7.5.2, "DEADLOCK DETECTION AND ROLLBACK"
+#
+# 			) innodb_dedicated_server
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-dedicated-server[={OFF|ON}]
+# 				Introduced 				8.0.3
+# 				Sys var 					innodb_dedicated_server
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					OFF
+#
+# 				When innodb_dedicated_server is enabled, InnoDB automatically configures the following options according to
+# 				the amount of memory detected on the server:
+#
+# 					) innodb_buffer_pool_size
+#
+# 					) innodb_log_file_size
+#
+# 					) innodb_flush_method
+#
+# 				Only consider enabling this option if your MySQL instance runs on a dedicated server where the MySQL server is able
+# 				to consume all available system resources.
+#
+# 				Enabling this option is not recommended if your MySQL instance shares system resources with other applications.
+#
+# 				For more information, see SECTION 15.8.12, "ENABLING AUTOMATIC CONFIGURATION FOR A DEDICATED MYSQL SERVER"
+#
+# 			) innodb_default_row_format
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-default-row-format=value
+# 				Sys var 					innodb_default_row_format
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Enumeration
+# 				Default 					DYNAMIC
+# 				Valid 					DYNAMIC
+# 											COMPACT
+# 											REDUNDANT
+#
+# 				The innodb_default_row_format option defines the default row format for InnoDB tables and user-created
+# 				temporary tables.
+#
+# 				The default setting is DYNAMIC. Other permitted values are COMPACT and REDUNDANT. The COMPRESSED row format,
+# 				which is not supported for use in the system tablespace, cannot be defined as the default.
+#
+# 				Newly created tables use the row format defined by innodb_default_row_format when a ROW_FORMAT option is not
+# 				specified explicitly or when ROW_FORMAT=DEFAULT is used.
+#
+# 				When a ROW_FORMAT option is not specified explicitly, or when ROW_FORMAT=DEFAULT is used, any operation that
+# 				rebuilds a table also silently changes the row format of the table to the format defined by innodb_default_row_format.
+#
+# 				For more information, see DEFINING THE ROW FORMAT OF A TABLE.
+#
+# 				Internal InnoDB temporary tables created by the server to process queries use the DYNAMIC row format,
+# 				regardless of the innodb_default_row_format setting.
+#
+# 			) innodb_directories
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-directories=dir_name
+# 				Introduced 				8.0.4
+# 				Sys var 					innodb_directories
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Directory name
+#
+# 				Defines directories to scan at startup for tablespace files. This option is used when moving or restoring tablespace
+# 				files to a new location while the server is offline.
+#
+# 				It is also used to specify directories of tablespace files created using an absolute path or that reside outside of the
+# 				data directory (see SECTION 15.6.3.6, "CREATING A TABLESPACE OUTSIDE OF THE DATA DIRECTORY")
+#
+# 				Tablespace discovery during crash recovery relies on the innodb_directories setting to identify tablespaces referenced
+# 				in the redo logs.
+#
+# 				For more information, see TABLESPACE DISCOVERY DURING CRASH RECOVERY.
+#
+# 				Directories defined by innodb_data_home_dir, innodb_undo_directory, and datadir are automatically appended to the
+# 				innodb_directories argument value, regardless of whether the innodb_directories option is specified explicitly.
+#
+# 				innodb_directories may be specified as an option in a startup command or in a MySQL option file. Quotes are used around
+# 				the argument value because otherwise a semicolon (;) is interpreted as a special char by some command interpreters.
+#
+# 				(unix shells treat it as a command terminator, for example)
+#
+# 				Startup command:
+#
+# 					mysqld --innodb-directories="directory_path_1;directory_path_2"
+#
+# 				MySQL option file:
+#
+# 					[mysqld]
+# 					innodb_directories="directory_path_1;directory_path_2"
+#
+# 				Wildcard expressions cannot be used to specify directories.
+#
+# 				The innodb_directories scan also traverses the subdirectories of specified directories.
+#
+# 				Duplicate directories and subdirectories are discarded from the list of directories to be scanned.
+#
+# 				For more information, see SECTION 15.6.3.8, "MOVING TABLESPACE FILES WHILE THE SERVER IS OFFLINE"
+#
+# 			) innodb_disable_sort_file_cache
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-disable-sort-file-cache[={OFF|ON}]
+# 				Sys var 						innodb_disable_sort_file_cache
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Boolean
+# 				Default 						OFF
+#
+# 				Disables the OS file system cache for merge-sort temporary files. The effect is to open such files with the
+# 				equivalent of O_DIRECT.
+#
+# 			) innodb_doublewrite
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-doublewrite[={OFF|ON}]
+# 				Sys var 						innodb_doublewrite
+# 				Scope 						Global
+# 				Dynamic 						No
+# 				SET_VAR Hint 				No
+# 				Type 							Boolean
+# 				Default 						ON
+#
+# 				When enabled (the default), InnoDB stores all data twice, first to the doublewrite buffer, then to the actual data files.
+#
+# 				This variable can be turned off with --skip-innodb-doublewrite for benchmarks or cases when top performance is needed rather
+# 				than concern for data integrity or possible failures.
+#
+# 				If system tablesapce data files (ibdata* files) are located on Fusion-io devices that support atomic writes, doublewrite
+# 				buffering is automatically disabled and Fusion-io atomic writes are used for all data files.
+#
+# 				Because the doublewrite buffer setting is global, doublewrite buffering is also disabled for data files residing on non-Fusion-io
+# 				hardware.
+#
+# 				This feature is only supported on Fusion-io hardware and only enabled for Fusion-io NVMFS on Linux. To take full advantage
+# 				of this feature, an innodb_flush_method setting of O_DIRECT is recommended.
+#
+# 				For related information, see SECTION 15.6.4, "DOUBLEWRITE BUFFER"
+#
+# 			) innodb_fast_shutdown
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-fast-shutdown=#
+# 				System variable 			innodb_fast_shutdown
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						1
+# 				Valid 						0
+# 												1
+# 												2
+#
+# 				The InnoDB shutdown mode.
+#
+# 				If the value is 0, INnoDB does a slow shutdown, a full purge and a change buffer merge before shutting down.
+#
+# 				If the value is 1, (the default), InnoDB skips these operations at shutdown, a process known as a fast shutdown.
+#
+# 				If the value is 2, InnoDB flushes its logs and shuts down cold, as if MySQL had crashed; no committed transactions
+# 				are lost, but the crash recovery operation makes the next startup take longer.
+#
+# 				The slow shutdown can take minutes, or even hours in extreme cases where substantial amounts of data are still
+# 				buffered. Use the slow shutdown technique before upgrading or downgrading between MySQL major releases, so that
+# 				all data files are fully prepared in case the upgrade process updates the file format.
+#
+# 				Use innodb_fast_shutdown=2 in emergency or troubleshooting situations, to get the absolute fastest shutdown
+# 				if data is at risk of corruption.
+#
+# 			) innodb_fil_make_page_dirty_debug
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-fil-make-page-dirty-debug=#
+# 				Sys var 						innodb_fil_make_page_dirty_debug
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						0
+# 				Max 							2**32-1
+#
+# 				By default, setting innodb_fil_make_page_dirty_debug to the ID of a tablespace immediately dirties
+# 				the first page of the tablespace.
+#
+# 				If innodb_saved_page_number_debug is set to a non-default value, setting innodb_fil_make_page_dirty_debug
+# 				dirties the specified page.
+#
+# 				The innodb_fil_make_page_dirty_debug option is only available if debugging support is compiled in using the
+# 				WITH_DEBUG CMake option.
+#
+# 			) innodb_file_per_table
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-file-per-table[={OFF|ON}]
+# 				Sys var 						innodb_file_per_table
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Boolean
+# 				Default 						ON
+#
+# 				When innodb_file_per_table is enabled, tables are created in file-per-table tablespaces by default.
+#
+# 				When disabled, tables are created in the system tablespace by default.
+#
+# 				For information about file-per-table tablespaces, see SECTION 15.6.3.2, "FILE-PER-TABLE TABLESPACES"
+#
+# 				For information about the InnoDB system tablespace, see SECTION 15.6.3.1, "THE SYSTEM TABLESPACE"
+#
+# 				The innodb_file_per_table variable can be configured at runtime using a SET_GLOBAL statement, specified
+# 				on the command line at startup, or specified in an option file.
+#
+# 				Configuration at runtime requires privileges sufficient ot set global system variables (see SECTION 5.1.9.1,
+# 				"SYSTEM VARIABLE PRIVILGES") and immediately affects the operation of all connections.
+#
+# 				When a table that resides in a file-per-table tablespace is truncated or dropped, the freed space is returned to
+# 				the OS.
+#
+# 				Truncating or dropping a table that resides in the system tablespace only frees space in the system tablespace.
+#
+# 				Freed space in the system tablespace can be used again for InnoDB data but is not returned to the OS, as
+# 				system tablespace data files never shrink.
+#
+# 				The innodb_file_per-table setting does not affect the creation of temporary tables.
+#
+# 				As of MySQL 8.0.14, temporary tables are created in session temporary tablespaces, and in the
+# 				global temporary tablespace before that.
+#
+# 				See SECTION 15.6.3.5, "TEMPORARY TABLESPACES"
+#
+# 			) innodb_fill_factor
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-fill-factor=#
+# 				Sys var 						innodb_fill_factor
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						100
+# 				Min 							10
+# 				Max 							100
+#
+# 				InnoDB performs a bulk load when creating or rebuilding indexes. This method of index creation is known as 
+# 				a "sorted index build"
+#
+# 				innodb_fill_factor defines the percentage of space on each B-tree page that is filled during a sorted index
+# 				build, with the remaining space reserved for future index growth.
+#
+# 				For example, setting innodb_fill_factor to 80 reserves 20 percent of the space on each B-tree page for future
+# 				index growth.
+#
+# 				Actualy percentage may vary. The innodb_fill_factor setting is interpreted as a hint rather than a hard limit.
+#
+# 				An innodb_fill_factor setting of 100 leaves 1/16 of the space in clustered index pages free for future index growth.
+#
+# 				innodb_fill_factor applies to both B-tree leaf and non-leaf pages. It does not apply to external pages used for
+# 				TEXT or BLOB entries.
+#
+# 				For more information, see SECTION 15.6.2.3, "SORTED INDEX BUILDS"
+#
+# 			) innodb_flush_log_at_timeout
+#
+# 				https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html
+# 	
