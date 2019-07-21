@@ -50801,5 +50801,796 @@
 #
 # 			) innodb_flush_log_at_timeout
 #
-# 				https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-flush-log-at-timeout=#
+# 				Sys var 						innodb_flush_log_at_timeout
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						1
+# 				Min 							1
+# 				Max 							2700
+#
+# 				Write and flush the logs every N seconds. innodb_flush_log_at_timeout allows the timeout period between flushes
+# 				to be increased in order to reduce flushing and avoid impacting performance of binary log group commit.
+#
+# 				The default setting for innodb_flush_log_at_timeout is once per second.
+#
+# 			) innodb_flush_log_at_trx_commit
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-flush-log-at-trx-commit=#
+# 				Sys var 						innodb_flush_log_at_trx_commit
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Enumeration
+# 				Default 						1
+# 				Valid 						0
+# 												1
+# 												2
+#
+# 				Controls the balance between strict ACID compliance for commit operations and higher performance that is possible
+# 				when commit-related I/O operations are rearranged and done in batches.
+#
+# 				You can achieve better performance by changing the default value but then you can lose transactions in a crash.
+#
+# 					) The default setting of 1 is required for full ACID compliance. Logs are written and flushed to disk at each transaction commit.
+#
+# 					) With a setting of 0, logs are written and flushed to disk once per second. Transactions for which logs have not been flushed can be lost in a crash.
+#
+# 					) With a setting of 2, logs are written after each transaction commit and flushed to disk once per second. Transactions for which logs have not been
+# 						flushed can be lost in a crash.
+#
+# 					) For settings 0 and 2, once-per-second flushing is not 100% guaranteed. Flushing may occur more frequently due to DDL changes and other internal
+# 						InnoDB activities that cause logs to be flushed independently of the innodb_flush_log_at_trx_commit setting, and sometimes less frequently
+# 						due to scheduling issues.
+#
+# 						If logs are flushed once per second, up to one second of transactions can be lost in a crash. If logs are flushed more or less frequently than
+# 						once per second, the amount of transactions that can be lost varies accordingly.
+#
+# 					) Log flushing frequency is controlled by innodb_flush_log_at_timeout, which allows you to set log flushing frequency to N seconds
+# 						(where N is 1 ... 2700, with a default value of 1)
+#
+# 						However, any mysqld process crash can erase up to N seconds of transactions.
+#
+# 					) DDL changes and other internal InnoDB activities flush the log independently of the innodb_flush_log_at_trx_commit setting.
+#
+# 					) InnoDB crash recovery works regardless of the innodb_flush_log_at_trx_commit setting. Transactions are either applied entirely
+# 						or erased entirely.
+#
+# 				For durability and consistency in a replication setup that uses InnoDB with transactions:
+#
+# 					) If binary logging is enabled, set sync_binlog=1
+#
+# 					) Always set innodb_flush_log_at_trx_commit=1
+#
+# 					CAUTION:
+#
+# 						Many operating systems and some disk hardware fool the flush-to-disk operation. They may tell mysqld that the flush
+# 						has taken place, even though it has not.
+#
+# 						In this case, the durability of transactions is not guaranteed even with the recommended settings, and in the worst case,
+# 						a power outage can corrupt InnoDB data.
+#
+# 						Using a battery-backed disk cache in the SCSI disk controller or in the disk itself speeds up file flushes, and
+# 						makes the operation safer. You can also try to disable the caching of disk writes in hardware caches.
+#
+# 			) innodb_flush_method
+#
+# 				Property 			Value
+#
+# 				Cmd line 			--innodb-flush-method=value
+# 				Sys var 				innodb_flush_method
+# 				Scope 				Global
+# 				Dynamic 				No
+# 				SET_VAR Hint 		No
+# 				Type 					String
+# 				Default (Windows) unbuffered
+# 				Default (Unix) 	fsync
+# 				Valid (Windows) 	unbuffered
+# 										normal
+#
+# 				Valid (Unix) 		fsync
+# 										O_DSYNC
+# 										littlesync
+# 										nosync
+# 										O_DIRECT
+# 										O_DIRECT_NO_FSYNC
+#
+# 				Defines the method used to flush data to InnoDB data files and log files, which can affect I/O throughput.
+#
+# 				On Unix-like systems, the default value is fsync. On Windows, the default value is unbuffered.
+#
+# 					NOTE:
+#
+# 						In MySQL 8.0, innodb_flush_method options may be specified numerically.
+#
+# 				The innodb_flush_method options for Unix-like systems include:
+#
+# 					) fsync or 0: InnoDB uses the fsync() system call to flush both the data and log files. fsync is the default setting.
+#
+# 					) O_DSYNC or 1: InnoDB uses O_SYNC to open and flush the log files, and fsync() to flush the data files. InnoDB does not use
+# 						O_DSYNC directly because there have been problems with it on many varities of Unix.
+#
+# 					) littlesync or 2: This option is used for internal performance testing and is currently unsupported. Use at your own risk.
+#
+# 					) nosync or 3: This option is used for internal performance testing and is currently unsupported. Use at your own risk.
+#
+# 					) O_DIRECT or 4: InnoDB uses O_DIRECT (or directio() on Solaris) to open the data files, and uses fsync() to flush both the
+# 						data and log files.
+#
+# 						THis option is available on some GNU/Linux versions, FreeBSD, and Solaris.
+#
+# 					) O_DIRECT_NO_FSYNC: InnoDB uses O_DIRECT during flushing I/O, but skips the fsync() system call after each write operation.
+#
+# 						Prior to MySQL 8.0.14, this setting is not suitable for file systems such as XFS and EXT4, which require an fsync() system
+# 						call to synchronize file system metadata changes.
+#
+# 						If you are not sure whether your file system requires an fsync() system call to synchronize file system metadata changes,
+# 						use O_DIRECT instead.
+#
+# 						As of MySQL 8.0.14, fsync() is called after creating a new file, after increasing file size, and after closing a file,
+# 						to ensure that file system metadata changes are synchronized.
+#
+# 						The fsync() system call is still skipped after each write operation.
+#
+# 						On storage devices with cache, data loss is possible if data files and redo log files reside on different storage devices,
+# 						and a crash occurs before data file writes are flushed from the device cache.
+#
+# 						If you use or intend to use different storage devices for redo logs and data files, use O_DIRECT instead.
+#
+# 				The innodb_flush_method options for Windows systems include:
+#
+# 					) unbuffered or 0: InnoDB uses simulated Asynch I/O and non-buffered I/O
+#
+# 					) normal or 1: InnoDB uses simulated Asynch I/O and buffered I/O
+#
+# 				How each setting affects performance depends on hardware configuration and workload. Benchmark your particular configuration
+# 				to decide which setting to use, or whether to keep the default setting.
+#
+# 				Examine the Innodb_data_fsync status variable to see the overall number of fsync() calls for each setting.
+#
+# 				The mix of read and write operations in your workload can affect how a setting performs. For example, on a system with a hardware
+# 				RAID controller and battery-backed write cache, O_DIRECT can help to avoid double buffering between the InnoDB buffer pool and
+# 				the operating system file system cache.
+#
+# 				On some systems where InnoDB data and log files are located on a SAN, the default value or O_DSYNC might be faster for a read-heavy
+# 				workload with mostly SELECT statements.
+#
+# 				Always test this parameter with hardware and workload that reflect your production environment. For general I/O tuning advice,
+# 				see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 				If innodb_dedicated_server is enabled, the innodb_flush_method value is automatically configured if it is not explicitly defined.
+#
+# 				For more information, see SECTION 15.8.12, "ENABLING AUTOMATIC CONFIGURATION FOR A DEDICATED MYSQL SERVER"
+#
+# 			) innodb_flush_neighbors
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-flush-neighbors=#
+# 				Sys var 					innodb_flush_neighbors
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Enumeration
+# 				Default (>= 8.0.3) 	0
+# 				Default (<= 8.0.2) 	1
+# 				Valid 					0
+# 											1
+# 											2
+#
+# 				Specifies whether flushing a page from the InnoDB buffer pool also flushes other dirty pages in the same extent.
+#
+# 					) A setting of 0 turns innodb_flush_neighbors off and no other dirty pages are flushed from the buffer pool.
+#
+# 					) A setting of 1 flushes contiguous dirty pages in the same extent from the buffer pool.
+#
+# 					) A setting of 2 flushes dirty pages in the same extent from the buffer pool.
+#
+# 				When the table data is stored on a traditional HDD storage device, flushing such neighbor pages in one operation reduces
+# 				I/O overhead (primarily for disk seek operations) compared to flushing individual pages at different times.
+#
+# 				For table data stored on SSD, seek time is not a significant factor and you can set this option to 0 to spread out write
+# 				operations.
+#
+# 				For related information, see SECTION 15.8.3.6, "FINE-TUNING INNODB BUFFER POOL FLUSHING"
+#
+# 			) innodb_flush_sync
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-flush-sync[={OFF|ON}]
+# 				Sys var 					innodb_flush_sync
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					ON
+#
+# 				The innodb_flush_sync parameter, which is enabled by default, causes the innodb_io_capacity setting to be ignored
+# 				for bursts of I/O activity that occur at checkpoints.
+#
+# 				To adhere to the limit on InnoDB background I/O activity defined by the innodb_io_capacity setting, disable
+# 				innodb_flush_sync
+#
+# 				For related information, see SECTION 15.8.7, "CONFIGURING THE INNODB MASTER THREAD I/O RATE"
+#
+# 			) innodb_flushing_avg_loops
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-flushing-avg-loops=#
+# 				Sys var 					innodb_flushing_avg_loops
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					30
+# 				Min 						1
+# 				Max 						1000
+#
+# 				Number of iterations for which InnoDB keeps the previously calculated snapshot of the flushing state, controlling how quickly
+# 				adaptive flushing responds to changing workloads.
+#
+# 				Increasing the value makes the rate of flush operations change smoothly and gradually as the workload changes.
+#
+# 				Decreasing the value makes adaptive flushing adjust quickly to workload changes, which can cause spikes in flushing
+# 				activity if the workload increases and decreases suddenly.
+#
+# 				For related information, see SECTION 15.8.3.6, "FINE-TUNING INNODB BUFFER POOL FLUSHING"
+#
+# 			) innodb_force_load_corrupted
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-force-load-corrupted[={OFF|ON}]
+# 				Sys var 					innodb_force_load_corrupted
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					OFF
+#
+# 				Permits InnoDB to load tables at startup that are marked as corrupted. Use only during troubleshooting,
+# 				to recover data that is otherwise inaccessible.
+#
+# 				When troubleshooting is complete, disable this setting and restart the server.
+#
+# 			) innodb_force_recovery
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-force-recovery=#
+# 				Sys var 					innodb_force_recovery
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					0
+# 				Min 						0
+# 				Max 						6
+#
+# 				The crash recovery mode, typically only changed in serious troubleshooting situations. Possible values are
+# 				from 0 to 6. For the meanings of these values and important information about innodb_force_recovery,
+# 				see SECTION 15.20.2, "FORCING INNODB RECOVERY"
+#
+# 				WARNING:
+#
+# 					Only set this variable to a value greater than 0 in an emergency situation so that you can start InnoDB
+# 					and dump your tables.
+#
+# 					As a safety measure, InnoDB prevents INSERT, UPDATE, or DELETE operations when innodb_force_recovery is
+# 					greater than 0.
+#
+# 					An innodb_force_recovery setting of 4 or greater places InnoDB into read-only mode.
+#
+# 					These restrictions may cause replication administration commands to fail with an error, as replication
+# 					stores the slave status logs in InnoDB tables.
+#
+# 			) innodb_fsync_threshold
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-fsync-threshold=#
+# 				Introduced 				8.0.13
+# 				Sys var 					innodb_fsync_threshold
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					0
+# 				Min 						0
+# 				Max 						2**64-1
+#
+# 				By default, when InnoDB creates a new data file, such as a new log file or tablespace file, it flushes the contents
+# 				of the write buffer to disk only after the file is fully written, which can cause a large amount of disk write
+# 				activity to occur at once.
+#
+# 				To force smaller, periodic flushes, use innodb_fsync_threshold to define a threshold size for the write buffer,
+# 				in bytes. The contents of the write buffer are flushed to disk when the threshold size is reached.
+#
+# 				The default value of 0 forces the default behavior.
+#
+# 				Specifying a write buffer threshold size to force smaller, periodic flushes may be beneficial in cases where
+# 				multiple MySQL instances use the same storage devices.
+#
+# 				For example, creating a new MySQL instance and its associated data files could cause large surges of disk write
+# 				activity, impeding the performance of other MySQL instances that use the same storage devices.
+#
+# 				Configuring a write buffer threshold size helps avoid such surges in disk write activity.
+#
+# 			) innodb_ft_aux_table
+#
+# 				Property 				Value
+#
+# 				Sys var 					innodb_ft_aux_table
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						String
+#
+# 				Specifies the qualified name of an InnoDB table containing a FULLTEXT index. This variable is intended for diagnostic
+# 				purposes and can only be set at runtime.
+#
+# 				For example:
+#
+# 					SET GLOBAL innodb_ft_aux_table = 'test/t1';
+#
+# 				After you set this variable to a name in the format db_name/table_name, the INFORMATION_SCHEMA tables INNODB_FT_INDEX_TABLE,
+# 				INNODB_FT_INDEX_CACHE, INNODB_FT_CONFIG, INNODB_FT_DELETED, and INNODB_FT_BEING_DELETED show information about the
+# 				search index for the specified table.
+#
+# 				For more information, see SECTION 15.14.4, "InnoDB INFORMATION_SCHEMA FULLTEXT INDEX TABLES"
+#
+# 			) innodb_ft_cache_size
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-ft-cache-size=#
+# 				Sys var 					innodb_ft_cache_size
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					8000000
+# 				Min 						1600000
+# 				Max 						80000000
+#
+# 				The memory allocated, in bytes, for the InnoDB FULLTEXT seach index cache, which holds a parsed document in memory
+# 				while creating an InnoDB FULLTEXT index.
+#
+# 				Index inserts and updates are only committed to disk when the innodb_ft_cache_size size limit is reached.
+#
+# 				innodb_ft_cache_size defines the cache size on a per table basis.
+#
+# 				To set a global limit for all tables, see innodb_ft_total_cache_size
+#
+# 				For more information, see InnoDB FULL-TEXT INDEX CACHE
+#
+# 			) innodb_ft_enable_diag_print
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-ft-enable-diag-print[={OFF|ON}]
+# 				Sys var 					innodb_ft_enable_diag_print
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					OFF
+#
+# 				Whether to enable additional full-text search (FTS) diagnostic output. This option is primarily intended for advanced
+# 				FTS debugging and will not be of interest to most users.
+#
+# 				Output is printed to the error log and includes information such as:
+#
+# 					) FTS index sync progress (when the FTS cache limit is reached). For example:
+#
+# 						FTS SYNC for table test, deleted count: 100 size: 10000 bytes
+# 						SYNC words: 100
+#
+# 					) FTS optimize progress. For example:
+#
+# 						FTS start optimize test
+# 						FTS_OPTIMIZE: optimize "mysql"
+# 						FTS_OPTIMIZE: processed "mysql"
+#
+# 					) FTS index build progress. For example:
+#
+# 						Number of doc processed: 1000
+#
+# 					) For FTS queries, the query parsing tree, word weight, query processing time and memory usage are printed. For example:
+#
+# 						FTS Search Processing time: 1 secs: 100 millisec: row(s) 10000
+# 						Full Search Memory: 245666 (bytes), Row: 10000
+#
+# 			) innodb_ft_enable_stopword
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-ft-enable-stopword[={OFF|ON}]
+# 				Sys var 					innodb_ft_enable_stopword
+# 				Scope 					Global, Session
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					ON
+#
+# 				Specifies that a set of stopwords is associated with an InnoDB FULLTEXT index at the time the index is created.
+#
+# 				If the innodb_ft_user_stopword_table option is set, the stopwords are taken from that table. Else, if the innodb_ft_server_stopword_table
+# 				option is set, the stopwords are taken from that table. Otherwise, a built-in set of default stopwords is used.
+#
+# 				For more information, see SECTION 12.9.4, "FULL-TEXT STOPWORDS"
+#
+# 			) innodb_ft_max_token_size
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-ft-max-token-size=#
+# 				Sys var 					innodb_ft_max_token_size
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					84
+# 				Min 						10
+# 				Max 						84
+#
+# 				Maximum character length of words that are stored in an InnoDB FULLTEXT index. Setting a limit on this value reduces the size
+# 				of the index, thus speeding up queries, by omitting long keywords or arbitrary collections of letters that are not real words
+# 				and are not likely to be search terms.
+#
+# 				For more information, see SECTION 12.9.6, "FINE-TUNING MYSQL FULL-TEXT SEARCH"
+#
+# 			) innodb_ft_min_token_size
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-ft-min-token-size=#
+# 				Sys var 					innodb_ft_min_token_size
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					3
+# 				Min 						0
+# 				Max 						16
+#
+# 				Min length of words that are stored in an InnoDB FULLTEXT index. Increasing this value reduces the size of the index,
+# 				thus speeding up queries, by omitting common words that are unlikely to be significant in a search context, such as
+# 				the english word "a" and "to".
+#
+# 				For content using a CJK (Chinese, Japansese, korean) char set, specify a value of 1.
+#
+# 				For more information, see SECTION 12.9.6, "FINE-TUNING MYSQL FULL-TEXT SEARCH"
+#
+# 			) innodb_ft_num_word_optimize
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-ft-num-word-optimize=#
+# 				Sys var 					innodb_ft_num_word_optimize
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					2000
+#
+# 				Number of words to process during each OPTIMIZE_TABLE operation on an InnoDB FULLTEXT index.
+#
+# 				Because a bulk insert or update operation to a table containing a full-text search index could require
+# 				substantial index maintenance to incorporate all changes, you might do a series of OPTIMIZE_TABLE statements,
+# 				each picking up where the last left off.
+#
+# 				For more information, see SECTION 12.9.6, "FINE-TUNING MySQL FULL-TEXT SEARCH"
+#
+# 			) innodb_ft_result_cache_limit
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-ft-result-cache-limit=#
+# 				Sys var 					innodb_ft_result_cache_limit
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					2000000000
+# 				Min 						1000000
+# 				Max 						2**32-1
+#
+# 				The InnoDB full-text search query result cache limit (defined in bytes) per full-text search query or per thread.
+# 				Intermediate and final InnoDB full-text search query results are handled in memory.
+#
+# 				Use innodb_ft_result_cache_limit to place a size limit on the full-text search query result cache to avoid
+# 				excessive memory consumption in case of very large InnoDB full-text search query results (millions or hundreds of mil of rows,
+# 				for example)
+#
+# 				Memory is allocated as required when a full-text search query is processed. If the result cache size limit is reached, an error
+# 				is returned indicating that hte query exceeds the maximum allowed memory.
+#
+# 				The maximum value of innodb_ft_result_cache_limit for all platforms types and bit sizes is 2**32-1
+#
+# 			) innodb_ft_server_stopword_table
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-ft-server-stopword-table=db_name/table_name
+# 				Sys var 					innodb_ft_server_stopword_table
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						String
+# 				Default 					NULL
+#
+# 				This option is used to specify your own InnoDB FULLTEXT index stopword list for all InnoDB tables.
+#
+# 				To configure your own stopword list for a specific InnoDB table, use innodb_ft_user_stopword_table
+#
+# 				Set innodb_ft_server_stopword_table to the name of the table containing a list of stopwords, in the format db_name/table_name
+#
+# 				The stopword table must exist before you configure innodb_ft_server_stopword_table.innodb_ft_enable_stopword must be enabled
+# 				and innodb_ft_server_stopword_table option must be configured before you create the FULLTEXT index.
+#
+# 				The stopword table must be an InnoDB table, containing a single VARCHAR column named value.
+#
+# 				For more information, see SECTION 12.9.4, "FULL-TEXT STOPWORDS"
+#
+# 			) innodb_ft_sort_pll_degree
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-ft-sort-pll-degree=#
+# 				Sys var 					innodb_ft_sort_pll_degree
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					2
+# 				Min 						1
+# 				Max 						32
+#
+# 				Number of threads used in parallel to index and tokenize text in an InnoDB FULLTEXT index when building a search index.
+#
+# 				For related information, see SECTION 15.6.2.4, "InnoDB FULLTEXT INDEXES", and innodb_sort_buffer_size
+#
+# 			) innodb_ft_total_cache_size
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-ft-total-cache-size=#
+# 				Sys Var 					innodb_ft_total_cache_size
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					640000000
+# 				Min 						32000000
+# 				Max 						1600000000
+#
+# 				The total memory allocated, in bytes, for the InnoDB full-text search index cache for all tables.
+#
+# 				Creating numerous tables, each with a FULLTEXT search index, could consume a significant portion of
+# 				available memory.
+#
+# 				innodb_ft_total_cache_size defines a global memory limit for all full-text search indexes to help
+# 				avoid excessive memory consumption.
+#
+# 				If the global limit is reached by an index operation, a forced sync is triggered.
+#
+# 				For more information, see InnoDB FULL-TEXT INDEX CACHE.
+#
+# 			) innodb_ft_user_stopword_table
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-ft-user-stopword-table=db_name/table_name
+# 				Sys var 					innodb_ft_user_stopword_table
+# 				Scope 					Global, Session
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						String
+# 				Default 					NULL
+#
+# 				This option is used to specify your own InnoDB FULLTEXT index stopword list on a specific table.
+#
+# 				To configure your own stopword list for all InnoDB tables, use innodb_ft_server_stopword_table
+#
+# 				Set innodb_ft_user_stopword_table to the name of the table containing a list of stopwords, in the format db_name/table_name
+#
+# 				The stopword table must exist before you configure innodb_ft_user_stopword_table.innodb_ft_enable_stopword must be enabled
+# 				and innodb_ft_user_stopword_table must be configured before you create the FULLTEXT index.
+#
+# 				The stopword table must be an InnoDB table, containing a single VARCHAR column named value
+#
+# 				For more information, see SECTION 12.9.4, "FULL-TEXT STOPWORDS"
+#
+# 			) innodb_io_capacity
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-io-capacity=#
+# 				Sys var 					innodb_io_capacity
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					200
+# 				Min 						100
+# 				Max(64-bit) 			2**64-1
+# 				Max(32-bit) 			2**32-1
+#
+# 				The innodb_io_capacity parameter sets an upper limit on the number of I/O operations performed per second by
+# 				InnoDB background tasks, such as flushing pages from the buffer pool and merging data from the change buffer.
+#
+# 				The innodb_io_capacity limit is a total limit for all buffer pool instances. When dirty pages are flushed, the
+# 				limit is divided equally among buffer pool instances.
+#
+# 				innodb_io_capacity should be set to approximately the number of I/O operations that the system can perform per
+# 				second.
+#
+# 				Ideally, keep the setting as low as practical, but not so low that background activities fall behind. If the value
+# 				is too high, data is removed from the buffer pool and insert buffer too quickly for caching to provide a significant benefit.
+#
+# 				The default value is 200. For busy systems capable of higher I/O rates, you can set a higher value to help the server
+# 				handle the background maintenance work associated with a high rate of row changes.
+#
+# 				In general, you can increase the value as a function of the number of drives used for InnoDB I/O.
+#
+# 				For example, you can increase the value on systems that use multiple disks or solid-state disks (SSD)
+#
+# 				The default setting of 200 is generally sufficient for a lower-end SSD. For a higher-end, bus-attached SSD,
+# 				consider a higher setting such as 1000, for example.
+#
+# 				For systems with individual 5400 RPM or 7200 RPM drives, you might lower the value to 100, which represents
+# 				an estimated proportion of the I/O operations per second (IOPS) available to older-generation disk drives
+# 				that can perform about 100 IOPS.
+#
+# 				Although you can specify a very high value such as one million, in practice such large values have little if
+# 				any benefit. Generally, a value of 20000 or higher is not recommended unless you have proven that lower values
+# 				are insufficient for your workload.
+#
+# 				Consider write workload when tuning innodb_io_capacity. Systems with large write workloads are likely to benefit
+# 				from a higher setting. A lower setting may be sufficient for systems with a small write workload.
+#
+# 				You can set innodb_io_capacity to any number 100 or greater to a maximum defined by innodb_io_capacity_max.
+#
+# 				innodb_io_capacity can be set in the MySQL option file (my.cnf or my.ini) or changed dynamically using a SET
+# 				GLOBAL statement, which requires privileges sufficient to set global system variables.
+#
+# 				See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 				The innodb_flush_sync variable causes the innodb_io_capacity setting to be ignored during bursts of I/O
+# 				activity that occur at checkpoints. innodb_flush_sync is enabled by default.
+#
+# 				See SECTION 15.8.7, "CONFIGURING THE INNODB MASTER THREAD I/O RATE" for more information. For general
+# 				information about InnoDB I/O performance, see SECTION 8.5.8, "OPTIMIZING InnoDB DISK I/O"
+#
+# 			) innodb_io_capacity_max
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-io-capacity-max=#
+# 				Sys var 					innodb_io_capacity_max
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					see Description
+# 				Min 						100
+# 				Max (64-bit, win) 	2**32-1
+# 				Max (64-bit, Unix) 	2**64-1
+# 				Max (32-bit) 			2**32-1
+#
+# 				If flushing activity falls behind, InnoDB can flush more aggressively than the limit imposed by innodb_io_capacity.
+#
+# 				innodb_io_capacity_max defines an upper limit the number of I/O operations performed per second by InnoDB background
+# 				tasks in such situations.
+#
+# 				The innodb_io_capacity_max setting is a total limit for all buffer pool instances.
+#
+# 				If you specify an innodb_io_capacity setting at startup but do not specify a value for innodb_io_capacity_max,
+# 				innodb_io_capacity_max defaults to twice the value of innodb_io_capacity, with a minimum value of 2000.
+#
+# 				When configuring innodb_io_capacity_max, twice the innodb_io_capacity is often a good starting point.
+#
+# 				The default value of 2000 is intended for workloads that use a solid-state disk (SSD) or more than one regular disk drive.
+# 				A setting of 2000 is likely too high for workloads that do not use SSD or multiple disk drives, and could allow too much
+# 				flushing.
+#
+# 				For a single regular disk drive, a setting between 200 and 400 is recommended. For a high-end, bus-attached SSD, consider
+# 				a higher setting such as 2500.
+#
+# 				As with the innodb_io_capacity setting, keep the setting as low as practical, but not so low that InnoDB cannot sufficiently
+# 				extend beyond the innodb_io_capacity limit, if necessary.
+#
+# 				Consider write workload when tuning innodb_io_capacity_max. Systems with large write workloads may benefit from a higher setting.
+#
+# 				A lower setting may be sufficient for systems with a small write workload.
+#
+# 				innodb_io_capacity_max cannot be set to a value lower than the innodb_io_capacity value.
+#
+# 				Setting innodb_io_capacity_max to DEFAULT using a SET statement (SET GLOBAL innodb_io_capacity_max=DEFAULT) sets
+# 				innodb_io_capacity_max to the maximum value.
+#
+# 				For related information, see SECTION 15.8.3.6, "FINE-TUNING INNODB BUFFER POOL FLUSHING"
+#
+# 			) innodb_limit_optimistic_insert_debug
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-limit-optimistic-insert-debug=#
+# 				Sys var 						innodb_limit_optimistic_insert_debug
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						0
+# 				Min 							0
+# 				Max 							2**32-1
+#
+# 				Limits the number of records per B-tree page. A default value of 0 means that no limit is imposed.
+#
+# 				This option is only available if debugging support is compiled in using the WITH_DEBUG CMake option.
+#
+# 			) innodb_lock_wait_timeout
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-lock-wait-timeout=#
+# 				Sys var 						innodb_lock_wait_timeout
+# 				Scope 						Global, Session
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						50
+# 				Min 							1
+# 				Max 							1073741824
+#
+# 				The length of time in seconds an InnoDB transaction waits for a row lock before giving up.
+#
+# 				The default vlaue is 50 seconds. A transaction that tries to access a row that is locked by another
+# 				INnoDB transaction waits at most this many seconds for write access to the row before issuing the following
+# 				error:
+#
+# 					ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction
+#
+# 				When a lock wait timeout occurs, the current statement is rolled back (not the entire transaction).
+#
+# 				To have the entire transaction roll back, start the server with the --innodb-rollback-on-timeout
+# 				option. See also SECTION 15.20.4, "InnoDB ERROR HANDLING"
+#
+# 				You might decrease this value for highly interactive applications or OLTP systems, to display user feedback
+# 				quickly or put the update into a queue for processing later.
+#
+# 				You might increase this value for long-running back-end operations, such as a transform step in a data warehouse
+# 				that waits for other large insert or update operations to finish.
+#
+# 				innodb_lock_wait_timeout applies to InnoDB row locks. A MySQL table lock does not happen inside InnoDB and this
+# 				timeout does not apply to waits for table locks.
+#
+# 				The lock wait timeout value does not apply to deadlocks when innodb_deadlock_detect is enabled (the default)
+# 				because InnoDB detects deadlocks immediately and rolls back one of the deadlocked transactions.
+#
+# 				When innodb_deadlock_detect is disabled, InnoDB relies on innodb_lock_wait_timeout for transaction rollback
+# 				when a deadlock occurs.
+#
+# 				See SECTION 15.7.5.2, "DEADLOCK DETECTION AND ROLLBACK"
+#
+# 				innodb_lock_wait_timeout can be set at runtime with the SET GLOBAL or SET SESSION statement.
+#
+# 				Changing the GLOBAL Setting requires privileges sufficient to set global system variables
+# 				(see SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES") and affects the operation of all clients
+# 				that subsequently connect.
+#
+# 				Any client can change the SESSION setting for innodb_lock_wait_timeout, which affects only that client.
+#
+# 			) innodb_log_buffer_size
+#
+# 				https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_ft_max_token_size
 # 	
