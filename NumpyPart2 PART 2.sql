@@ -51592,5 +51592,1355 @@
 #
 # 			) innodb_log_buffer_size
 #
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-log-buffer-size=#
+# 				Sys Var (>= 8.0.11) 		innodb_log_buffer_size
+# 				Sys Var (<= 8.0.4) 		innodb_log_buffer_size
+# 				Scope (>= 8.0.11) 		Global
+# 				SCope (<= 8.0.4) 			Global
+# 				Dynamic (>= 8.0.11) 		Yes
+# 				Dynamic (<= 8.0.4) 		No
+# 				SET_VAR Hint (>= 8.0.11)No
+# 				SET_VAR Hint (<= 8.0.4) No
+# 				Type 							Integer
+# 				Default 						16777216
+# 				Min 							1048576
+# 				Max 							4294967295
+#
+# 				The size in bytes of the buffer that InnoDB uses to write to the log files on disk.
+# 				The default is 16 MB. A large log buffer enables large transactions to run without the
+# 				need to write the log to disk before the transactions commit.
+#
+# 				Thus, if you have transactions that update, insert, or delete many rows, making the log
+# 				buffer larger saves disk I/O.
+#
+# 				For related information, see Memory Configuration, and Section 8.5.4, "Optimizing InnoDB Redo Logging"
+#
+# 				For general I/O tuning advice, see SECTION 8.5.8, "Optimizing InnoDB Disk I/O"
+#
+# 			) innodb_log_checkpoint_fuzzy_now
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-log-checkpoint-fuzzy-now[={OFF|ON}]
+# 				Intro 						8.0.13
+# 				Sys var 						innodb_log_checkpoint_fuzzy_now
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Boolean
+# 				Default 						OFF
+#
+# 				Enable this debug option to force InnoDB to write a fuzzy checkpoint. This option is only available if debugging
+# 				support is compiled in using the WITH_DEBUG Cmake option.
+#
+# 			) innodb_log_checkpoint_now
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-log-checkpoint-now[={OFF|ON}]
+# 				Sys var 						innodb_log_checkpoint_now
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Boolean
+# 				Default 						OFF
+#
+# 				Enable this debug option to force InnoDB to write a checkpoint. This option is only available if debugging support is compiled
+# 				in using the WITH_DEBUG CMake option.
+#
+# 			) innodb_log_checksums
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-log-checksums[={OFF|ON}]
+# 				Sys var 						innodb_log_checksums
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR hint 				No
+# 				Type 							Boolean
+# 				Default 						ON
+#
+# 				Enables or disables checksums for redo log pages.
+#
+# 				innodb_log_checksums=ON enables the CRC-32C checksum algorithm for redo log pages.
+#
+# 				When innodb_log_checksums is disabled, the contents of the redo log page checksum field are ignored.
+#
+# 				Checksums on the redo log header page and redo log checkpoint pages are never disabled.
+#
+# 			) innodb_log_compressed_pages
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-log-compressed-pages[={OFF|ON}]
+# 				Sys var 						innodb_log_compressed_pages
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Boolean
+# 				Default 						ON
+#
+# 				Specifies whether images of re-compressed pages are written to the redo log. Re-compression may occur when changes
+# 				are made to compressed data.
+#
+# 				innodb_log_compressed_pages is enabled by default to prevent corruption that could occur if a different version of the
+# 				zlib compression algorithm is used during recovery.
+#
+# 				If you are certain that the zlib version will not change, you can disable innodb_log_compressed_pages to reduce redo log
+# 				generation for workloads that modify compressed data.
+#
+# 				To measure the effect of enabling or disabling innodb_log_compressed_pages, compare redo log generation for both settings
+# 				under the same workload.
+#
+# 				Options for measuring redo log generation include observing the Log sequence number (LSN) in the LOG section of SHOW_ENGINE_INNODB_STATUS
+# 				output, or monitoring Innodb_os_log_written status for the number of bytes written to the redo log files.
+#
+# 				For related information, see SECTION 15.9.1.6, "COMPRESSION FOR OLTP WORKLOADS"
+#
+# 			) innodb_log_file_size
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-log-file-size=#
+# 				Sys var 						innodb_log_file_size
+# 				Scope 						Global
+# 				Dynamic 						No
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						50331648
+# 				Min 							4194304
+# 				Max 							512GB / innodb_log_files_in_group
+#
+# 				The size in bytes of each log file in a log group. The combined size of log files (innodb_log_file_size * innodb_log_files_in_group)
+# 				cannot exceed a maximum value that is slightly less than 512GB. A pair of 255 GB log files, for example, approaches the limit but
+# 				does not exceed it.
+#
+# 				The default value is 48MB.
+#
+# 				Generally, the combined size of the log files should be large enough that the server can smooth out peaks and troughs in workload
+# 				activity, which often means that there is enough redo log space to handle more than an hour of write activity.
+#
+# 				The larger the value, the less checkpoint flush activity is required in the buffer pool, saving disk I/O.
+#
+# 				Larger log files also make crash recovery slower, although improvements to recovery performance make log file size less of a consideration
+# 				than it was in earlier versions of MySQL.
+#
+# 				The minimum innodb_log_file_size is 4MB.
+#
+# 				For related information, see Redo Log File Configuration. For general I/O tuning advice, see SECTION 8.5.8, "OPTIMIZING InnoDB DISK I/O"
+#
+# 				If innodb_dedicated_server is enabled, the innodb_log_file_size value is automatically configured if it is not explicitly defined.
+#
+# 				For more information, see SECTION 15.8.12, "ENABLING AUTOMATIC CONFIGURATION FOR A DEDICATED MYSQL SERVER"
+#
+# 			) innodb_log_files_in_group
+#
+# 				Property 						Value
+#
+# 				Cmd line 						--innodb-log-files-in-group=#
+# 				Sys var 							innodb_log_files_in_group
+# 				Scope 							Global
+# 				Dynamic 							No
+# 				SET_VAR Hint 					No
+# 				Type 								Integer
+# 				Default 							2
+# 				Min 								2
+# 				Max 								100
+#
+# 				The number of log files in the log group. InnoDB writes to the files in a circular fashion. The default (and recommended)
+# 				value is 2.
+#
+# 				The location of the files is specified by innodb_log_group_home_dir. The combined size of log files (innodb_log_file_size * innodb_log_files_in_group)
+# 				can be up to 512GB.
+#
+# 				For related information, see REDO LOG FILE CONFIGURATION.
+#
+# 			) innodb_log_group_home_dir
+#
+# 				Property 						Value
+#
+# 				Cmd line 						--innodb-log-group-home-dir=dir_name
+# 				Sys var 							innodb_log_group_home_dir
+# 				Scope 							Global
+# 				Dynamic 							No
+# 				SET_VAR Hint 					No
+# 				Type 								Dir name
+#
+# 				The directory path to the InnoDB redo log files, whose number is specified by innodb_log_files_in_group.
+#
+# 				If you do not specify any InnoDB log variables, the default is to create two files named ib_logfile0 and
+# 				ib_logfile1 in the MySQL data directory.
+#
+# 				Log file size is given by the innodb_log_file_size system variable.
+#
+# 				For related information, see Redo Log File Configuration
+#
+# 			) innodb_log_spin_cpu_abs_lwm
+#
+# 				Property 						Value
+#
+# 				Cmd line 						--innodb-log-spin-cpu-abs-lwm=#
+# 				Intro 							8.0.11
+# 				Sys var 							innodb_log_spin_cpu_abs_lwm
+# 				Scope 							Global
+# 				Dynamic 							Yes
+# 				SET_VAR Hint 					No
+# 				Type 								Integer
+# 				Default 							80
+# 				Min 								0
+# 				Max 								4294967295
+#
+# 				Defines the minimum amount of CPU usage below which user threads no longer spin while waiting for flushed redo.
+#
+# 				The value is expressed as a sum of CPU core usage. For example, the default value of 80 is 80% of a single CPU core.
+#
+# 				On a system with a multi-core processor, a value of 150 represents 100% usage of one CPU core plus 50% usage
+# 				of a second CPU core.
+#
+# 				For related information, see SECTION 8.5.4, "OPTIMIZING INNODB REDO LOGGING"
+#
+# 			) innodb_log_spin_cpu_pct_hwm
+#
+# 				Property 						Value
+#
+# 				Cmd line 						--innodb-log-spin-cpu-pct-hwm=#
+# 				Intro 							8.0.11
+# 				Sys var 							innodb_log_spin_cpu_pct_hwm
+# 				Scope 							Global
+# 				Dynamic 							Yes
+# 				SET_VAR Hint 					No
+# 				Type 								Integer
+# 				Default 							50
+# 				Min 								0
+# 				Max 								100
+#
+# 				Defines the maximum amount of CPU usage above which user threads no longer spin while waiting for flushed redo.
+#
+# 				The value is expressed as a percentage of the combined total processing power of all CPU cores. The default value is 50%.
+#
+# 				For example, 100% usage of two CPU cores is 50% of the combined CPU processing power on a server with four CPU cores.
+#
+# 				The innodb_log_spin_cpu_pct_hwm variable respects processor affinity. For example, if a server has 48 cores but the mysqld
+# 				process is pinned to only four CPU cores, the other 44 CPU cores are ignored.
+#
+# 				For related information, see SECTION 8.5.4, "OPTIMIZING INNODB REDO LOGGING"
+#
+# 			) innodb_log_wait_for_flush_spin_hwm
+#
+# 				Property 						Value
+#
+# 				Cmd line 						--innodb-log-wait-for-flush-spin-hwm=#
+# 				Intro 							8.0.11
+# 				Sys var 							innodb_log_wait_for_flush_spin_hwm
+# 				Scope 							Global
+# 				Dynamic 							Yes
+# 				SET_VAR Hint 					No
+# 				Type 								Integer
+# 				Default 							400
+# 				Min 								0
+# 				Max (64-bit) 					2**64-1
+# 				Max (32-bit) 					2**32-1
+#
+# 				Defines the maximum average log flush time beyond which user threads no longer spin while waiting for flushed redo.
+#
+# 				The default value is 400 ms.
+#
+# 				For related information, see SECTION 8.5.4, "OPTIMIZING INNODB REDO LOGGING"
+#
+# 			) innodb_log_write_ahead_size
+#
+# 				Property 						Value
+#
+# 				Cmd line 						--innodb-log-write-ahead-size=#
+# 				Sys var 							innodb_log_write_ahead_size
+# 				Scope 							Global
+# 				Dynamic 							Yes
+# 				SET_VAR Hint 					No
+# 				Type 								Integer
+# 				Default 							8192
+# 				Min 								512 (log file block size)
+# 				Max 								Equal to innodb_page_size
+#
+# 				Defines the write-ahead block size for the redo log, in bytes. To avoid "read-on-write", set innodb_log_write_ahead_size
+# 				to match the operating system or file system cache block size.
+#
+# 				The default setting is 8192 bytes. Read-on-write occurs when redo log blocks are not entirely cached to the operating system
+# 				or file system due to a mismatch between write-ahead block size for the redo log and operating system or file system cache block size.
+#
+# 				Valid values for innodb_log_write_ahead_size are multiples of the InnoDB log file block size (2^n)
+#
+# 				The minimum value is the InnoDB log file block size (512). Write-ahead does not occur when the minimum value is specified.
+#
+# 				The maximum value is equal to the innodb_page_size value. If you specify a value for innodb_log_write_ahead_size that is larger
+# 				than the innodb_page_size value, the innodb_log_write_ahead_size setting is truncated to the innodb_page_size value.
+#
+# 				Setting the innodb_log_write_ahead_size value too low in relation to the operating system or file system cache block size
+# 				results in "read-on-write". Setting the value too high may have a slight impact on fsync performance for log file writes
+# 				due to several blocks being written at once.
+#
+# 				For related information, see SECTION 8.5.4, "OPTIMIZING INNODB REDO LOGGING"
+#
+# 			) innodb_lru_scan_depth
+#
+# 				Property 						Value
+#
+#				Cmd line 						--innodb-lru-scan-depth=#
+# 				Sys var 							innodb_lru_scan_depth
+# 				Scope 							Global
+# 				Dynamic 							Yes
+# 				SET_VAR Hint 					No
+# 				Type 								Integer
+# 				Default 							1024
+# 				Min 								100
+# 				Max (64-bit) 					2**64-1
+# 				Max (32-bit) 					2**32-1
+#
+# 				A parameter that influences the algorithms and heuristics for the flush operation for the InnoDB buffer pool.
+#
+# 				Primarily of interest to performance experts tuning I/O-intensive workloads. It specifies, per buffer pool instance,
+# 				how far down the buffer pool LRU page list the page cleaner thread scans looking for dirty pages to flush.
+#
+# 				This is a background operation performed once per second.
+#
+# 				A setting smaller than the default is generally suitable for most workloads. A value that is much higher than necessary
+# 				may impact performance. Only consider increasing the value if you have spare I/O capacity under a typical workload.
+#
+# 				Conversely, if a write-intensive workload saturates your I/O capacity, decrease the value, especially in the case
+# 				of a large buffer pool.
+#
+# 				When tuning innodb_lru_scan_depth, start with a low value and configure the setting upward with the goal of rarely
+# 				seeing zero free pages. Also, consider adjusting innodb_lru_scan_depth when changing the number of buffer pool instances,
+# 				since innodb_lru_scan_depth * innodb_buffer_pool_instances defines the amount of work performed by the page
+# 				cleaner thread each second.
+#
+# 				For related information, see SECTION 15.8.3.6, "FINE-TUNING InnoDB BUFFER POOL FLUSHING". For general I/O tuning advice,
+# 				see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 			) innodb_max_dirty_pages_pct
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-max-dirty-pages-pct=#
+# 				Sys var 						innodb_max_dirty_pages_pct
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Numeric
+# 				Default (>= 8.0.3) 		90
+# 				Default (<= 8.0.2) 		75
+# 				Min 							0
+# 				Max 							99.99
+#
+# 				InnoDB tries to flush data from the buffer pool so that the percentage of dirty pages does not exceed this value.
+#
+# 				The innodb_max_dirty_pages_pct setting establishes a target for flushing activity. It does not affect the rate of flushing.
+#
+# 				For information about managing the rate of flushing, see SECTION 15.8.3.5, "CONFIGURING INNODB BUFFER POOL FLUSHING"
+#
+# 				For related information, see SECTION 15.8.3.6, "FINE-TUNING INNODB BUFFER POOL FLUSHING". For general I/O tuning advice,
+# 				see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 			) innodb_max_dirty_pages_pct_lwm
+#
+# 				Property						Value
+#
+# 				Cmd line 					--innodb-max-dirty-pages-pct-lwm=#
+# 				Sys var 						innodb_max_dirty_pages_pct_lwm
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Numeric
+# 				Default (>= 8.0.3) 		10
+# 				Default (<= 8.0.2) 		0
+# 				Min 							0
+# 				Max 							99.99
+#
+# 				Defines a low water mark representing the percentage of dirty pages at which preflushing is enabled to control the dirty
+# 				page ratio. A value of 0 disables the pre-flushing behavior entirely.
+#
+# 				For more information, see SECTION 15.8.3.6, "FINE-TUNING InnoDB BUFFER POOL FLUSHING"
+#
+# 			) innodb_max_purge_lag
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-max-purge-lag=#
+# 				Sys var 						innodb_max_purge_lag
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						0
+# 				Min 							0
+# 				Max 							4294967295
+#
+# 				Defines the maximum length of the purge queue. The default value of 0 indicates no limit (no delays)
+#
+# 				Use this option to impose a delay for INSERT, UPDATE and DELETE operations when purge operations are lagging
+# 				(see SECTION 15.3, "InnoDB MULTI-VERSIONING")
+#
+# 				The InnoDB transaction system maintains a list of transactions that have index records delete-marked by UPDATE
+# 				or DELETE operations. The length of the list represents the purge_lag value.
+#
+# 				When purge_lag exceeds innodb_max_purge_lag, INSERT, UPDATE and DELETE operations are delayed. Prior to MySQL
+# 				8.0.14, the delay calculation is (purge_lag/innodb_max_purge_lag - 0.5) * 10000, which results in a minimum delay
+# 				of 5000 microseconds.
+#
+# 				As of MySQL 8.0.14, the delay calculation is (purge_lag/innodb_max_purge_lag - 0.9995) * 10000, which results in a
+# 				minimum delay of 5 microseconds.
+#
+# 				To prevent excessive delays in extreme situations where purge_lag becomes huge, you can limit the delay by setting
+# 				the innodb_max_purge_lag_delay variable.
+#
+# 				The delay is computed at the beginning of a purge batch.
+#
+# 				A typical setting for a problematic workload might be 1 million, assuming that transactions are small, only
+# 				100 bytes in size, and it is permissible to have 100MB of unpurged InnoDB table rows.
+#
+# 				The lag value is displayed as the history list length in the TRANSACTIONS section of InnoDB Monitor output.
+#
+# 				The lag value is 20 in this example output:
+#
+# 					----------------
+# 					TRANSACTIONS
+# 					----------------
+# 					Trx id counter 0 290328385
+# 					Purge done for trx's n:o < 0 290315608 undo n:o < 0 17
+# 					History list length 20
+#
+# 				For general I/O tuning advice, see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 			) innodb_max_purge_lag_delay
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-max-purge-lag-delay=#
+# 				Sys var 					innodb_max_purge_lag_delay
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					0
+# 				Min 						0
+#
+# 				Specifies the maximum delay in microseconds for the delay imposed by the innodb_max_purge_lag variable.
+#
+# 				The specified value is the upper limit on the delay period computed from the formula based on the value
+# 				of innodb_max_purge_lag.
+#
+# 				For general I/O tuning advice, see SECTION 8.5.8 "OPTIMIZING INNODB DISK I/O"
+#
+# 			) innodb_max_undo_log_size
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-max-undo-log-size=#
+# 				Sys var 					innodb_max_undo_log_size
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					1073741824
+# 				Min 						10485760
+# 				Max 						2**64-1
+#
+# 				Defines a threshold size for undo tablespaces. If an undo tablespace exceeds the threshold, it can be marked
+# 				for truncation when innodb_undo_log_truncate is enabled.
+#
+# 				The default value is 1073741824 bytes (1024 MiB)
+#
+# 				For more information, see TRUNCATING UNDO TABLESPACES
+#
+# 			) innodb_merge_threshold_set_all_debug
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-merge-threshold-set-all-debug=#
+# 				Sys var 					innodb_merge_threshold_set_all_debug
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					50
+# 				Min 						1
+# 				Max 						50
+#
+# 				Defines a page-full percentage value for index pages that overrides the current MERGE_THRESHOLD setting
+# 				for all indexes that are currently in the dictionary cache.
+#
+# 				This option is only available if debugging support is compiled in using the WITH_DEBUG CMake option.
+#
+# 				For related information, see SECTION 15.8.11, "CONFIGURING THE MERGE THRESHOLD FOR INDEX PAGES"
+#
+# 			) innodb_monitor_disable
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-monitor-disable={counter|module|pattern|all}
+# 				Sys var 					innodb_monitor_disable
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						String
+#
+# 				Disable InnoDB metrics counters. Counter data may be queried using the INFORMATION_SCHEMA.INNODB_METRICS table.
+#
+# 				For usage information, see SECTION 15.14.6, "InnoDB INFORMATION_SCHEMA METRICS TABLE"
+#
+# 				innodb_monitor_disable='latch' disables statistics collection for SHOW_ENGINE_INNODB_MUTEX.
+#
+# 				For more information, see SECTION 13.7.6.15, "SHOW ENGINE SYNTAX"
+#
+# 			) innodb_monitor_enable
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-monitor-enable={counter|module|pattern|all}
+# 				Sys var 					innodb_monitor_enable
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						String
+#
+# 				Enables InnoDB metrics counters. Counter data may be queried using the INFORMATION_SCHEMA.INNODB_METRICS
+# 				table.
+#
+# 				For usage information, see SECTION 15.14.6, "InnoDB INFORMATION_SCHEMA METRICS TABLE"
+#
+# 				innodb_monitor_enable='latch' enables statistics collections for SHOW_ENGINE_INNODB_MUTEX.
+#
+# 				For more information, see SECTION 13.7.6.15, "SHOW ENGINE SYNTAX"
+#
+# 			) innodb_monitor_reset
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-monitor-reset={counter|module|pattern|all}
+# 				Sys var 					innodb_monitor_reset
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Enumeration
+# 				Default 					empty string
+# 				Valid 					counter
+# 											module
+# 											pattern
+# 											all
+#
+# 				Resets the count value for InnoDB metrics counters to zero. Counter data may be queried using the
+# 				INFORMATION_SCHEMA.INNODB_METRICS table.
+#
+# 				For usage information, see SECTION 15.14.6, "InnoDB INFORMATION_SCHEMA METRICS TABLE"
+#
+# 				innodb_monitor_reset='latch' resets statistics reported by SHOW_ENGINE_INNODB_MUTEX. 
+#
+# 				For more information, see SECTION 13.7.6.15, "SHOW ENGINE SYNTAX"
+#
+# 			) innodb_monitor_reset_all
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-monitor-reset-all={counter|module|pattern|all}
+# 				Sys var 					innodb_monitor_reset_all
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Enumeration
+# 				Default 					empty string
+# 				Valid 					counter
+# 											module
+# 											pattern
+# 											all
+#
+# 				Resets all values (minimum, maximum and so on) for InnoDB metrics counters.
+#
+# 				Counter data may be queried using the INFORMATION_SCHEMA.INNODB_METRICS table.
+#
+# 				For usage information, see SECTION 15.14.6, "InnoDB INFORMATION_SCHEMA METRICS TABLE"
+#
+# 			) innodb_numa_interleave
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-numa-interleave[={OFF|ON}]
+# 				Sys var 					innodb_numa_interleave
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					OFF
+#
+# 				Enables the NUMA interleave memory policy for allocation of the InnoDB buffer pool.
+#
+# 				When innodb_numa_interleave is enabled, the NUMA memory policy is set to MPOL_INTERLEAVE
+# 				for the mysqld process.
+#
+# 				After the InnoDB buffer pool is allocated, the NUMA memory policy is set back to MPOL_DEFAULT.
+#
+# 				For the innodb_numa_interleave option to be available, MySQL must be compiled on a NUMA-enabled
+# 				Linux system.
+#
+# 				CMake sets the default WITH_NUMA value based on whether the current platform has NUMA support.
+#
+# 				For more information, see SECTION 2.9.4, "MySQL SOURCE-CONFIGURATION OPTIONS"
+#
+# 			) innodb_old_blocks_pct
+#
+# 				Property 			Value
+#
+# 				Cmd line 			--innodb-old-blocks-pct=#
+# 				Sys var 				innodb_old_blocks_pct
+# 				Scope 				Global
+# 				Dynamic 				Yes
+# 				SET_VAR Hint 		No
+# 				Type 					Integer
+# 				Default 				37
+# 				Min 					5
+# 				Max 					95
+#
+# 				Specifies the approximate percentage of the InnoDB buffer pool used for the old block sublist.
+#
+# 				The range of values is 5 to 95. The default value is 37 (that is, 3/8 of the pool)
+#
+# 				Often used in combination with innodb_old_blocks_time
+#
+# 				For more information, see SECTION 15.8.3.3, "MAKING THE BUFFER POOL SCAN RESISTANT" 
+#
+# 				For information about buffer pool management, the LRU algorithm, and eviction policies,
+# 				see SECTION 15.5.1, "BUFFER POOL"
+#
+# 			) innodb_old_blocks_time
+#
+# 				Property 			Value
+#
+# 				Cmd line 			--innodb-old-blocks-time=#
+# 				Sys var 				innodb_old_blocks_time
+# 				Scope 				Global
+# 				Dynamic 				Yes
+# 				SET_VAR Hint 		No
+# 				Type 					Integer
+# 				Default 				1000
+# 				Min 					0
+# 				Max 					2**32-1
+#
+# 				Non-zero values protect against the buffer pool being filled by data that is referenced only for a brief period,
+# 				such as during a full table scan. Increasing this value offers more protection against full table scans interfering
+# 				with data cached in the buffer pool.
+#
+# 				Specifies how long in milliseconds a block inserted into the old sublist must stay there after its first access
+# 				before it can be moved to the new sublist.
+#
+# 				If the value is 0, a block inserted into the old sublist moves immediately to the new sublist the first time it is
+# 				accessed, no matter how soon after insertion the access occurs.
+#
+# 				If the value is greater than 0, blocks remain in the old sublist until an access occurs at least that many miliseconds
+# 				after the first access. For example, a value of 1000 causes blocks to stay in the old sublist for 1 second after the first
+# 				access before they become eligible to move to the new sublist.
+#
+# 				The default value is 1000.
+#
+# 				This variable is often used in combination with innodb_old_blocks_pct. For more information, see SECTION 15.8.3.3,
+# 				"MAKING THE BUFFER POOL SCAN RESISTANT"
+#
+# 				For information about buffer pool management, the LRU algorithm, and eviction policies, see SECTION 15.5.1,
+# 				"BUFFER POOL"
+#
+# 			) innodb_online_alter_log_max_size
+#
+# 				Property 			Value
+#
+# 				Cmd line 			--innodb-online-alter-log-max-size=#
+# 				Sys var 				innodb_online_alter_log_max_size
+# 				Scope 				Global
+# 				Dynamic 				Yes
+# 				SET_VAR Hint 		No
+# 				Type 					Integer
+# 				Default 				134217728
+# 				Min 					65536
+# 				Max 					2**64-1
+#
+# 				Specifies an upper limit in bytes on the size of the temporary log files used during online DDL operations for InnoDB tables.
+#
+# 				There is one such log file for each index being created or table being altered. This log file stores data inserted, updated,
+# 				or deleted in the table during the DDL operation.
+#
+# 				THe temporary log file is extended when needed by the value of innodb_sort_buffer_size, up to the maximum specified by 
+# 				innodb_online_alter_log_max_size. If a temporary log file exceeds the upper size limit, the ALTER_TABLE operation fails
+# 				and all uncommitted concurrent DML operations are rolled back.
+#
+# 				Thus, a large value for this option allows more DML to happen during an online DDL operation, but also extends the period of
+# 				time at the end of the DDL operation when the table is locked to apply the data from the log.
+#
+# 			) innodb_open_files
+#
+# 				Property 			Value
+#
+# 				Cmd line 			--innodb-open-files=#
+# 				Sys var 				innodb_open_files
+# 				Scope 				Global
+# 				Dynamic 				No
+# 				SET_VAR Hint 		No
+# 				Type 					Integer
+# 				Default 				-1 (signifies autosizing; do not assign this literal value)
+# 				Min 					10
+# 				Max 					4294967295
+#
+# 				This variable is only relevant if you use multiple InnoDB tablespaces. It specifies the maximum number of .ibd
+# 				files that MySQL can keep open at one time.
+#
+# 				The minimum value is 10. The default value is 300 if innodb_file_per_table is not enabled, and the higher of
+# 				300 and table_open_cache otherwise.
+#
+# 				The file descriptors used for .ibd files are for InnoDB tables only. They are independent of those specified by the
+# 				open_files_limit system variable, and do not affect the operation of the table cache.
+#
+# 				For general I/O tuning advice, see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 			) innodb_optimize_fulltext_only
+#
+# 				Property 			Value
+#
+# 				Cmd line 			--innodb-optimize-fulltext-only[={OFF|ON}]
+# 				Sys var 				innodb_optimize_fulltext_only
+# 				Scope 				Global
+# 				Dynamic 				Yes
+# 				SET_VAR Hint 		No
+# 				Type 					Boolean
+# 				Default 				OFF
+#
+# 				Changes the way OPTIMIZE_TABLE operates on InnoDB tables. Intended to be enabled temporarily, during maintenance
+# 				operations for InnoDB tables with FULLTEXT indexes.
+#
+# 				By default, OPTIMIZE_TABLE reorganizes data in the clustered index of the table. When this option is enabled,
+# 				OPTIMIZE_TABLE skips the reorganization of table data, and instead processes newly added, deleted and updated
+# 				token data for InnoDB FULLTEXT indexes.
+#
+# 				For more information, see OPTIMIZING INNODB FULL-TEXT INDEXES
+#
+# 			) innodb_page_cleaners
+#
+# 				Property 			Value
+#
+# 				Cmd line 			--innodb-page-cleaners=#
+# 				Sys var 				innodb_page_cleaners
+# 				Scope 				Global
+# 				Dynamic 				No
+# 				SET_VAR Hint 		No
+# 				Type 					Integer
+# 				Default 				4
+# 				Min 					1
+# 				Max 					64
+#
+# 				The number of page cleaner threads that flush dirty pages from buffer pool instances. Page cleaner threads
+# 				perform flush list and LRU flushing.
+#
+# 				When there are multiple page cleaner threads, buffer pool flushing tasks for each buffer pool instance are
+# 				dispatched to idle page cleaner threads.
+#
+# 				The innodb_page_cleaners default value is 4.
+#
+# 				If the number of page cleaner threads exceeds the number of buffer pool instances, innodb_page_cleaners
+# 				is automatically set to the same value as innodb_buffer_pool_instances
+#
+# 				If your workload is write-IO bound when flushing dirty pages from buffer pool instances to data files,
+# 				and if your system hardware has available capacity, increasing the number of page cleaner threads
+# 				may help improve write-IO throughput.
+#
+# 				Multithreaded page cleaner support extends to shutdown and recovery phases.
+#
+# 				The setpriority() system call is used on Linux platforms where it is supported, and where the mysqld execution
+# 				user is authorized to give page_cleaner threads priority over other MySQL and InnoDB threads to help page flushing
+# 				keep pace with the current workload.
+#
+# 				setpriority() support is indicated by this InnoDB startup message:
+#
+# 					[Note] InnoDB: If the mysqld execution user is authorized, page cleaner
+# 					thread priority can be changed. See the man page of setpriority()
+#
+# 				For systems where server startup and shutdown is not managed by systemd, mysqld execution user authorization
+# 				can be configured in /etc/security/limits.conf
+#
+# 				For example, if mysqld is run under the mysql user, you can authorize the mysql user by adding these lines to
+# 				/etc/security/limits.conf:
+#
+# 					mysql 			hard 	nice 		-20
+# 					mysql 			soft  nice 		-20
+#
+# 				For systemd managed systems, the same can be achieved by specifying LimitNICE=-20 in a localized systemd configuration
+# 				file. For example, create a file named override.conf in /etc/systemd/system/mysqld.service.d/override.conf and add this entry:
+#
+# 					[Service]
+# 					LimitNICE=-20
+#
+# 				After creating or changing override.conf, reload the systemd configuration, then tell systemd to restart the MySQL service:
+#
+# 					systemctl daemon-reload
+# 					systemctl restart mysqld 	#RPM platforms
+# 					systemctl restart mysql 	# Debian platforms
+# 	
+# 				For more information about using a localized systemd configuration file, see CONFIGURING SYSTEMD FOR MYSQL
+#
+# 				After authorizing the mysqld execution user, use the cat command to verify the configured Nice limits for
+# 				the mysqld process:
+#
+# 					shell> cat /proc/mysqld_pid/limits | grep nice
+# 					Max nice priority 			<limit numerals> <limit numerals>
+#
+# 			) innodb_page_size
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-page-size=#
+# 				Sys var 					innodb_page_size
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Enumeration
+# 				Default 					16384
+# 				Valid 					4096
+# 											8192
+# 											16384
+# 											32768
+# 											65536
+#
+# 				Specifies the page size for InnoDB tablespaces. Values can be specified in bytes or kilobytes. For example, 
+# 				a 16 kilobyte page size value can be specified as 16384, 16kb, or 16k.
+#
+# 				innodb_page_size can only be configured prior to initializing the MySQL instance and cannot be changed afterward.
+#
+# 				If no value is specified, the instance is initialized using the default page size. See SECTION 15.8.1, "InnoDB STARTUP CONFIGURATION"
+#
+# 				For both 32kb and 64kb page sizes, the maximum row length is approximately 16000 bytes. ROW_FORMAT=COMPRESSED is not supported when
+# 				innodb_page_size is set to 32kb or 64kb.
+#
+# 				For innodb_page_size=32kb, extent size is 2MB. For innodb_page_size=64kb, extent size is 4MB.
+#
+# 				innodb_log_buffer_size should be set to at least 16M (the default) when using 32kb or 64kb page sizes.
+#
+# 				The default 16kb page size or larger is appropriate for a wide range of workloads, particularly for queries involving
+# 				table scans and DML operations involving bulk updates.
+#
+# 				Smaller page sizes might be more efficient for OLTP workloads involving many small writes, where contention can be
+# 				an issue when single pages contain many rows.
+#
+# 				Smaller pages might also be efficient with SSD storage devices, which typically use small block sizes. Keeping the 
+# 				InnoDB page size close to the storage device block size minimizes the amount of unchanged data that is rewritten to disk.
+#
+# 				The minimum file size for the first system tablespace data file (ibdata1) differs depending on the innodb_page_size value.
+#
+# 				See the innodb_data_file_path option description for more information.
+#
+# 				For general I/O tuning advice, see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 			) innodb_parallel_read_threads
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-parallel-read-threads=#
+# 				Introduced 					8.0.14
+# 				Sys var 						innodb_parallel_read_threads
+# 				Scope 						Session
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						4
+# 				Min 							1
+# 				Max 							256
+#
+# 				Defines the number of threads that can be used for parallel clustered index reads. Parallel scanning of partitions
+# 				is supported as of MySQL 8.0.17. Parallel read threads can improve CHECK_TABLE performance.
+#
+# 				InnoDB reads the clustered index twice during a CHECK_TABLE operation. The second read can be performed in parallel.
+# 				This feature does not apply to secondary index scans. The innodb_parallel_read_threads session variable must be set
+# 				to a value greater than 1 for parallel clustered index reads to occur.
+#
+# 				The actual number of threads used to perform a parallel clustered index read is determined by the innodb_parallel_read_threads
+# 				setting or the number of index subtrees to scan, whichever is smaller.
+#
+# 				The pages read into the buffer pool during the scan are kept at the tail of the buffer pool LRU list so that
+# 				they can be discarded quickly when free buffer pool pages are required.
+#
+# 				As of MySQL 8.0.17, the maximum number of parallel read threads (256) is the total number of threads for all
+# 				client connections.
+#
+# 				If the thread limit is reached, connections fall back to using a single thread.
+#
+# 			) innodb_print_all_deadlocks
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-print-all-deadlocks[={OFF|ON}]
+# 				Sys var 						innodb_print_all_deadlocks
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Boolean
+# 				Default 						OFF
+#
+# 				When this option is enabled, information about all deadlocks in InnoDB user transactions is recorded in the mysqld error log.
+#
+# 				Otherwise, you see information about only the last deadlock, using the SHOW ENGINE INNODB STATUS command.
+#
+# 				An occasional InnoDB deadlock is not necessarily an issue, because InnoDB detects the condition immediately and rolls
+# 				back one of the transactions automatically.
+#
+# 				You might use this option to troubleshoot why deadlocks are occurring if an application does not have appropriate
+# 				error-handling logic to detect the rollback and retry its operation.
+#
+# 				A large number of deadlocks might indicate the need to restructure transactions that issue DML or SELECT /etc/ FOR UPDATE
+# 				statements for multiple tables, so that each transaction accesses the tables in the same order, thus avoiding
+# 				the deadlock condition.
+#
+# 				For related information, see SECTION 15.7.5, "DEADLOCKS IN INNODB"
+#
+# 			) innodb_print_ddl_logs
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-print-ddl-logs[={OFF|ON}]
+# 				Introduced 					8.0.3
+# 				Sys var 						innodb_print_ddl_logs
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Boolean
+# 				Default 						OFF
+#
+# 				Enabling this option causes MySQL to write DDL logs to stderr. For more information, see Viewing DDL Logs.
+#
+# 			) innodb_purge_batch_size
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-purge-batch-size=#
+# 				Sys var 						innodb_purge_batch_size
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						300
+# 				Min 							1
+# 				Max 							5000
+#
+# 				Defines the number of undo log pages that purge parses and processes in one batch from the history list.
+#
+# 				In a multithreaded purge configuration, the coordinator purge thread divides innodb_purge_batch_size by 
+# 				innodb_purge_threads and assigns that number of pages to each purge thread.
+#
+# 				The innodb_purge_batch_size option also defines the number of undo log pages that purge frees after
+# 				every 128 iterations through the undo logs.
+#
+# 				The innodb_purge_batch_size option is intended for advanced performance tuning in combination with the
+# 				innodb_purge_threads setting.
+#
+# 				Most MySQL users need not change innodb_purge_batch_size from its default value.
+#
+# 				For related information, see SECTION 15.8.9, "CONFIGURING INNODB PURGE SCHEDULING"
+#
+# 			) innodb_purge_threads
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-purge-threads=#
+# 				Sys var 						innodb_purge_threads
+# 				Scope 						Global
+# 				Dynamic 						No
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						4
+# 				Min 							1
+# 				Max 							32
+#
+# 				The number of background threads devoted to the InnoDB purge operation. A minimum value of 1 signifies that the
+# 				purge operation is always performed by a background thread, never as part of the master thread.
+#
+# 				Running the purge operation in one or more background threads helps reduce internal contention within InnoDB,
+# 				improving scalability. Increasing the value to greater than 1 creates that many separate purge threads, which can
+# 				improve efficiency on systems where DML operations are performed on multiple tables.
+#
+# 				The maximum is 32.
+#
+# 				For related information, see SECTION 15.8.9, "CONFIGURING INNODB PURGE SCHEDULING"
+#
+# 			) innodb_purge_rseg_truncate_frequency
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-purge-rseg-truncate-frequency=#
+# 				Sys var 						innodb_purge_rseg_truncate_frequency
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						128
+# 				Min 							1
+# 				Max 							128
+#
+# 				Defines the frequency with which the purge system frees rollback segments in terms of the number of times
+# 				that purge is invoked.
+#
+# 				An undo tablespace cannot be truncated until its rollback segments are freed.
+#
+# 				Normally, the purge system frees rollback segments once every 128 times that purge is invoked.
+#
+# 				The default value is 128.
+#
+# 				Reducing this value increases the frequency with which the purge thread frees rollback segments.
+#
+# 				innodb_purge_rseg_truncate_frequency is intended for use with innodb_undo_log_truncate.
+# 				For more information, see TRUNCATING UNDO TABLESPACES.
+#
+# 			) innodb_random_read_ahead
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-random-read-ahead[={OFF|ON}]
+# 				Sys var 						innodb_random_read_ahead
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Boolean
+# 				Default 						OFF
+#
+# 				Enables the random read-ahead technique for optimizing InnoDB I/O.
+#
+# 				For details about performance considerations for different types of read-ahead requests,
+# 				see SECTION 15.8.3.4, "CONFIGURING INNODB BUFFER POOL PREFETCHING (READ-AHEAD)"
+#
+# 				For general I/O tuning advice, see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 			) innodb_read_ahead_threshold
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-read-ahead-threshold=#
+# 				Sys var 						innodb_read_ahead_threshold
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						56
+# 				Min 							0
+# 				Max 							64
+#
+# 				Controls the sensitivity of linear read-ahead that InnoDB uses to prefetch pages into the buffer pool.
+#
+# 				If InnoDB reads at least innodb_read_ahead_threshold pages sequentially from an extent (64 pages),
+# 				it initiates an asynch read for the entire following extent.
+#
+# 				The permissible range of values is 0 to 64.
+#
+# 				A value of 0 disables read-ahead. For the default of 56, InnoDB must read at least 56 pages sequentially
+# 				from an extent to initiate an asynch read for the following extent.
+#
+# 				Knowing how many pages are read through the read-ahead mechanism, and how many of these pages are evicted
+# 				from the buffer pool without ever being accessed, can be useful when fine-tuning the innodb_read_ahead_threshold
+# 				setting.
+#
+# 				SHOW_ENGINE_INNODB_STATUS output displays counter information from the Innodb_buffer_pool_read_ahead and
+# 				Innodb_buffer_pool_read_ahead_evicted global status variables, which report the number of pages brought into the
+# 				buffer pool by read-ahead requests, and the number of such pages evicted from the buffer pool without ever
+# 				being accessed, respectively.
+#
+# 				The status variables report global values since the last server restart.
+#
+# 				SHOW_ENGINE_INNODB_STATUS also shows the rate at which the read-ahead pages are read and the rate at which
+# 				such pages are evicted without being accessed.
+#
+# 				The per-second averages are based on the statistics collected since the last invocation of SHOW ENGINE INNODB STATUS
+# 				and are displayed in the BUFFER POOL AND MEMORY section of the SHOW_ENGINE_INNODB_STATUS output.
+#
+# 				For more information, see SECTION 15.8.3.4, "CONFIGURING InnoDB BUFFER POOL PREFETCHING (READ-AHEAD)"
+#
+# 				For general I/O tuning advice, see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 			) innodb_read_io_threads
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-read-io-threads=#
+# 				Sys var 						innodb_read_io_threads
+# 				Scope 						Global
+# 				Dynamic 						No
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						4
+# 				Min 							1
+# 				Max 							64
+#
+# 				The number of I/O threads for read operations in InnoDB. Its counterpart for write threads is
+# 				innodb_write_io_threads.
+#
+# 				For more information, see SECTION 15.8.5, "CONFIGURING THE NUMBER OF BACKGROUND INNODB I/O THREADS"
+#
+# 				For general I/O tuning advice, see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 				NOTE:
+#
+# 					On Linux systems, running multiple MySQL servers (typically more than 12) with default settings for 
+# 					innodb_read_io_threads, innodb_write_io_threads, and the Linux aio-max-nr setting can exceed system
+# 					limits.
+#
+# 					Ideally, increase the aio-max-nr setting; as a workaround, you might reduce the settings for one or both
+# 					of the MySQL variables.
+#
+# 			) innodb_read_only
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-read-only[={OFF|ON}]
+# 				Sys var 						innodb_read_only
+# 				Scope 						Global
+# 				Dynamic 						No
+# 				SET_VAR Hint 				No
+# 				Type 							Boolean
+# 				Default 						OFF
+#
+# 				Starts InnoDB in read-only mode. For distributing database applications or data sets on read-only media.
+#
+# 				Can also be used in data warehouses to share the same data directory between multiple instances.
+# 				For more information, see SECTION 15.8.2, "CONFIGURING INNODB FOR READ-ONLY OPERATION"
+#
+# 				Previously, enabling the innodb_read_only system variable prevented creating and dropping tables only
+# 				for the InnoDB storage engine.
+#
+# 				As of MySQL 8.0, enabling innodb_read_only prevents these operations for all storage engines.
+# 				Table creation and drop operations for any storage engine modify data dictionary tables in
+# 				the mysql system database, but those tables use the InnoDB storage engine and cannot be modified
+# 				when innodb_read_only is enabled.
+#
+# 				The same principle applies to other table operations that require modifying data dictionary tables.
+#
+# 				Examples:
+#
+# 					) if the innodb_read_only system variable is enabled, ANALYZE_TABLE may fail because it cannot update
+# 						statistics tables in the data dictionary, which uses InnoDB.
+#
+# 						For ANALYZE_TABLE operations that update the key distribution, failure may occur even if the 
+# 						operation updates the table itself (for example, if it is a MyISAM table)
+#
+# 						To obtain the updated distribution statistics, set information_schema_stats_expiry=0
+#
+# 					) ALTER_TABLE_tbl_name_ENGINE=engine_name fails because it updates the storage engine designation,
+# 						which is stored in the data dictionary.
+#
+# 				In addition, other tables in the mysql system database use the InnoDB storage engine in MySQL 8.0
+#
+# 				Making those tables read only results in restrictions on operations that modify them. Examples:
+#
+# 					) Account-management statements such as CREATE_USER and GRANT fail because the grant tables use InnoDB
+#
+# 					) The INSTALL_PLUGIN and UNINSTALL_PLUGIN plugin-management statements fail because the plugin table uses InnoDB
+#
+# 					) The CREATE_FUNCTION and DROP_FUNCTION UDF-management statements fail because the func table uses InnoDB.
+#
+# 			) innodb_redo_log_archive_dirs
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-redo-log-archive-dirs
+# 				Introduced 				8.0.17
+# 				Sys var 					innodb_redo_log_archive_dirs
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						String
+# 				Default 					NULL
+#
+# 				Defines labeled directories where redo log archive files can be created. You can define multiple
+# 				labeled directories in a semicolon-separated list. For example:
+#
+# 					innodb_redo_log_archive_dirs='label1:/backups1;label2:/backups2'
+#
+# 				A label can be any string of characters, with the exception of colons (:), which are not permitted.
+# 				An empty label is also permitted, but the colon (:) is still required in this case.
+#
+# 				A path must be specified, and the directory must exist. The path can contain colons (':'), but semicolons
+# 				(;) are not permitted.
+#
+# 			) innodb_redo_log_encrypt
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-redo-log-encrypt[={OFF|ON}]
+# 				Introduced 				8.0.1
+# 				Sys var 					innodb_redo_log_encrypt
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					OFF
+#
+# 				Controls encryption of redo log data for tables encrypted using the InnoDB data-at-rest encryption feature.
+#
+# 				Encryption of redo log data is disabled by default. For more information, see Redo Log Encryption.
+#
+# 			) innodb_replication_delay
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-replication-delay=#
+# 				Sys var 					innodb_replication_delay
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					0
+# 				Min 						0
+# 				Max 						4294967295
+#
+# 				The replication thread delay in milliseconds on a slave server if innodb_thread_concurrency is reached.
+#
+# 			) innodb_rollback_on_timeout
+#
+# 				Property 				Value
+#
+# 				cmd line 				--innodb-rollback-on-timeout[={OFF|ON}]
+# 				Sys var 					innodb_rollback_on_timeout
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					OFF
+#
+# 				InnoDB rolls back only the last statement on a transaction timeout by default.
+#
+# 				If --innodb-rollback-on-timeout is specified, a transaction timeout causes InnoDB to
+# 				abort and roll back the entire transaction.
+#
+# 				NOTE:
+#
+# 					If the start-transaction statement was START_TRANSACTION or BEGIN statement, rollback does not
+# 					cancel that statement.
+#
+# 					Further SQL statements become part of the transaction until the occurrence of COMMIT, ROLLBACK
+# 					or some SQL statement that causes an implicit commit.
+#
+# 				For more information, see SECTION 15.20.4, "InnoDB ERROR HANDLING"
+#
+# 			) innodb_rollback_segments
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-rollback-segments=#
+# 				Sys var 					innodb_rollback_segments
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					128
+# 				Min 						1
+# 				Max 						128
+#
+# 				innodb_rollback_segments defines the number of rollback segments allocated to each undo tablespace
+# 				and the global temporary tablespace for transactions that generate undo records.
+#
+# 				The number of transactions that each rollback segment supports depends on the InnoDB page size
+# 				and the number of undo logs assigned to each transaction.
+#
+# 				For more information, see SECTION 15.6.6, "UNDO LOGS"
+#
+# 				For related information, see SECTION 15.3, "InnoDB MULTI-VERSIONING"
+#
+# 				For information about undo tablespaces, see SECTION 15.6.3.4, "UNDO TABLESPACES"
+#
+# 			) innodb_scan_directories
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-scan-directories=dir_name
+# 				Introduced 				8.0.2
+# 				Removed 					8.0.4
+# 				Sys var 					innodb_scan_directories
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Dir name
+# 				Default 					NULL
+#
+# 				This variable was replaced by innodb_directories in MySQL 8.0.4
+#
+# 			) innodb_saved_page_number_debug
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-saved-page-number-debug=#
+# 				Sys var 					innodb_saved_page_number_debug
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					0
+# 				Max 						2**23-1
+#
+# 				Saves a page number. Setting the innodb_fil_make_page_dirty_debug option dirties the page defined by
+# 				innodb_saved_page_number_debug.
+#
+# 				The innodb_saved_page_number_debug option is only available if debugging support is compiled in using
+# 				the WITH_DEBUG CMake option.
+#
+# 			) innodb_sort_buffer_size
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-sort-buffer-size=#
+# 				Sys var 					innodb_sort_buffer_size
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					1048576
+# 				Min 						65536
+# 				Max 						67108864
+#
+# 				Specifies the size of sort buffers used to sort data during creation of an InnoDB index.
+#
+# 				The specified size defines the amount of data that is read into memory for internal sorting
+# 				and then written out to disk.
+#
+# 				This process is referred to as a "run". During the merge phase, pairs of buffers of the 
+# 				specified size are read and merged.
+#
+# 				The larger the setting, the fewer runs and merges there are.
+#
+# 				This sort area is only used for merge sorts during index creation, not during later index
+# 				maintenance operations. Buffers are deallocated when index creation completes.
+#
+# 				The value of this option also controls the amount by which the temporary log file is extended
+# 				to record concurrent DML during online DDL operations.
+#
+# 				Before this setting was made configurable, the size was hardcoded to 1048576 (1MB), which remains
+# 				the default.
+#
+# 				During an ALTER_TABLE or CREATE_TABLE statement that creates an index, 3 buffers are allocated,
+# 				each with a size defined by this option.
+#
+# 				Additionally, auxiliary pointers are allocated to rows in the sort buffer so that the sort can run
+# 				on pointers (as opposed to moving rows during the sort operation)
+#
+# 				For a typical sort operation, a formula such as this one can be used to estimate memory consumption:
+#
+# 					(6 /*FTS_NUM_AUX_INDEX*/ * (3**@@GLOBAL.innodb_sort_buffer_size)
+# 					+ 2 * number_of_partitions * number_of_secondary_indexes_created
+# 					* (@@GLOBAL.innodb_sort_buffer_size/dict_index_get_min_size(index)*/)
+# 					* 8 /*64-bit sizeof *buf->tuples*/")
+#
+# 				@@GLOBAL.innodb_sort_buffer_size/dict_index_get_min_size(index) indicates the maximum tuples held.
+#
+# 				2 * (@@GLOBAL.innodb_sort_buffer_size/*dict_index_get_min_size(index)*/) * 8 /*64-bit size of *buf->tuples*/
+# 				indicates auxiliary pointers allocated.
+#
+# 				NOTE:
+#
+# 					For 32-bit, multiply by 4 instead of 8.
+#
+# 				For parallel sortts on a full-text index, multiply by the innodb_ft_sort_pll_degree setting:
+#
+# 					(6 /*FTS_NUM_AUX_INDEX*/ * @@GLOBAL.innodb_ft_sort_pll_degree)
+#
+# 			) innodb_spin_wait_delay
+#
 # 				https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_ft_max_token_size
 # 	
