@@ -52942,5 +52942,905 @@
 #
 # 			) innodb_spin_wait_delay
 #
-# 				https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_ft_max_token_size
+# 				Property 						Value
+#
+# 				Cmd line 						--innodb-spin-wait-delay=#
+# 				Sys var 							innodb_spin_wait_delay
+# 				Scope 							Global
+# 				Dynamic 							Yes
+# 				SET_VAR Hint 					No
+# 				Type 								Integer
+# 				Default 							6
+# 				Min 								0
+# 				Max (64-bit <= 8.0.13) 		2**64-1
+# 				Max (32-bit <= 8.0.13) 		2**32-1
+# 				Max (>= 8.0.14) 				1000
+#
+# 				The maximum delay between polls for a spin lock. The low-level implementation of this mechanism
+# 				varies depending on the combination of hardware and operating system, so the delay does not
+# 				correspond to a fixed time interval.
+#
+# 				Can be used in combination with the innodb_spin_wait_pause_multiplier variable for greater control over
+# 				the duration of spin-lock polling delays.
+#
+# 				For more information, see SECTION 15.8.8, "CONFIGURING SPIN LOCK POLLING"
+#
+# 			) innodb_spin_wait_pause_multiplier
+#
+# 				Property 						Value
+#
+# 				Cmd line 						--innodb-spin-wait-pause-multiplier=#
+# 				Introduced 						8.0.16
+# 				Sys var 							innodb_spin_wait_pause_multiplier
+# 				Scope 							Global
+# 				Dynamic 							Yes
+# 				SET_VAR Hint 					No
+# 				Type 								Integer
+# 				Default 							50
+# 				Min 								1
+# 				Max 								100
+#
+# 				Defines a multiplier value used to determine the number of PAUSE instructions in spin-wait loops that
+# 				occur when a thread waits to acquire a mutex or rw-lock.
+#
+# 				For more information, see SECTION 15.8.8, "CONFIGURING SPIN LOCK POLLING"
+#
+# 			) innodb_stats_auto_recalc
+#
+# 				Property 						Value
+#
+# 				Cmd line 						--innodb-stats-auto-recalc[={OFF|ON}]
+# 				Sys var 							innodb_stats_auto_recalc
+# 				Scope 							Global
+# 				Dynamic 							Yes
+# 				SET_VAR Hint 					No
+# 				Type 								Boolean
+# 				Default 							ON
+#
+# 				Causes InnoDB to automatically recalculate persistent statistics after the data in a table is changed
+# 				substantially. The threshold value is 10% of the rows in the table.
+#
+# 				This setting applies to tables created when the innodb_stats_persistent option is enabled. Automatic
+# 				statistics recalculation may also be configured by specifying STATS_PERSISTENT=1 in a CREATE_TABLE
+# 				or ALTER_TABLE statement.
+#
+# 				The amount of data sampled to produce the statistics is controlled by the innodb_stats_persistent_sample_pages
+# 				variable.
+#
+# 				For more information, see SECTION 15.8.10.1, "CONFIGURING PERSISTENT OPTIMIZER STATISTICS PARAMETERS"
+#
+# 			) innodb_stats_include_delete_marked
+#
+# 				Property 						Value
+#
+# 				Cmd line 						--innodb-stats-include-delete-marked[={OFF|ON}]
+# 				Introduced 						8.0.1
+# 				Sys var 							innodb_stats_include_delete_marked
+# 				Scope 							Global
+# 				Dynamic 							Yes
+# 				SET_VAR Hint 					No
+# 				Type 								Boolean
+# 				Default 							OFF
+#
+# 				By default, InnoDB reads uncommitted data when calculating statistics.
+#
+# 				In the case of an uncommitted transaction that deletes rows from a table, InnoDB excludes
+# 				records that are delete-marked when calculating row estimates and index statistics, which can lead
+# 				to non-optimal execution plans for other transactions that are operating on the table concurrently
+# 				using a transaction isolation level other than READ_UNCOMMITTED.
+#
+# 				To avoid this scenario, innodb_stats_include_delete_marked can be enabled to ensure that InnoDB
+# 				includes delete-marked records when calculating persistent optimizer statistics.
+#
+# 				When innodb_stats_include_delete_marked is enabled, ANALYZE_TABLE considers delete-marked records when
+# 				recalculating statistics.
+#
+# 				innodb_stats_include_delete_marked is a global setting that affects all InnoDB tables. It is only applicable
+# 				to persistent optimizer statistics.
+#
+# 				For related information, see SECTION 15.8.10.1, "CONFIGURING PERSISTENT OPTIMIZER STATISTICS PARAMETERS"
+#
+# 			) innodb_stats_method
+#
+# 				Property 						Value
+#
+# 				Cmd line 						--innodb-stats-method=value
+# 				Sys var 							innodb_stats_method
+# 				Scope 							Global
+# 				Dynamic 							Yes
+# 				SET_VAR Hint 					No
+# 				Type 								Enumeration
+# 				Default 							nulls_equal
+# 				Valid 							nulls_equal
+# 													nulls_unequal
+# 													nulls_ignored
+#
+# 				How the server treats NULL values when collecting statistics about the distribution of index values for InnoDB tables.
+#
+# 				Permitted values are nulls_equal, nulls_unequal and nulls_ignored. For nulls_equal, all NULL index values are considered
+# 				equal and form a single value group with a size equal to the number of NULL values.
+#
+# 				For nulls_unequal, NULL values are considered unequal, and each NULL forms a distinct value group of size 1.
+#
+# 				For nulls_ignored, NULL values are ignored.
+#
+# 				The method used to generate table statistics influences how the optimizer chooses indexes for query execution,
+# 				as described in SECTION 8.3.8, "InnoDB and MyISAM INDEX STATISTICS COLLECTION"
+#
+# 			) innodb_stats_on_metadata
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-stats-on-metadata[={OFF|ON}]
+# 				Sys var 						innodb_stats_on_metadata
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Boolean
+# 				Default 						OFF
+#
+# 				This option only applies when optimizer statistics are configured to be non-persistent. Optimizer statistics are not persisted
+# 				to disk when innodb_stats_persistent is disabled or when individual tables are created or altered with STATS_PERSISTENT=0
+#
+# 				For more information, see SECTION 15.8.10.2, "CONFIGURING NON-PERSISTENT OPTIMIZER STATISTICS PARAMETERS"
+#
+# 				When innodb_stats_on_metadata is enabled, InnoDB updates non-persistent statistics when metadata statements such as
+# 				SHOW_TABLE_STATUS or when accessing the INFORMATION_SCHEMA.TABLES or INFORMATION_SCHEMA.STATISTICS tables.
+#
+# 				(These updates are similar to what happens for ANALYZE_TABLE). When disabled, InnoDB does not update statistics during
+# 				these operations. Leaving the setting disabled can improve access speed for schemas that have a large number of tables
+# 				or indexes.
+#
+# 				It can also improve the stability of execution plans for queries that involve InnoDB tables.
+#
+# 				To change the setting, issue the statement SET GLOBAL innodb_stats_on_metadata=mode, where mode is either ON
+# 				or OFF (or 1 or 0). Changing the setting requires privileges sufficient to set global system variables.
+#
+# 				(See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES") and immediately affects the operation of all connections.
+#
+# 			) innodb_stats_persistent
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-stats-persistent[={OFF|ON}]
+# 				Sys var 						innodb_stats_persistent
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Boolean
+# 				Default 						ON
+#
+# 				Specifies whether InnoDB index statistics are persisted to disk. Otherwise, statistics may be recalculated
+# 				frequently which can lead to variations in query execution plans.
+#
+# 				This setting is stored with each table when the table is created. You can set innodb_stats_persistent at
+# 				the global level before creating a table, or use the STATS_PERSISTENT clause of the CREATE_TABLE and ALTER_TABLE
+# 				statements to override the system-wide setting and configure persistent statistics for individual tables.
+#
+# 				For more information, see SECTION 15.8.10.1, "CONFIGURING PERSISTENT OPTIMIZER STATISTICS PARAMETERS"
+#
+# 			) innodb_stats_persistent_sample_pages
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-stats-persistent-sample-pages=#
+# 				Sys var 						innodb_stats_persistent_sample_pages
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						20
+#
+# 				The number of index pages to sample when estimating cardinality and other statistics for an indexed column,
+# 				such as those calculated by ANALYZE_TABLE.
+#
+# 				Increasing the value improves the accuracy of index statistics, which can improve the query execution plan,
+# 				at the expense of increased I/O during the execution of ANALYZE_TABLE for an InnoDB table.
+#
+# 				For more information, see SECTION 15.8.10.1, "CONFIGURING PERSISTENT OPTIMIZER STATISTICS PARAMETERS"
+#
+# 				NOTE:
+#
+# 					Setting a high value for innodb_stats_persistent_sample_pages could result in lengthy ANALYZE_TABLE
+# 					execution time.
+#
+# 					To estimate the number of database pages accessed by ANALYZE_TABLE, see SECTION 15.8.10.3, "ESTIMATING ANALYZE TABLE COMPLEXITY FOR INNODB TABLES"
+#
+# 				innodb_stats_persistent_sample_pages only applies when innodb_stats_persistent is enabled for a table;
+# 				when innodb_stats_persistent is disabled, innodb_stats_transient_sample_pages applies instead.
+#
+# 			) innodb_stats_transient_sample_pages
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-stats-transient-sample-pages=#
+# 				Sys var 						innodb_stats_transient_sample_pages
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						8
+#
+# 				The number of index pages to sample when estimating cardinality and other statistics for an indexed column,
+# 				such as those calculated by ANALYZE_TABLE.
+#
+# 				The default value is 8.
+#
+# 				Increasing the value improves the accuracy of index statistics, which can improve the query execution plan,
+# 				at the expense of increased I/O when opening an InnoDB table or recalculating statistics.
+#
+# 				For more information, see SECTION 15.8.10.2, "CONFIGURING NON-PERSISTENT OPTIMIZER STATISTICS PARAMETERS"
+#
+# 				NOTE:
+#
+# 					Setting a high value for innodb_stats_transient_sample_pages could result in lengthy ANALYZE_TABLE
+# 					execution time. To estimate the number of database pages accessed by ANALYZE_TABLE.
+#
+# 					See SECTION 15.8.10.3, "ESTIMATING ANALYZE TABLE COMPLEXITY FOR INNODB TABLES"
+#
+# 				innodb_stats_transient_sample_pages only applies when innodb_stats_persistent is disabled for a table;
+# 				when innodb_stats_persistent is enabled, innodb_stats_persistent_sample_pages applies instead.
+#
+# 				Takes the place of innodb_stats_sample_pages. For more information, see SECTION 15.8.10.2,
+# 				"CONFIGURING NON-PERSISTENT OPTIMIZER STATISTICS PARAMETERS"
+#
+# 			) innodb_status_output
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-status-output[={OFF|ON}]
+# 				Sys var 					innodb_status_output
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					OFF
+#
+# 				Enables or disables periodic output for the standard InnoDB Monitor. ALso used in combination
+# 				with innodb_status_output_locks to enable or disable periodic output for the InnoDB lock Monitor.
+#
+# 				For more information, see SECTION 15.16.2, "ENABLING INNODB MONITORS"
+#
+# 			) innodb_status_output_locks
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-status-output-locks[={OFF|ON}]
+# 				Sys var 					innodb_status_output_locks
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					OFF
+#
+# 				Enables or disables the InnoDB Lock Monitor. When enabled, the InnoDB Lock Monitor prints additional
+# 				information about locks in SHOW ENGINE INNODB STATUS output and periodic output printed to the MySQL
+# 				error log.
+#
+# 				Periodic output for the InnoDB Lock Monitor is printed as part of the standard InnoDB Monitor output.
+#
+# 				The standard InnoDB Monitor must therefore be enabled for the InnoDB Lock Monitor to print data to the
+# 				MySQL error log periodically. For more information, see SECTION 15.16.2, "ENABLING INNODB MONITORS"
+#
+# 			) innodb_strict_mode
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-strict-mode[={OFF|ON}]
+# 				Sys var 					innodb_strict_mode
+# 				Scope 					Global, Session
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					ON
+#
+# 				When innodb_strict_mode is enabled, InnoDB returns errors rather than warnings for certain conditions.
+#
+# 				Stirct mode helps guard against ignored typos and syntax errors in SQL, or other unintended consequences
+# 				of various combinations of operational modes and SQL statements.
+#
+# 				When innodb_strict_mode is enabled, InnoDB raises error conditions in certain cases, rather than issuing
+# 				a warning and processing the specified statement (perhaps with unintended behavior)
+#
+# 				This is analogous to sql_mode in MySQL, which controls what SQL syntax MySQL accepts, and determines
+# 				whether it silently ignores errors, or validates input syntax and data values.
+#
+# 				The innodb_strict_mode setting affects the handling of syntax errors for CREATE_TABLE, ALTER_TABLE,
+# 				CREATE_INDEX and OPTIMIZE_TABLE statements.
+#
+# 				innodb_strict_mode also enables a record size check, so that an INSERT or UPDATE never fails due to the
+# 				record being too large for the selected page size.
+#
+# 				Oracle recommends enabling innodb_strict_mode when using ROW_FORMAT and KEY_BLOCK_SIZE clauses in 
+# 				CREATE_TABLE, ALTER_TABLE and CREATE_INDEX statements.
+#
+# 				When innodb_strict_mode is disabled, InnoDB ignores conflicting clauses and creates the table or index
+# 				with only a warning in the message log.
+#
+# 				The resulting table might have different characteristics than intended, such as lack of compression
+# 				support when attempting to create a compressed table.
+#
+# 				When innodb_strict_mode is enabled, such problems generate an immediate error and the table or index
+# 				is not created.
+#
+# 				You can enable or disable innodb_strict_mode on the command line when starting mysqld, or in a MySQL
+# 				configuration file. You can also enable or disable innodb_strict_mode at runtime with the statement
+# 				SET [GLOBAL|SESSION] innodb_strict_mode=mode, where mode is either ΟΝ or OFF.
+#
+# 				Changing the GLOBAL setting requires privileges sufficient to set global system variables (see SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES")
+# 				and affects the operation of all clients that subsequently connect.
+#
+# 				Any client can change the SESSION setting for innodb_strict_mode, and the setting affects only that client.
+#
+# 				innodb_strict_mode is not applicable to general tablespaces. Tablespace management rules for general tablespaces
+# 				are strictly enforced independently of innodb_strict_mode.
+#
+# 				For more information, see SECTION 13.1.21, "CREATE TABLESPACE SYNTAX"
+#
+# 			) innodb_sync_array_size
+#
+# 				Property 				Value
+# 				
+# 				Cmd line 				--innodb-sync-array-size=#
+# 				Sys var 					innodb_sync_array_size
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					1
+# 				Min 						1
+# 				Max 						1024
+#
+# 				Defines the size of the mutex/lock wait array. Increasing the value splits the internal data structure used to 
+# 				coordinate threads, for higher concurrency in workloads with large numbers of waiting threads.
+#
+# 				This setting must be configured when the MySQL instance is starting up, and cannot be changed afterward.
+#
+# 				Increasing the value is recommended for workloads that frequently produce a large number of waiting
+# 				threads, typically greater than 768.
+#
+# 			) innodb_sync_spin_loops
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-sync-spin-loop=#
+# 				Sys var 					innodb_sync_spin_loops
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					30
+# 				Min 						0
+# 				Max 						4294976295
+#
+# 				The number of times a thread waits for an InnoDB mutex to be freed before the thread is suspended.
+#
+# 			) innodb_sync_debug
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-sync-debug[={OFF|ON}]
+# 				Sys var 					innodb_sync_debug
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					OFF
+#
+# 				Enables sync debug checking for the InnoDB storage engine. This option is only available if debugging
+# 				support is compiled in using the WITH_DEBUG CMake option.
+#
+# 			) innodb_table_locks
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-table-locks[={OFF|ON}]
+# 				Sys var 					innodb_table_locks
+# 				Scope 					Global, Session
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					ON
+#
+# 				If autocommit = 0, InnoDB honors LOCK_TABLES; MySQL does not return from LOCK TABLES /etc/ WRITE until all other
+# 				threads have released all their locks to the table.
+#
+# 				The default value of innodb_table_locks is 1, which means that LOCK_TABLES causes InnoDB to lock a table internally
+# 				if autocommit = 0
+#
+# 				In MySQL 8.0, innodb_table_locks = 0 has no effect for tables locked explicitly with LOCK_TABLES_/ETC/_WRITE
+#
+# 				It does have an effect for tables locked for read or write by LOCK_TABLES_/ETC/_WRITE implicitly (for example,
+# 				through triggers) or by LOCK_TABLES_/ETC/_READ
+#
+# 				For related information, see SECTION 15.7, "InnoDB LOCKING AND TRANSACTION MODEL"
+#
+# 			) innodb_temp_data_file_path
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-temp-data-file-path=file_name
+# 				Sys var 					innodb_temp_data_file_path
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						String
+# 				Default 					ibtmp1:12M:autoextend
+#
+# 				Defines the relative path, name, size and attributes of global temporary tablespace data files.
+#
+# 				The global temporary tablespace stores rollback segments for changes made to user-created
+# 				temporary tables.
+#
+# 				If no value is specified for innodb_temp_data_file_path, the default behavior is to create a single 
+# 				auto-extending data file named ibtmp1 in the innodb_data_home_dir directory.
+#
+# 				The initial file size is slightly larger than 12MB.
+#
+# 				The syntax for a global temporary tablespace data file specification includes the file name,
+# 				file size, and autoextend and max attributes:
+#
+# 					file_name:file_size[:autoextend[:max:max_file_size]]
+#
+# 				The global temporary tablespace data file cannot have the same name as another InnoDB data file.
+#
+# 				Any inability or error creating the global temporary tablespace data file is treated as fatal
+# 				and server startup is refused.
+#
+# 				File sizes are specified in KB, MB or GB by appending K, M or G to the size value.
+#
+# 				The sum of file sizes must be slightly larger than 12MB.
+#
+# 				The size limit of individual files is determined by the operating system. File size can be more
+# 				than 4GB on operating systems that support large files.
+#
+# 				Use of raw disk partitions for global temporary tablespace data files is not supported.
+#
+# 				The autoextend and max attributes can be used only for the data file specified last in the
+# 				innodb_temp_data_file_path setting.
+#
+# 				For example:
+#
+# 					[mysqld]
+# 					innodb_temp_data_file_path=ibtmp1:50M;ibtmp2:12M:autoextend:max:500MB
+#
+# 				The autoextend option causes the data file to automatically increase in size when it runs out of
+# 				free space.
+#
+# 				The autoextend increment is 64MB by default. To modify the increment, change the innodb_autoextend_increment
+# 				variable setting.
+#
+# 				The directory path for global temporary tablespace data files is formed by concatenating the paths defined by
+# 				innodb_data_home_dir and innodb_temp_data_file_path
+#
+# 				Before running InnoDB in read-only mode, set innodb_temp_data_file_path to a location outside of the data directory.
+#
+# 				The path must be relative to the data directory. For example:
+#
+# 					--innodb-temp-data-file-path=etc/etc/etc/tmp/ibtmp1:12M:autoextend
+#
+# 				For more information, see GLOBAL TEMPORARY TABLESPACE.
+#
+# 			) innodb_temp_tablespaces_dir
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-temp-tablespaces-dir=dir_name
+# 				Introduced 					8.0.13
+# 				Sys var 						innodb_temp_tablespaces_dir
+# 				Scope 						Global
+# 				Dynamic 						No
+# 				SET_VAR Hint 				No
+# 				Type 							Directory Name
+# 				Default 						#innodb_temp
+#
+# 				Defines the location where InnoDB creates a pool of session temporary tablespaces at startup. 
+# 				The default location is the #innodb_temp directory in the data directory.
+#
+# 				A fully qualified path or path relative to the data directory is permitted.
+#
+# 				As of MySQL 8.0.16, session temporary tablespaces always store user-created temporary tables and internal
+# 				temporary tables created by the optimizer using InnoDB.
+#
+# 				(Previously, the on-disk storage engine for internal temporary tables was determined by the internal_tmp_disk_storage_engine
+# 				system variable, which is no longer supported.
+#
+# 				See STORAGE ENGINE FOR ON-DISK INTERNAL TEMPORARY TABLES)
+#
+# 				For more information, see SESSION TEMPORARY TABLESPACES
+#
+# 			) innodb_thread_concurrency
+#
+# 				Property 					Value
+#
+# 				Cmd line 					--innodb-thread-concurrency=#
+# 				Sys var 						innodb_thread_concurrency
+# 				Scope 						Global
+# 				Dynamic 						Yes
+# 				SET_VAR Hint 				No
+# 				Type 							Integer
+# 				Default 						0
+# 				Min 							0
+# 				Max 							1000
+#
+# 				InnoDB tries to keep the number of operating system threads concurrently inside InnoDB less than or equal
+# 				to the limit given by this variable (InnoDB uses operating system threads to process user transactions)
+#
+# 				Once the number of threads reaches this limit, additional threads are placed into a wait state within
+# 				a "First in, First Out" (FIFO) queue for execution.
+#
+# 				Threads waiting for locks are not counted in the number of concurrently executing threads.
+#
+# 				The range of this variable is 0 to 1000. A value of 0 (the default) is interpreted as infinite concurrency
+# 				(no concurrency checking). Disabling thread concurrency checking enables InnoDB to create as many threads
+# 				as it needs.
+#
+# 				A value of 0 also disables the queries inside InnoDB and queries in queue counters in the ROW OPERATIONS
+# 				section of SHOW ENGINE INNODB STATUS output.
+#
+# 				Consider setting this variable if your MySQL instance shares CPU resources with other applications, or if your
+# 				workload or number of concurrent users is growing.
+#
+# 				The correct setting depends on workload, computing environment, and the version of MySQL that you are running.
+#
+# 				You will need to test a range of values to determine the setting that provides the best performance. innodb_thread_concurrency
+# 				is a dynamic variable, which allows you to experiment with different settings on a live test system.
+#
+# 				If a particular setting performs poorly, you can quickly set innodb_thread_concurrency back to 0.
+#
+# 				Use the following guidelines to help find and maintain an appropriate setting:
+#
+# 					) If the number of concurrent user threads for a workload is less than 64, set innodb_thread_concurrency=0
+#
+# 					) If your workload is consistently heavy or occasionally spikes, start by setting innodb_thread_concurrency=128
+# 						and then lowering the value to 96, 80, 64 and so on, until you find the number of threads that provides the
+# 						best performance.
+#
+# 						For example, suppose your system typically has 40 to 50 users, but periodically the number increases to
+# 						60, 70 or even 200.
+#
+# 						You find that performance is stable at 80 concurrent users but starts to show a regression above this number.
+# 						In this case, you would set innodb_thread_concurrency=80 to avoid impacting performance.
+#
+# 					) If you do not want InnoDB to use more than a certain number of virtual CPUs for user threads (20 virtual CPUs,
+# 						for example), set innodb_thread_concurrency to this number (or possibly lower, depending on performance results)
+#
+# 						If your goal is to isolate MySQL from other applications, you may consider binding the mysqld process exclusively
+# 						to the virtual CPUs.
+#
+# 						Be aware, however, that exclusive binding could result in non-optimal hardware usage if the mysqld process is not
+# 						consistently busy.
+#
+# 						In this case, you might bind the mysqld process to the virtual CPUs but also allow other applications to use some
+# 						or all of the virtual CPUs.
+#
+# 						NOTE:
+#
+# 							From an operating system perspective, using a resource management solution to manage how CPU time is shared
+# 							among applications may be preferable to binding the mysqld process.
+#
+# 							For example, you could assign 90% of virtual CPU time to a given application while other critical processes
+# 							are not running, and scale that value back to 40% when other critical processes are running.
+#
+# 					) innodb_thread_concurrency values that are too high can cause performance regression due to increased contention on system
+# 						internals and resources.
+#
+# 					) In some cases, the optimal innodb_thread_concurrency setting can be smaller than the number of virtual CPUs.
+#
+# 					) Monitor and analyze your system regularly. Changes to workload, number of users, or computing environment may require
+# 						that you adjust the innodb_thread_concurrency setting.
+#
+# 				For related information, see SECTION 15.8.4, "CONFIGURING THREAD CONCURRENCY FOR INNODB"
+#
+# 			) innodb_thread_sleep_delay
+#
+# 				Property 			Value
+#
+# 				Cmd line 			--innodb-thread-sleep-delay=#
+# 				Sys var 				innodb_thread_sleep_delay
+# 				Scope 				Global
+# 				Dynamic 				Yes
+# 				SET_VAR Hint 		No
+# 				Type 					Integer
+# 				Default 				10000
+# 				Min 					0
+# 				Max 					1000000
+#
+# 				How long InnoDB threads sleep before joining the InnoDB queue, in microseconds. The default value is 10000.
+#
+# 				A value of 0 disables sleep. You can set innodb_adaptive_max_sleep_delay to the highest value you would
+# 				allow for innodb_thread_sleep_delay, and InnoDB automatically adjusts innodb_thread_sleep_delay up or down
+# 				depending on current thread-scheduling activity.
+#
+# 				This dynamic adjustment helps the thread scheduling mechanism to work smoothly during times when the system
+# 				is lightly loaded or when it is operating near full capacity.
+#
+# 				For more information, see SECTION 15.8.4, "CONFIGURING THREAD CONCURRENCY FOR INNODB"
+#
+# 			) innodb_tmpdir
+#
+# 				Property 			Value
+#
+# 				Cmd line 			--innodb-tmpdir=dir_name
+# 				Sys var 				innodb_tmpdir
+# 				Scope 				Global, Session
+# 				Dynamic 				Yes
+# 				SET_VAR Hint 		No
+# 				Type 					Dir name
+# 				Default 				NULL
+#
+# 				Used to define an alternate directory for temporary sort files created during online ALTER_TABLE operations that
+# 				rebuild the table.
+#
+# 				Online ALTER_TABLE operations that rebuild the table also create an intermediate table file in the same directory
+# 				as the original table. The innodb_tmpdir option is not applicable to intermediate table files.
+#
+# 				A valid value is any directory path other than the MySQL data directory path. If the value is NULL (the default),
+# 				temporary files are created MySQL temporary directory ($TMPDIR on Unix, %TEMP% on Windows, or the directory specified
+# 				by the --tmpdir configuration option).
+#
+# 				If a directory is specified, existence of the directory and permissions are only checked when innodb_tmpdir is configured
+# 				using a SET statement. If a symlink is provided in a directory string, the symlink is resolved and stored as an absolute path.
+#
+# 				The path should not exceed 512 bytes. An online ALTER_TABLE operation reports an error if innodb_tmpdir is set to an invalid
+# 				directory.
+#
+# 				innodb_tmpdir overrides the MySQL tmpdir setting but only for online ALTER_TABLE operations.
+#
+# 				The FILE privilege is required to configure innodb_tmpdir.
+#
+# 				The innodb_tmpdir option was introduced to help avoid overflowing a temporary file directory located on a tmpfs file system.
+#
+# 				Such overflows could occur as a result of large temporary sort files created during online ALTER_TABLE operations
+# 				that rebuild the table.
+#
+# 				In replication environments, only consider replicating the innodb_tmpdir setting if all servers have the same operating
+# 				system environment. Otherwise, replicating the innodb_tmpdir setting could result in a replication failure when running
+# 				online ALTER_TABLE operations that rebuild the table.
+#
+# 				If server operating environments differ, it is recommended that you configure innodb_tmpdir on each server individually.
+#
+# 				For more information, see SECTION 15.12.3, "ONLINE DDL SPACE REQUIREMENTS". For information about online ALTER_TABLE 
+# 				operations, see SECTION 15.12, "InnoDB AND ONLINE DDL"
+#
+# 			) innodb_trx_purge_view_update_only_debug
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-trx-purge-view-update-only-debug[={OFF|ON}]
+# 				Sys var 					innodb_trx_purge_view_update_only_debug
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					OFF
+#
+# 				Pauses purging of delete-marked records while allowing the purge view to be updated. This option artifically
+# 				creates a situation in which the purge view is updated but purges have not yet been performed.
+#
+# 				This option is only available if debugging support is compiled in using the WITH_DEBUG CMake option.
+#
+# 			) innodb_trx_rseg_n_slots_debug
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-trx-rseg-n-slots-debug=#
+# 				Sys var 					innodb_trx_rseg_n_slots_debug
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					0
+# 				Max 						1024
+#
+# 				Sets a debug flag that limits TRX_RSEG_N_SLOTS to a given value for the trx_rsegf_undo_find_free function
+# 				that looks for free slots for undo log segments.
+#
+# 				This option is only available if debugging support is compiled in using the WITH_DEBUG CMake option.
+#
+# 			) innodb_undo_directory
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-undo-directory=dir_name
+# 				Sys var 					innodb_undo_directory
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Dir name
+#
+# 				The path where InnoDB creates undo tablespaces. Typically used to place undo tablespaces on a different
+# 				storage device.
+#
+# 				There is no default value (it is NULL). If the innodb_undo_directory variable is undefined, undo tablespaces
+# 				are created in the data directory.
+#
+# 				The default undo tablespaces (innodb_undo_001 and innodb_undo_002) created when the MySQL instance is initialized
+# 				always reside in the directory defined by the innodb_undo_directory variable.
+#
+# 				Undo tablespaces created using CREATE_UNDO_TABLESPACE syntax are created in the directory defined by the innodb_undo_directory
+# 				variable if a different path is not specified.
+#
+# 				For more information, see SECTION 15.6.3.4, "UNDO TABLESPACES"
+#
+# 			) innodb_undo_log_encrypt
+#
+# 				Property 				Value
+#
+# 				cmd line 				--innodb-undo-log-encrypt[={OFF|ON}]
+# 				Introduced 				8.0.1
+# 				Sys var 					innodb_undo_log_encrypt
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR HInt 			No
+# 				Type 						Boolean
+# 				Default 					OFF
+#
+# 				Controls encryption of undo log data for tables encrypted using the InnoDB data-at-rest encryption feature.
+#
+# 				Only applies to undo logs that reside in separate undo tablespaces. See SECTION 15.6.3.4, "UNDO TABLESPACES"
+# 				Encryption is not supported for undo log data that resides in the system tablespace.
+#
+# 				For more information, see UNDO LOG ENCRYPTION.
+#
+# 			) innodb_undo_log_truncate
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-undo-log-truncate[={OFF|ON}]
+# 				Sys var 					innodb_undo_log_truncate
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default (>= 8.0.2) 	ON
+# 				Default (<= 8.0.1) 	OFF
+#
+# 				When enabled, undo tablespaces that exceed the threshold value defined by innodb_max_undo_log_size are marked
+# 				for truncation. Only undo tablespaces can be truncated.
+#
+# 				Truncating undo logs that reside in the system tablespace is not supported. For truncation to occur, there must
+# 				be at least two undo tablespaces.
+#
+# 				The innodb_purge_rseg_truncate_frequency variable can be used to expedite truncation of undo tablespaces.
+#
+# 				For more information, see TRUNCATING UNDO TABLESPACES
+#
+# 			) innodb_undo_logs
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-undo-logs=#
+# 				Deprecated 				Yes (removed in 8.0.2)
+# 				Sys var 					innodb_undo_logs
+# 				Scope 					Global
+# 				Dynamic 					Yes
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					128
+# 				Min 						1
+# 				Max 						128
+#
+# 				NOTE:
+#
+# 					innodb_undo_logs was removed in MySQL 8.0.2
+#
+# 				The innodb_undo_logs option is an alias for innodb_rollback_segments. For more information,
+# 				see the description of innodb_rollback_segments.
+#
+# 			) innodb_undo_tablespaces
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-undo-tablespaces=#
+# 				Deprecated 				8.0.4
+# 				Sys var 					innodb_undo_tablespaces
+# 				Scope 					Global
+# 				Dynamic (>= 8.0.2) 	Yes
+# 				Dynamic (<= 8.0.1) 	No
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default (>= 8.0.2) 	2
+# 				Default (<= 8.0.1) 	0
+# 				Min (>= 8.0.3) 		2
+# 				Min (<= 8.0.2) 		0
+# 				Max (>= 8.0.2) 		127
+# 				Max (<= 8.0.1) 		95
+#
+# 				Defines the number of undo tablespaces used by InnoDB. The default and minimum value is 2.
+#
+# 				NOTE:
+#
+# 					The innodb_undo_tablespaces variable is deprecated and is no longer configurable as of MySQL
+# 					8.0.14. It will be removed in a future release.
+#
+# 				For more infromation, see SECTION 15.6.3.4, "UNDO TABLESPACES"
+#
+# 			) innodb_use_native_aio
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-use-native-aio[={OFF|ON}]
+# 				Sys var 					innodb_use_native_aio
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Boolean
+# 				Default 					ON
+#
+# 				Specifies whether to use the Linux asynch I/O subsystem. This variable applies to Linux systems only, and cannot be changed
+# 				while the server is running.
+#
+# 				Normally, you do not need to configure this option, because it is enabled by default.
+#
+# 				The asynch I/O capability that INnoDB has on Windows systems is available on Linux systems. (Other Unix-like systems
+# 				continue to use synch I/O calls)
+#
+# 				This feature improves the scalability of heavily I/O-bound systems, which typically show many pending reads/writes in
+# 				SHOW ENGINE INNODB STATUS\G output.
+#
+# 				Running with a large number of InnoDB I/O threads, and especially running multiple such instances on the same server
+# 				machine, can exceed capacity limits on Linux systems.
+#
+# 				In this case, you may receive the following error:
+#
+# 					EAGAIN: The specified maxevents exceeds the user's limit of available events
+#
+# 				You can typically address this error by writing a higher limit to /proc/sys/fs/aio-max-nr
+#
+# 				However, if a problem with the asynch I/O subsystem in the OS prevents InnoDB from starting, you can start
+# 				the server with innodb_use_native_AIO=0. This option may also be disabled automatically during startup if
+# 				InnoDB detects a potential problem such as a combination of tmpdir location, tmpfs file system, and Linux
+# 				kernel that does not support AIO on tmpfs.
+#
+# 				For more information, see SECTION 15.8.6, "USING ASYNCH I/O ON LINUX"
+#
+# 			) innodb_version
+#
+# 				The InnoDB version number. In MySQL 8.0, separate version numbering for InnoDB does not apply and this value
+# 				is the same the version number of the server.
+#
+# 			) innodb_write_io_threads
+#
+# 				Property 				Value
+#
+# 				Cmd line 				--innodb-write-io-threads=#
+# 				Sys var 					innodb_write_io_threads
+# 				Scope 					Global
+# 				Dynamic 					No
+# 				SET_VAR Hint 			No
+# 				Type 						Integer
+# 				Default 					4
+# 				Min 						1
+# 				Max 						64
+#
+# 				The number of I/O threads for write operations in InnoDB. The default value is 4. Its counterpart for read threads
+# 				is innodb_read_io_threads. For more information, see SECTION 15.8.5, "CONFIGURING THE NUMBER OF BACKGROUND INNODB I/O THREADS"
+#
+# 				For general I/O tuning advice, see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 				NOTE:
+#
+# 					ON Linux systems, running multiple MySQL servers (typically more than 12) with default settings for innodb_read_io_threads,
+# 					innodb_write_io_threads, and the Linux aio-max-nr setting can exceed system limits. Ideally, increase the aio-max-nr setting;
+# 					as a workaround, you might reduce the settings for one or both of the MySQL variables.
+#
+# 				ALso take into consideration the value of sync_binlog, which controls synch of teh binary log to disk.
+#
+# 				For general i/O tuning advice, see SECTION 8.5.8, "OPTIMIZING INNODB DISK I/O"
+#
+# 15.14 INNODB INFORMATION_SCHEMA TABLES
+#
+# 		15.14.1 InnoDB INFORMATION_SCHEMA TABLES ABOUT COMPRESSION
+# 		15.14.2 InnoDB INFORMATION_SCHEMA TRANSACTION AND LOCKING INFORMATION
+# 		15.14.3 InnoDB INFORMATION_SCHEMA SCHEMA OBJECT TABLES
+# 		15.14.4 InnoDB INFORMATION_SCHEMA FULLTEXT INDEX TABLES
+# 		15.14.5 InnoDB INFORMATION_SCHEMA BUFFER POOL TABLES
+# 		15.14.6 InnoDB INFORMATION_SCHEMA METRICS TABLE
+# 		15.14.7 InnoDB INFORMATION_SCHEMA TEMPORARY TABLE INFO TABLE
+# 		15.14.8 RETRIEVING InnoDB TABLESPACE METADATA FROM INFORMATION_SCHEMA.FILES
+#
+# 		https://dev.mysql.com/doc/refman/8.0/en/innodb-information-schema.html
+#
+# 				
 # 	
