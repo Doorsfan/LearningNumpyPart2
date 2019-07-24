@@ -53839,8 +53839,1065 @@
 # 		15.14.6 InnoDB INFORMATION_SCHEMA METRICS TABLE
 # 		15.14.7 InnoDB INFORMATION_SCHEMA TEMPORARY TABLE INFO TABLE
 # 		15.14.8 RETRIEVING InnoDB TABLESPACE METADATA FROM INFORMATION_SCHEMA.FILES
+#		
 #
-# 		https://dev.mysql.com/doc/refman/8.0/en/innodb-information-schema.html
+# 		This section provides information and usage examples for InnoDB INFORMATION_SCHEMA tables.
+#
+# 		InnoDB INFORMATION_SCHEMA tables provide metadata, status information, and statistics about various aspects
+# 		of the InnoDB storage engine.
+#
+# 		You can view a list of InnoDB INFORMATION_SCHEMA tables by issuing a SHOW_TABLES statement on the INFORMATION_SCHEMA database:
+#
+# 			mysql> SHOW TABLES FROM INFORMATION_SCHEMA LIKE 'INNODB%';
+#
+# 		For table definitions, see SECTION 25.39, "INFORMATION_SCHEMA INNODB TABLES". For general information regarding the MySQL
+# 		INFORMATION_SCHEMA database, see CHAPTER 25, INFORMATION_SCHEMA TABLES
+#
+# 15.14.1 InnoDB INFORMATION_SCHEMA TABLES ABOUT COMPRESSION
+#
+# 		15.14.1.1 InnoDB_CMP AND INNODB_CMP_RESET
+# 		15.14.1.2 InnoDB_CMPMEM AND INNODB_CMPMEM_RESET
+# 		15.14.1.3 USING THE COMPRESSION INFORMATION SCHEMA TABLES
+#
+# 		There are two pairs of InnoDB INFORMATION_SCHEMA tables about compression that can provide insight into how well compression
+# 		is working overall:
+#
+# 			) INNODB_CMP and INNODB_CMP_RESET provide information about the number of compression operations and the amount of time spent
+# 				performing compression.
+#
+# 			) INNODB_CMPMEM and INNODB_CMP_RESET provide information about the way memory is allocated for compression.
+#
+# 15.14.1.1 INNODB_CMP AND INNODB_CMP_RESET
+#
+# 		The INNODB_CMP and INNODB_CMP_RESET tables provide status information about operations related to compressed tables,
+# 		which are described in SECTION 15.9, "InnoDB TABLE AND PAGE COMPRESSION".
+#
+# 		The PAGE_SIZE column reports the compressed page size.
+#
+# 		These two tables have identical contents, but reading from INNODB_CMP_RESET resets the statistics on compression
+# 		and uncompression operations. For example, if you archive the output of INNODB_CMP_RESET every 60 minutes, you see
+# 		the statistics for each hourly period..
+#
+# 		If you monitor the output of INNODB_CMP (making sure never to read INNODB_CMP_RESET), you see the cumulative statistics
+# 		since InnoDB was started.
+#
+# 		For the table definition, see SECTION 25.39.5, "THE INFORMATION_SCHEMA INNODB_CMP AND INNODB_CMP_RESET TABLES"
+#
+# 15.14.1.2 INNODB_CMPMEM AND INNODB_CMPMEM_RESET
+#
+# 		The INNODB_CMPMEM and INNODB_CMPMEM_RESET tables provides status information about compressed pages that reside
+# 		in the buffer pool.
+#
+# 		Please consult SECTION 15.9, "INNODB TABLE AND PAGE COMPRESSION" for further information on compressed tables
+# 		and the use of the buffer pool.
+#
+# 		The INNODB_CMP and INNODB_CMP_RESET tables should provide more useful statistics on compression.
+#
+# 		INTERNAL DETAILS
+#
+# 			InnoDB uses a buddy allocator system to manage memory allocated to pages of various sizes, from 1KB to 16KB.
+#
+# 			Each row of the two tables described here corresponds to a single page size.
+#
+# 			The INNODB_CMPMEM and INNODB_CMPMEM_RESET tables have identical contents, but reading from INNODB_CMPMEM_RESET
+# 			resets the statistics on relocation operations.
+#
+# 			For example, if every 60 minutes you archived the output of INNODB_CMPMEM_RESET, it would show the hourly stats.
+#
+# 			If you never read INNODB_CMPMEM_RESET and monitored the output of INNODB_CMPMEM instead, it would show the cumulative
+# 			statistics since InnoDB was started.
+#
+# 			For the table definition, see SECTION 25.39.6, "THE INFORMATION_SCHEMA INNODB_CMPMEM AND INNODB_CMPMEM_RESET TABLES"
+#
+# 15.14.1.3 USING THE COMPRESSION INFORMATION SCHEMA TABLES
+#
+# 		Example 15.1 Using the Compression Information Schema Tables
+#
+# 		The following is sample output from a database that contains compressed tables (see SECTION 15.9, "InnoDB TABLE AND PAGE COMPRESSION",
+# 		INNODB_CMP, INNODB_CMP_PER_INDEX, and INNODB_CMPMEM)
+#
+# 		The following table shows the contents of INFORMATION_SCHEMA.INNODB_CMP under a light workload. The only compressed page size that the
+# 		buffer pool contains is 8K.
+#
+# 		Compressing or uncompressing pages has consumed less than a second since the time the statistics were reset, because the columns
+# 		COMPRESS_TIME and UNCOMPRESS_TIME are zero.
+#
+# 			PAGE SIZE 			COMPRESS OPS 		COMPRESS OPS OK 		COMPRESS TIME 			UNCOMPRESS OPS 		UNCOMPRESS TIME
+#
+# 			1024 					0 						0							0 							0 							0
+# 			2048 					0 						0 							0 							0 							0
+# 			4096 					0 						0 							0 							0 							0
+# 			8192 					1048 					921 						0 							61 						0
+# 			16384 				0 						0 							0 							0 							0
+#
+# 		According to INNODB_CMPMEM, there are 6169 compressed 8KB pages in the buffer pool. The only other allocated block size is 64 bytes.
+#
+# 		The smallest PAGE_SIZE in INNODB_CMPMEM is used for block descriptors of those compressed pages for which no uncompressed page
+# 		exists in the buffer pool. We see that there are 5910 such pages.
+#
+# 		Indirectly, we see that 259 (6169-5910) compressed pages also exist in the buffer pool in uncompressed form.
+#
+# 		The following table shows the contents of INFORMATION_SCHEMA.INNODB_CMPMEM under a light workload. Some memory is unusable due to
+# 		fragmentation of the memory allocator for compressed pages: SUM(PAGE_SIZE*PAGES_FREE)=6784.
+#
+# 		This is because small memory allocation requests are fullfilled by splitting bigger blocks, starting from the 16K blocks that are
+# 		allocated from the main buffer pool, using the buddy allocation system.
+#
+# 		The fragmentation is this low because some allocated blocks have been relocated (copied) to form bigger adjacent free blocks.
+#
+# 		This copying of SUM(PAGE_SIZE*RELOCATION_OPS) bytes has consumed less than a second (SUM(RELOCATION_TIME)=0)
+#
+# 			PAGE SIZE 		PAGES USED 			PAGES FREE 			RELOCATION OPS 			RELOCATION TIME
+#
+# 			64 				5910 					0 						2436 							0
+# 			128 				0 						1 						0 								0
+# 			256 				0 						0 						0 								0
+# 			512 				0 						1 						0 								0
+# 			1024 				0 						0	 					0 								0
+# 			2048 				0 						1 						0 								0
+# 			4096 				0 						1 						0 								0
+# 			8192 				6169 					0 						5 								0
+# 			16384 			0 						0 						0 								0
+#
+# 15.14.2 INNODB INFORMATION_SCHEMA TRANSACTION AND LOCKING INFORMATION
+#
+# 	15.14.2.1 USING INNODB TRANSACTION AND LOCKING INFORMATION
+# 	15.14.2.2 INNODB LOCK AND LOCK-WAIT INFORMATION
+# 	15.14.2.3 PERSISTENCE AND CONSISTENCY OF INNODB TRANSACTION AND LOCKING INFORMATION
+#
+# 	NOTE:
+#
+# 		This section describes locking information as exposed by the Performance Schema data_locks
+# 		and data_lock_waits tables, which supersede the INFORMATION_SCHEMA INNODB_LOCKS and
+# 		INNODB_LOCK_WAITS tables in MySQL 8.0 
+#
+# 		For similar discussion written in terms of the older INFORMATION_SCHEMA tables,
+# 		see INNODB INFORMATION_SCHEMA TRANSACTION AND LOCKING INFORMATION in MYSQL 5.7 REFERENCE MANUAL
+#
+# One INFORMATION_SCHEMA table and two Performance Schema tables enable you to monitor InnoDB transactions
+# and diagnose potential locking problems:
+#
+# 		) INNODB_TRX: This INFORMATION_SCHEMA table provides information about every transaction currently executing
+# 			inside InnoDB, including the transaction state (for example, whether it is running or waiting for a lock),
+# 			when the transaction started, and the particular SQL statement the transaction is executing.
+#
+# 		) data_locks: This Performance Schema table contains a row for each hold lock and each lock request that is
+# 			blocked waiting for a held lock to be released:
+#
+# 				) There is one row for each held lock, whatever the state of the transaction that holds the lock
+#
+# 					(INNODB_TRX.TRX_STATE is RUNNING, LOCK WAIT, ROLLING BACK or COMMITTING)
+#
+# 				) Each transaction in InnoDB that is waiting for another transaction to release a lock (INNODB_TRX.TRX_STATE is LOCK WAIT)
+# 					is blocked by exactly one blocking lock request.
+#
+# 					That blocking lock request is for a row or table lock held by another transaction in an incompatible mode.
+#
+# 					A lock request always has a mode that is incompatible with the mode of the held lock that blocks the request
+# 					(read vs. write, shared vs. exclusive)
+#
+# 					The blocked transaction cannot proceed until the other transaction commits or rolls back, thereby releasing
+# 					the requested lock. For every blocked transaction, data_locks contains one row that describes each lock
+# 					the transaction has requested, and for which it is waiting.
+#
+# 			) data_lock_waits: This Performance Schema table indicates which transactions are waiting for a given lock, or for which
+# 				lock a given transaction is waiting.
+#
+# 				This table contains one or more rows for each blocked transaction, indicating the lock it has requested and any locks
+# 				that are blocking that request.
+#
+# 				The REQUESTING_ENGINE_LOCK_ID value refers to the lock requested by a transaction, and the BLOCKING_ENGINE_LOCK_ID
+# 				value refers to the lock (held by another transaction) that prevents the first transaction from proceeding.
+#
+# 				For any given blocked transaction, all rows in data_lock_waits have the same value for REQUESTING_ENGINE_LOCK_ID
+# 				and different values for BLOCKING_ENGINE_LOCK_ID
+#
+# For more information about the preceding tables, see SECTION 25.39.29, "THE INFORMATION_SCHEMA INNODB_TRX TABLE", SECTION 
+# 26.12.12.1, "THE DATA_LOCKS TABLE" and SECTION 26.12.12.2, "THE DATA_LOCK_WAITS TABLE"
+#
+# 15.14.2.1 USING INNODB TRANSACTION AND LOCKING INFORMATION
+#
+# NOTE:
+#
+# 		This section describes locking information as exposed by the Performance Schema data_locks and data_lock_waits tables,
+# 		which supersede the INFORMATION_SCHEMA INNODB_LOCKS and INNODB_LOCK_WAITS tables in MySQL 8.0
+#
+# 		For similar discussion written in terms of the older INFORMATION_SCHEMA tables, see USING INNODB TRANSACTION AND
+# 		LOCKING INFORMATION in MYSQL 5.7 REFERENCE MANUAL
+#
+# IDENTIFYING BLOCKING TRANSACTIONS
+#
+# It is sometimes helpful to identify which transaction blocks another. The tables that contain information about InnoDB
+# transactions and data locks enable you to determine which transaction is waiting for another, and which resource is being
+# requested.
+#
+# (For descriptions of these tables, see SECTION 15.14.2, "INNODB INFORMATION_SCHEMA TRANSACTION AND LOCKING INFORMATION")
+#
+# Suppose that three sessions are running concurrently. Each session corresponds to a MySQL thread, and executes one transaction
+# after another.
+#
+# Consider the state of the system when these sessions have issued the following statements, but none has yet committed
+# its transaction:
+#
+# 		) Session A:
+#
+# 			BEGIN;
+# 			SELECT a FROM t FOR UPDATE;
+# 			SELECT SLEEP(100);
+#
+# 		) Session B:
+#
+# 			SELECT b FROM t FOR UPDATE;
+#
+# 		) Session C:
+#
+# 			SELECT c FROM t FOR UPDATE;
+#
+# In this scenario, use the following query to see which transactions are waiting and which transactions are blocking them:
+#
+# 		SELECT
+# 			r.trx_id waiting_trx_id,
+# 			r.trx_mysql_thread_id waiting_thread,
+# 			r.trx_query waiting_query,
+# 			b.trx_id blocking_trx_id,
+# 			b.trx_mysql_thread_id blocking_thread,
+# 			b.trx_query blocking_query
+# 		FROM 		performance_schema.data_lock_waits w
+# 		INNER JOIN information_schema.innodb_trx b
+# 		ON b.trx_id = w.blocking_engine_transaction_id
+# 		INNER JOIN information_schema.innodb_trx r
+# 		ON r.trx_id = w.requesting_engine_transaction_id;
+#
+# Or, more simply, use  the sys Schema innodb_lock_waits view:
+#
+# 		SELECT
+# 			waiting_trx_id,
+# 			waiting_pid,
+# 			waiting_query,
+# 			blocking_trx_id,
+# 			blocking_pid,
+# 			blocking_query
+# 		FROM sys.innodb_lock_waits;
+#
+# If a NULL value is reported for the blocking query, see IDENTIFYING A BLOCKING QUERY AFTER THE ISSUING SESSION BECOMES IDLE.
+#
+# 		waiting trx id 		waiting thread 		Waiting query 							blocking trx id 		blocking thread 		blocking query
+#
+# 		A4 						6 							SELECT b FROM t FOR UPDATE 		A3 						5 							SELECT SLEEP(100)
+# 		A5 						7 							SELECT c FROM t FOR UPDATE 		A3 						5 							SELECT SLEEP(100)
+# 		A5 						7 							SELECT c FROM t FOR UPDATE 		A4 						6 							SELECT b FROM t FOR UPDATE
+#
+# In the preceding table, you can identify sessions by the "waiting query" or "blocking query" columns. As you can see:
+#
+# 		) Session B (trx id A4, thread 6) and Session C (trx id A5, thread 7) are both waiting for Session A (trx id A3, thread 5)
+#
+# 		) Session C is waiting for Session B as well as Session A.
+#
+# You can see the underlying data in the INFORMATION_SCHEMA INNODB_TRX table and Performance Schema data_locks and data_lock_waits
+# tables.
+#
+# The following table shows some sample contents of the INNODB_TRX table.
+#
+# 		trx id 			trx state 				trx started 					trx requested lock id 				trx wait started 			trx weight 	trx mysql thread id 		trx query
+#
+# 		A3 				RUNNING 					2008-01-15 16:44:54 			NULL 										NULL 							2 				5 								SELECT SLEEP(100)
+# 		A4 				LOCK WAIT 				2008-01-15 16:45:09 			A4:1:3:2 								2008-01-15 16:45:09 		2 				6 								SELECT b FROM t FOR UPDATE
+# 		A5 				LOCK WAIT 				2008-01-15 16:45:14 			A5:1:3:2 								2008-01-15 16:45:14 		2 				7 								SELECT c FROM t FOR UPDATE
+#
+# The following table shows some sample contents of the data_locks table.
+#
+# 		lock id 			Lock trx id 			Lock mode 						Lock type 								Lock schema 				lock table 	lock index 					lock data
+# 		
+# 		A3:1:3:2 		A3 						X 									RECORD 									test 							t 				PRIMARY 						0x0200
+# 		A4:1:3:2 		A4 						X 									RECORD 									test 							t 				PRIMARY 						0x0200
+# 		A5:1:3:2 		A5 						X 									RECORD 									test 							t 				PRIMARY 						0x0200
+#
+# The following table shows some sample contents of the data_lock_waits table.
+#
+# 		requesting trx id 			requested lock id 				blocking trx id 					blocking lock id
+#
+# 		A4 								A4:1:3:2 							A3 									A3:1:3:2
+# 		A5 								A5:1:3:2 							A3 									A3:1:3:2
+# 		A5 								A5:1:3:2 							A4 									A4:1:3:2
+#
+# IDENTIFYING A BLOCKING QUERY AFTER THE ISSUING SESSION BECOMES IDLE
+#
+# When identifying blocking transactions, a NULL value is reported for the blocking query if the session that issued the query
+# has become idle.
+#
+# In this case, use the following steps to determine the blocking query:
+#
+# 		1. Identify the processlist ID of the blocking transaction. In the sys.innodb_lock_waits table, the processlist ID of the blocking transaction is the blocking_pid value
+#
+# 		2. Using the blocking_pid, query the MySQL Performance Schema threads table to determine the THREAD_ID of the blocking transaction.
+#
+# 			For example, if the blocking_pid is 6, issue this query:
+#
+# 				SELECT THREAD_ID FROM performance_schema.threads WHERE PROCESSLIST_ID = 6;
+#
+# 		3. Using the THREAD_ID, query the Performance Schema events_statements_current table to determine the last query executed by the thread.
+#
+# 			For example, if the THREAD_ID is 28, issue this query:
+#
+# 				SELECT THREAD_ID, SQL_TEXT FROM performance_schema.events_statements_current
+# 				WHERE THREAD_ID = 28\G
+#
+# 		4. If the last query executed by the thread is not enough information to determine why a lock is held, you can query the Performance
+# 			Schema events_statements_history table to view the last 10 statements executed by the thread.
+#
+# 				SELECT THREAD_ID, SQL_TEXT FROM performance_schema.events_statements_history
+# 				WHERE THREAD_ID = 28 ORDER BY EVENT_ID;
+#
+# CORRELATING INNODB TRANSACTIONS WITH MYSQL SESSIONS
+#
+# Sometimes it is useful to correlate internal InnoDB locking information with the session-level information maintained
+# by MySQL. For example, you might like to know, for a given InnoDB transaction ID, the corresponding MySQL session ID 
+# and name of the session that may be holding a lock, and thus blocking other transactions.
+#
+# The following output from the INFORMATION_SCHEMA INNODB_TRX table and Performance Schema data_locks and data_lock_waits
+# tables is taken from a somewhat loaded system.
+#
+# As can be seen, there are several transactions running.
+#
+# The following data_locks and data_lock_waits tables show that:
+#
+# 		) Transaction 77F (executing an INSERT) is waiting for transactions 77E, 77D and 77B to commit.
+#
+# 		) Transaction 77E (executing an INSERT) is waiting for transactions 77D and 77B to commit.
+#
+# 		) Transaction 77D (executing an INSERT) is waiting for transaction 77B to commit
+#
+# 		) Transaction 77B (executing an INSERT) is waiting for transaction 77A to commit.
+#
+# 		) Transaction 77A is running, currently executing SELECT
+#
+# 		) Transaction E56 (executing an INSERT) is waiting for transaction E55 to commit
+#
+# 		) Transaction E55 (executing an INSERT) is waiting for transaction 19C to commit
+#
+# 		) Transaction 19C is running, currently executing an INSERT
+#
+# NOTE:
+#
+# 		There may be inconsistencies between queries shown in the INFORMATION_SCHEMA PROCESSLIST and INNODB_TRX tables.
+#
+# 		For an explanation, see SECTION 15.14.2.3, "PERSISTENCE AND CONSISTENCY OF INNODB TRANSACTION AND LOCKING INFORMATION"
+#
+# The following table shows the contents of the PROCESSLIST table for a system running a heavy workload.
+#
+# 		ID 		USER 			HOST 			DB 		COMMAND 		TIME 		STATE 			INFO
+#
+# 		384 		root 			localhost 	test 		Query 		10 		update 			INSERT INTO t2 VALUES /etc/
+#
+# 		257 		root 			localhost 	test 		Query 		3 			update 			INSERT INTO t2 VALUES /etc/
+#
+# 		130 		root 			localhost 	test 		Query 		0 			update 			INSERT INTO t2 VALUES /etc/
+#
+# 		61 		root 			localhost 	test 		Query 		1 			update 			INSERT INTO t2 VALUES /etc/
+#
+# 		8 			root 			localhost 	test 		Query 		1 			update 			INSERT INTO t2 VALUES /etc/
+#
+# 		4 			root 			localhost 	test 		Query 		0 			preparing 		SELECT * FROM PROCESSLIST
+#
+# 		2 			root 			localhost 	test 		Sleep 		566 		- 					NULL
+#
+# The following table shows the contents of the INNODB_TRX table for a system running a heavy workload.
+#
+# 		Trx id 		Trx State 		Trx started		 		Trx requested lock id 		Trx wait started 		Trx weight 		Trx mysql thread id 		trx Query
+#
+# 		77F 			LOCK WAIT 		2008-01-15 13:10:16 	77F 								2008-01-15 13:10:16 	1 					876 							INSERT INTO t09(D,B,C) VALUES /etc/
+#
+# 		77E 			LOCK WAIT 		2008-01-15 13:10:16 	77E 								2008-01-15 13:10:16 	1 					875 							INSERT INTO t09(D,B,C) VALUES /etc/
+#
+# 		77D 			LOCK WAIT 		2008-01-15 13:10:16 	77D 								2008-01-15 13:10:16 	1 					874 							INSERT INTO t09(D,B,C) VALUES /etc/
+#
+# 		77B 			LOCK WAIT 		2008-01-15 13:10:16 	77B:733:12:1 					2008-01-15 13:10:16 	4 					873 							INSERT INTO t09(D,B,C) VALUES /etc/
+#
+# 		77A 			RUNNING 			2008-01-15 13:10:16 	NULL 								NULL 						4 					872 							SELECT b,c FROM t09 WHERE /etc/
+#
+# 		E56 			LOCK WAIT 		2008-01-15 13:10:06 	E56:743:6:2 					2008-01-15 13:10:06 	5 					384 							INSERT INTO t2 VALUES /etc/
+#
+# 		E55 			LOCK WAIT 		2008-01-15 13:10:06 	E55:743:38:2 					2008-01-15 13:10:13 	965 				257 							INSERT INTO t2 VALUES /etc/
+#
+# 		19C 			RUNNING 			2008-01-15 13:09:10 	NULL 								NULL 						2900				130 							INSERT INTO t2 VALUES /etc/
+#
+# 		E15 			RUNNING 			2008-01-15 13:08:59 	NULL 								NULL 						5395 				61 							INSERT INTO t2 VALUES /etc/
+#
+# 		51D 			RUNNING 			2008-01-15 13:08:47 	NULL 								NULL 						9807 				8 								INSERT INTO t2 VALUES /etc/
+#
+# The following table shows the contents of the data_lock_waits table for a system running a heavy workload.
+#
+# 		requesting trx id 		requested lock id 		blocking trx id 		blocking lock id
+#
+# 		77F 							77F:806 						77E 						77E:806 (1)
+#
+# 		77F 							77F:806 						77D 						77D:806 (2)
+# 
+# 		77F 							77F:806 						77B 						77B:806 (3)
+#
+# 		77E 							77E:806 						77D 						77D:806 (4)
+#
+# 		77E 							77E:806 						77B 						77B:806 (5)
+#
+# 		77D 							77D:806 						77B 						77B:806 (6)
+#
+# 		77B 							77B:733:12:1 				77A 						77A:733:12:1
+# 
+# 		E56 							E56:743:6:2 				E55 						E55:743:6:2
+#
+# 		E55 							E55:743:38:2 				19C 						19C:743:38:2
+#
+# The following table shows the contents of the data_locks table for a system running a heavy workload.
+#
+# 		lock id 						Lock trx id 				lock mode 				lock type 			lock schema 		lock table 		lock index 				lock data
+#
+# 		77F:806 						77F 							AUTO_INC 				TABLE 				TEST 					T09 				NULL 						NULL
+#
+# 		77E:806 						77E 							AUTO_INC 				TABLE 				TEST 					T09 				NULL 						NULL
+#
+# 		77D:806 						77D 							AUTO_INC 				TABLE 				TEST 					T09 				NULL 						NULL
+#
+# 		77B:806 						77B 							AUTO_INC 				TABLE 				TEST 					T09 				NULL 						NULL
+#
+# 		77B:733:12:1 				77B 							X 							RECORD 				TEST 					T09 				PRIMARY 					SUPREMUM PSEUDO-RECORD
+#
+# 		77A:733:12:1 				77A 							X 							RECORD 				TEST 					T09 				PRIMARY 					SUPREMUM PSEUDO-RECORD
+#
+# 		E56:743:6:2 				E56 							S 							RECORD 				TEST 					T2 				PRIMARY 					0, 0
+#
+# 		E55:743:6:2 				E55 							X 							RECORD 				TEST 					T2 				PRIMARY 					0, 0
+#
+# 		E55:743:38:2 				E55 							S 							RECORD 				TEST 					T2 				PRIMARY 					1922, 1922
+#
+# 		19C:743:38:2 				19C 							X 							RECORD 				TEST 					T2 				PRIMARY 					1922, 1922
+#
+# 15.14.2.2 INNODB LOCK AND LOCK-WAIT INFORMATION
+#
+# NOTE:
+#
+# 		This section describes locking information as exposed by the Performance Schema data_locks and data_lock_waits
+# 		tables, which supersede the INFORMATION_SCHEMA INNODB_LOCKS and INNODB_LOCK_WAITS tables in MySQL 8.0
+#
+# 		For similar discussion written in terms of the older INFORMATION_SCHEMA tables, see InnoDB LOCK AND LOCK-WAIT INFORMATION
+# 		in MySQL 5.7 REFERENCE MANUAL
+#
+# When a transaction updates a row in a table, or locks it with SELECT FOR UPDATE, InnoDB establishes a list or queue of locks
+# on that row.
+#
+# Similarly, InnoDB maintains a list of locks on a table for table-level locks. If a second transaction wants to update a row or
+# lock a table already locked by a prior transaction in an incompatible mode, InnoDB adds a lock request for the row to the
+# corresponding queue.
+#
+# For a lock to be acquired by a transaction, all incompatible block lock requests previously entered into the lock queue
+# for that row or table must be removed (which occurs when the transactions holding or requesting those locks either
+# commit or roll back)
+#
+# A transaction may have any number of lock requests for different rows or tables. At any given time, a transaction may request
+# a lock that is held by another transaction, in which case it is blocked by that other transaction.
+#
+# The requesting transaction must wait for the transaction that holds the blocking lock to commit or roll back.
+#
+# If a transaction is not waiting for a lock, it is in a RUNNING state. If a transaction is waiting for a lock, it is
+# in a LOCK WAIT state. (The INFORMATION_SCHEMA INNODB_TRX table indicates transaction state values)
+#
+# The Performance Schema data_locks table holds one or more rows for each LOCK WAIT transaction, indicating any lock
+# requests that prevent its progress. This table also contains one row describing each lock in a queue of locks
+# pending for a given row or table.
+#
+# The Performance Schema data_lock_waits table shows which locks already held by a transaction are blocking
+# locks requested by other transactions.
+#
+# 15.4.2.3 PERSISTENCE AND CONSISTENCY OF INNODB TRANSACTION AND LOCKING INFORMATION
+#
+# NOTE:
+#
+# 		This section describes locking information as exposed by the Performance Schema data_locks and
+# 		data_lock_waits tables, which supersede the INFORMATION_SCHEMA INNODB_LOCKS and INNODB_LOCK_WAITS
+# 		tables in MySQL 8.0
+#
+# 		For similar discussion written in terms of the older INFORMATION_SCHEMA tables, see 
+# 		PERSISTENCE AND CONSISTENCY OF INNODB TRANSACTION AND LOCKING INFORMATION in
+# 		MYSQL 5.7 REFERENCE MANUAL
+#
+# The data exposed by the transaction and locking tables (INFORMATION_SCHEMA INNODB_TRX table,
+# Performance Schema data_locks and data_lock_waits tables) represents a glimpse into fast-changing data.
+#
+# THis is not like user tables, where the data changes only when application-initiated updates occur.
+#
+# The underlying data is internal system-managed data, and can change very quickly:
+#
+# 		) Data might not be consistent between the INNODB_TRX, data_locks and data_lock_waits tables.
+#
+# 			The data_locks and data_lock_waits tables expose live data from the InnoDB storage engine,
+# 			to provide lock information about the transactions in the INNODB_TRX table.
+#
+# 			Data retrieved from the lock tables exists when the SELECT is executed, but might be gone
+# 			or changed by the time the query results is consumed by the client.
+#
+# 			Joining data_locks with data_lock_waits can show rows in data_lock_waits that identify a
+# 			parent row in data_locks that no longer exists or does not exist yet.
+#
+# 		) Data in the transaction and locking tables might not be consistent with data in the INFORMATION_SCHEMA PROCESSLIST
+# 			table or Performance Schema threads table.
+#
+# 			For example, you should be careful when comparing data in the InnoDB transaction and locking tables with data
+# 			in the PROCESSLIST table.
+#
+# 			Even if you issue a single SELECT (joining INNODB_TRX and PROCESSLIST, for example), the content of those tables
+# 			is generally not consistent.
+#
+# 			It is possible for INNODB_TRX to reference rows that are not present in PROCESSLIST or for the currently executing
+# 			SQL query of a transaction shown in INNODB_TRX.TRX_QUERY to differ from the one in PROCESSLIST.INFO
+#
+# 15.14.3 INNODB INFORMATION_SCHEMA SCHEMA OBJECT TABLES
+#
+# You can extract metadata about schema objects managed by InnoDB using InnoDB INFORMATION_SCHEMA tables. This information
+# comes from the data dictionary.
+#
+# Traditionally, you would get this type of information using the techniques from SECTION 15.16, "InnoDB MONITORS",
+# setting up InnoDB monitors and parsing the output from the SHOW_ENGINE_INNODB_STATUS statement.
+#
+# The InnoDB INFORMATION_SCHEMA table interface allows you to query this data using SQL.
+#
+# InnoDB INFORMATION_SCHEMA schema object tables include the tables listed below.
+#
+# 		INNODB_DATAFILES
+# 		INNODB_TABLESTATS
+# 		INNODB_FOREIGN
+# 		INNODB_COLUMNS
+# 		INNODB_INDEXES
+# 		INNODB_FIELDS
+# 		INNODB_TABLESPACES
+# 		INNODB_TABLESPACES_BRIEF
+# 		INNODB_FOREIGN_COLS
+# 		INNODB_TABLES
+#
+# The table names are indicative of the type of data provided:
+#
+# 		) INNODB_TABLES provides metadata about InnoDB tables
+#
+# 		) INNODB_COLUMNS provides metadata about InnoDB table columns
+#
+# 		) INNODB_INDEXES provides metadata about InnoDB indexes.
+#
+# 		) INNODB_FIELDS provides metadata about the key columns (fields) of InnoDB indexes.
+#
+# 		) INNODB_TABLESTATS provides a view of low-level status information about InnoDB tables that is derived
+# 			from in-memory data structures.
+#
+# 		) INNODB_DATAFILES provides data file path information for InnoDB file-per-table and general tablespaces.
+#
+# 		) INNODB_TABLESPACES provides metadata about InnoDB file-per-table, general, and undo tablespaces.
+#
+# 		) INNODB_TABLESPACES_BRIEF provides a subset of metadata about InnoDB tablespaces.
+#
+# 		) INNODB_FOREIGN provides metadata about foreign keys defined on InnoDB tables.
+#
+# 		) INNODB_FOREIGN_COLS provides metadata about the columns of foreign keys that are defined on InnoDB tables.
+#
+# InnoDB INFORMATION_SCHEMA schema object tables can be joined together through fields such as TABLE_ID, INDEX_ID,
+# and SPACE, allowing you to easily retrieve all available data for an object you want to study or monitor.
+#
+# Refer to the InnoDB INFORMATION_SCHEMA documentation for information about the columns of each table.
+#
+# EXAMPLE 15.2 InnoDB INFORMATION_SCHEMA SCHEMA OBJECT TABLES
+#
+# This example uses a simple table (t1) with a single index (i1) to demonstrate the type of metadata found in
+# the InnoDB INFORMATION_SCHEMA schema object tables.
+#
+# 		1. Creates a test database and table t1:
+#
+# 			mysql> CREATE DATABASE test;
+#
+# 			mysql> USE test;
+#
+# 			mysql> CREATE TABLE t1 (
+# 					 col1 INT,
+# 					 col2 CHAR(10),
+# 					 col3 VARCHAR(10))
+# 					 ENGINE = InnoDB;
+#
+# 			mysql> CREATE INDEX i1 ON t1(col1);
+#
+# 		2. After creating the table t1, query INNODB_TABLES to locate the metadata for test/t1:
+#
+# 			mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_TABLES WHERE NAME='test/t1' \G
+# 			************************** 1. row ********************************
+# 							TABLE_ID: 71
+# 								NAME : test/t1
+# 								FLAG : 1
+# 							N_COLS  : 6
+# 								SPACE: 57
+# 						ROW_FORMAT : Compact
+# 					ZIP_PAGE_SIZE : 0
+# 					INSTANT_COLS  : 0
+#
+# 			Table t1 has a TABLE_ID of 71. The FLAG field provides bit level information about table format and storage characteristics.
+#
+# 			There are six columns, three of which are hidden columns created by InnoDB(DB_ROW_ID, DB_TRX_ID and DB_ROLL_PTR)
+#
+# 			The ID of the table's SPACE is 57 (a value of 0 would indicate that the table resides in the system tablespace)
+#
+# 			The ROW_FORMAT is Compact. ZIP_PAGE_SIZE only applies to tables with a Compressed row format. INSTANT_COLS
+# 			shows number of columns in the table prior to adding the first instant column using ALTER TABLE /etc/ ADD COLUMN
+# 			with ALGORITHM=INSTANT
+#
+# 		3. Using the TABLE_ID information from INNODB_TABLES, query the INNODB_COLUMNS table for information about the
+# 			table's columns.
+#
+# 				mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_COLUMNS where TABLE_ID = 71\G
+# 				********************************** 1. row ***************************************
+# 								TABLE_ID: 71
+# 								  NAME  : col1
+# 								    POS : 0
+# 								MTYPE   : 6
+# 								PRTYPE  : 1027
+# 									LEN  : 4
+# 							HAS_DEFAULT: 0
+# 						DEFAULT_VALUE : NULL
+# 				********************************** 2. row *****************************************
+# 								TABLE_ID: 71
+# 									NAME : col2
+# 									  POS: 1
+# 									MTYPE: 2
+# 								PRTYPE  : 524542
+# 									LEN  : 10
+# 							HAS_DEFAULT: 0
+# 						DEFAULT_VALUE : NULL
+# 				********************************** 3. row *****************************************
+# 								TABLE_ID: 71
+# 									NAME : col3
+# 								     POS: 2
+# 									MTYPE: 1
+# 								PRTYPE  : 524303
+# 								LEN 	  : 10
+# 							HAS_DEFAULT: 0
+# 						DEFAULT_VALUE : NULL
+#
+# 			In addition to the TABLE_ID and column NAME, INNODB_COLUMNS provides the ordinal position (POS) of each column
+# 			(starting from 0 and incrementing sequentially), the column MTYPE or "main type" (6 = INT, 2 = CHAR, 1 = VARCHAR),
+# 			the PRTYPE or "precise type" (a binary value with bits that represent the MySQL data type, char set code and nullability),
+# 			and the column length (LEN).
+#
+# 			The HAS_DEFAULT and DEFAULT_VALUE columns only apply to columns added instantly using ALTER TABLE /etc/ ADD COLUMN
+# 			with ALGORITHM=INSTANT
+#
+# 		4. Using the TABLE_ID information from INNODB_TABLES once again, query INNODB_INDEXES for information about the indexes
+# 				associated with table t1.
+#
+# 				mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_INDEXES WHERE TABLE_ID = 71 \G
+# 				******************************** 1. row *********************************************
+# 								INDEX_ID: 111
+# 								  NAME  : GEN_CLUST_INDEX
+# 								TABLE_ID: 71
+# 									TYPE : 1
+# 								N_FIELDS: 0
+# 							PAGE_NO    : 3
+# 								   SPACE: 57
+# 					MERGE_THRESHOLD  : 50
+# 				******************************** 2. row **********************************************
+# 								INDEX_ID: 112
+# 									NAME : i1
+# 							TABLE_ID   : 71
+# 									TYPE : 0
+# 								N_FIELDS: 1
+# 							PAGE_NO    : 4
+# 									SPACE: 57
+# 					MERGE_THRESHOLD  : 50
+#
+# 			INNODB_INDEXES returns data for two indexes. The first index is GEN_CLUST_INDEX, which is a clustered index
+# 			created by InnoDB if the table does not have a user-defined clustered index.
+#
+# 			The second index (i1) is the user-defined secondary index.
+#
+# 			The INDEX_ID is an identifier for the index that is unique across all databases in an instance. The TABLE_ID
+# 			identifies the table that the index is associated with.
+#
+# 			The index TYPE value indicates the type of index (1 = Clustered Index, 0 = Secondary Index).
+#
+# 			The N_FIELDS value is the number of fields that comprise the index. PAGE_NO is the root page number of the
+# 			index B-tree, and SPACE is the ID of the tablespace where the index resides.
+#
+# 			A nonzero value indicates that the index does not reside in the system tablespace.
+#
+# 			MERGE_THRESHOLD defines a percentage threshold value for the amount of data in an index page. If the amount
+# 			of data in an index page falls below the this value (the default is 50%) when a row is deleted or when a row
+# 			is shortened by an update operation, InnoDB attempts to merge the index page with a neighboring index page.
+#
+# 		5. Using the INDEX_ID information from INNODB_INDEXES, query INNODB_FIELDS for information about the fields of index i1.
+#
+# 			mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_FIELDS where INDEX_ID = 112 \G
+# 			*********************************** 1. row ************************************
+# 			INDEX_ID: 112
+# 				NAME : col1
+# 				  POS: 0
+#
+# 			INNODB_FIELDS provides the NAME of the indexed field and its ordinal position within the index.
+#
+# 			If the index (i1) had been defined on multiple fields, INNODB_FIELDS would provide metadata for
+# 			each of the indexed fields.
+#
+# 		6. Using the SPACE information from INNODB_TABLES, query INNODB_TABLESPACES table for information about
+# 			the table's tablespace.
+#
+# 				mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_TABLESPACES WHERE SPACE = 57 \G
+# 				******************************** 1. row *************************************
+# 											SPACE: 57
+# 											NAME : test/t1
+# 											FLAG : 16417
+# 									ROW_FORMAT : Dynamic
+# 									 PAGE_SIZE : 16384
+# 							ZIP_PAGE_SIZE    : 0
+# 								SPACE_TYPE    : Single
+# 								FS_BLOCK_SIZE : 4096
+# 								FILE_SIZE     : 114688
+# 							ALLOCATED_SIZE   : 98304
+# 								SERVER_VERSION: 8.0.4
+# 								SPACE_VERSION : 1
+# 									ENCRYPTION : N
+#
+# 			In addition to the SPACE ID of the tablespace and the NAME of the associated table, INNODB_TABLESPACES
+# 			provides tablespace FLAG data, which is bit level information about tablespace format and storage characteristics.
+#
+# 			Also provided are tablespace ROW_FORMAT, PAGE_SIZE, and several other tablespace metadata items.
+#
+# 		7. Using the SPACE information from INNODB_TABLES once again, query INNODB_DATAFILES for the location of the tablespace data file.
+#
+# 			mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_DATAFILES WHERE SPACE = 57 \G
+# 			******************************** 1. row ****************************************
+# 			SPACE: 57
+# 			 PATH: ./test/t1.ibd
+#
+# 			The datafile is located in the test directory under MySQL's data directory. If a file-per-table tablespace were created
+# 			in a location outside the MySQL data directory using the DATA DIRECTORY clause of the CREATE_TABLE statement, the
+# 			tablespace PATH would be a fully qualified directory path.
+#
+# 		8. As a final step, insert a row into table t1(TABLE_ID = 71) and view the data in the INNODB_TABLESTATS table.
+#
+# 			The data in this table is used by the MySQL optimizer to calculate which index to use when querying an InnoDB table.
+#
+# 			This information is derived from in-memory data structures.
+#
+# 				mysql> INSERT INTO t1 VALUES(5, 'abc', 'def');
+# 				Query OK, 1 row affected (0.06 sec)
+#
+# 				mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_TABLESTATS where TABLE_ID = 71 \G
+# 				******************************* 1. row **************************************
+# 									TABLE_ID: 71
+# 									    NAME: test/t1
+# 						STATS_INITIALIZED: Initialized
+# 								NUM_ROWS   : 1
+# 						 CLUST_INDEX_SIZE: 1
+# 						OTHER_INDEX_SIZE : 0
+# 						MODIFIED_COUNTER : 1
+# 						AUTOINC 			  : 0
+# 								REF_COUNT  : 1
+#
+# 			The STATS_INITIALIZED field indicates whether or not statistics have been collected for the table.
+#
+# 			NUM_ROWS is the current estimated number of rows in the table. The CLUST_INDEX_SIZE and OTHER_INDEX_SIZE
+# 			fields report the number of pages on disk that store clustered and secondary indexes for the table,
+# 			respectively.
+#
+# 			The MODIFIED_COUNTER value shows the number of rows modified by DML operations and cascade operations
+# 			from foreign keys. The AUTOINC value is the next number to be issued for any autoincrement-based operation.
+#
+# 			There are no autoincrement columns defined on table t1, so the value is 0. The REF_COUNT value is a counter.
+# 			When the counter reaches 0, it signifies that the table metadata can be evicted from the table cache.
+#
+# EXAMPLE 15.3 FOREIGN KEY INFORMATION_SCHEMA SCHEMA OBJECT TABLES
+#
+# The INNODB_FOREIGN and INNODB_FOREIGN_COLS tables provide data about foreign key relationships. This example uses a
+# parent table and child table with a foreign key relationship to demonstrate the data found in the INNODB_FOREIGN
+# and INNODB_FOREIGN_COLS tables.
+#
+# 		1. Create the test database with parent and child tables:
+#
+# 			mysql> CREATE DATABASE test;
+#
+# 			mysql> USE test;
+#
+# 			mysql> CREATE TABLE parent (id INT NOT NULL,
+# 					 PRIMARY KEY (id)) ENGINE=INNODB;
+#
+# 			mysql> CREATE TABLE child (id INT, parent_id INT,
+# 					 INDEX par_ind (parent_id),
+# 					 CONSTRAINT fk1
+# 					 FOREIGN KEY (parent_id) REFERENCES parent(id)
+# 					 ON DELETE CASCADE) ENGINE=INNODB;
+#
+# 		2. After the parent and child tables are created, query INNODB_FOREIGN and locate the foreign key data for the
+# 			test/child and test/parent foreign key relationship:
+#
+# 				mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_FOREIGN \G
+# 				************************** 1. row ******************************
+# 								ID: test/fk1
+# 						FOR_NAME: test/child
+# 						REF_NAME: test/parent
+# 						N_COLS  : 1
+# 							TYPE : 1
+#
+# 			Metadata includes the foreign key ID(fk1), which is named for the CONSTRAINT that was defined on the child table.
+#
+# 			The FOR_NAME is the name of the child table where the foreign key is defined. REF_NAME is the name of the parent
+# 			table (the "referenced" table). N_COLS is the number of columns in the foreign key index. 
+#
+# 			TYPE is a numerical value representing bit flags that provide additional information about the foreign key column.
+#
+# 			In this case, the TYPE value is 1, which indicates that the ON DELETE CASCADE option was specified for the foreign
+# 			key.
+#
+# 			See the INNODB_FOREIGN table definition for more information about TYPE values.
+#
+# 		3. Using the foreign key ID, query INNODB_FOREIGN_COLS to view data about the columns of the foreign key
+#
+# 			mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_FOREIGN_COLS WHERE ID = 'test/fk1' \G
+# 			************************************* 1. row *********************************
+# 									ID: test/fk1
+# 					FOR_COL_NAME  : parent_id
+# 				REF_COL_NAME 	  : id
+# 								 POS : 0
+#
+# 			FOR_COL_NAME is the name of the foreign key column in the child table, and REF_COL_NAME is the name of the
+# 			referenced column in the parent table. The POS Value is the ordinal position of the key field within the
+# 			foreign key index, starting at zero.
+#
+# EXAMPLE 15.4 JOINING INNODB INFORMATION_SCHEMA SCHEMA OBJECT TABLES
+#
+# This example demonstrates joining three InnoDB INFORMATION_SCHEMA schema object tables (INNODB_TABLES, INNODB_TABLESPACES,
+# and INNODB_TABLESTATS) to gather file format, row format, page size, and index size information about tables in the
+# employees sample database.
+#
+# The following table name aliases are used to shorten the query string:
+#
+# 		) INFORMATION_SCHEMA.INNODB_TABLES: a
+# 	
+# 		) INFORMATION_SCHEMA.INNODB_TABLESPACES: b
+#
+# 		) INFORMATION_SCHEMA.INNODB_TABLESTATS: c
+#
+# An IF() control flow function is used to account for compressed tables. If a table is compressed, the index size is calculated
+# using ZIP_PAGE_SIZE rather than PAGE_SIZE.
+#
+# CLUST_INDEX_SIZE and OTHER_INDEX_SIZE, which are reported in bytes, are divided by 1024*1024 to provide index sizes in megabytes
+# (MBs). MB values are rounded to zero decimal spaces using the ROUND() function.
+#
+# 		mysql> SELECT a.NAME, a.ROW_FORMAT,
+# 				 @page_size :=
+# 					IF(a.ROW_FORMAT='Compressed',
+# 					 b.ZIP_PAGE_SIZE, b.PAGE_SIZE)
+# 					 AS page_size,
+# 					ROUND((@page_size * c.CLUST_INDEX_SIZE)
+# 					 /(1024*1024)) AS pk_mb,
+# 					ROUND((@page_size * c.OTHER_INDEX_SIZE)
+# 					 /(1024*1024)) AS secidx_mb
+# 					FROM INFORMATION_SCHEMA.INNODB_TABLES a
+# 					INNER JOIN INFORMATION_SCHEMA.INNODB_TABLESPACES b on a.NAME = b.NAME
+# 					INNER JOIN INFORMATION_SCHEMA.INNODB_TABLESTATS c on b.NAME = c.NAME
+# 					WHERE a.NAME LIKE 'employees/%'
+# 					ORDER BY a.NAME DESC;
+# 		+-------------------------------+------------+-------------------+-----------+-------+----------+
+# 		| NAME 								  | ROW_FORMAT 						  | page_size | pk_mb | secidx_mb|
+# 		+-------------------------------+--------------------------------+-----------+-------+----------+
+# 		| employees/titles 				  | Dynamic 							  | 16384 	  | 20 	 | 	11 	|
+# 		| employees/salaries 			  | Dynamic 							  | 16384 	  | 93 	 | 	34 	|
+# 		| employees/employees 			  | Dynamic 							  | 16384 	  | 15 	 | 	0 		|
+# 		| employees/dept_manager 		  | Dynamic 							  | 16384 	  | 0 	 | 	0 	   |
+# 		| employees/dept_emp 			  | Dynamic 							  | 16384 	  | 12 	 | 	10 	|
+# 		| employees/departments 		  | Dynamic 							  | 16384 	  | 0 	 | 	0 		|
+# 		+-------------------------------+--------------------------------+-----------+-------+----------+
+#
+# 15.14.4 INNODB INFORMATION_SCHEMA FULLTEXT INDEX TABLES
+#
+# The following tables provide metadata for FULLTEXT indexes:
+#
+# 		mysql> SHOW TABLES FROM INFORMATION_SCHEMA LIKE 'INNODB_FT%';
+# 		+------------------------------------------+
+# 		| Tables_in_INFORMATION_SCHEMA (INNODB_FT%)|
+# 		+------------------------------------------+
+# 		| INNODB_FT_CONFIG 								 |
+# 		| INNODB_FT_BEING_DELETED 						 |
+# 		| INNODB_FT_DELETED 								 |
+# 		| INNODB_FT_DEFAULT_STOPWORD 					 |
+# 		| INNODB_FT_INDEX_TABLE 						 |
+# 		| INNODB_FT_INDEX_CACHE 						 |
+# 		+------------------------------------------+
+#
+# TABLE OVERVIEW
+#
+# 	) INNODB_FT_CONFIG: Provides metadata about the FULLTEXT index and associated processing for an InnoDB table.
+#
+# 	) INNODB_FT_BEING_DELETED: Provides a snapshot of the INNODB_FT_DELETED table; it is used only during an OPTIMIZE_TABLE
+# 		maintenance operation. When OPTIMIZE_TABLE is run, the INNODB_FT_BEING_DELETED table is emptied, and DOC_ID values are
+# 		removed from the INNODB_FT_DELETED table.
+#
+# 		Because the contents of INNODB_FT_BEING_DELETED typically have a short lifetime, this table has limited utility
+# 		for monitoring or debugging. For information about running OPTIMIZE_TABLE on tables with FULLTEXT indexes,
+# 		see SECTION 12.9.6, "FINE-TUNING MYSQL FULL-TEXT SEARCH"
+#
+# ) INNODB_FT_DELETED: Stores rows that are deleted from the FULLTEXT index for an InnoDB table. To avoid expensive index
+# 		reorganization during DML operations for an InnoDB FULLTEXT index, the information about newly deleted words is stored
+# 		separately, filtered out of search results when you do a text search, and removed from the main search index only
+# 		when you issue an OPTIMIZE_TABLE statement for the InnoDB table.
+#
+# ) INNODB_FT_DEFAULT_STOPWORD: Holds a list of stopwords that are used by default when creating a FULLTEXT index on InnoDB tables.
+#
+# 		For information about the INNODB_FT_DEFAULT_STOPWORD table, see SECTION 12.9.4, "FULL-TEXT STOPWORDS"
+#
+# ) INNODB_FT_INDEX_TABLE: Provides information about the inverted index used to process text searches against the FULLTEXT index of an
+# InnoDB table.
+#
+# ) INNODB_FT_INDEX_CACHE: Provides token information about newly inserted rows in a FULLTEXT index. To avoid expensive index reorganization
+# during DML operations, the information about newly indexed words is stored seperately, and combined with the main search index only
+# when OPTIMIZE_TABLE is run, when the server is shut down, or when the cache size exceeds a limit defined by the innodb_ft_cache_size
+# or innodb_ft_total_cache_size system variable.
+#
+# NOTE:
+#
+# 		With the exception of the INNODB_FT_DEFAULT_STOPWORD table, these tables are empty initially.
+#
+# 		Before querying any of them, set the value of the innodb_ft_aux_table system variable to the name
+# 		(including the database name) of the table that contains the FULLTEXT index (for example,
+# 		test/articles)
+#
+# EXAMPLE 15.5 INNODB FULLTEXT INDEX INFORMATION_SCHEMA TABLES
+#
+# This example uses a table with a FULLTEXT index to demonstrate the data contained in the FULLTEXT index
+# INFORMATION_SCHEMA tables.
+#
+# 		1. Create a table with a FULLTEXT index and insert some data:
+#
+# 			mysql> CREATE TABLE articles (
+# 						id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
+# 						title VARCHAR(200),
+# 						body TEXT,
+# 						FULLTEXT (title, body)
+# 					) ENGINE=InnoDB;
+#
+# 			mysql> INSERT INTO articles (title,body) VALUES
+# 					  //values//
+#
+# 		2. Set the innodb_ft_aux_table variable to the name of the table with the FULLTEXT index.
+#
+# 			If this variable is not set, the InnoDB FULLTEXT INFORMATION_SCHEMA tables are empty,
+# 			with the exception of INNODB_FT_DEFAULT_STOPWORD.
+#
+# 				mysql> SET GLOBAL innodb_ft_aux_table = 'test/articles';
+#
+# 		3. Query the INNODB_FT_INDEX_CACHE table, which shows information about newly inserted rows in a FULLTEXT index.
+#
+# 			To avoid expensive index reorganization during DML operations, data for newly inserted rows remains in the
+# 			FULLTEXT index cache until OPTIMIZE_TABLE is run (or until the server is shut down or cache limits are exceeded)
+#
+# 				mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_FT_INDEX_CACHE LIMIT 5;
+# 				+-----------------+---------------+----------------+----------------+---------------+------------------+
+# 				| WORD 				| FIRST_DOC_ID  | LAST_DOC_ID 	| DOC_COUNT 	  | DOC_ID 			| POSITION 			 |
+# 				+-----------------+---------------+----------------+----------------+---------------+------------------+
+# 				| 1001 				| 5 				 | 5 					| 1 				  | 5 				| 0 					 |
+# 				| after 				| 3 				 | 3 					| 1 				  | 3 				| 22 					 |
+# 				| comparison 		| 6 				 | 6 					| 1 				  | 6 				| 44 					 |
+# 				| configured 		| 7 				 | 7 					| 1 				  | 7 			   | 20 					 |
+# 				| database 			| 2 				 | 6 					| 2 				  | 2 				| 31 					 |
+# 				+-----------------+---------------+----------------+----------------+---------------+------------------+
+#
+# 		4. Enable the innodb_optimize_fulltext_only system variable and run OPTIMIZE_TABLE on the table that contains the
+# 			FULLTEXT index.
+#
+# 			This operation flushes the contents of the FULLTEXT index cache to the main FULLTEXT index. innodb_optimize_fulltext_only
+# 			changes the way the OPTIMIZE_TABLE statement operates on InnoDB tables, and is intended to be enabled temporarily,
+# 			during maintenance operations on InnoDB tables with FULLTEXT indexes.
+#
+# 				mysql> SET GLOBAL innodb_optimize_fulltext_only=ON;
+#
+# 				mysql> OPTIMIZE TABLE articles;
+# 				+-------------------+-----------------+---------------+---------------+
+# 				| Table 				  | Op 				  | Msg_type 		| Msg_text 		 |
+# 				+-------------------+-----------------+---------------+---------------+
+# 				| test.articles 	  | optimize 		  | status 			| OK 				 |
+# 				+-------------------+-----------------+---------------+---------------+
+#
+# 		5. Query the INNODB_FT_INDEX_TABLE table to view information about data in the main FULLTEXT index, including
+# 			information about the data that was just flushed from the FULLTEXT index cache.
+#
+# 				mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_FT_INDEX_TABLE LIMIT 5;
+# 				+----------------+----------------+---------------+-------------+----------------+---------------------+
+# 				| WORD 			  | FIRST_DOC_ID 	 | LAST_DOC_ID   | DOC_COUNT   | DOC_ID 			| POSITION 				 |
+# 				+----------------+----------------+---------------+-------------+----------------+---------------------+
+# 				| 1001 			  | 		5 			 | 		5 		  | 	1 			 | 	5 				| 0 						 |
+# 				| after 			  | 		3 			 | 		3 		  | 	1 			 | 	3 				| 22 						 |
+# 				| comparison 	  | 		6 			 | 		6 		  | 	1 			 | 	6 				| 44 						 |
+# 				| configured 	  | 		7 			 | 		7 		  | 	1 			 | 	7 				| 20 						 |
+# 				| database 		  | 		2 			 | 		6 		  | 	2 			 | 	2 				| 31 						 |
+# 				+----------------+----------------+---------------+-------------+----------------+---------------------+
+#
+# 			The INNODB_FT_INDEX_CACHE table is now empty since the OPTIMIZE_TABLE operation flushed the FULLTEXT index cache.
+#
+# 				mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_FT_INDEX_CACHE LIMIT 5;
+# 				Empty set (0.00 sec)
+#
+# 		6. Delete some records from the test/articles table.
+#
+# 			mysql> DELETE FROM test.articles WHERE id < 4;
+#
+# 		7. Query the INNODB_FT_DELETED table. This table records rows that are deleted from the FULLTEXT index.
+#
+# 			To avoid expensive index reorganization during DML operations, information about newly deleted
+# 			records is stored separately, filtered out of search results when you do a text search, and removed
+# 			from the main search index when you run OPTIMIZE_TABLE.
+#
+# 				mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_FT_DELETED;
+# 				+-------+
+# 				| DOC_ID|
+# 				+-------+
+# 				| 2 	  |
+# 				| 3 	  |
+# 				| 4 	  |
+# 				+-------+
+#
+# 		8. Run OPTIMIZE_TABLE to remove the deleted records.
+#
+# 				mysql> OPTIMIZE TABLE articles;
+# 				+-------------------+----------+---------------+--------------+
+# 				| Table 				  | Op 		 | Msg_type 	  | Msg_text 	  |
+# 				+-------------------+----------+---------------+--------------+
+# 				| test.articles 	  | optimize | status 		  | OK 			  |
+# 				+-------------------+----------+---------------+--------------+
+#
+# 			The INNODB_FT_DELETED table should now be empty.
+#
+# 				mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_FT_DELETED;
+# 				Empty set (0.00 sec)
+#
+# 		9. Query the INNODB_FT_CONFIG table. This table contains metadata about the FULLTEXT index and related processing:
+#
+# 			) optimize_checkpoint_limit: The number of seconds after which an OPTIMIZE_TABLE run stops.
+#
+# 			) synced_doc_id: The next DOC_ID to be issued
+#
+# 			) stopword_table_name: The database/table name for a user-defined stopword table. The VALUE column is empty if there
+# 				is no user-defined stopword table.
+#
+# 			) use_stopword: indicates whether a stopword table is used, which is defined when the FULLTEXT index is created.
+#
+# 				mysql> SELECT * FROM INFORMATION_SCHEMA.INNODB_FT_CONFIG;
+# 				+--------------------------+-----------+
+# 				| KEY 							| VALUE 	   |
+# 				+--------------------------+-----------+
+# 				| optimize_checkpoint_limit| 180 		|
+# 				| synced_doc_id 				| 8 			|
+# 				| stopword_table_name 		|  			|
+# 				| use_stopword 				| 1 			|
+# 				+--------------------------+-----------+
+#
+# 		10. Disable innodb_optimize_fulltext_only, since it is intended to be enabled only temporarily:
+#
+# 			mysql> SET GLOBAL innodb_optimize_fulltext_only=OFF;
+#
+# 15.14.5 INNODB INFORMATION_SCHEMA BUFFER POOL TABLES
+#
+# https://dev.mysql.com/doc/refman/8.0/en/innodb-information-schema-buffer-pool-tables.html
+#
+# 		
 #
 # 				
 # 	
