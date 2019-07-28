@@ -57838,5 +57838,1200 @@
 #
 # 15.19.4 INNODB MEMCACHED MULTIPLE GET AND RANGE QUERY SUPPORT
 #
-# https://dev.mysql.com/doc/refman/8.0/en/innodb-memcached-multiple-get-range-query.html
-# 			
+# The daemon_memcached plugin supports multiple get operations (fetching multiple key-value pairs in a single memcached query)
+# and range queries.
+#
+# MULTIPLE GET OPERATIONS
+#
+# The ability to fetch multiple key-value pairs in a single memcached query improves read performance by reducing communication
+# traffic between the client and the server.
+#
+# For InnoDB, it means fewer transactions and open-table operations.
+#
+# The following example demonstrates multiple-get support. The example uses the test.city table described in 
+# CREATING A NEW TABLE AND COLUMN MAPPING.
+#
+# 		mysql> USE test;
+# 		mysql> SELECT * FROM test.city;
+# 		+---------+-------------+---------------+---------------+-------------+------------+------------+
+# 		| city_id | name 			| state 			 | country 		  | flags 		 | cas 		  | expiry 		|
+# 		+---------+-------------+---------------+---------------+-------------+------------+------------+
+# 		| B 		 | BANGALORE 	| BANGALORE 	 | IN 			  | 0 			 | 1 			  | 0 			|
+# 		// etc //
+#
+# Run a get command to retrieve all values from the city table. The results are returned in a key-value pair
+# sequence.
+#
+# 		telnet 127.0.0.1 11211
+# 		Trying 127.0.0.1
+# 		Connected to 127.0.0.1
+# 		Escape character is '^]'
+# 		get B C D H M
+# 		VALUE B 0 22
+# 		BANGALORE|BANGALORE|IN
+# 		VALUE C 0 21
+# 		CHENNAI|TAMIL NADU|IN
+# 		VALUE D 0 14
+# 		DELHI|DELHI|IN
+# 		VALUE H 0 22
+# 		HYDERABAD|TELANGANA|IN
+# 		VALUE M 0 21
+# 		MUMBAI|MAHARASHTRA|IN
+# 		END
+#
+# When retrieving multiple values in a single get command, you can switch tables (using @@containers.name notation) to retireve
+# the value for the first key, but you cannot switch tables for subsequent keys. For example, the table switch in this example
+# is valid:
+#
+# 		get @@aaa.AA BB
+# 		VALUE @@aaa.AA 8 12
+# 		HELLO HELLO
+# 		VALUE BB 10 16
+# 		GOODBYE, GOODBYE
+# 		END
+#
+# Attempting to switch tables again in the same get command to retrieve a key value from a different table is not supported.
+#
+# RANGE QUERIES
+#
+# For range queries, the daemon_memcached plugin supports the following comparison operators: <,>,<=,>=.
+#
+# An operator must be preceded by an @ symbol. When a range query finds multiple matching key-value pairs,
+# results are returned in a key-value pair sequence.
+#
+# The following examples demonstrate range query support. The examples use the test.city table described in 
+# CREATING A NEW TABLE AND COLUMN MAPPING
+#
+# 		mysql> SELECT * FROM test.city;
+# 		+-----------+-------------+------------------+---------------+-----------+-----------+-----------+
+# 		| city_id 	| name 		  | state 				| country 		 | flags 	 | cas 		 | expiry 	 |
+# 		+-----------+-------------+------------------+---------------+-----------+-----------+-----------+
+# 		| B 			| BANGALORE   | BANGALORE 			| IN 				 | 0 			 | 1 			 | 0 			 |
+# 		| C 			| CHENNAI 	  | TAMIL NADU 		| IN 				 | 0 			 | 0 			 | 0 			 |
+# 		| D 			| DELHI 		  | DELHI 			   | IN 				 | 0 			 | 0 			 | 0	 		 |
+# 		| H 			| HYDERABAD   | TELANGANA 			| IN 				 | 0 			 | 0 			 | 0 		    |
+# 		| M 		 	| MUMBAI 	  | MAHARASHTRA 		| IN 				 | 0 			 | 0 			 | 0 			 |
+# 		+-----------+-------------+------------------+---------------+-----------+-----------+-----------+
+#
+# Open a telnet session:
+#
+# 		telnet 1270.0.0.1 11211
+# 		Trying 127.0.0.1
+# 		Connected to 127.0.0.1
+# 		Escape character is '^]'
+#
+# To get all values greater than B, enter get @>B:
+#
+# 		get @>B
+# 		VALUE C 0 21
+# 		CHENNAI|TAMIL NADU|IN
+# 		VALUE D 0 14
+# 		DELHI|DELHI|IN
+# 		VALUE H 0 22
+# 		HYDERABAD|TELAGANA|IN
+# 		VALUE M 0 21
+# 		MUMBAI|MAHARASHTRA|IN
+# 		END
+#
+# To get all values less than M, enter get @<M
+#
+# 		get @<M
+# 		VALUE B 0 22
+# 		BANGALORE|BANGALORE|IN
+# 		VALUE C 0 21
+# 		CHENNAI|TAMIL NADU|IN
+# 		VALUE D 0 14
+# 		DELHI|DELHI|IN
+# 		VALUE H 0 22
+# 		HYDERABAD|TELANGANA|IN
+# 		END
+#
+# To get all values less than and including M, enter get @<=M:
+#
+# 		get @<=M
+# 		VALUE B 0 22
+# 		BANGALORE|BANGALORE|IN
+# 		VALUE C 0 21
+# 		CHENNAI|TAMIL NADU|IN
+# 		VALUE D 0 14
+# 		DELHI|DELHI|IN
+# 		VALUE H 0 22
+# 		HYDERABAD|TELAGANA|IN
+# 		VALUE M 0 21
+# 		MUMBAI|MAHARASHTRA|IN
+#
+# To get values greater than B but less than M, enter get @>B@<M:
+#
+# 		get @>B@<M
+# 		VALUE C 0 21
+# 		CHENNAI|TAMIL NADU|IN
+# 		VALUE D 0 14
+# 		DELHI|DELHI|IN
+# 		VALUE H 0 22
+# 		HYDERABAD|TELANGANA|IN
+# 		END
+#
+# A maximum of two comparison operators can be parsed, one either a 'less than' (@<) or 'less than or equal to'(@<=) operator, and the
+# other being either a 'greater than' (@>) or 'greater than or equal to'(@>=) operator.
+#
+# ANy additional operators are assumed to be part of the key. For example, if you issue a get command with three operators,
+# the third operator (@>C) is treated as part of the key, and the get command searches for values smaller than M and greater
+# than B@>C
+#
+# 		get @<M@>B@>C
+# 		VALUE C 0 21
+# 		CHENNAI|TAMIL NADU|IN
+# 		VALUE D 0 14
+# 		DELHI|DELHI|IN
+# 		VALUE H 0 22
+# 		HYDERABAD|TELANGANA|IN
+#
+# 15.19.5 SECURITY CONSIDERATIONS FOR THE INNODB MEMCACHED PLUGIN
+#
+# CAUTION:
+#
+# 		Consult this section before deploying the daemon_memcached plugin on a production server, or even on a test
+# 		server if the MySQL instance contains sensitive data.
+#
+# Because memcached does not use an authentication mechanism by default, and the optional SASL authentication is not
+# as strong as traditional DBMS security measures, only keep non-sensitive data in the MySQL instance that uses the
+# daemon_memcached plugin, and wall off any servers that use this configuration from potentital intruders.
+#
+# Do not allow memcached access to these servers from the Internet; only allow access from within a firewall intranet,
+# ideally from a subnet whose membership you can restrict.
+#
+# PASSWORD-PROTECTING MEMCACHED USING SASL
+#
+# SASL support provides the capability to protect your MySQL database from unauthenticated access through memcached
+# clients.
+#
+# This section explains how to enable SASL with the daemon_memcached plugin. The steps are almost identical to those
+# performed to enable SASL for a traditional memcached server.
+#
+# SASL stands for "SImple Authentication and Security Layer", a standard for adding authentication support to connection
+# based protocols.
+#
+# memcached added SASL support in version 1.4.3
+#
+# SASL authentication is only supported with the binary protocol.
+#
+# memcached clients are only able to access InnoDB tables that are registered in the innodb_memcache.containers table.
+#
+# Even though a DBA can place access restrictions on such tables, acess through memcached applications cannot be controlled.
+# For this reason, SASL support is provided to control access to InnoDB tables associated with the daemon_memcached plugin.
+#
+# The following section shows how to build, enable and test an SASL-enabled daemon_memcached plugin.
+#
+# BUILDING AND ENABLING SASL WITH THE INNODB MEMCACHED PLUGIN
+#
+# By default, an SASL-enabled daemon_memcached plugin is not included in MySQL release packages, since an SASL-enabled
+# daemon_memcached plugin requires building memcached with SASL libraries.
+#
+# To enable SASL support, download the MySQL source and rebuild the daemon_memcached plugin after downloading the SASL
+# libraries:
+#
+# 		1. Install the SASL development and utility libraries. For example, on Ubuntu, use apt-get to obtain the libraries:
+#
+# 			sudo apt-get -f install libsasl2-2 sasl2-bin libsasl2-2 libsasl2-dev libsasl2-modules
+#
+# 		2. Build the daemon_memcached plugin shared libraries with SASL capability by adding ENABLE_MEMCACHED_SASL=1 to your
+# 			cmake options.
+#
+# 			memcached also provides simple cleartext password support, which facilitates testing. To enable simple cleartext
+# 			password support, specify the ENABLE_MEMCACHED_SASL_PWDB=1 cmake option.
+#
+# 			In summary, add following three cmake options:
+#
+# 				cmake /etc/ -DWITH_INNODB_MEMCACHED=1 -DENABLE_MEMCACHED_SASL=1 -DENABLE_MEMCACHED_SASL_PWDB=1
+#
+# 		3. Install the daemon_memcached plugin, as described in SECTION 15.19.3, "SETTING UP THE INNODB MEMCACHED PLUGIN"
+#
+# 		4. Configure a user name and password file. (This example uses memcached simple cleartext password support)
+#
+# 			a. In a file, create a user named testname and define the password as testpasswd:
+
+# 				echo "testname:testpasswd::::::::" >/home/jy/memcached-sasl-db
+#
+# 			b. Configure the MEMCACHED_SASL_PWDB environment variable to inform memcached of the user name and password file:
+#
+# 				export MEMCACHED_SASL_PWDB=/home/jy/memcached-sasl-db
+#
+# 			c. Inform memcached that a cleartext password is used:
+#
+# 				echo "mech_list: plain" > /home/jy/work2/msasl/clients/memcached.conf
+# 				export SASL_CONF_PATH=/home/jy/work2/msasl/clients
+#
+# 		5. Enable SASL by restarting the MySQL server with the memcached -S option encoded in the daemon_memcached_option configuration parameter:
+#
+# 			mysqld /etc/ --daemon_memcached_option="-S"
+#
+# 		6. To test the setup, use an SASL-enabled client such as SASL-enabled libmemcached
+#
+# 			memcp --servers=localhost:11211 --binary --username=testname
+# 				--password=password myfile.txt
+#
+# 			memcat --servers=localhost:11211 --binary --username=testname
+# 				--password=password myfile.txt
+#
+# 			If you specify an incorrect user name or password, the operation is rejected with a memcache error AUTHENTICATION FAILURE message.
+# 			In this case, examine the cleartext password set in the memcached-sasl-db file to verify that the credentials you supplied
+# 			are correct.
+#
+# There are other methods to test SASL authentication with memcached, but the method described above is the most straightforward.
+#
+# 15.19.6 WRITING APPLICATIONS FOR THE INNODB MEMCACHED PLUGIN
+#
+# 15.19.6.1 ADAPTING AN EXISTING MYSQL SCHEMA FOR THE INNODB MEMCACHED PLUGIN
+# 15.19.6.2 ADAPTING A MEMCACHED APPLICATION FOR THE INNODB MEMCACHED PLUGIN
+# 15.19.6.3 TUNING INNODB MEMCACHED PLUGIN PERFORMANCE
+# 15.19.6.4 CONTROLLING TRANSACTIONAL BEHAVIOR OF THE INNODB MEMCACHED PLUGIN
+# 15.19.6.5 ADAPTING DML STATEMENTS TO MEMCACHED OPERATIONS
+# 15.19.6.6 PERFORMING DML AND DDL STATEMENTS ON THE UNDERLYING INNODB TABLE
+#
+# Typically, writing an application for the InnoDB memcached plugin involves some degree of rewriting or adapting existing code
+# that uses MySQL or the memcached API.
+#
+# 		) With the daemon_memcached plugin, instead of many traditional memcached servers running on low-powered machines, you have
+# 			the same number of memcached servers as MySQL servers, running on relatively high-powered machines with substantial disk
+# 			storage and memory.
+#
+# 			You might reuse some existing code that works with the memcached API, but adaptation is likely required due to the different
+# 			server configuration.
+#
+# 		) The data stored through the daemon_memcached plugin goes into VARCHAR, TEXT or BLOB columns, and must be converted to do
+# 			numeric operations.
+#
+# 			You can perform the conversion on the application side, or by using the CAST() function in queries.
+#
+# 		) Coming from a database background, you might be used to general-purpose SQL tables with many columns.
+#
+# 			The tables accessed by memcached code likely have only a few or even a single column holding data values.
+#
+# 		) You might adapt parts of your application that perform single-row queries, inserts, updates or deletes, to improve
+# 			performance in critical sections of code.
+#
+# 			Both queries (read) and DML (write) operations can be substantially faster when performed through the InnoDB
+# 			memcached interface.
+#
+# 			The performance improvement for writes is typically greater than the performance improvement for reads, so you might
+# 			focus on adapting code that performs logging or records interactive choices on a website.
+#
+# The following sections explore these points in more detail.
+#
+# 15.19.6.1 ADAPTING AN EXISTING MYSQL SCHEMA FOR THE INNODB MEMCACHED PLUGIN
+#
+# Consider these aspects of memcached applications when adapting an existing MySQL schema or application to use the daemon_memcached plugin:
+#
+# 		) memcached keys cannot contain spaces or newlines, because these characters are used as separators in the ASCII protocol.
+#
+# 			If you are using lookup values that contain spaces, transform or hash them into values without spaces before using them
+# 			as keys in calls to add(), set(), get() and so on. Although theoretically these characters are allowed in keys in programs
+# 			that use the binary protocol, you should restrict the characters used in keys to ensure compatibility with a broad range of
+# 			clients.
+#
+# 		) If there is a short numeric primary key column in an InnoDB table, use it as the unique lookup key for memcached by converting
+# 			the integer to a string value.
+#
+# 			If the memcached server is used for multiple applications, or with more than one InnoDB table, consider modifying the name
+# 			to ensure that it is unique.
+#
+# 			For example, prepend the table name, or the database name and the table name, before the numeric value.
+#
+# 			NOTE:
+#
+# 				The daemon_memcached plugin supports inserts and reads on mapped InnoDB tables that have an INTEGER defined
+# 				as the primary key.
+#
+# 		) You cannot use a partitioned table for data queried or stored using memcached.
+#
+# 		) The memcached protocol passes numeric values around as strings. To store numeric values in the underlying InnoDB table,
+# 			to implement counters that can be used in SQL functions such as SUM() or AVG(), for example:
+#
+# 			) Use VARCHAR columns with enough characters to hold all the digits of the largest expected number (and additional characters
+# 				if appropriate for the negative sign, decimal point or both)
+#
+# 			) In any query that performs arithmetic using column values, use the CAST() function to convert the values from string to integer,
+# 				or to some other numeric type.
+#
+# 				For example:
+#
+# 					#Alphabetic entries are returned as zero
+#
+# 					SELECT CAST(c2 AS UNSIGNED integer) FROM demo_test;
+#
+# 					# Since there could be numeric values of 0, can't disqualify them
+# 					# Test the string values to find the ones that are integers, and average only those.
+#
+# 					SELECT AVG(cast(c2 AS UNSIGNED integer)) FROM demo_test
+# 						WHERE c2 BETWEEN '0' and '9999999999';
+#
+# 					# Views let you hide the complexity of queries. The results are already converted,
+# 					# no need to repeat conversion functions and WHERE clauses each time
+#
+# 					CREATE VIEW numbers AS SELECT c1 KEY, CAST(c2 AS UNSIGNED INTEGER) val
+# 						FROM demo_test WHERE c2 BETWEEN '0' and '99999999';
+# 					SELECT SUM(val) FROM numbers;
+#
+# 				NOTE:
+#
+# 					ANy alphabetic values in the result set are converted into 0 by the call to CAST(). When using functions
+# 					such as AVG(), which depend on the number of rows in the result set, include WHERE clauses to filter out
+# 					non-numeric values.
+#
+# 		) If the InnoDB column used as a key could have values longer than 250 bytes, hash the value to less than 250 bytes.
+#
+# 		) To use an existing table with the daemon_memcached plugin, define an entry for it in the innodb_memcache.containers table.
+#
+# 			To make that table the default for all memcached requests, specify a value of default in the name column, then restart
+# 			the MySQL server to make the change take effect.
+#
+# 			If you use multiple tables for different classes of memcached data, set up multiple entries in the innodb_memcache.containers
+# 			table with name values of your choice, then issue a memcached request in the form of get @@name or set @@name within the 
+# 			application to specify the table to be used for subsequent memcached requests.
+#
+# 			For an example of using a table other than the predefined test.demo_test table, see EXAMPLE 15.13, "USING YOUR OWN TABLE WITH AN INNODB MEMCACHED APPLICATION"
+#
+# 			For the required table layout, see SECTION 15.19.8, "INNODB MEMCACHED PLUGIN INTERNALS"
+#
+# 		) To use multiple InnoDB table column values with memcached key-value pairs, specify column names separated by comma, semicolon,
+# 			space, or pipe characters in the value_columns field of the innodb_memcache.containers entry for the InnoDB table.
+#
+# 			For example, specify col1, col2, col3 or col1|col2|col3 in the value_columns field.
+#
+# 			Concatenate the column values into a single string using the pipe character as a separator before passing the string to
+# 			memcached add or set calls.
+#
+# 			The string is unpacked automatically into the correct column.
+#
+# 			Each get call returns a single string containing the column values that is also delimited by the pipe character.
+#
+# 			You can unpack the values using the appropriate language syntax.
+#
+# EXAMPLE 15.13 USING YOUR OWN TABLE WITH AN INNODB MEMCACHED APPLICATION
+#
+# This example shows how to use your own table with a sample Python application that uses memcached for data manipulatiton.
+#
+# The example assumes that the daemon_memcached plugin is installed as described in SECTION 15.19.3, "SETTING UP THE INNODB 
+# MEMCACHED PLUGIN"
+#
+# It also assumes that your system is configured to run a Python script that uses the python-memcache module.
+#
+# 		1. Create the multicol table which stores country information including population area, and driver side data
+# 			('R' for right and 'L' for left)
+#
+# 				mysql> USE test;
+#
+# 				mysql> CREATE TABLE `multicol` (
+# 					`country` varchar(128) NOT NULL DEFAULT '',
+# 					`population` varchar(10) DEFAULT NULL,
+# 					`area_sq_km` varchar(9)  DEFAULT NULL,
+# 					`drive_side` varchar(1)  DEFAULT NULL,
+# 					`c3` int(11) DEFAULT NULL,
+# 					`c4` bigint(20) unsigned DEFAULT NULL,
+# 					`c5` int(11) DEFAULT NULL,
+# 					PRIMARY KEY (`country`)
+# 					) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+#
+# 		2. Insert a record into the innodb_memcache.containers table so that the daemon_memcached plugin can access the multicol table.
+#
+# 				mysql> INSERT INTO innodb_memcache.containers
+# 						 (name,db_schema,db_table,key_columns,value_columns,flags,cas_column,
+# 						 expire_time_column,unique_idx_name_on_key)
+# 						 VALUES
+# 						 ('bbb','test','multicol','country','population,area_sq_km,drive_side',
+# 						 'c3','c4','c5','PRIMARY');
+# 				mysql> COMMIT;
+#
+# 			) The innodb_memcache.containers record for the multicol table specifies a name value of 'bbb', which is the table identifier.
+#
+# 				NOTE:
+#
+# 					If a single InnoDB table is used for all memcached applications, the name value can be set to default to avoid
+# 					using @@ notation to switch tables.
+#
+# 			) The db_schema column is set to test, which is the name of the database where the multicol table resides.
+#
+# 			) The db_table column is set to multicol, which is the name of the InnoDB table
+#
+# 			) key_columns is set to the unique country column. The country column is defined as the primary key in the multicol table definition.
+#
+# 			) Rather than a single InnoDB table column to hold a composite data value, data is divided among three table columns (population, area_sq_km,
+# 				and drive_side)
+#
+# 				To accomodate multiple value columns, a comma-separated list of columns is specified in the value_columns field. The columns defined
+# 				in the value_columns field are the columns used when storing or retrieving values.
+#
+# 			) Values for the flags, expire_time, and cas_column fields are based on values used in the demo.test sample table. These fields are typically
+# 				not significant in applications that use the daemon_memcached plugin because MySQL keeps data synchronized, and there is no need
+# 				to worry about data expiring or becoming stale.
+#
+# 			) The unique_idx_name_on_key field is set to PRIMARY, which refers to the primary index defined on the unique country column in the multicol table.
+#
+# 		3. Copy the sample Python application into a file. In this example, the sample script is copied to a file named multicol.py
+#
+# 			The sample Python application inserts data into the multicol table and retrieves data for all keys, demonstrating how to access an InnoDB
+# 			table through the daemon_memcached plugin.
+#
+# 				import sys, os
+# 				import memcache
+#
+# 				def connect_to_memcached():
+# 					memc = memcache.Client(['127.0.0.1:11211'], debug=0);
+# 					print 'Connected to Memcached.'
+# 					return memc
+#
+# 				def banner(message):
+# 					print
+# 					print "=" * len(message)
+# 					print message
+# 					print "=" * len(message)
+#
+# 				country_data = [
+# 				("Canada", //etc, values//)
+#				]
+#
+# 				def switch_table(memc,table):
+# 					key = "@@" + table
+# 					print "Switching default table to '" + table "' by issuing GET for '" + key + "'."
+# 					result = memc.get(key)
+#
+# 				def insert_country_data(memc):
+# 					banner("Inserting initial data via memcached interface")
+# 					for item in country_data:
+# 						country = item[0]
+# 						population = item[1]
+# 						area = item[2]
+# 						drive_side = item[3]
+#
+# 						key = country
+# 						value = "|".join([population,area,drive_side])
+# 						print "Key = " + key
+# 						print "Value = " + value
+#
+# 						if memc.add(key,value):
+# 							print "Added new key, value pair."
+# 						else:
+# 							print "Updating value for existing key"
+# 							memc.set(key,value)
+#
+# 				def query_country_data(memc):
+# 					banner("Retrieving data for all keys (country names)")
+# 					for item in country_data:
+# 						key = item[0]
+# 						result = memc.get(key)
+# 						print "Here is the result retrieved from the database for key " + key + ":"
+# 						print result
+# 						(m_population, m_area, m_drive_side) = result.split("|")
+# 						print "Unpacked population value: " + m_population
+# 						print "Unpacked area value 	  : " + m_area
+# 						print "Unpacked drive side value: " + m_drive_side
+#
+# 				if __name__ == '__main__':
+# 
+# 					memc = connect_to_memcached()
+# 					switch_table(memc, "bbb")
+# 					insert_country_data(memc)
+# 					query_country_data(memc)
+# 
+# 					sys.exit(0)
+#
+# Sample Python application notes:
+#
+# 		) No database authorization is reuqired ot run the app, since data manipulation is performed through the memcached interface.
+#
+# 			The only required information is the port number on the local system where the memcached daemon listens.
+#
+# 		) To make sure the application uses the multicol table, the switch_table() function is called, which performs a dummy get or set
+# 			request using @@ notation.
+#
+# 			The name value in the request is bbb, which is the multicol table identifier defined in the innodb_memcache.containers.name field
+#
+# 			A more descriptive name value might be used in a real-world application. This example simply illustrates that a table identifier
+# 			is specified rather than the table name in get @@/etc/ requests.
+#
+# 		) The utility functions used to insert and query data demonstrate how to turn a Python data structure into pipe-separated values for
+# 			sending data to MySQL with add or set requests, and how to unpack the pipe-separated values returned by get requests.
+#
+# 			This extra processing is only required when mapping a single memcached value to multiple MySQL table columns.
+#
+# 4. Run the sample Python app
+#
+# 		shell> python multicol.py
+#
+# If successful, the sample application returns this output:
+#
+# 		Connected to memcached
+# 		Switching default table to 'bbb' by issuing GET for '@@bbb'
+#
+# 		===================
+# 		Inserting initial data via memcached interface
+# 		===================
+# 		Key = Canada
+# 		Value = 34820000|9984670|R
+# 		Added new key, value pair
+# 		Key = USA
+# 		//etc.//
+#
+# 		===================
+# 		Retrieving data for all keys (country names)
+# 		===================
+# 		//ETC//
+#
+# 5. Query the innodb_memcache.containers table to view the record you inserted earlier for the multicol table.
+#
+# The first record is the sample entry for the demo_test table that is created during the initial daemon_memcached
+# plugin setup.
+#
+# The second record is the entry you inserted for the multicol table.
+#
+# 		mysql> SELECT * FROM innodb_memcache.containers\G
+# 		*********************** 1. row *******************
+# 						name: aaa
+# 				db_schema : test
+# 				db_table  : demo_test
+# 			key_columns  : c1
+# 			value_columns: c2
+# 					flags  : c3
+# 			cas_column   : c4
+# 	 expire_time_column: c5
+#unique_idx_name_on_key: PRIMARY
+#
+# 		*********************** 2. row *********************
+# 						name: bbb
+# 				db_schema : test
+# 				db_table  : multicol
+# 			  key_columns: country
+# 			value_columns: population,area_sq_km,drive_side
+# 					flags  : c3
+# 			cas_column   : c4
+# 	 expire_time_column: c5
+#unique_idx_name_on_key: PRIMARY
+#
+# 6. Query the multicol table to view data inserted by the sample Python application. The data is available for MySQL queries,
+# 		which demonstrates how the same data can be accessed using SQL or through applications (using the appropriate MySQL Connector or API)
+#
+# 			mysql> SELECT * FROM test.multicol;
+# 			+----------+-----------------+--------------+--------------+----------+-----------+-----------+
+# 			| country  | population 	  | area_sq_km   | drive_side   | c3 	    | c4 		 | c5 		 |
+# 			+----------+-----------------+--------------+--------------+----------+-----------+-----------+
+# 			| Canada   | //values//
+#
+# NOTE:
+#
+# 		Always allow sufficient size to hold necessary digits, decimal points, sign characters, leading zeros,
+# 		and so on when defining the length for columns that are treated as numbers.
+#
+# 		Too long values in a string column such as a VARCHAR are truncated by removing some characters,
+# 		which could produce nonsensical numeric values
+#
+# 7. Optionally, run report-type queries on the InnoDB table that stores the memcached data.
+#
+# 		YOu can produce reports through SQL queries, performing calculations and tests across any columns,
+# 		not just the country key column.
+#
+# 		(Because the following examples use data from only a few countries, the numbers are for illustration purposes only)
+#
+# 		The following queries return the average population of countries where people drive on the right, and the average size
+# 		of countries whose names start with "U"
+#
+# 			mysql> SELECT AVG(population) FROM multicol WHERE drive_side = 'R';
+# 			+----------------+
+# 			| avg(population)|
+#			+----------------+
+# 			| //value//
+#
+# 			mysql> SELECT SUM(area_sq_km) FROM multicol WHERE country LIKE '%';
+# 			+-----------------+
+# 			| sum(area_sq_km) |
+# 			+-----------------+
+# 			| //value//
+#
+# 		Because the population and area_sq_km columns store character data rather than strongly typed numeric data,
+# 		functions such as AVG() and SUM() work by converting each value to a number first.
+#
+# 		This approach does not work for operators such as < or >, for example, when comparing character-based values,
+# 		9 > 1000, which is not expected from a clause such as ORDER BY population DESC 
+#
+# 		For the most accurate type treatment, perform queries against views that cast numeric columns to the appropriate types.
+#
+# 		This technique lets you issue simple SELECT * queries from database applications, while ensuring that casting, filtering
+# 		and ordering is correct.
+#
+# 		The following example shows a view that can be queried to find the top three countries in descending order of population,
+# 		with the results reflecting the latest data in the multicol table, and with population and area figures treated as numbers:
+#
+# 			mysql> CREATE VIEW populous_countries AS
+# 					 SELECT
+# 					 country,
+# 					 cast(population as unsigned integer) population,
+# 					 cast(area_sq_km as unsigned integer) area_sq_km,
+# 					 drive_side FROM multicol
+# 					 ORDER BY CAST(population as unsigned integer) DESC
+# 					 LIMIT 3;
+#
+# 			mysql> SELECT * FROM populous_countries;
+# 			+-----------+---------------+------------+---------------+
+# 			| country 	| population 	 | area_sq_km | drive_side 	|
+# 			+-----------+---------------+------------+---------------+
+# 			| China 	   | 	/values//
+#
+# 			mysql> DESC populous_countries;
+# 			+-----------+---------------+-------+--------+----------+----------+
+# 			| Field 	   | Type 			 | Null  | Key 	| Default  | Extra 	 |
+# 			+-----------+---------------+-------+--------+----------+----------+
+# 			| //ETC//
+#
+# 15.19.6.2 ADAPTING A MEMCACHED APPLICATION FOR THE INNODB MEMCACHED PLUGIN
+#
+# Consider these aspects of MySQL and InnoDB tables when adapting existing memcached applications to use the daemon_memcached plugin:
+#
+# 		) If there are key values longer than a few bytes, it may be more efficient to use a numeric auto-increment column as the primary
+# 			key of the INnoDB table, and to create a unique secondary index on the column that contains the memcached key values.
+#
+# 			This is because InnoDB performs best for large-scale insertions if primary key values are added in sorted order (as they are with
+# 			auto-increment values)
+#
+# 			Primary key values are included in secondary indexes, which takes up unnecessary space if the primary key is a long string value.
+#
+# 		) If you store several different classes of information using memcached, consider setting up a separate InnoDB table for each type
+# 			of data.
+#
+# 			Define additional table identifiers in the innodb_memcache.containers table, and use the @@table_id.key notation to store and
+# 			retrieve items from different tables.
+#
+# 			Physically dividing different types of information allows you to tune the characteristics of each table for optimum space utilization,
+# 			performance and reliability.
+#
+# 			For example, you might enable compression for a table that holds blog posts, but not for a table that holds thumbnail images.
+#
+# 			You might back up one table more frequently than another because it holds critical data.
+#
+# 			You might create additional secondary indexes on tables that are frequently used to generate reports using SQL.
+#
+# 		) Preferably, configure a stable set of table definitions for use with the daemon_memcached plugin, and leave the tables
+# 			in place permanently.
+#
+# 			Changes to the innodb_memcache.containers table take effect the next time the innodb_memcache.containers table is queried.
+# 			Entries in the containers table are processed at startup, and are consulted whenever an unrecognized table identifier
+# 			(as defined by containers.name) is requested using @@ notation.
+#
+# 			Thus, new entries are visible as soon as oyu use the associated table identifier, but changes to existing entries
+# 			require a server restart before they take effect.
+#
+# 		) When you use the default innodb_only caching policy, calls to add(), set(), incr() and so on can succeed but still
+# 			trigger debugging messages such as while expecting 'STORED', got unexpected response 'NOT_STORED'
+#
+# 			Debug messages occur because new and updated values are sent directly to the INnoDB table without being saved
+# 			in the memory cache, due to the innodb_only caching policy.
+#
+# 15.19.6.3 TUNING INNODB MEMCACHED PLUGIN PERFORMANCE
+#
+# Because using InnoDB in combination with memcached involves writing all data to disk, whether immediately or sometimes
+# later, raw performance is expected to be somewhat slower than using memcached by itself.
+#
+# When using the InnoDB memcached plugin, focus tuning goals for memcached operations on achieving better performance
+# than equivalent SQL operations.
+#
+# Benchmarks suggest that queries and DML operations (inserts, updates and deletes) that use the memcached interface
+# are faster than traditional SQL.
+#
+# DML operations typically see larger improvements. Therefore, consider adapting write-intensive applications to use the
+# memcached interface first. Also consider prioritizing adaptation of write-intensive applications that use fast, lightweight
+# mechanisms that lack reliability.
+#
+# ADAPTING SQL QUERIES
+#
+# The types of queries that are most suited to simple GET requests are those with a single clause or a set of AND conditions
+# in the WHERE clause:
+#
+# 		SQL:
+# 		SELECT col FROM tbl WHERE key = '/value/';
+#
+# 		memcached:
+# 		get /value/
+#
+# 		SQL:
+# 		SELECT col FROM tbl WHERE col1 = val1 and col2 = val2 and col3 = val3;
+#
+# 		memcached:
+# 		# since you must always know these 3 values to look up the key,
+# 		# combine them into a unique string and use that as the key
+# 		# for all ADD, SET and GET operations.
+# 		key_value = val1 + ":" + val2 + ":" + val3
+# 		get key_value
+#
+# 		SQL:
+# 		SELECT 'key exists' FROM tbl
+# 			WHERE EXISTS (SELECT col1 FROM tbl WHERE KEY = '/value/') LIMIT 1;
+#
+# 		memcached:
+# 		# Test for existence of key by asking for its value and checking if the call succeeds,
+# 		# ignoring the value itself. For existence checking, you typically only store a very
+# 		# short value such as "1"
+# 		get key_value
+#
+# USING SYSTEM MEMORY
+#
+# 	For best performance, deploy the daemon_memcached plugin on machines that are configured as typical database servers,
+# 	where the majority of system RAM is devoted to the InnoDB Buffer pool, through the innodb_buffer_pool_size configuration
+# 	option.
+#
+# 	For systems with multi-gigabyte buffer pools, consider raising the value of innodb_buffer_pool_instances for maximum
+# 	throughput when most operations involve data that is already cached in memory.
+#
+# REDUCING REDUNDANT I/O
+#
+# InnoDB has a number of settings that let you choose the balance between high reliability, in case of a crash, and the amount
+# of I/O overhead during high write workloads.
+#
+# For example, consider setting the innodb_doublewrite to 0 and innodb_flush_log_at_trx_commit to 2.
+#
+# Measure performance with different innodb_flush_method settings.
+#
+# For other ways to reduce or tune I/O table operations, see SECTION 8.5.8 "OPTIMIZING INNODB DISK I/O"
+#
+# REDUCING TRANSACTIONAL OVERHEAD
+#
+# a default value of 1 for daemon_memcached_r_batch_size and daemon_memcached_w_batch_size is intended for maximum reliability
+# of results and safety of stored or updated data.
+#
+# Depending on the type of application, you might increase one or both of these settings to reduce the overhead of frequent
+# commit operations.
+#
+# On a busy system, you might increase daemon_memcached_r_batch_size, knowing that changes to data made through SQL may not become
+# visible to memcached immediately (that is, until N more get oeprations are processed).
+#
+# When processing data where every write operation must be reliably stored, leave daemon_memcached_w_batch_size set to 1.
+#
+# Increase the setting when processing large numbers of updates intended only for statistical analysis, where losing the last
+# N updates in a crash is an acceptable risk.
+#
+# For example, a system that monitors traffic crossing a bridge, recording data for approx 100K vehicles each day.
+#
+# If the application counts different types of vehicles to analyze traffic patterns, chagning daemon_memcached_w_batch_size
+# from 1 to 100 reduces I/O overhead for commit operations by 99%. 
+#
+# In case of an outage, a maximum of 100 records are lost, which may be an acceptable margin of error. If instead the application
+# performed automated toll collection for each car, you would set daemon_memcached_w_batch_size to 1 to ensure that each toll
+# record is immediately saved to disk.
+#
+# Because of the way InnoDB organizes memcached key values on disk, if you have a large number of keys to create, it may be faster
+# to sort the data items by key value in the application and add them in sorted order, rather than create keys in arbitrary order.
+#
+# The memslap command, which is part of the regular memcached distirbution but not included with the daemon_memcached plugin, 
+# can be useful for benchmarking different configurations.
+#
+# It can also be used to generate sample key-value pairs to use in your own benchmarks. see LIBMEMCACHED command-line utilities for details.
+#
+# 15.19.6.4 CONTROLLING TRANSACTIONAL BEHAVIOR OF THE INNODB MEMCACHED PLUGIN
+#
+# UNlike traditional memcached, the daemon_memcached plugin allows you to control durability of data values produced through
+# calls to add, set, incr and so on.
+#
+# By default, data written through the memcached interface is stored to disk, and calls to get return the most recent value from disk.
+#
+# Although the default behavior does not offer the best possible raw performance, it is still fast compared to the SQL interface
+# for InnoDB tables.
+#
+# As you gain exp. using the daemon_memcached plugin, you can consider relaxing durability settings for non-critical classes of data,
+# at the risk of losing some updated values in the event of an outage, oir returning data that is slightly out-of-date.
+#
+# FREQUENCY OF COMMITS
+#
+# One tradeoff between durability and raw perf. is how frequently new and changed data is committed. If data is critical, it should be
+# committed immediately so that it is safe in case of a crash or outage.
+#
+# If data is less critical, such as counters that are reset after a crash or logging data that you can afford to lose, you might
+# prefer higher raw throughput that is available with less frequent commits.
+#
+# When a memcached operation inserts, updates, or deletes data in the underlying InnoDB table, the change might be committed to the
+# InnoDB table instantly (if daemon_memcached_w_batch_size=1) or some time later (if the daemon_memcached_w_batch_size value is greater
+# than 1).
+#
+# In either case, the change cannot be rolled back.
+#
+# If oyu increase the value of daemon_memcached_w_batch_Size to avoid high I/O overhead during busy times,commits could become
+# infrequent when the workload decreases.
+#
+# As a safety measure, a background thread automatically commits changes made through the memcached API at regular intervals.
+#
+# The interval controlled by the innodb_api_bk_commit_interval configuration option, which has a default setting of 5 seconds.
+#
+# When a memcached operation inserts or updates data in the underlying InnoDB table, the changed data is immediately visible
+# to other memcached requests because the new value remains in the memory cache, even if it is not yet committed on the MySQL side.
+#
+# TRANSACTION ISOLATION
+#
+# When a memcached operation such as get or incr causes a query or DML operation on the underlying InnoDB table, you can control
+# whether the operation sees the very latest data written to the table, only data that has been committed, or other variations
+# of transaction isolation level.
+#
+# Use the innodb_api_trx_level configuration option to control this feature.
+#
+# The numeric values specified for this option correspond to isoaltion levels such as REPEATABLE_READ. See the description
+# of the innodb_api_trx_level option for information about other settings.
+#
+# A strict isolation level ensures that data you retrieve is not rolled back or changed suddenly causing subsequent queries
+# to return different values.
+#
+# However, strict isolation levels require greater locking overhead, which can cause waits. For a NoSQL-style application
+# that does not use long-running transactions, you can typically use the default isolation level or switch to a less
+# strict isolation level.
+#
+# DISABLING ROW LOCKS FOR MEMCACHED DML OPERATIONS
+#
+# The innodb_api_disable_rowlock option can be used to disable row locks when memcached requests through the daemon_memcached
+# plugin causes DML operations.
+#
+# By default, innodb_api_disable_rowlock is set to OFF which means that memcached requests row locks for get and set operations.
+#
+# When innodb_api_disable_rowlock is set to ON, memcached requests a table lock instead of row locks.
+#
+# The innodb_api_disable_rowlock option is not dynamic. It must be specified at startup on the mysqld command line or entered
+# in a MySQL configuration file.
+#
+# ALLOWING OR DISALLOWING DDL
+#
+# By default, you can perform DDL operations such as ALTER_TABLE on tables used by the daemon_memcached plugin.
+#
+# To avoid potential slowdowns when these tables are used for high-throughput applications, disable DDL operations
+# on these tables by enabling innodb_api_enable_mdl at startup.
+#
+# THis option is less appropriate when accessing the same tables through both memcached and SQL, because it blocks
+# CREATE_INDEX statements on the tables, which could be important for running reporting queries.
+#
+# STORING DATA ON DISK, IN MEMORY OR BOTH
+#
+# The innodb_memcache.cache_policies table specifies whether to store data written through the memcached interface to disk
+# (innodb_only, the default); in memory only, as with traditional memcached (cache_only); or both (caching).
+#
+# With the caching setting, if memcached cannot find a key in memory, it searches for the value in an InnoDB table.
+#
+# Values returned from get calls under the caching setting could be out-of-date if the values were updated on disk
+# in the InnoDB table but are not yet expired from the memory cache.
+#
+# The caching policy can be set independently for get, set (including incr and decr), delete and flush operations.
+#
+# For example, you might allow get and set operations to query or update a table and the memcached memory cache at the
+# same time (using the caching setting), while making delete, flush or both operate only on the in-memory copy
+# (using the cache_only setting).
+#
+# That way, deleting or flushing an item only expires the item from the cache, and the latest value is returned
+# from the InnoDB table the next time the item is requested.
+#
+# 		mysql> SELECT * FROM innodb_memcache.cache_policies;
+# 		+---------------+--------------+--------------+----------------+----------------+
+# 		| policy name   | get_policy   | set_policy 	 | delete_policy  | flush_policy   |
+# 		+---------------+--------------+--------------+----------------+----------------+
+# 		| cache_policy  | innodb_only  | innodb_only  | innodb_only    | innodb_only 	  |
+# 		+---------------+--------------+--------------+----------------+----------------+
+#
+# 		mysql> UPDATE innodb_memcache.cache_policies SET set_policy = 'caching'
+# 				 WHERE policy_name = 'cache_policy';
+#
+# innodb_memcache.cache_policies values are only read at startup. After changing values in this table, uninstall and 
+# reinstall the daemon_memcached plugin to ensure that changes take effect.
+#
+# 		mysql> UNINSTALL PLUGIN daemon_memcached;
+#
+# 		mysql> INSTALL PLUGIN daemon_memcached soname "libmemcached.so";
+#
+# 15.19.6.5 ADAPTING DML STATEMENTS TO MEMCACHED OPERATIONS
+#
+# Benchmarks suggest that the daemon_memcached plugin speeds up DML operations (inserts, updates and deletes) more than it speeds
+# up queries.
+#
+# Therefore, consider focusing initial development efforts on write-intensive applications that are I/O bound, and look for opportunities
+# to use MySQL with the daemon_memcached plugin for new write-intensive applications.
+#
+# Single-row DML statements are the easiest types of statements to turn into memcached operations. INSERT becomes add, UPDATE becomes set,
+# incr or decr, and DELETE becomes delete.
+#
+# These operations are guaranteed to only affect one row when issued through the memcached interface, because the key is unique within the table.
+#
+# In the following SQL examples, t1 refers to the table used for memcached operations, based on the configuration in the innodb_memcache.containers
+# table.
+#
+# Key refers to the column listed under key_columns, and val refers to the column listed under value_columns.
+#
+# 		INSERT INTO t1 (key,val) VALUES (some_key,some_value);
+# 		SELECT val FROM t1 WHERE key = some_key;
+# 		UPDATE t1 SET val = new_value WHERE key = some_key;
+# 		UPDATE t1 SET val = val + x WHERE key = some_key;
+# 		DELETE FROM t1 WHERE KEY = some_key;
+#
+# The following TRUNCATE_TABLE and DELETE statements, which remove all rows from teh table, correspond to the flush_all operation,
+# where t1 is configured as the table for memcached operations, as in the previous example.
+#
+# 		TRUNCATE TABLE t1;
+# 		DELETE FROM t1;
+#
+# 15.19.6.6 PERFORMING DML AND DDL STATEMENTS ON THE UNDERLYING INNODB TABLE
+#
+# You can access the underlying InnoDB table (which is test.demo_test by default) through standard SQL interfaces.
+# However, there are some restrictions:
+#
+# 		) When querying a table that is also accessed through the memcached interface, remember that memcached operations
+# 			can be configured to the committed periodically rather than after every write operation.
+#
+# 			This behavior is controlled by the daemon_memcached_w_batch_size option.
+#
+# 			If this option is set to a value greater than 1, use READ_UNCOMMITTED queries to find rows that were just inserted.
+#
+# 				mysql> SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+#
+# 				mysql> SELECT * FROM demo_test;
+# 				+---------+---------+---------+----------+-----------+-----------+---------+---------+---------+---------+----------+
+# 				| cx 	    | cy 	  | c1 		| cz 		  | c2 		  | ca 	 		| CB 		 | c3 	  | cu 		| c4 	    | C5 		|
+# 				+---------+---------+---------+----------+------------+-----------+---------+---------+---------+---------+----------+
+# 				| NULL 	 | NULL 	  | a11 	   | NULL 	  | 123456789  | NULL 		| NULL 	 | 10 	  | NULL 	| 3 		 | NULL 		|
+# 				+---------+---------+---------+----------+------------+-----------+---------+---------+---------+---------+----------+
+#
+# 		) When modifying a table using SQL that is also accessed through the memcached interface, you can configure memcached operations
+# 			to start a new transaction periodically rather than for every read operation.
+#
+# 			This behavior is controlled by the daemon_memcached_r_batch_size option.
+#
+# 			If this option is set to a value greater than 1, changes made to the table using SQL are not immediately visible to memcached operations.
+#
+# 		) The InnoDB table is either IS (intention shared) or IX (intention exclusive) locked for all operations in a transaction.
+#
+# 			If you increase daemon_memcached_r_batch_size and daemon_memcached_w_batch_size substantially from their default value of 1,
+# 			the table is most likely locked between each operation, preventing DDL statements on the table.
+#
+# 15.19.7 THE INNODB MEMCACHED PLUGIN AND REPLICATION
+#
+# Because the daemon_memcached plugin supports the MySQL binary log, updates made on a master server through the memcached
+# interface can be replicated for backup, balancing intensive read workloads, and high availability.
+#
+# All memcached commands are supported with binary logging.
+#
+# You do not need to set up the daemon_memcached plugin on slave servers. The primary advantage of htis configuration is increased
+# write throughput on the master.
+#
+# The speed of the replication mechanism is not affected.
+#
+# The following sections show how to use the binary log capability when using the daemon_memcached plugin with MySQL replication.
+#
+# It is assumed that you have completed the setup described in SECTION 15.19.3, "SETTING UP THE INNODB MEMCACHED PLUGIN"
+#
+# ENABLING THE INNODB MEMCACHED BINARY LOG
+#
+# 	1. TO use the daemon_memcached plugin with the MySQL binary log, enable the innodb_api_enable_binlog configuration option
+# 		on the master server.
+#
+# 		This option can only be set at server startup. You must also enable the MySQL binary log on the master server using the
+# 		--log-bin option. YOu can add these options to the MySQL configuration file, or on the mysqld command line.
+#
+# 			mysqld /etc/ --log-bin --innodb_api_enable_binlog=1
+#
+# 	2. Configure the master and slave server, as described in SECTION 17.1.2, "SETTING UP BINARY LOG FILE POSITION BASED REPLICATION"
+#
+# 	3. Use mysqldump to create a master data snapshot, and sync the snapshot to the slave server.
+#
+# 			master shell> mysqldump --all-databases --lock-all-tables > dbdump.db
+# 			slave shell> mysql < dbdump.db
+#
+# 	4. On the master server, issue SHOW_MASTER_STATUS to obtain the master binary log coordinates.
+#
+# 		mysql> SHOW MASTER STATUS;
+#
+# 	5. On the slave server, use a CHANGE_MASTER_TO statement to set up a slave server using the master binary log coordinates.
+#
+# 		mysql> CHANGE MASTER TO
+# 				 MASTER_HOST='localhost',
+# 				 MASTER_USER='root'
+# 				 MASTER_PASSWORD='',
+# 				 MASTER_PORT=13000,
+# 				 MASTER_LOG_FILE='0.0000001',
+# 				 MASTER_LOG_POS=114;
+#
+# 	6. Start the slave
+#
+# 		mysql> START SLAVE;
+#
+#  	If the error log prints output similar to the following, the slave is ready for replication.
+#
+# 			2013-09-24T13:04:38./etc/ [Note] Slave I/O thread: connected to
+# 			master 'root@localhost:13000', replication started in log '0.0000001'
+# 			at position 114
+#
+# TESTING THE INNODB MEMCACHED REPLICATION CONFIGURATION
+#
+# This example demonstrates how to test the InnoDB memcached replication configuration using the memcached and telnet to insert,
+# update and delete data.
+#
+# A MySQL client is used to verify results on the master and slave servers.
+#
+# The example uses the demo_test table, which was created by the innodb_memcached_config.sql configuration script during the
+# initial setup of the daemon_memcached plugin.
+#
+# The demo_test table contains a single example record.
+#
+# 	1. Use the set command to insert a record with a key of test1, a flag value of 10, an expiration value of 0, a cas value of 1, and a value of t1.
+#
+# 		telnet 127.0.0.1 11211
+# 		Trying 127.0.0.1
+# 		Connected to 127.0.0.1
+# 		Escape character is '^]'
+# 		set test1 10 0 1
+# 		t1 
+# 		STORED
+#
+# 	2. On the master server, check that the record was inserted into the demo_test table.
+#
+# 		Assuming the demo_test table was not previously modified, there should be two records.
+#
+# 		The example record with a key of AA, and the record you just inserted, with a key of test1. The c1
+# 		column maps to the key, the c2 column to the value, the c3 column to the flag value, the c4 column
+# 		to the cas value, and the 5 column to the expiration time.
+#
+# 		The expiration time was set to 0, since it is unused.
+#
+# 			mysql> SELECT * FROM test.demo_test;
+# 			+---------+------------------+----------+---------+-----------+
+# 			| c1 		 | c2 				  | c3 		 | c4 	  | c5 		  |
+# 			+---------+------------------+----------+---------+-----------+
+# 			| AA 		 | HELLO, HELLO 	  | 8 		 | 0 		  | 0 		  |
+# 			| test1 	 | t1 				  | 10 		 | 1 		  | 0 		  |
+# 			+---------+------------------+----------+---------+-----------+
+#
+# 	3. Check to verify that the same record was replicated to the slave server.
+#
+# 			mysql> SELECT * FROM test.demo_test;
+# 			+---------+-----------------+-------------+------------+---------+
+# 			| c1 		 | c2 				 | c3 			| c4 			 | c5 	  |
+# 			+---------+-----------------+-------------+------------+---------+
+# 			| AA 		 | HELLO, HELLO 	 | 8 				| 0 			 | 0 		  |
+# 			| test1 	 | t1 				 | 10 			| 1 			 | 0 		  |
+# 			+---------+-----------------+-------------+------------+---------+
+#
+# 	4. Use the set command to update the key to a value of new
+#
+# 			telnet 127.0.0.1 11211
+# 			Trying 127.0.0.1 
+# 			Connected to 127.0.0.1
+# 			Escape character is '^]'
+# 			set test1 10 0 2
+# 			new
+# 			STORED
+#
+# 			The update is replicated to the slave server (notice that the cas value is also updated)
+#
+# 				mysql> SELECT * FROM test.demo_test;
+# 				+------------+--------------+--------+-------+--------+
+# 				| c1 			 | c2 			 | c3 	 | c4 	| c5 	   |
+# 				+------------+--------------+--------+-------+--------+
+# 				| AA 			 | HELLO, HELLO | 8 		 | 0 		| 0 		|
+# 				| test1 		 | new 			 | 10 	 | 2 		| 0 		|
+# 				+------------+--------------+--------+-------+--------+
+#
+# 	5. Delete the test1 record using a delete command
+#
+# 			telnet 127.0.0.1 11211
+# 			Trying 127.0.0.1
+# 			Connected to 127.0.0.1
+# 			Escape character is '^]'
+# 			delete test1
+# 			DELETED
+#
+# 		When the delete operation is replicated to the slave, the test1 record on the slave
+# 		is also deleted.
+#
+# 			mysql> SELECT * FROM test.demo_test;
+# 			+------------+----------------+------------+----------+------------+
+# 			| c1 			 | c2 				| c3 			 | c4 		| c5 			 |
+# 			+------------+----------------+------------+----------+------------+
+# 			| AA 			 | HELLO, HELLO 	| 8 			 | 0 			| 0 			 |
+# 			+------------+----------------+------------+----------+------------+
+#
+# 	6. Remove all rows from the table using the flush_all command
+#
+# 			telnet 127.0.0.1 11211
+# 			Trying 127.0.0.1
+# 			Connected to 127.0.0.1
+# 			Escape character is '^]'
+# 			flush_all
+# 			OK
+#
+# 			mysql> SELECT * FROM test.demo_test;
+# 			Empty set (0.00 sec)
+#
+# 	7. Telnet to the master server and enter two new records.
+#
+#
+# 			telnet 127.0.0.1 11211
+# 			Trying 127.0.0.1
+# 			Connected to 127.0.0.1
+# 			Escape character is '^]'
+# 			set test2 10 0 4
+# 			again
+# 			STORED
+# 			set test3 10 0 5
+# 			again1
+# 			STORED
+#
+# 	8. Confirm that the two records were replicated to the slave server
+#
+# 		mysql> SELECT * FROM test.demo_test;
+# 		+--------+--------------+----------+--------+---------+
+# 		| c1 	   | c2 			   | c3 		  | c4 	  | c5 		|
+# 		+--------+--------------+----------+--------+---------+
+# 		| test2  | again 			| 10 		  | 4 	  | 0 		|
+# 		| test3 	| again1 		| 10 		  | 5 	  | 0 		|
+# 		+--------+--------------+----------+--------+---------+
+#
+# 	9. Remove all rows from the table using the flush_all command
+#
+# 		telnet 127.0.0.1 11211
+# 		Trying 127.0.0.1
+# 		Connected to 127.0.0.1
+# 		Escape character is '^]'
+# 		flush_all
+# 		OK
+#
+# 	10. Check to ensure that the flush_all operation was replicated on the slave server
+#
+# 		mysql> SELECT * FROM test.demo_test;
+# 		Empty set (0.00 sec)
+#
+# INNODB MEMCACHED BINARY LOG NOTES
+#
+# Binary Log Format:
+#
+# 		) Most memcached operations are mapped to DML statements (analogous to insert, delete, update). Since there is no actual
+# 			SQL statement being processed by the MySQL server, all memcached commands (except for flush_all) use Row-based replication
+# 			(RBR) logging, which is independent of any server binlog_format setting.
+#
+# 		) The memcached flush_all command is mapped to the TRUNCATE_TABLE command in MySQL 5.7 and earlier.
+#
+# 			Since DDL commands can only use statement-based logging, the flush_all command is replicated by sending 
+# 			a TRUNCATE_TABLE statement.
+#
+# 			In MySQL 8.0 and later, flush_all is mapped to DELETE but is still replicated by sending a TRUNCATE_TABLE
+# 			statement.
+#
+# TRANSACTIONS:
+#
+# 		) The concept of transactions has not typically been part of memcached applications. For performance considerations,
+# 			daemon_memcached_r_batch_size and daemon_memcached_w_batch_size are used to control the batch size for read and write
+# 			transactions.
+#
+# 			These settings do not affect replication. each SQL operation on the underlying InnoDB table is replicated after
+# 			successful completion.
+#
+# 		) The default value of daemon_memcached_w_batch_size is 1, which means that each memcached write operation is commited immediately.
+#
+# 			This default setting incurs a certain amount of performance overhead to avoid inconsistencies in the data that is visible on the
+# 			master and slave servers.
+#
+# 			The replicated records are always available immediately on the slave server. If you set daemon_memcached_w_batch_size to a value
+# 			greater than 1, records inserted or updated through memcached are not immediately visible on the master server;
+#
+# 			To view the records on the master server before they are committed, issue SET_TRANSACTION_ISOLATION_LEVEL_READ_UNCOMMITTED.
+#
+# 15.19.8 INNODB MEMCACHED PLUGIN INTERNALS
+#
+# https://dev.mysql.com/doc/refman/8.0/en/innodb-memcached-internals.html
+#
+#
