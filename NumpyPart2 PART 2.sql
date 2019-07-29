@@ -59032,6 +59032,1029 @@
 #
 # 15.19.8 INNODB MEMCACHED PLUGIN INTERNALS
 #
-# https://dev.mysql.com/doc/refman/8.0/en/innodb-memcached-internals.html
+# InnoDB API FOR THE INNODB MEMCACHED PLUGIN
 #
+# The InnoDB memcached engine accesses InnoDB through InnoDB APIs, most of which are directly adopted from embedded InnoDB.
+# InnoDB API functions are passed to the InnoDB memcached engine as callback functions.
+#
+# InnoDB API functions access the InnoDB tables directly, and are mostly DML operations with the exception of TRUNCATE_TABLE
+#
+# memcached commands are implemented through the InnoDB memcached API. The following table outlines how memcached commands
+# are mapped to DML or DDL operations.
+#
+# TABLE 15.28 MEMCACHED COMMANDS AND ASSOCIATED DML OR DDL OPERATIONS
+#
+# 		memcached Command 			DML or DDL Operations
+#
+# 		get 								a read/fetch command
+#
+# 		set 								a search followed by an INSERT or UPDATE (depending on whether or not a key exists)
+#
+# 		add 								a search followed by an INSERT or UPDATE
+#
+# 		replace 							a search followed by an UPDATE
+#
+# 		append 							a search followed by an UPDATE (appends data to the result before UPDATE)
+#
+# 		prepend 							a search followed by an UPDATE (prepends data to the result before UPDATE)
+#
+# 		incr 								a search followed by an UPDATE
+#
+# 		decr 								a search followed by an UPDATE
+# 		
+# 		delete 							a search followed by a DELETE
+#
+# 		flush_all 						TRUNCATE TABLE (DDL)
+#
+# INNODB MEMCACHED PLUGIN CONFIGURATION TABLES
+#
+# This section describes configuration tables used by the daemon_memcached plugin. The cache_policies table,
+# config_options table and containers table are created by the innodb_memcached_config.sql configuration
+# script in the innodb_memcache database.
+#
+# 		mysql> USE innodb_memcache;
+# 		Database changed
+# 		mysql> SHOW TABLES;
+# 		+---------------------------+
+# 		| Tables_in_innodb_memcache |
+# 		+---------------------------+
+# 		| cache_policies 			    |
+# 		| config_options 				 |
+# 		| containers 					 |
+# 		+---------------------------+
+#
+# CACHE_POLICIES TABLE
+#
+# The cache_policies table defines a cache policy for the InnoDB memcached installation. You can specify individual policies
+# for get, set, delete and flush operations, within a single cache policy.
+#
+# The default setting for all operations is innodb_only.
+#
+# 		) innodb_only: Use InnoDB as the data store
+#
+# 		) cache_only: Use the memcached engine as the data store
+#
+# 		) caching: Use both InnoDB and the memcached engine as data stores. In this case, if memcached cannot find a key in memory, it searches
+# 			for the value in an InnoDB table.
+#
+# 		) disable: Disable caching
+#
+# TABLE 15.29 CACHE_POLICIES COLUMNS
+#
+# 			Column 					Description
+#
+# policy_name 						Name of the cache policy. The default cache policy name is cache_policy
+#
+# get_policy 						The cache policy for get operations. Valid values are innodb_only, cache_only,
+# 										caching, or disabled. The default setting is innodb_only
+#
+# set_policy 						The cache policy for set operations. Valid values are innodb_only, cache_only,
+# 										caching, or disabled. The default setting is innodb_only
+#
+# delete_policy 					The cache policy for delete operations. Valid values are innodb_only, cache_only,
+# 										caching or disabled. The default setting is innodb_only
+#
+# flush_policy 					The cache policy for flush operations. Valid values are innodb_only, cache_only,
+# 										caching, or disabled. The default setting is innodb_only.
+#
+# CONFIG_OPTIONS TABLE
+#
+# The config_options table stores memcached-related settings that can be changed at runtime using SQL. Supported
+# configuration options are separator and table_map_delimiter.
+#
+# TABLE 15.30 CONFIG_OPTIONS COLUMNS
+#
+# 	Column 				Description
+#
+# Name 					Name of the memcached-related configuration option. The following configuration options are supported
+# 							by the config_options table:
+#
+# 								) separator: Used to separate values of a long string into separate values when there are multiple value_columns
+# 									defined.
+#
+# 									By default, the separator is a | character. For example, if you define col1, col2 as value columns, and you define
+# 									| as the separator, you can issue the following memcached command to insert values into col1 and col2, respectively:
+#
+# 										set keyx 10 0 19
+# 										valuecolx|valuecoly
+#
+# 									valuecol1x is stored in col1 and valuecoly is stored in col2.
+#
+# 								) table_map_delimiter: The character separating the schema name and the table name when you use the @@ notation
+# 									in a key name to access a key in a specific table.
+#
+# 									For example, @@t1.some_key and @@t2.som_key have the same key value, but are stored in different tables.
+#
+# Value 					The value assigned to the memcached-related configuration option
+#
+# CONTAINERS TABLE
+#
+# The containers table is the most important of the three configuration tables. Each InnoDB table that is used to store memcached
+# values must have an entry in the containers table.
+#
+# The entry provides a mapping between InnoDB table columns and container table columns, which is required for memcached to work
+# with InnoDB tables.
+#
+# The containers table contains a default entry for the test.demo_test table, which is created by the innodb_memcached_config.sql
+# configuration script.
+#
+# To use the daemon_memcached plugin with your own InnoDB table, you must create an entry in the containers table.
+#
+# TABLE 15.31 CONTAINERS COLUMNS
+#
+# 		COLUMN 					DESCRIPTION
+#
+# 		name 						The name given to the container. If an InnoDB table is not requested by name using @@ notation, the daemon_memcached
+# 									plugin uses the InnoDB table with a containers.name value of default. If there is no such entry, the first entry in the
+# 									containers table, ordered alphabetically by name (ascending), determines the default InnoDB table.
+#
+# 		db_schema 				The name of the database where the InnoDB table resides. This is a required value
+#
+# 		db_table 				The name of the InnoDB table that stores memcached values. This is a required value
+#
+# 		key_columns 			The column in the InnoDB table that contains lookup key values for memcached operations. This is a required value.
+#
+# 		value_columns 			The InnoDB table columns (one or more) that store memcached data. Multiple columns can be specified using the
+# 									separator character specified in the innodb_memcached.config_options table.
+#
+# 									By default, the separator is a pipe character ("|"). To specify multiple columns, separate them with the defined
+# 									separator character.
+#
+# 									For example: col1|col2|col3
+#
+# 									This is a required value
+#
+# 		flags 					The InnoDB table columns that are used as flags (a user-defined numeric value that is stored and retrieved along
+# 									with the main value) for memcached.
+#
+# 									A flag value can be used as a column specifier for some operations (such as incr, prepend) if a memcached 
+# 									value is mapped to multiple columns, so that an operation is performed on a specified column.
+#
+# 									For example, if you have mapped a value_columns to three InnoDB table columns, and only want the increment
+# 									operation performed on one column, use the flags column to specify the column.
+#
+# 									If you do not use the flags column, set a value of 0 to indicate that it is unused.
+#
+# 		cas_column 				The InnoDB table column that stores compare-and-swap (cas) values. The cas_column value is related
+# 									to the way memcached hashes requests to different servers and caches data in memory.
+#
+# 									Because the InnoDB memcached plugin is tightly integrated with a single memcached daemon, and the
+# 									in-memory caching mechanism is handled by MySQL and the InnoDB buffer pool, this column is rarely
+# 									needed.
+#
+# 									If you do not use this column, set a value of 0 to indicate that it is unused.
+#
+# 		expire_time_column 	The InnoDB table column that stores expiration values. The expire_time_column value is related to the way
+# 									memcached hashes requests to different servers and caches data in memory.
+#
+# 									Because the InnoDB memcached plugin is tightly integrated with a single memcached daemon, and the
+# 									in-memory caching mechanism is handled by MySQL and the InnoDB buffer pool, this column is rarely needed.
+#
+# 									If you do not use this column, set a value of 0 to indicate that the column is unused.
+#
+# 									The maximum expire time is defined as INT_MAX32 or 2147483647 seconds (approx 68 years)
+#
+# 	unique_idx_name_on_key  The name of the index on the key column. It must be a unique index. It can be the primary key or
+# 									a secondary index.
+#
+# 									Preferably, use the primary key of the InnoDB table. Using the primary key avoids a lookup that is
+# 									performed when using a secondary index.
+#
+# 									You cannot make a covering index for memcached lookups; InnoDB returns an error if you try to define
+# 									a composite secondary index over both the key and value columns.
+#
+# CONTAINERS TABLE COLUMN CONSTRAINTS
+#
+# 		) You must supply a value for db_schema, db_name, key_columns, value_columns and unique_idx_name_on_key. Specify 0 for flags,
+# 			cas_column and expire_time_column if they are unused.
+#
+# 			Failing to do so could cause your setup to fail.
+#
+# 		) key_columns: The maximum limit for a memcached key is 250 characters, which is enforced by memcached. The mapped key must be
+# 			a non-Null CHAR or VARCHAR type.
+#
+# 		) value_columns: Must be mapped to a CHAR, VARCHAR, or BLOB column. There is no length restriction and the value can be NULL.
+#
+# 		) cas_column: The cas value is a 64 bit integer. It must be mapped to a BIGINT of at least 8 bytes. If you do not use this column,
+# 			set a value of 0 to indicate that it is unused.
+#
+# 		) expiration_time_column: Must mapped to an INTEGER of at least 4 bytes. Expiration time is defined as a 32-bit integer for Unix time
+# 			(the number of seconds since January 1, 1970, as a 32-bit value), or the number of seconds starting from the current time.
+#
+# 			For the latter, the number of seconds may not exceed 60*60*24*30 (the number of seconds in 30 days).
+#
+# 			If the number sent by a client is larger, the server considers it to be a real Unix time value rather than an offset from the
+# 			current time.
+#
+# 			If you do not use this column, set a value of 0 to indicate that it is unused.
+#
+# 		) flags: Must be mapped to an INTEGER of at least 32-bits and can be NULL. If you do not use this column, set a value of 0 to indicate
+# 			that it is unused.
+#
+# A pre-check is performed at plugin load time to enforce column constraints. If mismatches are found, the plugin is not loaded.
+#
+# MULTIPLE VALUE COLUMN MAPPING
+#
+# 		) During plugin initialization, when InnoDB memcached is configured with information defined in the containers table, each mapped
+# 			column defined in containers.value_columns is verified against the mapped InnoDB table.
+#
+# 			If multiple InnoDB table columns are mapped, there is a check to ensure that each column exists and is the right type.
+#
+# 		) At run-time, for memcached insert operations, if there are more delimited values than the number of mapped columns,
+# 			only the number of mapped values are taken.
+#
+# 			For example, if there are six mapped columns, and seven delimited values are provided, only the first six delimited values
+# 			are taken.
+#
+# 			The seventh delimited value is ignored.
+#
+# 		) If there are fewer delimited values than mapped columns, unfilled columns are set to NULL. If an unfilled column cannot be
+# 			set to NULL, insert operations fail.
+#
+# 		) If a table has more columns than mapped values, the extra columns do not affect results.
+#
+# THE DEMO_TEST EXAMPLE TABLE
+#
+# The innodb_memcached_config.sql configuration script creates a demo_test table in the test database, which can be used
+# to verify InnoDB memcached plugin installation immediately after setup.
+#
+# The innodb_memcached_config.sql configuration script also creates an entry for the demo_test table in the innodb_memcache.containers table.
+#
+# 		mysql> SELECT * FROM innodb_memcache.containers\G
+# 		*********************** 1. row *********************************
+# 							name: aaa
+# 					db_schema : test
+# 					db_table  : demo_test
+# 				key_columns  : c1
+# 			value_columns   : c2
+# 						flags  : c3
+# 				cas_column   : c4
+# 		expire_time_column : c5
+# 	unique_idx_name_on_key: PRIMARY
+#
+# 		mysql> SELECT * FROM test.demo_test;
+# 		+-------+-----------------------+---------+-----------+----------+
+# 		| c1 	  | c2 						  | c3 		| c4 			| c5 		  |
+# 		+-------+-----------------------+---------+-----------+----------+
+# 		| AA 	  | HELLO, HELLO 			  | 8 		| 0 			| 0 		  |
+# 		+-------+-----------------------+---------+-----------+----------+
+#
+# 15.19.9 TROUBLESHOOTING THE INNODB MEMCACHED PLUGIN
+#
+# This section describes issues that you may encounter when using the InnoDB memcached plugin.
+#
+# 		) If you encounter the following error in the MySQL error log, the server might fail to start:
+#
+# 				failed to set rlimit for open files. Try running as root or requesting smaller maxconns value.
+#
+# 			The error message is from the memcached daemon. One solution is to raise the OS limit for the number
+# 			of open files.
+#
+# 			The commands for checking and increasing the open file limit varies by operating system.
+#
+# 			This example shows commands for Linux and OS X:
+#
+# 				# Linux
+# 				shell> ulimit -n
+# 				1024
+# 				shell> ulimit -n 4096
+# 				shell> ulimit -n
+# 				4096
+#
+# 				# OS X
+# 				shell> ulimit -n
+# 				256
+# 				shell> ulimit -n 4096
+# 				shell> ulimit -n
+# 				4096
+#
+# 			THe other solution is to reduce the number of concurrent connections permitted for the memcached daemon.
+#
+# 			To do so, encode the -c memcached option in the daemon_memcached_option configuration parameter in the
+# 			MySQL configuration file. The -c option has a default value of 1024.
+#
+# 				[mysqld]
+# 				/etc/
+# 				loose-daemon_memcached_option='-c 64'
+#
+# 		) To troubleshoot problems where the memcached daemon is unable to store or retrieve InnoDB table data, encode the
+# 			-vvv memcached option in the daemon_memcached_option configuration parameter in the MySQL configuration file.
+#
+# 			Examine the MySQL error log debug output related to memcached operations.
+#
+# 				[mysqld]
+# 				/etc/
+# 				loose-daemon_memcached_option='-vvv'
+#
+# 		) If columns specified to hold memcached values are the wrong data type, such as a numeric type instead of a string
+# 			type, attempts to store key-value pairs fail with no specific error code or message.
+#
+# 		) If the daemon_memcached plugin causes MySQL server startup issues, you can temporarily disable the daemon_memcached
+# 			plugin while troubleshooting by adding this line under the [mysqld] group in the MySQL configuration file:
+#
+# 				daemon_memcached=OFF
+#
+# 			For example, if you run the INSTALL_PLUGIN statement before running the innodb_memcached_config.sql configuration
+# 			script to set up the necessary database and tables, the server might crash and fail to start.
+#
+# 			The server could also fail to start if you incorrectly configure an entry in the innodb_memcache.containers table.
+#
+# 			To uninstall the memcached plugin for a MySQL instance, issue the following statement:
+#
+# 				mysql> UNINSTALL PLUGIN daemon_memcached;
+#
+# 		) If you run more than one instance of MySQL on the same machine with the daemon_memcached plugin enabled in each
+# 			instance, use the daemon_memcached_option configuration parameter to specify a unique memcached port for
+# 			each daemon_memcached plugin.
+#
+# 		) If an SQL statement cannot find the InnoDB table or finds no data in the table, but memcached API calls retrieve
+# 			the expected data, you may be missing an entry for the InnoDB table in the innodb_memcache.containers table,
+# 			or you may have not switched to the correct InnoDB table by issuing a get or set request using @@table_id notation.
+#
+# 			This problem could also occur if you change an existing entry in the innodb_memcache.containers table without
+# 			restarting the MySQL server afterward.
+#
+# 			The free-form storage mechanism is flexible enough that your requests to store or retrieve a multi-column value
+# 			such as col1|col2|col3 may still work, even if the daemon is using the test.demo_test table which stores values
+# 			in a single column.
+#
+# 		) When defining your own InnoDB table for use with the daemon_memcached plugin, and columns in the table are defined
+# 			as NOT NULL, ensure that values are supplied for the NOT NULL columns when inserting a record for the table into
+# 			the innodb_memcache.containers table.
+#
+# 			If the INSERT statement for the innodb_memcache.containers record contains fewer delimited values than there are
+# 			mapped columns, unfilled columns are set to NULL.
+#
+# 			Attempting to insert a NULL value into a NOT NULL column causes the INSERT to fail, which may only become evident
+# 			after you reinitialize the daemon_memcached plugin to apply changes to the innodb_memcache.containers table.
+#
+# 		) If cas_column and expire_time_column fields of the innodb_memcached.containers table are set to NULL, the following
+# 			error is returned when attempting to load the memcached plugin:
+#
+# 				InnoDB_Memcached: column 6 in the entry for config table 'containers' in
+# 				database 'innodb_memcache' has an invalid NULL value.
+#
+# 			The memcached plugin rejects usage of NULL in the cas_column and expire_time_column columns.
+#
+# 			Set the value of these columns to 0 when the columns are unused.
+#
+# 		) As the length of the memcached key and values increase, you might encounter size and length limits.
+#
+# 			) When the key exceeds 250 bytes, memcached operations return an error. This is currently a fixed limit within memcached.
+#
+# 			) InnoDB table limits may be encountered if values exceed 768 bytes in size, 3072 bytes in size, or half of the innodb_page_size
+# 				value.
+#
+# 				These limits primarily apply if you intend to create an index on a value column to run report-generating queries on that
+# 				column using SQL.
+#
+# 				See SECTION 15.6.1.6, "LIMITS ON INNODB TABLES" for details.
+#
+# 			) The maximum size for the key-value combination is 1 MB.
+#
+# 		) If you share configuration files across MySQL servers of different versions, using the latest configuration options for the
+# 			daemon_memcached plugin could cause startup errors on older MySQL versions.
+#
+# 			To avoid compatibility problems, use the loose prefix with option names. For example, use loose-daemon_memcached_option='-c 64'
+# 			instead of daemon_memcached_option='-c 64'
+#
+# 		) There is no restriction or check in place to validate character set settings. memcached stores and retrieves keys and values
+# 			in bytes and is therefore not character set sensitive. However, you must ensure that the memcached client and the MySQL
+# 			table use the same character set.
+#
+# 		) memcached connections are blocked from accessing tables that contain an indexed virtual column.
+#
+# 			Accessing an indexed virtual column requires a callback to the server, but a memcached connection does
+# 			not have access to the server code.
+#
+#  
+#
+# 15.20 INNODB TROUBLESHOOTING
+#
+# 15.20.1 TROUBLESHOOTING INNODB I/O PROBLEMS
+# 15.20.2 FORCING INNODB RECOVERY
+# 15.20.3 TROUBLESHOOTING INNODB DATA DICTIONARY OPERATIONS
+# 15.20.4 INNODB ERROR HANDLING
+#
+# The following general guidelines apply to troubleshooting InnoDB problems:
+#
+# 		) When an operation fails or you suspect a bug, look at the MySQL server error log (see SECTION 5.4.2, "THE ERROR LOG")
+# 		
+# 			SECTION B.3.1, "SERVER ERROR MESSAGE REFERENCE" provides troubleshooting information for some of the common
+# 			InnoDB-specific errors that you may encounter.
+#
+# 		) If the failure is related to a deadlock, run with the innodb_print_all_deadlocks option enabled so that details about
+# 			each deadlock are printed to the MySQL server error log.
+#
+# 			For information about deadlocks, see SECTION 15.7.5, "DEADLOCKS IN INNODB"
+#
+# 		) If the issue is related to the InnoDB data dictionary, see SECTION 15.20.3, "TROUBLESHOOTING INNODB DATA DICTIONARY OPERATIONS"
+#
+# 		) When troubleshooting, it is usually best to run the MySQL server from the command prompt, rather than through mysqld_safe or as 
+# 			a Windows service.
+#
+# 			You can then see what mysqld prints to the console, and so have a better grasp of what is going on. On Windows, start
+# 			mysqld with the --console option to direct the output to the console window.
+#
+# 		) Enable the InnoDB Monitors to obtain information about a problem (see SECTION 15.16, "INNODB MONITORS")
+#
+# 			If the problem is performance-related, or your server appears to be hung, you should enable the standard
+# 			Monitor to print the information about the internal state of InnoDB.
+#
+# 			If the problem is with locks, enable the Lock Monitor.
+
+# 			If the problem is with table creation, tablespaces, or data dictionary operations, refer to the InnoDB INFORMATION
+# 			SCHEMA SYSTEM TABLES to examine contents of the InnoDB internal data dictionary.
+#
+# 			InnoDB temporarily enables standard InnoDB Monitor output under the following conditions:
+#
+# 				) A long semaphore wait
+#
+# 				) InnoDB cannot find free blocks in the buffer pool
+#
+# 				) Over 67% of the buffer pool is occupied by lock heaps or the adaptive hash index
+#
+# 		) If you suspect that a table is corrupt, run CHECK_TABLE on that table.
+#
+# 15.20.1 TROUBLESHOOTING INNODB I/O PROBLEMS
+#
+# The troubleshooting steps for InnoDB I/O problems depend on when the problem occurs: during startup of the MySQL
+# server, or during normal operations when a DML or DDL statement fails due to problems at the file system level.
+#
+# Initialization Problems
+#
+# If something goes wrong when InnoDB attempts to initialize its tablespace or its log files, delete all files created
+# by InnoDB: all ibdata files and all ib_logfile files.
+#
+# If you already created some InnoDB tables, also delete any .ibd files from the MySQL database directories.
+#
+# Then try the InnoDB database creation again. For easiest troubleshooting, start the MySQL server from a command
+# prompt so that you see what is happening.
+#
+# RUNTIME PROBLEMS
+#
+# If InnoDB prints an operating system error during a file operation, usually the problem has one of the following solutions:
+#
+# 		) Make sure the InnoDB data file directory and the InnoDB log directory exist
+#
+# 		) Make sure mysqld has access rights to create files in those directories
+#
+# 		) Make sure mysqld can read the proper my.cnf or my.ini option file, so that it starts with the options that you specified
+#
+# 		) Make sure the disk is not full and you are not exceeding any disk quota
+#
+# 		) Make sure that the names you specify for subdirectories and data files do not clash
+#
+# 		) Doublecheck the syntax of the innodb_data_home_dir and innodb_data_file_path values. In particular, any MAX value
+# 			in the innodb_data_file_path option is a hard limit, and exceeding that limit causes a fatal error.
+#
+# 15.20.2 FORCING INNODB RECOVERY
+#
+# To investigate database page corruption, you might dump your tables from the database with SELECT_/ETC/_INTO_OUTFILE.
+#
+# Usually, most of the data obtained in this way is intact. Serious corruption might cause SELECT * FROM tbl_name statements
+# or InnoDB background operations to crash or assert, or even cause InnoDB roll-forward recovery to crash.
+#
+# In such cases, you can use the innodb_force_recovery option to force the InnoDB storage engine to start up while preventing
+# background operations from running, so that you can dump your tables. For example, you can add the following line to the
+# [mysqld] section of your option file before restarting the server:
+#
+# 		[mysqld]
+# 		innodb_force_recovery = 1
+#
+# For information about using option files, see SECTION 4.2.2.2, "USING OPTION FILES"
+#
+# WARNING:
+#
+# 		Only set innodb_force_recovery to a value greater than 0 in an emergency situation, so that you can start InnoDB
+# 		and dump your tables.
+#
+# 		Before doing so, ensure that you have a backup copy of your database in case you need to recreate it.
+#
+# 		Values of 4 or greater can permanently corrupt data files.
+#
+# 		Only use an innodb_force_recovery setting of 4 or greater on a production server instance after you have successfully
+# 		tested the setting on a separate physical copy of your database.
+#
+# 		When forcing InnoDB recovery, you should always start with innodb_force_recovery=1 and only increase
+# 		the value incrementally, as necessary.
+#
+# innodb_force_recovery is 0 by default (normal startup without forced recovery). The permissible nonzero values for
+# innodb_force_recovery are 1 to 6. A larger value includes the functionality of lesser values.
+#
+# For example, a value of 3 includes all of the functionality of values 1 and 2.
+#
+# If you are able to dump your tables with an innodb_force_recovery value of 3 or less, then you are relatively safe that
+# only some data on corrupt individual pages is lost.
+#
+# A value of 4 or greater is considered dangerous because data files can be permanently corrupted. A value of 6 is considered
+# drastic because database pages are left in an obsolete state, which in turn may introduce more corruption into B-trees
+# and other database structures.
+#
+# As a safety measure, InnoDB prevents INSERT, UPDATE or DELETE operations when innodb_force_recovery is greater than 0.
+#
+# An innodb_force_recovery setting of 4 or greater places InnoDB in read-only mode.
+#
+# 		) 1 (SRV_FORCE_IGNORE_CORRUPT)
+#
+# 			Let the server run even if it detects a corrupt page. Tries to make SELECT * FROM tbl_name jump over corrupt index
+# 			records and ppages, which helps in dumping tables.
+#
+# 		) 2 (SRV_FORCE_NO_BACKGROUND)
+#
+# 			Prevents the master thread and any purge threads from running. If a crash would occur during the purge operation,
+# 			this recovery value prevents it.
+#
+# 		) 3 (SRV_FORCE_NO_TRX_UNDO)
+#
+# 			Does not run transaction rollbacks after crash recovery.
+#
+# 		) 4 (SRV_FORCE_NO_IBUF_MERGE)
+#
+# 			Prevents insert buffer merge operations. If they would cause a crash, does not do them. Does not calculate
+# 			table statistics.
+#
+# 			This value can permanently corrupt data files. After using this value, be prepared to drop and recreate all
+# 			secondary indexes. Sets InnoDB to read-only.
+#
+# 		) 5 (SRV_FORCE_NO_UNDO_LOG_SCAN)
+#
+# 			Does not look at undo logs when starting the database: InnoDB treats even incomplete transactions as committed.
+#
+# 			This value can permanently corrupt data files. Sets InnoDB to read-only.
+#
+# 		) 6 (SRV_FORCE_NO_LOG_REDO)
+#
+# 			Does not do the redo log roll-forward in connection with recovery. This value can permanently corrupt data files.
+#
+# 			Leaves database pages in an obsolete state, which in turn may introduce more corruption into B-trees and other
+# 			database structures. Sets InnoDB to read-only.
+#
+# You can SELECT from tables to dump them. With an innodb_force_recovery value of 3 or less you can DROP or CREATE tables.
+#
+# DROP_TABLE is also supported with an innodb_force_recovery value greater than 3. DROP_TABLE is not permitted with an
+# innodb_force_recovery value greater than 4.
+#
+# If you know that a given table is causing a crash on rollback, you can drop it. If you encounter a runaway rollback
+# caused by a failing mass import or ALTER_TABLE, you can kill the mysqld process and set innodb_force_recovery to 3
+# to bring the database up without the rollback, and then DROP the table that is causing the runaway rollback.
+#
+# If corruption within the table data prevents you from dumping the entire table contents, a query with an ORDER BY
+# primary_key DESC clause might be able to dump the portion of the table after the corrupted part.
+#
+# If a high innodb_force_recovery value is required to start InnoDB, there may be corrupted data structures that could
+# cause complex queries (queries containing WHERE, ORDER BY or other clauses) to fail.
+#
+# In this case, you may only be able to run basic SELECT * FROM t queries.
+#
+# 15.20.3 TROUBLESHOOTING INNODB DATA DICTIONARY OPERATIONS
+#
+# Information about table definitions is stored in the InnoDB data dictionary. If you move data files around, dictionary
+# data can become inconsistent.
+#
+# If a data dictionary corruption or consistency issue prevents you from starting InnoDB, see SECTION 15.20.2, "FORCING INNODB RECOVERY"
+# for information about manual recovery.
+#
+# CANNOT OPEN DATAFILE
+#
+# With innodb_file_per_table enabled (the default), the following messages may appear at startup if a file-per-table tablespace
+# file (.ibd file) is missing:
+#
+# 		[ERROR] InnoDB: Operating system error number 2 in a file operation
+# 		[ERROR] InnoDB: The error means the system cannot find the path specified
+# 		[ERROR] InnoDB: Cannot open datafile for read-only: './test/t1.ibd' OS error: 71
+# 		[Warning] InnoDB: Ignoring tablespace `test/t1` because it could not be opened.
+#
+# To address these messages, issue DROP_TABLE statement to remove data about the missing table from the data dictionary.
+#
+# RESTORING ORPHAN FILE-PER-TABLE IBD FILES
+#
+# This procedure describes how to restore orphan file-per-table .ibd files to another MySQL instance. You might use this
+# procedure if the system tablespace is lost or unrecoverable and you want to restore .ibd file backups on a new MySQL instance.
+#
+# The procedure is not supported for general tablespace .ibd files
+#
+# The procedure assumes that you only have .ibd file backups, you are recovering to the same version of MySQL that initially
+# created the orphan .ibd files, and that .ibd file backups are clean.
+#
+# See SECTION 15.6.1.2, "MOVING OR COPYING INNODB TABLES" for information about creating clean backups.
+#
+# Tablespace copying limitations outlined in SECTION 15.6.3.7, "COPYING TABLESPACES TO ANOTHER INSTANCE" are applicable
+# to this procedure.
+#
+# 		1. On the new MySQL instance, recreate the table in a database of the same name.
+#
+# 			mysql> CREATE DATABASE sakila;
+#
+# 			mysql> USE sakila;
+#
+# 			mysql> CREATE TABLE actor (
+# 						actor_id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+# 						first_name VARCHAR(45) NOT NULL,
+# 						last_name VARCHAR(45) NOT NULL,
+# 						last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+# 						PRIMARY KEY (actor_id),
+# 						KEY idx_actor_last_name (last_name)
+# 					)ENGINE=InnoDB DEFAULT CHARSET=utf8;
+#
+# 		2. Discard the tablespace of the newly created table.
+#
+# 				mysql> ALTER TABLE sakila.actor DISCARD TABLESPACE;
+#
+# 		3. Copy the orphan .ibd file from your backup directory to the new database directory
+#
+# 			shell> cp /backup_directory/actor.ibd path/to/mysql-5.7/data/sakila/
+#
+# 		4. Ensure that the .ibd file has the necessary file permissions.
+#
+# 		5. Import the orphan .ibd file. A warning is issued indicating that InnoDB will atempt to import the file without schema verification.
+#
+# 				mysql> ALTER TABLE sakila.actor IMPORT TABLESPACE; SHOW WARNINGS;
+# 				Query OK, 0 rows affected, 1 warning (0.15 sec)
+#
+# 				Warning | 1810 | InnoDB: IO Read error: (2, No such file or directory)
+# 				Error opening './sakila/actor.cfg', will attempt to import
+# 				without schema verification
+#
+# 		6. Query the table to verify that the .ibd file was successfully restored.
+#
+# 			mysql> SELECT COUNT(*) FROM sakila.actor;
+# 			+---------+
+# 			| count(*)|
+# 			+---------+
+# 			| 200 	 |
+# 			+---------+
+#
+# 15.20.4 InnoDB ERROR HANDLING
+#
+# The following items describe how InnoDB performs error handling. InnoDB sometimes rolls back only the statement that failed,
+# other times it rolls back the entire transaction.
+#
+# 		) If you run out of file space in a tablespace, a MySQL Table is full error occurs and InnoDB rolls back the SQL statement
+#
+# 		) A transaction deadlock causes InnoDB to roll back the entire transaction. Retry the whole transaction when this happens.
+#
+# 			A lock wait timeout causes InnoDB to roll back only the single statement that was waiting for the lock and encountered the
+# 			timeout.
+#
+# 			(To have the entire transaction roll back, start the server with the --innodb-rollback-on-timeout option)
+#
+# 			Retry the statement if using the current behavior, or the entire transaction if using --innodb-rollback-on-timeout
+#
+# 			Both deadlocks and lock wait timeouts are normal on busy servers and it is necessary for applications to be aware that
+# 			they may happen and handle them by retrying.
+#
+# 			You can make them less likely by doing as little work as possible between the first change to data during a transaction
+# 			and the commit, so the locks are held for the shortest possible time and for the smallest possible number of rows.
+#
+# 			Sometimes splitting work between different transactions may be practical and helpful.
+#
+# 			When a transaction rollback occurs due to a deadlock or lock wait timeout, it cancels the effect of the statements
+# 			within the transaction.
+#
+# 			But if the start-transaction statement was START_TRANSACTION or BEGIN statement, rollback does not cancel that statement.
+#
+# 			Further SQL statements become a part of the transaction until the occurrence of COMMIT, ROLLBACK, or some SQL statement
+# 			that causes an implicit commit.
+#
+# 		) A duplicate-key error rolls back the SQL statement, if you have not specified the IGNORE option in your statement.
+#
+# 		) A row too long error rolls back the SQL statement
+#
+# 		) Other errors are mostly detected by the MySQL layer of code (above the InnoDB storage engine level), and they roll back
+# 			the corresponding SQL statement.
+#
+# 			Locks are not released in a rollback of a single SQL statement.
+#
+# During implicit rollbacks, as well as during the execution of an explicit ROLLBACK SQL statement, SHOW_PROCESSLIST displays
+# Rolling back in the State column for the relevant connection.
+#
+# CHAPTER 16 ALTERNATIVE STORAGE ENGINES
+#
+# Table of Contents
+#
+# 16.1 SETTING THE STORAGE ENGINE
+# 16.2 THE MYISAM STORAGE ENGINE
+# 16.3 THE MEMORY STORAGE ENGINE
+# 16.4 THE CSV STORAGE ENGINE
+# 16.5 THE ARCHIVE STORAGE ENGINE
+# 16.6 THE BLACKHOLE STORAGE ENGINE
+# 16.7 THE MERGE STORAGE ENGINE
+# 16.8 THE FEDERATED STORAGE ENGINE
+# 16.9 THE EXAMPLE STORAGE ENGINE
+# 16.10 OTHER STORAGE ENGINES
+# 16.11 OVERVIEW OF MYSQL STORAGE ENGINE ARCHITECHTURE
+#
+# Storage engines are MySQL components that handle the SQL operations for different table types. InnoDB is the default and most
+# genral-purpose storage engine, and Oracle recommends using it for tables except for specialized use cases.
+#
+# (The CREATE_TABLE statement in MySQL 8.0 creates InnoDB tables by default)
+#
+# MySQL Server uses a pluggable storage engine architechture that enables storage engines to be loaded into and unloaded
+# from a running MySQL server.
+#
+# To determine which storage engines your server supports, use the SHOW_ENGINES statement. The value in the Support column
+# indicates whether an engine can be used.
+#
+# A value of YES, NO, or DEFAULT indicates that an engine is available, not available, or available and currently set as
+# the default storage engine.
+#
+# 		mysql> SHOW ENGINES\G
+# 		*************************** 1. row *****************************
+# 					Engine: PERFORMANCE_SCHEMA
+# 				Support  : YES
+# 				Comment  : Performance Schema
+# 		Transactions   : NO
+# 						XA : NO
+# 		Savepoints 	   : NO
+# 		*************************** 2. row ******************************
+#  				Engine: InnoDB
+# 				Support  : DEFAULT
+# 				Comment  : Supports transactions, row-level locking, and foreign keys
+# 		Transactions 	: YES
+# 						XA : YES
+# 			Savepoints  : YES
+# 		*************************** 3. row *******************************
+# 					Engine: MRG_MYISAM
+# 				Support  : YES
+# 				Comment  : Collection of identical MyISAM tables
+# 		Transactions   : NO
+# 						XA : NO
+# 			Savepoints  : NO
+# 		*************************** 4. row ********************************
+# 				Engine   : BLACKHOLE
+# 				Support  : YES
+# 				  Comment: /dev/null storage engine (anything you write to it disappears)
+# 			Transactions: NO
+# 						XA : NO
+# 			Savepoints  : NO
+# 		*************************** 5. row *********************************
+# 				Engine   : MyISAM
+# 				Support  : YES
+# 				Comment  : MyISAM storage engine
+# 			Transactions: NO
+# 						XA : NO
+# 			Savepoints  : NO
+# 		/ETC/
+#
+# This chapter covers use cases for special-purpose MySQL storage engines. It does not cover the default InnoDB
+# storage engine or the NDB storage engine which are covered in CHAPTER 15, THE INNODB STORAGE ENGINE and 
+# CHAPTER 22, MYSQL NDB CLUSTER 8.0
+#
+# For advanced users, it also contains a description of the pluggable storage engine architechture (see SECTION 16.11, "OVERVIEW OF MYSQL STORAGE ENGINE ARCHITECHTURE")
+#
+# For information about features offered in commerical MySQL Server binaries, see MySQL Editions.
+#
+# The storage engines available might depend on which edition of MySQL you are using.
+#
+# For answers to FAQ's about MySQL storage engines, see SECTION A.2, "MYSQL 8.0 FAQ: STORAGE ENGINES"
+#
+# MySQL 8.0 SUPPORTED STORAGE ENGINES
+#
+# 	) InnoDB: The default storage engine in MySQL 8.0. InnoDB is a transaction-safe (ACID compliant) storage engine for MySQL
+# 					that has commit, rollback and crash-recovery capabilities to protect user data.
+#
+# 				InnoDB row-level locking (without escalation to coarser granularity locks) and Oracle-style consistent nonlocking
+# 				reads increase multi-user concurrency and performance.
+#
+# 				InnoDB stores user data in clustered indexes to reduce I/O for common queries based on primary keys. To maintain
+# 				data integrity, InnoDB also supports FOREIGN KEY referential-integrity constraints.
+#
+# 				For more information about InnoDB, see CHAPTER 15, THE INNODB STORAGE ENGINE.
+#
+#  ) MyISAM: These tables have a small footprint. Table-level locking limits the performance in read/write workloads, so it is often
+# 				used in read-only or read-mostly workloads in Web and data warehousing configurations.
+#
+# 	) Memory: Stores all data in RAM, for fast access in environments that require quick lookups of non-critical data.
+#
+# 				This engine was formerly known as the HEAP engine. Its use cases are decreasing; InnoDB with its buffer pool
+# 				memory area provides a general-purpose and durable way to keep most or all data in memory, and NDBCLUSTER
+# 				provides fast key-value lookups for huge distributed data sets.
+#
+# 	) CSV: Its tables are really text files with comma-separated values. CSV tables let you import or dump data in CSV format,
+# 				to exchange data with scripts and applications that read and write that same format.
+#
+# 				Because CSV tables are not indexed, you typically keep the data in InnoDB tables during normal operation,
+# 				and only use CSV tables during the import or export stage.
+#
+#  ) Archive: These compact, unindexed tables are intended for storing and retrieving large amounts of seldom-referenced
+# 					historical, archived or security audit information.
+#
+# ) Blackhole: The Blackhole storage engine accepts but does not store data, similar to the Unix /dev/null device.
+#
+# 					Queries always return an empty set. These tables can be used in replication configurations where DML
+# 					statements are sent to slave servers, but the master server does not keep its own copy of the data.
+#
+# ) NDB (also known as NDBCLUSTER): This clustered database engine is particularly suited for applications that require the highest
+# 												possible degree of uptime and availability.
+#
+# ) Merge: Enables a MySQL DBA or developer to logically group a series of identical MyISAM tables and reference them as one object.
+# 				Good for VLDB environments such as data warehousing.
+#
+# ) Federated: Offers the ability to link separate MySQL servers to create one logical database from many physical servers.
+#
+# 					Very good for distributed or data mart environments.
+#
+# ) Example: This engine serves as an example in the MySQL source code that illustrates how to begin writing new storage engines.
+# 				It is primarily of interest to developers.
+#
+# 				The storage engine is a "stub" that does nothing. You can create tables with this engine, but no data can be stored
+# 				in them or retrieved from them.
+#
+# You are not restricted to using the same storage engine for an entire server or schema. You can specify the storage engine
+# for any table.
+#
+# For example, an application might use mostly InnoDB tables, with one CSV table for exporting data to a spreadsheet and a few
+# MEMORY tables for temporary workspaces.
+#
+# CHOOSING A STORAGE ENGINE
+#
+# The various storage engines provided with MySQL are designed with different use cases in mind. The following table provides
+# an overview of some storage engines provided with MySQL, with clarifying notes following the table.
+#
+# TABLE 16.1 STORAGE ENGINES FEATURE SUMMARY
+#
+# 		FEATURE 			MyISAM 		MEMORY 		InnoDB 		Archive 		NDB
+# 		
+# 		B-tree indexes Yes 			Yes 			Yes 			No 			No
+#
+# 		Backup/ 			Yes 			Yes 			Yes 			Yes 			Yes
+# 		point-in-time
+# 		recovery
+# 		(note 1)
+#
+# 		Cluster 			No 			No 			No 			No 			Yes 
+# 		database
+# 		support
+#
+# 		Clustered 		No 			No 			Yes 			No 			No
+# 		indexes
+#
+# 		Compressed 		Yes (note 2) No 			Yes 			Yes 			No
+# 		data
+#
+# 		Data caches 	No 		 	 N/A 		     Yes 			No 			Yes
+#
+# 		Encrypted 		Yes (note 3) Yes (note 3) Yes (note 4) Yes (note 3) Yes (note 3)
+# 		data
+#
+# 		Foreign key 	No 			No 			Yes 			No 			Yes (note 5)
+# 		support
+#
+# 		Full-text  		Yes 			No 			Yes (note 6) No 			No
+# 		search indexes
+#
+# 		Geospatial 		Yes 			No 			Yes 			Yes 			Yes
+# 		data type
+# 		support
+#
+# 		geospatial 		Yes 			No 			Yes (note 7) No 			No
+# 		indexing
+# 		support
+#
+# 		Hash indexes 	No 			Yes 			No (Note 8) No 			Yes
+#
+# 		Index caches 	Yes 			N/A 			Yes 			No 			Yes
+#
+# 		Locking 			Table 		Table 		Row 			Row 			Row
+# 		granularity
+#
+# 		MVCC 				No 			No 			Yes 			No 			No
+#
+# 		Replication 	Yes 			Limited (note 9) Yes 	Yes 			Yes 
+# 		support (note 1)
+#
+# 		Storage limits 256TB 		RAM 			64TB 			None 			384EB
+#
+# 		T-tree indexes No 			No 			No 			No 			Yes
+#
+# 		Transactions 	No 			No 			Yes 			No 			Yes
+#
+# 		Update stats 	Yes 			Yes 			Yes 			Yes 			Yes
+# 		for data dict.
+#
+# NOTES:
+#
+# 		1. Implemented in the server, rather than in the storage engine
+#
+# 		2. Compressed MyISAM tables are supported only when using the compressed row format. Tables using the compressed row format with MyISAM are read only.
+#
+# 		3. Implemented in the server via encryption functions
+#
+# 		4. Implemented in the server via encryption functions; In MySQL 5.7 and later, data-at-rest tablespace encryption is supported.
+#
+# 		5. Support for foreign keys is available in MySQL Cluster NDB 7.3 and later
+#
+# 		6. InnoDB support for FULLTEXT indexes is available in MysQL 5.6 and alter
+#
+# 		7. InnoDB support for geospatial indexing is available in MySQL 5.7 and later
+#
+# 		8. InnoDB utilizes hash indexes internally for its Adaptive Hash Index feature.
+#
+# 		9. See the discussion later in this section.
+#
+# 16.1 SETTING THE STORAGE ENGINE
+#
+# When you create a new table, you can specify which storage engine to use by adding an ENGINE table option to the CREATE_TABLE statement:
+#
+# 		-- ENGINE=INNODB not needed unless you have set a different
+# 		-- default storage engine
+# 		CREATE TABLE t1 (i INT) ENGINE = INNODB;
+# 		-- Simple table definition can be switched from one to another
+# 		CREATE TABLE t2 (i INT) ENGINE = CSV;
+# 		CREATE TABLE t3 (i INT) ENGINE = MEMORY;
+#
+# When you omit the ENGINE option, the default storage engine is used. The default engine is InnoDB in mySQL 8.0
+#
+# You can specify the default engine by using the --default-storage-engine server startup option, or by setting the
+# default-storage-engine option in the my.cnf configuration file.
+#
+# You can set the default storage engine for the current session by setting the default_storage_engine variable:
+#
+# 		SET default_storage_engine=NDBCLUSTER;
+#
+# The storage engine for TEMPORARY tables created with CREATE_TEMPORARY_TABLE can be set separately from the engine
+# for permanent tables by setting the default_tmp_storage_engine, either at startup or at runtime.
+#
+# To convert a table from one storage engine to another, use an ALTER_TABLE statement that indicates the new engine.
+#
+# 		ALTER TABLE t ENGINE = InnoDB;
+#
+# See SECTION 13.1.20, "CREATE TABLE SYNTAX", and SECTION 13.1.9, "ALTER TABLE SYNTAX"
+#
+# If you try to use a storage engine that is not compiled in or that is compiled in but deactivated, MySQL instead creates 
+# a table using the default storage engine.
+#
+# For example, in a replication setup, perhaps your master server uses InnoDB tables for maximum safety, but the slave servers
+# use other storage engines for speed at the expense of durability or concurrency.
+#
+# By default, a warning is generated whenever CREATE_TABLE or ALTER_TABLE cannot use the default storage engine. To prevent
+# confusing, unintended behavior if the desired engine is unavailable, enable the NO_ENGINE_SUBSTITUTION SQL mode.
+#
+# If the desired engine is unavailable, this setting produces an error instead of a warning, and the table is not created
+# or altered. See SECTION 5.1.11, "SERVER SQL MODES"
+#
+# MySQL may store a table's index and data in one or more other files, depending on the storage engine. Table and column
+# definitions are stored in the MySQL data dictionary.
+#
+# Individual storage engines create any additional files required for the tables that they manage. If a table name contains
+# special characters, the names for the table files contain encoded versions of those characters as described in SECTION
+# 9.2.3, "MAPPING OF IDENTIFIERS TO FILE NAMES"
+#
+# 16.2 THE MYISAM STORAGE ENGINE
+#
+# 16.2.1 MYISAM STARTUP OPTIONS
+# 16.2.2 SPACE NEEDED FOR KEYS
+# 16.2.3 MYISAM TABLE STORAGE FORMATS
+# 16.2.4 MYISAM TABLE PROBLEMS
+#
+# MyISAM is based on the older (and no longer available) ISAM storage engine but has many useful extensions.
+#
+# TABLE 16.2 MYISAM STORAGE ENGINE FEATURES
+#
+# 				FEATURE 																										Support
+#
+# 	B-tree indexes																							 				Yes
+# 	Backup/point-in-time recovery (implemented in the server, rather than in the storage engine) Yes
+# 
+# 	Cluster database support 																							No
+# 	Clustered indexes 																									No
+#
+# 	Compressed Data 																										Yes (Compressed MyISAM tables are supported only when using the compressed row format.
+# 																																	Tables using the compressed row format with MyISAM are read only)
+#
+# 	Data caches 																											No
+# 	Encrypted Data 																										Yes (implemented in the server via encryption functions)
+#
+# 	Foreign key support 																									No
+# 	Full-text search indexes 																							Yes
+#
+# 	Geospatial data type support 																						Yes
+# 	Geospatial indexing support 																						Yes
+#
+# 	Hash indexes 																											No
+# 	INdex caches 																											Yes
+#
+# 	Locking granularity 																									Table
+# 	MVCC 																														No
+#
+# 	Replication support (implemented in the server, rather than in the storage engine) 				Yes
+# 	Storage limits 																										256TB
+#
+# 	T-tree indexes 																										No
+# 	Transactions 																											No
+#
+# 	Update statistics for data dictionary 																			Yes
+#
+# Each MyISAM table is stored on disk in two files. The files have names that begin with the table name and have
+# an extension to indicate the file type.
+#
+# The data file has an .MYD (MYData) extension. The index file has an .MYI (MYIndex) extension. The table definition
+# is stored in the MySQL data dictionary.
+#
+# To specify explicitly that you want a MyISAM table, indicate that with an ENGINE table option:
+#
+# 		CREATE TABLE t (i INT) ENGINE = MYISAM;
+#
+# https://dev.mysql.com/doc/refman/8.0/en/myisam-storage-engine.html
 #
