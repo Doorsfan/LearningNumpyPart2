@@ -60056,5 +60056,1015 @@
 #
 # 		CREATE TABLE t (i INT) ENGINE = MYISAM;
 #
-# https://dev.mysql.com/doc/refman/8.0/en/myisam-storage-engine.html
+# In MySQL 8.0, it is normally necessary to use ENGINE to specify the MyISAM storage engine because InnoDB is the default engine.
 #
+# You can check or repair MyISAM tables with the mysqlcheck client or myisamchk utility. You can also compress MyISAM tables
+# with myisampack to take up much less space.
+#
+# See SECTION 4.5.3, "mysqlcheck - A TABLE MAINTENANCE PROGRAM", SECTION 4.6.4, "myisamchk - MyISAM TABLE MAINTENANCE UTILITY",
+# and SECTION 4.6.6, "Myisampack - GENERATE COMPRESSED, READ-ONLY MYISAM TABLES"
+#
+# In MySQL 8.0, the MyISAM storage engine provides no partitioning support. Partitioned MyISAM tables created in previous
+# versions of MySQL cannot be used in MySQL 8.0
+#
+# For more information, see SECTION 23.6.2, "PARTITIONING LIMITATIONS RELATING TO STORAGE ENGINES"
+#
+# For help with upgrading such tables so that they can be used in MySQL 8.0, see SECTION 2.11.4, "CHANGES IN MYSQL 8.0"
+#
+# MyISAM tables have the following characteristics:
+#
+# 		) All data values are stored with the low byte first. This makes the data machine and operating system independent.
+#
+# 			The only requirements for binary portability are that the machine uses two's-complement signed integers and IEEE
+# 			floating-point format.
+#
+# 			These requirements are widely used among mainstream machines. Binary compatibility might not be applicable
+# 			to embedded systems, which sometimes have peculiar processors.
+#
+# 			There is no significant speed penalty for storing data low byte first; the bytes in a table row normally are unaligned
+# 			and it takes little more processing to read an unaligned byte in order than in reverse order.
+#
+# 			Also, the code in the server that fetches column values is not time critical compared to other code.
+#
+# 		) All numeric key values are stored with the high byte first to permit better index compression
+#
+# 		) Large files (up to 63-bit file length) are supported on file systems and operating systems that support large files.
+#
+# 		) There is a limit of (2^32)^2 (1.844E+19) rows in a MyISAM table.
+#
+# 		) The maximum number of indexes per MyISAM table is 64.
+#
+# 			The maximum number of columns per index is 16.
+#
+# 		) The maximum key length is 1000 bytes. This can also be changed by changing the source and recompiling. For the case of
+# 			a key longer than 250 bytes, a larger key block size than default of 1024 bytes is used.
+#
+# 		) When rows are inserted in sorted order (as when you are using an AUTO_INCREMENT column), the index tree is split so that
+# 			the high node only contains one key.
+#
+# 			This improves space utilization in the index tree.
+#
+# 		) Internal handling of one AUTO_INCREMENT column per table is supported. MyISAM automatically updates this column for
+# 			INSERT and UPDATE operations. This makes AUTO_INCREMENT columns faster (at least 10%)
+#
+# 			Values at the top of the sequence are not reused after being deleted. (When an AUTO_INCREMENT column is defined as
+# 			the last column of a multiple-column index, reuse of values deleted from the top of a sequence does occur)
+#
+# 			The AUTO_INCREMENT value can be reset with ALTER_TABLE or myisamchk
+#
+# 		) Dynamic-sized rows are much less fragmented when mixing deletes with updates and inserts. This is done by automatically
+# 			combining adjacent deleted blocks and by extending blocks if the next block is deleted.
+#
+# 		) MyISAM supports concurrent inserts: If a table has no free blocks in the middle of the data file, you can INSERT new rows
+# 			into it at the same time that other threads are reading from the table.
+#
+# 			A free block can occur as a result of deleting rows or an update of a dynamic length row with more data than its current
+# 			contents.
+#
+# 			When all free blocks are used up (filled in), future inserts become concurrent again. See SECTION 8.11.3, "CONCURRENT INSERTS"
+#
+# 		) You can put the data file and index file in different directories on different physical devices to get more speed with the DATA
+# 			DIRECTORY and INDEX DIRECTORY table options to CREATE_TABLE. See SECTION 13.1.20, "CREATE TABLE SYNTAX"
+#
+# 		) BLOB and TEXT columns can be indexed.
+#
+# 		) NULL values are permitted in indexed columns. This takes 0 to 1 bytes per key.
+#
+# 		) Each character column can have a different character set. See CHAPTER 10, CHARACTER SETS, COLLATIONS, UNICODE
+#
+# 		) There is a flag in the MyISAM index file that indicates whether the table was closed correctly. If mysqld is started with the
+# 			--myisam-recover-options option, MyISAM tables are automatically checked when opened, and are repaired if the table wasn't
+# 			closed properly.
+#
+# 		) myisamchk marks tables as checked if you run it with the --update-state option. myisamchk --fast checks only those tables that
+# 			don't have this mark
+#
+# 		) myisamchk --analyze stores statistics for portions of keys, as well as for entire keys
+#
+# 		) myisampack can pack BLOB and VARCHAR columns
+#
+# MyISAM also supports the following features:
+#
+# 		) Support for a true VARCHAR type; a VARCHAR column starts with a length stored in one or two bytes
+#
+# 		) Tables with VARCHAR columns may have fixed or dynamic row length
+#
+# 		) The sum of the lengths of the VARCHAR and CHAR columns in a table may be up to 64KB
+#
+# 		) Arbitrary length UNIQUE constraints
+#
+# ADDITIONAL RESOURCES
+#
+# 		) Forum for MyISAM : <link>
+#
+# 16.2.1 MYISAM STARTUP OPTIONS
+#
+# The following options to mysqld can be used to change the behavior of MYISAM tables. For additional information,
+# see SECTION 5.1.7, "SERVER COMMAND OPTIONS"
+#
+# TABLE 16.3 MYISAM OPTION AND VARIABLE REFERENCE
+#
+# 		NAME 								Cmd-line 			Option File 			System var 			Status var 			Var Scope 			Dynamic
+#
+# 		bulk_insert_buffer_size 	Yes 					Yes 						Yes 					- 						Both 					Yes
+#
+# 		concurrent_insert 			Yes 					Yes 						Yes 					- 						Global 				Yes
+#
+# 		delay_key_write 				Yes 					Yes 						Yes 					- 						Global 				Yes
+#
+# 		have_rtree_keys 				- 						- 							Yes 					- 						Global 				No
+#
+# 		key_buffer_size 				Yes 					Yes 						Yes 					- 						Global 				Yes
+#
+# 		log-isam 						Yes 					Yes 						- 						-  					- 						-
+#
+# 		myisam-block-size 			Yes 					Yes 						- 						- 						- 						-
+#
+# 		myisam_data_pointer_size 	Yes 					Yes 						Yes 					- 						Global 				Yes
+#
+# 		myisam_max_sort_file_size 	Yes 					Yes 						Yes 					- 						Global 				Yes
+#
+# 		myisam_mmap_size 				Yes 					Yes 						Yes 					- 						Global 				No
+#
+# 		myisam-recover-options 		Yes 					Yes 						- 						- 						-	 					-
+# 
+# 		-Variable:
+# 		myisam_recover_options 		- 						- 							- 						- 						- 						-
+#
+# 		myisam_recover_options 		- 						- 							Yes 					- 						Global 				No
+#
+# 		myisam_repair_threads 		Yes 					Yes 						Yes 					- 						Both 					Yes
+#
+# 		myisam_sort_buffer_size 	Yes 					Yes 						Yes 					- 						Both 					Yes
+#
+# 		myisam_stats_method 			Yes 					Yes 						Yes 					- 						Both 					Yes
+#
+# 		myisam_use_mmap 				Yes 					Yes 						Yes 					- 						Global 				Yes
+#
+# 		skip-concurrent-insert 		Yes 					Yes 						- 						- 						- 						-
+#
+# 		Variable:
+# 		concurrent_insert 			- 						- 							- 						- 						- 						-
+#
+# 		tmp_table_size 				Yes 					Yes 						Yes 					- 						Both 					Yes
+#
+#
+# 	) --myisam-recover-options=mode
+#
+# 		Set the mode for automatic recovery of crashed MyISAM tables
+#
+# 	) --delay-key-write=ALL
+#
+# 		Don't flush key buffers between writes for any MyISAM table
+#
+# 		NOTE:
+#
+# 			If you do this, you should not access MyISAM tables from another program (such as from another MySQL
+# 			server or with myisamchk) when the tables are in use.
+#
+# 			Doing so risks index corruption. Using --external-locking does not eliminate this risk.
+#
+# The following system variables affect the behavior of MyISAM tables. For additional information, see SECTION 
+# 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# 		) bulk_insert_buffer_size
+#
+# 			The size of the tree cache used in bulk insert optimization
+#
+# 			NOTE:
+#
+# 				THis is a limit per thread
+#
+# 		) myisam_max_sort_file_size
+#
+# 			The maximum size of the temporary file that MySQL is permitted to use while re-creating a MyISAM index
+# 			(during REPAIR_TABLE, ALTER_TABLE, or LOAD_DATA)
+#
+# 			If the file size would be larger than this value, the index is created using the key cache instead, which is slower.
+#
+# 			The value is given in bytes.
+#
+# 		) myisam_sort_buffer_size
+#
+# 			Set the size of the buffer used when recovering tables
+#
+# Automatic recovery is activated if you start mysqld with the --myisam-recover-options option. In this case, when the server
+# opens a MyISAM table, it checks whether the table is marked as crashed or whether the open count variable for the table is
+# not 0 and you are running the server with external locking disabled.
+#
+# If either of these conditions is true, the following happens:
+#
+# 		) The server checks the table for errors
+#
+# 		) If the server finds an error, it tries to do a fast table repair (with sorting and without re-creating the data file)
+#
+# 		) If the repair fails because of an error in the data file (for example, a duplicate-key error), the server tries again,
+# 			this time re-creating the data file.
+#
+# 		) If the repair still fails, the server tries once more with the old repair option method (write row by row without sorting).
+#
+# 			This method should be able to repair any type of error and has low disk space requirements.
+#
+# If the recovery wouldn't be able to recover all rows from previously completed statements and you didn't specify FORCE in the value
+# of the --myisam-recover-options option, automatic repair aborts with an error message in the error log:
+#
+# 		Error: Couldn't repair table: test.g00pages
+#
+# If you specify FORCE, a warning like this is written instead:
+#
+# 		Warning: Found 344 of 354 rows when repairing ./test/g00pages
+#
+# If the automatic recovery value includes BACKUP, the recovery process creates files with names of the form tbl_name-datetime.BAK
+#
+# You should have a cron script that automatically moves these files from the database directories to backup media.
+#
+# 16.2.2 SPACE NEEDED FOR KEYS
+#
+# MyISAM tables use B-tree indexes. You can roughly calculate the size for the index file as (key_length+4)/0.67, summed over all
+# keys.
+#
+# This is for the worst case when all keys are inserted in sorted order and the table doesn't have any compressed keys.
+#
+# String indexes are space compressed. If the first index part is a string, it is also prefix compressed. Space compression makes
+# the index file smaller than the worst-case figure if a string column has a lot of trailing space or is a VARCHAR column that 
+# is not always used to the full length.
+#
+# Prefix compression is used on keys that start with a string. Prefix compression helps if there are many strings with an identical
+# prefix.
+#
+# In MyISAM tables, you can also prefix compress numbers by specifying the PACK_KEYS=1 table option when you create the table.
+#
+# Numbers are stored with the high byte first, so this helps when you have many integer keys that have an identical prefix.
+#
+# 16.2.3 MYISAM TABLE STORAGE FORMATS
+#
+# 16.2.3.1 STATIC (FIXED-LENGTH) TABLE CHARACTERISTICS
+# 16.2.3.2 DYNAMIC TABLE CHARACTERISTICS
+# 16.2.3.3 COMPRESSED TABLE CHARACTERISTICS
+#
+# MyISAM supports three different storage formats. Two of them, fixed and dynamic format, are chosen automatically depending
+# on the type of columns you are using.
+#
+# The third, compressed format, can be created only with the myisampack utility (see SECTION 4.6.6, "myisampack -- Generate Compressed,
+# Read-Only MyISAM Tables")
+#
+# When you use CREATE_TABLE or ALTER_TABLE for a table that has no BLOB or TEXT columns, you can force the table format to FIXED
+# or DYNAMIC with the ROW_FORMAT table option.
+#
+# See SECTION 13.1.20, "CREATE TABLE SYNTAX" for info about ROW_FORMAT
+#
+# YOu can decompress (unpack) compressed MyISAM tables using myisamchk --unpack, see SECTION 4.6.4, "myisamchk -- MyISAM TABLE-MAINTENANCE UTILITY",
+# for more information.
+#
+# 16.2.3.1 STATIC (FIXED-LENGTH) TABLE CHARACTERISTICS
+#
+# Static format is the default for MyISAM tables. It is used when the table contains no variable length columns (VARCHAR, VARBINARY, BLOB or TEXT)
+#
+# Each row is stored using a fixed number of bytes
+#
+# Of the three MyISAM storage formats, static format is the simplest and most secure (least subject to corruption).
+#
+# It is also the fastest of teh on-disk formats due to the ease with which rows in the data file can be found on disk: To look up a row based on
+# a row number in the index, multiply the row number by the row length to calculate the row position.
+#
+# Also, when scanning a table, it is very easy to read a constant number of rows with each disk read operation.
+#
+# The security is evidenced if your computer crashes while the MySQL server is writing to a fixed-format MyISAM file. In this case,
+# myisamchk can easily determine where each row starts and ends, so it can usually reclaim all rows except the partially written one.
+#
+# MyISAM table indexes can always be reconstructed based on teh data rows.
+#
+# NOTE:
+#
+# 		Fixed-length row format is only available for tables without BLOB or TEXT columns. Creating a table with these columns
+# 		with an explicit ROW_FORMAT clause will not raise an error or warning; the format specification is ignored.
+#
+# Static-format tables hve these characteristics:
+#
+# 		) CHAR and VARCHAR columns are space-padded to the specified column width, although the column type is not altered.
+#
+# 			BINARY and VARBINARY columns are padded with 0x00 bytes to the column width.
+#
+# 		) NULL columns require additional space in the row to record whether their values are NULL. Each NULL column takes one
+# 			bit extra, rounded up to the nearest byte.
+#
+# 		) Very quick
+#
+# 		) Easy to cache
+#
+# 		) easy to reconstruct after a crash, because rows are located in fixed pos
+#
+# 		) Reorganization is unnecessary unless you delete a huge number of rows and want to return free disk space to the OS.
+#
+# 			To do this, use OPTIMIZE_TABLE or myisamchk -r
+#
+# 		) Usually require more disk space than dynamic-format tables
+#
+# 		) The expected row length in bytes for static-sized rows is calculated using the following expression:
+#
+# 				row length = 1
+# 								 + (sum of column lengths)
+# 								 + (number of NULL columns + delete_flag + 7)/8
+# 								 + (number of variable-length columns)
+#
+# 			delete_flag is 1 for tables with static row format. Static tables use a bit in the row record
+# 			for a flag that indicates whether the row has been deleted.
+#
+# 			delete_flag is 0 for dynamic tables because the flag is stored in teh dynamic row header.
+#
+# 16.2.3.2 DYNAMIC TABLE CHARACTERISTICS
+#
+# Dynamic storage format is used if a MyISAM table contains any variable-length columns (VARCHAR, VARBINARY, BLOB or TEXT), or if the
+# table was created with the ROW_FORMAT=DYNAMIC table option.
+#
+# Dynamic format is a little more complex than static format because each row has a header that indicates how long it is.
+# A row can become fragmented (stored in noncontiguous pieces) when it is made longer as a result of an update.
+#
+# You can use OPTIMIZE_TABLE or myisamchk -r to defragment a table. If you have fixed-length columns that you access or change
+# frequently in a table that also contains some variable-length columns, it might be a good idea to move the variable-length
+# columns to other tables just to avoid fragmentation.
+#
+# Dynamic-format tables have these characteristics:
+#
+# 		) All string columns are dynamic except those with a length less than four
+#
+# 		) Each row is preceded by a bitmap that indicates which columns contain the empty string (for string columns) or zero
+# 			(for numeric columns).
+#
+# 			This does not include columns that contain NULL values. If a string column has a length of zero after trailing space
+# 			removal, or a numeric column has a value of zero, it is marked in the bitmap and not saved to disk. Nonempty string
+# 			are saved as a length byte plus the string contents.
+#
+# 		) NULL columns require additional space in the row to record whether their values are NULL. Each NULL column takes one bit extra,
+# 			rounded up to the nearest byte.
+#
+# 		) Much less disk space usually is required than for fixed-length tables.
+#
+# 		) Each row uses only as much space as is required. However, if a row becomes larger, it is split into as many pieces
+# 			as are required, resulting in row fragmentation.
+#
+# 			For example, if you update a row with information that extends the row length, the row becomes fragmented.
+#
+# 			In this case, you may have to run OPTIMIZE_TABLE or myisamchk -r from time to time to improve performance.
+#
+# 			Use myisamchk -ei to obtain table stats.
+#
+# 		) More difficult than static-format tables to reconstruct after a crash, because rows may be fragmented into many pieces
+# 			and links (fragments) may be missing.
+#
+# 		) The expected row length for dynamic-sized rows is calculated using the following expression:
+#
+# 			3
+# 			+ (number of columns + 7) / 8
+# 			+ (number of char columns)
+# 			+ (packed size of numeric columns)
+# 			+ (length of strings)
+# 			+ (number of NULL columns + 7) / 8
+#
+# 			There is a penalty of 6 bytes for each link. A dynamic row is linked whenever an update causes an enlargement 
+# 			of the row.
+#
+# 			Each new link is at least 20 bytes, so the next enlargement probably goes in the same link. If not, another link
+# 			is created.
+#
+# 			You can find the number of links using myisamchk -ed. All links may be removed with OPTIMIZE_TABLE or myisamchk -r
+#
+# 16.2.3.3 COMPRESSED TABLE CHARACTERISTICS
+#
+# Compressed storage format is a read-only format that is generated with the myisampack tool. Compressed tables can be
+# uncompressed with myisamchk.
+#
+# Compressed tables have the following characteristics:
+#
+# 		) Compressed tables take very little disk space. This minimizes disk usage, which is helpful when using slow disks
+# 			(such as CD-roms)
+#
+# 		) Each row is compressed separately, so there is very little access overhead. The header for a row takes up to one to
+# 			three bytes depending on the biggest row in the table.
+#
+# 			Each column is compressed differently. There is usually a different Huffman tree for each column. Some of the
+# 			compression types are:
+#
+# 				) Suffix space compression
+#
+# 				) Prefix space compression
+#
+# 				) Numbers with a value of zero are stored using one bit
+#
+# 				) If values in an integer column have a small range, the column is stored using the smallest possible
+# 					types.
+#
+# 					For example, a BIGINT column (8 bytes) can be stored as a TINYINT column (1 byte) if all its values
+# 					are in the range from -128 to 127.
+#
+# 				) If a column has only a small set of possible values, the data type is converted to ENUM.
+#
+# 				) A column may use any combination of the preceding compression types.
+#
+# 		) Can be used for fixed-length or dynamic-length rows
+#
+# 			NOTE:
+#
+# 				While a compressed table is read only, and you cannot therefore update or add rows in teh table, DDL (Data Definition Language)
+# 				operations are still valid.
+#
+# 				For example, you may still use DROP to drop the table, and TRUNCATE_TABLE to empty the table.
+#
+# 16.2.4 MYISAM TABLE PROBLEMS
+#
+# 16.2.4.1 CORRUPTED MYISAM TABLES
+# 16.2.4.2 PROBLEMS FROM TABLES NOT BEING CLOSED PROPERLY
+#
+# The file format that MySQL uses to store data has been extensively tested, but there are always circumstances that may cause
+# database tables to become corrupted.
+#
+# The following discussion describes how this can happen and how to handle it.
+#
+# 16.2.4.1 CORRUPTED MYISAM TABLES
+#
+# Even though the MyISAM table format is very reliable (all changes to a table made by an SQL statement are written before the statement
+# returns), you can still get corrupted tables if any of the following events occur:
+#
+# 		) The mysqld process is killed in the middle of a write.
+#
+# 		) An unexpected computer shutdown occurs (for example, the computer is turned off)
+#
+# 		) Hardware failures
+#
+# 		) You are using an external program (such as myisamchk) to modify a table that is being modified by the server at the same time.
+#
+# 		) A software bug in the MySQL or MyISAM code.
+#
+# Typical symptoms of a corrupt table are:
+#
+# 		) You get the following error while selecting data from the table:
+#
+# 			Incorrect key file for table: '/etc/'. Try to repair it
+#
+# 		) Queries don't find rows in the table or return incomplete results
+#
+# You can check the health of a MyISAM table using the CHECK_TABLE statement, and repair a corrupted MyISAM table with
+# REPAIR_TABLE.
+#
+# When Mysqld is not running, you can also check or repair a table with the myisamchk command. See SECTION 13.7.3.2, "CHECK TABLE SYNTAX",
+# SECTION 13.7.3.5, "REPAIR TABLE SYNTAX" and SECTION 4.6.4, "myisamchk - MyISAM TABLE-MAINTENANCE UTILITY"
+#
+# If your tables become corrupted frequently, you should try to determine why this is happening. The most important thing to know is whether
+# the table became corrupted as a result of a server crash.
+#
+# You can verify this easily by looking for a recent restarted mysqld message in the error log. If there is such a message, it is likely
+# that table corruption is a result of the server dying.
+#
+# Otherwise, corruption may have occurred during normal operation. This is a bug.
+#
+# You should try to create a reproducible test case that demonstrates the problem. See SECTION B.4.3.3, "WHAT TO DO IF MYSQL KEEPS CRASHING",
+# and SECTION 29.5, "DEBUGGING AND PORTING MYSQL"
+#
+# 16.2.4.2 PROBLEMS FROM TABLES NOT BEING CLOSED PROPERLY
+# 
+# Each MyISAM index file (.MYI file) has a counter in the header that can be used to check whether a table has been closed
+# properly.
+#
+# If you get the following warning from CHECK_TABLE or myisamchk, it means that this counter has gone out of sync:
+#
+# 		clients are using or haven't closed the table properly
+#
+# This warning does not necessarily mean that the table is corrupted, but you should at least check the table.
+#
+# The counter works as follows:
+#
+# 		) The first time a table is updated in MySQL, a counter in the header of the index file is incremented
+#
+# 		) The counter is not changed during further updates
+#
+# 		) When the last instance of a table is closed (because a FLUSH_TABLES operation was performed or because there
+# 			is no room in teh table cache), the counter is decremented if the table has been updated at any point.
+#
+# 		) When you repair the table or check the table and it is found to be okay, the counter is reset to zero.
+#
+# 		) To avoid problems with interaction with other processes that might check the table, the counter is not decremented on close if it was zero.
+#
+# In other words, the counter can become incorrect only under these conditions:
+#
+# 		) A MyISAM table is copied without first issuing LOCK_TABLES and FLUSH_TABLES
+#
+# 		) MySQL has crashed between an update and the final close. (The table may still be okay because MySQL always issues writes for everything between each
+# 			statement)
+#
+# 		) A table was modified by myisamchk --recover or myisamchk --update-state at the same time that it was in used by mysqld
+#
+# 		) Multiple mysqld servers are using the table and one server performed a REPAIR_TABLE or CHECK_TABLE on the table while it was in use by another server.
+#
+# 			In this setup, it is safe to use CHECK_TABLE, although you might get the warning from other servers. However, REPAIR_TABLE should be avoided
+# 			because when one server replaces the data file with a new one, this is not known to the other servers.
+#
+# 			In general, it is a bad idea to share a data directory among multiple servers. See SECTION 5.8, "RUNNING MULTIPLE MYSQL INSTANCES ON ONE MACHINE"
+# 			for additional info.
+#
+# 16.3 THE MEMORY STORAGE ENGINE
+#
+# The MEMORY storage engine (formerly known as HEAP) creates special-purposes tables with contents that are stored in memory.
+#
+# Because the data is vulnerable to crashes, hardware issues, or power outages, only use these tables as temporary work areas or read-only
+# caches for data pulled from other tables.
+#
+# TABLE 16.4 MEMORY STORAGE ENGINE FEATURES
+#
+# 		Feature 																														Support
+#
+# 	B-tree Indexes 																												Yes
+# 	Backup/point-in-time recovery (Implemented in the server, rather than in the storage engine)			Yes
+#
+# 	Cluster database support 																									No
+# 	Clustered indexes 																											No
+# 	
+# 	Compressed data 																												No
+# 	Data caches 																													N/A
+#
+# 	Encrypted data 																												Yes (Implemented in the server via encryption functions)
+# 	Foreign key support 																											No
+#
+# 	Full-text search indexes 																									No
+# 	Geospatial data type support 																								No
+# 	Geospatial indexing support 																								No
+#
+# 	Hash indexes 																													Yes
+# 	Index caches 																													N/A
+# 
+# 	Locking Granularity 																											Table
+# 	MVCC 																																No
+#
+# 	Replication support (implemented in the server, rather than in the storage engine) 						Limited (See the discussion later in this section)
+# 	Storage limits 																												RAM
+#
+# 	T-tree indexes 																												No
+# 	Transactions 																													No
+#
+# 	Update stats for data dictionary 																						Yes
+#
+# 		) WHEN TO USE MEMORY OR NDB CLUSTER
+#
+# 		) PARTITIONING
+#
+#		) PERFORMANCE CHARACTERISTICS
+#
+# 		) CHARACTERISTICS OF MEMORY TABLES
+#
+# 		) DDL OPERATIONS FOR MEMORY TABLES
+#
+# 		) INDEXES
+#
+# 		) USER-CREATED AND TEMPORARY TABLES
+#
+# 		) LOADING DATA
+#
+# 		) MEMORY TABLES AND REPLICATION
+#
+# 		) MANAGING MEMORY USE
+#
+# 		) ADDITIONAL RESOURCES
+#
+# WHEN TO USE MEMORY OR NDB CLUSTER
+#
+# Developers looking to deploy applications that use the MEMORY storage engine for important, highly available, or frequently
+# updated data should consider whether NDB Cluster is a better choice.
+#
+# A typical use case for the MEMORY engine involves these characteristics:
+#
+# 		) Operations involving transient, non-critical data such as session management or caching. When the MySQL server halts or restarts,
+# 			the data in MEMORY tables is lost.
+#
+# 		) In-memory storage for fast access and low latency. Data volume can fit entirely in memory without causing the OS to swap out virtual memory pages.
+#
+# 		) A read-only or read-mostly data access pattern (limited updates)
+#
+# NDB Cluster offers the same features as the MEMORY engine with higher performance levels, and provides additional features not available
+# with MEMORY:
+#
+# 		) Row-level locking and multiple-thread operation for low contention between clients
+#
+# 		) Scalability even with statement mixes that include writes
+#
+# 		) Optional disk-backed operation for data durability
+#
+# 		) Shared-nothing architechture and multiple-host operation with no single point of failure, enabling 99.99% availability
+#
+# 		) Automatic data distribution across nodes; application developers need not craft custom sharding or partitioning solutions
+#
+# 		) Support for variable-length data types (including BLOB and TEXT) not supported by MEMORY.
+#
+# PARTITIONING 
+#
+# MEMORY tables cannot be partitioned.
+#
+# PERFORMANCE CHARACTERISTICS
+#
+# MEMORY performance is constrained by contention resulting from single-thread execution and table lock overhead when processing updates.
+#
+# This limits scalability when load increases, particularly for statement mixes that include writes.
+#
+# Despite the in-memory processing for MEMORY tables, they are not necessarily faster than InnoDB tables on a busy server, for general-purpose
+# queries, or under a read/write workload. In particular, the table locking involved with performing updates can slow down concurrent usage
+# of MEMORY tables from multiple sessions.
+#
+# Depending on the kinds of queries performed on a MEMORY table, you might create indexes as either the default hash data structure
+# (for looking up single values based on a unique key), or a general-purpose B-tree data structure (for all kinds of queries involving equality,
+# inequality, or range operators such as less than or greater than).
+#
+# The following sections illustrate the syntax for creating both kinds of indexes. A common performance issue is using the default hash indexes
+# in workloads where B-tree indexes are more efficient.
+#
+# CHARACTERISTICS OF MEMORY TABLES
+#
+# THe MEMORY storage engine does not create any files on disk. The table definition is stored in the MySQL data dictionary.
+#
+# MEMORY tables have the following characteristics:
+#
+# 		) Space for MEMORY tables is allocated in small blocks. Tables use 100% dynamic hashing for inserts. No overflow area or extra key
+# 			space is needed.
+#
+# 			No extra space is needed for free lists. Deleted rows are put in a linked list and are reused when you insert new data into
+# 			the table.
+#
+# 			MEMORY tables also have none of the problems commonly associated with deletes plus inserts in hashed tables.
+#
+# 		) MEMORY tables used a fixed-length row-storage format. Variable-length types such as VARCHAR are stored using a fixed length.
+#
+# 		) MEMORY tables cannot contain BLOB or TEXT columns
+#
+# 		) MEMORY includes support for AUTO_INCREMENT columns
+#
+# 		) Non-TEMPORARY MEMORY tables are shared among all clients, just like any other non-TEMPORARY table.
+#
+# DDL OPERATIONS FOR MEMORY TABLES
+#
+# To create a MEMORY table, specify the clause ENGINE=MEMORY on the CREATE_TABLE statement
+#
+# 		CREATE TABLE t (i INT) ENGINE = MEMORY;
+#
+# As indicated by the engine name, MEMORY tables are stored in memory. They use hash indexes by default, which makes
+# them very fast for single-value lookups and very useful for creating temporary tables.
+#
+# However, when the server shuts down, all rows stored in MEMORY tables are lost: The tables themselves continue
+# to exist because their definitions are stored in the MySQL data dictionary, but they are empty when the server restarts.
+#
+# This example shows how you might create, use, and remove a MEMORY table:
+#
+# 		mysql> CREATE TABLE test ENGINE=MEMORY
+# 						SELECT ip,SUM(downloads) AS down
+# 						FROM log_table GROUP BY ip;
+# 		mysql> SELECT COUNT(ip),AVG(down) FROM test;
+# 		mysql> DROP TABLE test;
+#
+# The maximum size of MEMORY tables is limited by the max_heap_table_size system variable, which has a default value
+# of 16MB.
+#
+# To enforce different size limits for MEMORY tables, change the value of this variable. The value in effect for
+# CREATE_TABLE, or a subsequent ALTER_TABLE or TRUNCATE_TABLE, is the value used for the life of the table.
+#
+# A server restart also sets the maximum size of existing MEMORY tables to the global max_heap_table_size value.
+#
+# You can set the size for individual tables as described later in this section.
+#
+# INDEXES
+#
+# The MEMORY storage engine supports both HASH and BTREE indexes. YOu can specify one or the other for a given index
+# by adding a USING clause as shown here:
+#
+# 		CREATE TABLE lookup
+# 			(id INT, INDEX USING HASH (id))
+# 			ENGINE = MEMORY;
+# 		CREATE TABLE lookup
+# 			(id INT, INDEX USING BTREE (id))
+# 			ENGINE = MEMORY;
+#
+# For general characteristics of B-tree and hash indexes, see SECTION 8.3.1, "HOW MYSQL USES INDEXES"
+#
+# MEMORY tables can have up to 64 indexes per table, 16 columns per index and a maximum key length of 3072 bytes.
+#
+# If a MEMORY table hash index has a high degree of key duplication (many index entires containing the same values),
+# updates to the table that affect key values and all deletes are significantly slower.
+#
+# The degree of this slowdown is proportional to the degree of duplication (or, inversely proportional to the index cardinality)
+#
+# You can use a BTREE index to avoid this problem.
+#
+# MEMORY tables can have nonunique keys. (This is an uncommon feature for implementations of hash indexes.)
+#
+# Columns that are indexed can contain NULL values
+#
+# USER-CREATED AND TEMPORARY TABLES
+#
+# MEMORY table contents are stored in memory, which is a property that MEMORY tables share with internal temporary tables
+# that the server creates on the fly while processing queries.
+#
+# However, the two types of tables differ in that MEMORY tables are not subject to storage conversion, whereas internal
+# temporary tables are:
+#
+# 		) If an internal temporary table becomes too large, the server automatically converts it to on-disk storage, as described
+# 			in SECTION 8.4.4, "INTERNAL TEMPORARY TABLE USE IN MYSQL"
+#
+# 		) User-created MEMORY tables are never converted to disk tables.
+#
+# LOADING DATA
+#
+# To populate a MEMORY table when the MySQL server starts, you can use the --init-file option.
+#
+# For example, you can put statements such as INSERT_INTO_/ETC/_SELECT or LOAD_DATA into this file
+# to load the table from a persistent data source.
+#
+# See SECTION 5.1.7, "SERVER COMMAND OPTIONS", AND SECTION 13.2.7, "LOAD DATA SYNTAX"
+#
+# MEMORY TABLES AND REPLICATION
+#
+# A server's MEMORY tables become empty when it is shut down and restarted.
+#
+# If the server is a replication master, its slaves are not aware that these tables have become
+# empty, so you see out-of-date content if you select data from the tables on the slaves.
+#
+# To synchronize master and slave MEMORY tables, when a MEMORY table is used on a master for the first
+# time since it was started, a DELETE statement is written to the master's binary log, to empty the table
+# on the slaves also.
+#
+# THe slave still has outdated data in the table during the interval between the master's restart and its
+# first use of the table.
+#
+# To avoid this interval when a direct query to the slave could return stale data, use the --init-file
+# option to populate the MEMORY table on the master at startup.
+#
+# MANAGING MEMORY USE
+#
+# The server needs sufficient memory to maintain all MEMORY tables that are in use at the same time.
+#
+# Memory is not reclaimed if you delete individual rows from a MEMORY table. Memory is reclaimed only when the entire
+# table is deleted.
+#
+# Memory that was previously used for deleted rows is re-used for new rows within the same table. To free all the memory
+# used by a MEMORY table when you no longer require its contents, execute DELETE or TRUNCATE_TABLE to remove all rows,
+# or remove the table altogether using DROP_TABLE.
+#
+# To free up the memory used by deleted rows, use ALTER TABLE ENGINE=MEMORY to force a table rebuild.
+#
+# The memory needed for one row in a MEMORY table is calculated using the following expression:
+#
+# 		SUM_OVER_ALL_BTREE_KEYS(max_length_of_key + sizeof(char*) * 4)
+# 		+ SUM_OVER_ALL_HASH_KEYS(sizeof(char*) * 2)
+# 		+ ALIGN(length_of_row+1, sizeof(char*))
+#
+# ALIGN() represents a round-up factor to cause the row length to be an exact multiple of the char pointer size.
+#
+# sizeof(char*) is 4 on 32-bit machines and 8 on 64-bit machines.
+#
+# As mentioned earlier, the max_heap_table_size system variable sets the limit on the maximum size of MEMORY tables.
+# To control the maximum size for individual tables, set the session value of this variable before creating each table.
+#
+# (Do not change the global max_heap_table_size value unless you intend the value to be used for MEMORY tables created
+# by all clients)
+#
+# The following example creates two MEMORY tables, with a maximum size of 1MB and 2MB, respectively.
+#
+# 		mysql> SET max_heap_table_size = 1024*1024;
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		mysql> CREATE TABLE t1 (id INT, UNIQUE(id)) ENGINE = MEMORY;
+# 		Query OK, 0 rows affected (0.01 sec)
+#
+# 		mysql> SET max_heap_table_size = 1024*1024*2;
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# 		mysql> CREATE TABLE t2 (id INT, UNIQUE(id)) ENGINE = MEMORY;
+# 		Query OK, 0 rows affected (0.00 sec)
+#
+# Both tables revert to the server's global max_heap_table_size value if hte server restarts.
+#
+# You can also specify a MAX_ROWS table option in CREATE_TABLE statements for MEMORY tables to provide a hint
+# about the number of rows you plan to store in them.
+#
+# This does not enable the table to grow beyond the max_heap_table_size value, which still acts as a constraint
+# on maximum table size.
+#
+# For maximum flexibility in being able to use MAX_ROWS, set max_heap_table_size at least as high as the value
+# to which you want each MEMORY table to be able to grow.
+#
+# ADDITIONAL RESOURCES
+#
+# Forum link
+#
+# 16.4 THE CSV STORAGE ENGINE
+#
+# 16.4.1 REPAIRING AND CHECKING CSV TABLES
+# 16.4.2 CSV LIMITATIONS
+#
+# The CSV storage engine stores data in text files using comma-separated values format.
+#
+# The CSV storage engine is always compiled into the MySQL server.
+#
+# To examine the source for the CSV engine, look in the storage/csv directory of a MySQL source distrib.
+#
+# When you create a CSV table, the server creates a plain text data file having a name that begins with the
+# table name and has a .CSV extension.
+#
+# When you store data into the table, the storage engine saves it into the data file in comma-separated values format
+#
+# 		mysql> CREATE TABLE test (i INT NOT NULL, c CHAR(10) NOT NULL)
+# 				 ENGINE = CSV;
+# 		Query OK, 0 rows affected (0.06 sec)
+#
+# 		mysql> INSERT INTO test VALUES(1, 'record one'), (2, 'record two');
+# 		Query OK, 2 rows affected (0.05 sec)
+# 		Records: 2 	Duplicates:  0 	Warnings: 0
+#
+# 		mysql> SELECT * FROM test;
+# 		+-----+----------------+
+# 		| i 	| c 				  |
+# 		+-----+----------------+
+# 		| 1 	| record one 	  |
+# 		| 2 	| record two 	  |
+# 		+-----+----------------+
+# 		2 rows in set (0.00 sec)
+#
+# Creating a CSV table also creates a corresponding metafile that stores the state of the table and the number of rows
+# that exist in the table.
+#
+# The name of this file is the same as the name of the table with the extension CSM.
+#
+# If you examine the test.CSV file in the database directory created by executing the preceding statements, its contents
+# should look like this:
+#
+# 		"1", "record one"
+# 		"2", "record two"
+#
+# THis format can be read, and even written, by spreadsheet applications such as Excel, etc.
+#
+# 16.4.1 REPAIRING AND CHECKING CSV TABLES
+#
+# The CSV storage engine supports the CHECK_TABLE and REPAIR_TABLE statements to verify and, if possible,
+# repair a damaged CSV table.
+#
+# When running the CHECK_TABLE statement, the CSV file will be checked for validity by looking for the correct
+# field separators, escaped fields (matching or missing quotation marks), the correct number of fields compared
+# to the table definition and the existence of a corresponding CSV metafila.
+#
+# The first invalid row discovered will report an error.
+#
+# Checking a valid table produces output like that shown below:
+#
+# 		mysql> CHECK TABLE csvtest;
+# 		+-------------+-----------+---------+---------+
+# 		| Table 	     | Op 	 	  | Msg_type| Msg_text|
+# 		+-------------+-----------+---------+---------+
+# 		| test.csvtest| check 	  | status  | OK 		 |
+# 		+-------------+-----------+---------+---------+
+#
+# A check on a corrupted table returns a fault:
+#
+# 		mysql> CHECK TABLE csvtest;
+# 		+---------------+-------+-------------+----------+
+# 		| Table 			 | Op 	| Msg_type 	  | Msg_text |
+# 		+---------------+-------+-------------+----------+
+# 		| test.csvtest  | check | error 		  | Corrupt  |
+# 		+---------------+-------+-------------+----------+
+#
+# If the check fails, the table is marked as crashed (corrupt). Once a table has been marked as corrupt, it is automatically
+# repaired when you next run CHECK_TABLE or execute a SELECT statement.
+#
+# The corresponding corrupt status and new status will be displayed when running CHECK_TABLE
+#
+# 		mysql> CHECK TABLE csvtest;
+# 		+------------------+--------+----------+----------------------------+
+# 		| Table 				 | Op 	 | Msg_type | Msg_text 				 		  |
+# 		+------------------+--------+----------+----------------------------+
+# 		| test.csvtest 	 | check  | warning 	| Table is marked as crashed |
+# 		| test.csvtest 	 | check  | status   | OK 								  |
+# 		+------------------+--------+----------+----------------------------+
+#
+# To repair a table, use REPAIR_TABLE, which copies as many valid rows from the existing CSV data as possible, and then replaces
+# the existing CSV file with the recovered rows.
+#
+# Any rows beyond the corrupted data are lost.
+#
+# 		mysql> REPAIR TABLE csvtest;
+# 		+-------------------+----------+-------------+------------+
+# 		| Table 				  | Op 		 | Msg_type 	| msg_text 	 |
+# 		+-------------------+----------+-------------+------------+
+# 		| test.csvtest 	  | repair 	 | status 		| OK 			 |
+# 		+-------------------+----------+-------------+------------+
+#
+# WARNING:
+#
+# 		During repair, only the rows from teh CSV file up to the first damaged rows are copied to the new table.
+#
+# 		All other rows from the first damaged row to the end of the table are removed, even valid rows.
+#
+# 16.4.2 CSV LIMITATIONS
+#
+# The CSV storage engine does not support indexing.
+#
+# The CSV storage engine does not support partitioning.
+#
+# All tables that you create using the CSV storage engine must have the NOT NULL attribute on all columns.
+#
+# 16.5 THE ARCHIVE STORAGE ENGINE
+#
+# The ARCHIVE storage engine produces special-purpose tables that store large amounts of unindexed data in a very
+# small footprint.
+#
+# TABLE 16.5 ARCHIVE STORAGE ENGINE FEATURES
+#
+# 		Feature 																												Support
+#
+# 	B-tree indexes 																										No
+# 	Backup/point-in-time recovery(Implemented in the server, rather than in the storage engine) 	Yes
+# 	Cluster database support 																							No
+#
+# 	Clustered indexes 																									No
+# 	Compressed data 																										Yes
+# 	
+# 	Data caches 																											No
+# 	Encrypted data 																										Yes (implemented in the server via encryption functions)
+#
+#	Foreign key support 																									No
+# 	Full-text search indexes 																							No
+#
+# 	Geospatial data type support 																						Yes
+# 	Geospatial indexing support 																						No
+# 
+# 	Hash indexes 																											No
+# 	INdex caches 																											No
+#
+# 	Locking granularity 																									Row
+# 	MVCC 																														No
+#
+# 	Replication support (implemented in the server, rather than in the storage engine) 				Yes
+# 	Storage limits 																										None
+#
+# 	T-tree indexes 																										No
+# 	Transactions 																											No
+#
+# 	Update stats for data dictionary 																				Yes
+#
+# The ARCHIVE storage engine is included in MySQL binary distribs. To enable this storage engine if you build
+# MySQL from source, invoke CMake with the -DWITH_ARCHIVE_STORAGE_ENGINE option.
+#
+# To examine the source for the ARCHIVE engine, look in the storage/archive directory of a MySQL source distrib.
+#
+# You can check whether the ARCHIVE storage engine is available with the SHOW_ENGINES statement.
+#
+# WHen you create an ARCHIVE table, teh storage engine creates files with names that begin with the table name.
+#
+# The data file has an extension of .ARZ. An .ARN file may appear during optimization operations.
+#
+# The ARCHIVE engine supports INSERT, REPLACE, and SELECT, but not DELETE or UPDATE. It does support ORDER BY operations,
+# BLOB columns, and spatial data types (see SECTION 11.5.1, "SPATIAL DATA TYPES")
+#
+# Geographical spatial reference systems are not supported. The ARCHIVE engine uses row-level locking.
+#
+# The ARCHIVE engine supports the AUTO_INCREMENT column attribute. The AUTO_INCREMENT column can have either a unique
+# or nonunique index. Attempting to create an index or any other column results in an error.
+#
+# The ARCHIVE engine also supports the AUTO_INCREMENT table option in CREATE_TABLE statements to specify the initial
+# sequence value for a new table or reset the sequence value for an existing table, respectively.
+#
+# ARCHIVE does not support inserting a value into an AUTO_INCREMENT column less than the current maximum column value.
+# Attempts to do so results in an ER_DUP_KEY error.
+#
+# The ARCHIVE engine ignores BLOB columns if they are not requested and scans past them while reading.
+#
+# The ARCHIVE engine does not support partitioning.
+#
+# STORAGE: Rows are compressed as they are inserted. The ARCHIVE engine uses zlib lossless data compression (/link/).
+#
+# You can use OPTIMIZE_TABLE to analyze the table and pack it into a smaller format (for a reason to use OPTIMIZE_TABLE,
+# see later in the discussion). The engine also supports CHECK_TABLE.
+#
+# There are several types of insertions that are used:
+#
+# 		) An INSERT statement just pushes rows into a compressed buffer, and that buffer flushes as necessary. The insertion
+# 			into the buffer is protected by a lock.
+#
+# 			A SELECT forces a flush to occur.
+#
+# 		) A bulk insert is visible only after it completes, unless other inserts occur at the same time, in which case it can be seen partially.
+#
+# 		A SELECT never causes a flush of a bulk insert unless a normal insert occurs while it is loading.
+#
+# RETRIEVAL: On retrieval, rows are uncompressed on demand; there is no row cache. A SELECT operation performs a complete table scan: When a SELECT
+# 	occurs, it finds out how many rows are currently available and reads that number of rows.
+#
+# SELECT is performed as consistent read. Note that lots of SELECT statements during insertion can deterioate the compression, unless only bulk inserts
+# are used.
+#
+# To achieve better compression, you can use OPTIMIZE_TABLE or REPAIR_TABLE.
+#
+# The number of rows in ARCHIVE table reported by SHOW_TABLE_STATUS is always accurate. See SECTION 13.7.3.4, "OPTIMIZE TABLE SYNTAX",
+# SECTION 13.7.3.5, "REPAIR TABLE SYNTAX", and SECTION 13.7.6.36, "SHOW TABLE STATUS SYNTAX"
+#
+# ADDITIONAL RESOURCES
+#
+# 	//Forum link
+#
+# 16.6 THE BLACKHOLE STORAGE ENGINE
+#
+# https://dev.mysql.com/doc/refman/8.0/en/blackhole-storage-engine.html
+#
+# 
