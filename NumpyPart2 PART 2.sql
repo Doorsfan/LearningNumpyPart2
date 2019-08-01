@@ -61065,6 +61065,957 @@
 #
 # 16.6 THE BLACKHOLE STORAGE ENGINE
 #
-# https://dev.mysql.com/doc/refman/8.0/en/blackhole-storage-engine.html
+# The BLACKHOLE storage engine acts as a "black hole" that accepts data but throws it away and does not store it.
 #
+# Retrievals always return an empty result:
+#
+# 		mysql> CREATE TABLE test(i INT, c CHAR(10)) ENGINE = BLACKHOLE;
+# 		Query OK, 0 rows affected (0.03 sec)
+#
+# 		mysql> INSERT INTO test VALUES(1,'record one'),(2,'record two');
+# 		Query OK, 2 rows affected (0.00 sec)
+# 		Records: 2 Duplicates: 0 Warnings: 0
+#
+# 		mysql> SELECT * FROM test;
+# 		Empty set (0.00 sec)
+#
+# To enable the BLACKHOLE storage engine if you build MySQL from source, invoke CMake with the -DWITH_BLACKHOLE_STORAGE_ENGINE option.
+#
+# To examine the source for the BLACKHOLE engine, look in the sql directory of a MySQL source distribution.
+#
+# When you create a BLACKHOLE table, the server creates the table definition in the global data dictionary. There are no files
+# associated with the table.
+#
+# The BLACKHOLE storage engine supports all kinds of indexes. That is, you can include index declarations in the table definition.
+#
+# The BLACKHOLE storage engine does not support partitioning.
+#
+# You can check whether the BLACKHOLE storage engine is available with the SHOW_ENGINE statement.
+#
+# Insert into a BLACKHOLE table do not store any data, but if statements based binary logging is enabled, the SQL statements
+# are logged and replicated to slave servers.
+#
+# This can be useful as a repeater or filter mechanism.
+#
+# Suppose that your application requires slave-side filtering rules, but transferring all binary log data to the slave first
+# results in too much traffic.
+#
+# IN such a case, it is possible to set up on the master host a "dummy" slave process whose default storage engine is BLACKHOLE,
+# depicted as follows:
+#
+# 		FIGURE 16.1 REPLICATION USING BLACKHOLE FOR FILTERING
+#
+# 		[ (Master Host) [Master mysqld process] -> [Dummy mysqld process] ] -> [ (Slave host) [Slave mysqld process] ]
+#
+# The master writes to its binary log. The "dummy" mysqld process acts as a slave, applying the desired combination of
+# replicate-do-* and replicate-ignore-* rules, and writes a new, filtered binary log of its own.
+#
+# (See SECTION 17.1.6, "REPLICATION AND BINARY LOGGING OPTIONS AND VARIABLES")
+#
+# This filtered log is provided to the slave.
+#
+# The dummy process does not actually store any data, so there is little processing overhead incurred by running
+# the additional mysqld process on the replication master host.
+#
+# This type of setup can be repeated with additional replication slaves.
+#
+# INSERT triggers for BLACKHOLE tables work as expected. However, because the BLACKHOLE table does not actually
+# store any data, UPDATE and DELETE triggers are not activated:
+#
+# 	The FOR EACH ROW clause in the trigger definition does not apply because there are no rows.
+#
+# Other possible uses for the BLACKHOLE storage engine include:
+#
+# 		) Verification of dump file syntax
+#
+# 		) Measurement of the overhead from binary logging, by comparing performance using BLACKHOLE with and without binary logging enabled.
+#
+# 		) BLACKHOLE is essentially a "no-op" storage engine, so it could be used for finding performance bottlenecks not related to the storage
+# 			engine itself.
+#
+# The BLACKHOLE engine is transaction-aware, in the sense that committed transactions are written to the binary log and rolled-back
+# transactions are not.
+#
+# BLACKHOLE ENGINE AND AUTO INCREMENT COLUMNS
+#
+# The Blackhole engine is a no-op engine. Any operations performed on a table using Blackhole will have no effect. This should be born in mind
+# when considering the behavior of primary key columns that auto increment.
+#
+# The engine will not automatically increment field values, and does not retain auto increment field state. This has important implications
+# in replication.
+#
+# Consider the following replication scenario where all three of the following conditions apply:
+#
+# 		1. On a master server there is a blackhole table with an auto increment field that is a primary key
+#
+# 		2. On a slave the same table exists but using the MyISAM engine
+#
+# 		3. Inserts are performed into the master's table without explicitly setting the auto increment value in the INSERT
+# 			statement itself or through using a SET INSERT_ID statement.
+#
+# In this scenario replication will fail with a duplicate entry error on the primary key column.
+#
+# In statement based replication, the value of INSERT_ID in the context event will always be the same. Replication will
+# therefore fail due to trying to insert a row with a duplicate value for a primary key column.
+#
+# In row based replication, the value that the engine returns for the row always be the same for each insert. 
+#
+# This will result in the slave attempting to replay two insert log entries using the same value for the primary key column,
+# and so replication will fail.
+#
+# COLUMN FILTERING
+#
+# When using row-based replication, (binlog_format=ROW), a slave where the last columns are missing from a table is supported,
+# as described in the section SECTION 17.4.1.9, "REPLICATION WITH DIFFERING TABLE DEFINITIONS ON MASTER AND SLAVE"
+#
+# This filtering works on the slave side, that is, the columns are copied to the slave before they are filtered out.
+#
+# There are at least two cases where it is not desirable to copy the columns to the slave:
+#
+# 		1. If the data is confidential, so the slave server should not have access to it.
+#
+# 		2. If the master has many slaves, filtering before sending to the slaves may reduce network traffic.
+#
+# Master column filtering can be achieved using the BLACKHOLE engine. This is carried out in a way similar to how master
+# table filtering is achieved - by using the BLACKHOLE engine and the --replicate-do-table or --replicate-ignore-table option.
+#
+# The setup for the master is:
+#
+# 		CREATE TABLE t1 (public_col_1, /etc/, public_col_N,
+# 							  secret_col_1, /etc/, secret_col_M) ENGINE=MyISAM;
+#
+# The setup for the trusted slave is:
+#
+# 		CREATE TABLE t1 (public_col_1, /etc/, public_col_N) ENGINE=BLACKHOLE;
+#
+# The setup for the untrusted slave is:
+#
+# 		CREATE TABLE t1 (public_col_1, /etc/, public_col_N) ENGINE=MyISAM;
+#
+# 16.7 THE MERGE STORAGE ENGINE
+#
+# 16.7.1 MERGE TABLE ADVANTAGES AND DISADVANTAGES
+# 16.7.2 MERGE TABLE PROBLEMS
+#
+# The MERGE storage engine, also known as the MRG_MyISAM engine, is a collection of identical MyISAM tables that can be used
+# as one.
+#
+# "Identical" means that all tables have identical column data types and index information. You cannot merge MyISAM tables in
+# which the columns are listed in a different order, do not have exactly the same data types in corresponding columns, or have
+# the indexes in different order.
+#
+# However, any or all of the MyISAM tables can be compressed with myisampack. See SECTION 4.6.6, "myisampack -- GENERATE COMPRESSED,
+# READ-ONLY MyISAM TABLES"
+#
+# Differences between tables such as these do not matter:
+#
+# 		) Names of corresponding columns and indexes can differ.
+#
+# 		) Comments for tables, columns, and indexes can differ.
+#
+# 		) Table options such as AVG_ROW_LENGTH, MAX_ROWS, or PACK_KEYS can differ.
+#
+# An alternative to a MERGE table is a partitioned table, which stores partitions of a single table in separate files and enables
+# some operations to be performed more efficiently.
+#
+# For more information, see CHAPTER 23, PARTITIONING.
+#
+# When you create a MERGE table, MySQL creates a .MRG file on disk that contains the names of the underlying MyISAM tables that
+# should be used as one.
+#
+# The table format of the MERGE tables is stored in the MySQL data dictionary. The underlying tables do not have to be in the same
+# database as the MERGE table.
+#
+# You can use SELECT, DELETE, UPDATE and INSERT on MERGE tables. You must have SELECT, DELETE, and UPDATE privileges on the MyISAM tables
+# that you map to a MERGE table.
+#
+# 		NOTE:
+#
+# 			The use of MERGE tables entails the following security issue: If a user has access to MyISAM table t, that user can create a
+# 			MERGE table m that accesses t.
+#
+# 			However, if the user's privileges on t are subsequently revoked, the user can continue to access t by doing so through m.
+#
+# Use of DROP_TABLE with a MERGE table drops only the MERGE specification. The underlying tables are not affected.
+#
+# To create a MERGE table, you must specify a UNION=(list-of-tables) option that indicates which MyISAM tables to use.
+#
+# You can optionally specify an INSERT_METHOD option to control how inserts into the MERGE table take place. Use a value of
+# FIRST or LAST to cause inserts to be made in the first or last underlying table, respectively.
+#
+# If you specify no INSERT_METHOD option or if you specify it with a value of NO, inserts into the MERGE table are not permitted
+# and attempts to do so result in an error.
+#
+# The following example shows how to create a MERGE table:
+#
+# 		mysql> CREATE TABLE t1 (
+# 			 -> 	a INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+# 			 -> 	message CHAR(20)) ENGINE=MyISAM;
+# 		mysql> CREATE TABLE t2 (
+# 			 -> 	a INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+# 			 -> 	message CHAR(20)) ENGINE=MyISAM;
+# 		mysql> INSERT INTO t1 (message) VALUES ('Testing'),('table'),('t1');
+# 		mysql> INSERT INTO t2 (message) VALUES ('Testing'),('table'),('t2');
+# 		mysql> CREATE TABLE total (
+# 			 ->  a INT NOT NULL AUTO_INCREMENT,
+# 			 ->  message CHAR(20), INDEX(a))
+# 			 ->  ENGINE=MERGE UNION=(t1,t2) INSERT_METHOD=LAST;
+#
+# Column a is indexed as a PRIMARY KEY in the underlying MyISAM tables, but not in the MERGE table. There it is indexed but not as
+# a PRIMARY KEY because a MERGE table cannot enforce uniqueness over the set of underlying tables.
+#
+# (Similarly, a column with a UNIQUE index in the underlying tables should be indexed in the MERGE table but not as a UNIQUE index)
+#
+# After creating the MERGE table, you can use it to issue queries that operate on the group of tables as a whole:
+#
+# 		mysql> SELECT * FROM total;
+# 		+---+--------------+
+# 		| a | message 		 |
+# 		+---+--------------+
+# 		| 1 | Testing 		 |
+# 		| 2 | table 		 |
+# 		| 3 | t1 			 |
+# 		| 1 | Testing 		 |
+# 		| 2 | table 		 |
+# 		| 3 | t2 			 |
+# 		+---+--------------+
+#
+# To remap a MERGE table to a different collection of MyISAM tables, you can use one of the following methods:
+#
+# 		) DROP the MERGE table and re-create it
+#
+# 		) use ALTER TABLE tbl_name UNION=(/etc/) to change the list of underlying tables
+#
+# 			It is also possible to use ALTER TABLE /etc/ UNION=() (that is, with an empty UNION clause) to remove all of the underlying tables.
+#
+# 			However, in this case, the table is effectively empty and inserts fail because there is no underlying table to take new rows.
+#
+# 			Such a table might be useful as a template for creating new MERGE tables with CREATE_TABLE_/ETC/_LIKE
+#
+# THe underlying table definitions and indexes must conform closely to the definition of the MERGE table. Conformance is checked when a table
+# that is part of a MERGE table is opened, not when the MERGE table is created.
+#
+# If any table fails the conformance checks, the operation that triggered the opening of the table fails. THis means that changes
+# to the definitions of tables within a MERGE may cause a failure when the MERGE table is accessed. The conformance checks applied
+# to each table are:
+#
+# 		) The underlying table and the MERGE table must have the same number of columns
+#
+# 		) The column order in the underlying table and the MERGE table must match.
+#
+# 		) Additionally, the specification for each corresponding column in the parent MERGE table and the underlying tables are compared and must satisfy these checks:
+#
+# 			) The column type in the underlying table and the MERGE table must be equal
+#
+# 			) The column length in the underlying table and the MERGE table must be equal
+#
+# 			) The column of the underlying table and the MERGE table can be NULL
+#
+# 		) The underlying table must have at least as many indexes as the MERGE table. The underlying table may have more indexes than the MERGE table, but cannot have fewer.
+#
+# 			NOTE:
+#
+# 				A known issue exists where indexes on the same columns must be an identical order, in both the MERGE table and the underlying MyISAM table.
+#
+# 				See Bug #33653
+#
+# 			Each index must satisfy these checks:
+#
+# 				) The index type of the underlying table and the MERGE table must be the same.
+#
+# 				) The number of index parts (that is, multiple columns within a compound index) in the index definition for the underlying
+# 					table and the MERGE table must be the same.
+#
+# 				) For each index part:
+#
+# 					) Index part lengths must be equal
+#
+# 					) Index part types must be equal
+#
+# 					) Index part languages must be equal
+#
+# 					) Check whether index parts can be NULL
+#
+# If a MERGE table cannot be opened or used because of a problem with an underlying table, CHECK_TABLE displays information about which
+# table caused the problem.
+#
+# ADDITIONAL RESOURCES
+#
+# 		/links/
+#
+# 16.7.1 MERGE TABLE ADVANTAGES AND DISADVANTAGES
+#
+# MERGE tables can help you solve the following problems:
+#
+# 		) Easily manage a set of log tables. For example, you can put data from different months into separate tables, compress some of them
+# 			with myisampack, and then create a MERGE table to use them as one.
+#
+# 		) Obtain more speed. You can split a large read-only table based on some criteria, and then put individual tables on different disks.
+#
+# 			A MERGE table structured this way could be much faster than using a single large table.
+#
+# 		) Perform more efficient searches. If you know exactly what you are looking for, you can search in just one of the underlying tables
+# 			for some queries and use a MERGE table for others.
+#
+# 			You can even have many different MERGE tables that use overlapping sets of tables.
+#
+# 		) Perform more efficient repairs. It is easier to repair individual smaller tables that are mapped to a MERGE table than to repair a single large table.
+#
+# 		) Instantly map many tables as one. A MERGE table need not maintain an index of its own because it uses the indexes of the individual tables.
+#
+# 			As a result, MERGE table collections are very fast to create or remap. (You must still specify the index definitions when you create a MERGE table,
+# 			even though no indexes are created.)
+#
+# 		) If you have a set of tables from which you create a large table on demand, you can instead create a MERGE table from them on demand.
+#
+# 			This is much faster and saves a lot of disk space.
+#
+# 		) Exceed the file size limit for the operating system. Each MyISAM table is bound by this limit, but a collection of MyISAM tables is not.
+#
+# 		) You can create an alias or synonym for a MyISAM table by defining a MERGE table that maps to that single table. There should be no really notable
+# 			performance impact from doing this (only a couple of indirect calls and memcpy() calls for each read)
+#
+# The disadvantage of MERGE tables are:
+#
+# 		) You can use only identical MyISAM tables for a MERGE table
+#
+# 		) Some MyISAM features are unavailable in MERGE tables. For example, you cannot create FULLTEXT indexes on MERGE tables.
+# 			(You can create FULLTEXT indexes on the underlying MyISAM tables, but you cannot search the MERGE table with a full-text search)
+#
+# 		) If the MERGE table is nontemporary, all underlying MyISAM tables must be nontemporary. If the MERGE table is temporary,
+# 			the MyISAM tables can be any mix of temporary and nontemporary
+#
+# 		) MERGE tables use more file descriptors than MyISAM tables. If 10 clients are using a MERGE table that maps to 10 tables,
+# 			the server uses (10 x 10) + 10 file descriptors. (10 data file descriptors for each of the 10 clients, and 10 index file
+# 			descriptors shared among the clients)
+#
+# 		) Index reads are slower. When you read an index, the MERGE storage engine needs to issue a read on all underlying tables to 
+# 			check which one most closely matches a given index value.
+#
+# 			To read the next index value, the MERGE storage engine needs to search the read buffers to find the next value.
+#
+# 			Only when one index buffer is used up does the storage engine need to read the next index block. 
+#
+# 			This makes MERGE indexes much slower on eq_ref searches, but not much slower on ref searches. For more information
+# 			about eq_ref and ref, see SECTION 13.8.2, "EXPLAIN SYNTAX"
+#
+# 16.7.2 MERGE TABLE PROBLEMS
+#
+# The following are known problems with MERGE tables:
+#
+# 		) In versions of MySQL Server prior to 5.1.23, it was possible to create temporary merge tables with nontemporary child MyISAM tables.
+#
+# 			From versions 5.1.23, MERGE children were locked through the parent table. If the parent was temporary, it was not locked and so the
+# 			children were not locked either.
+#
+# 			Parallel use of the MyISAM tables corrupted them.
+#
+# 		) If you use ALTER_TABLE to change a MERGE table to another storage engine, the mapping to the underlying tables is lost.
+#
+# 			Instead, the rows from the underlying MyISAM tables are copied into the altered table, which then uses the specified
+# 			storage engine.
+#
+# 		) The INSERT_METHOD table option for a MERGE table indicates which underlying MyISAM table to use for inserts into the MERGE table.
+#
+# 			However, use of the AUTO_INCREMENT table option for that MyISAM table has no effect for inserts into the MERGE table until at least
+# 			one row has been inserted directly into the MyISAM table.
+#
+# 		) A MERGE table cannot maintain uniqueness constraints over the entire table. When you perform an INSERT, the data goes into the first
+# 			or last MyISAM table (as determined by the INSERT_METHOD option)
+#
+# 			MySQL ensures that unique key values remain unique within that MyISAM table, but not over all the underlying tables in the
+# 			collection.
+#
+# 		) Because the MERGE engine cannot enforce uniqueness over the set of underlying tables, REPLACE does not work as expected. The two key facts are:
+#
+# 			) REPLACE can detect unique key violations only in the underlying table to which it is going to write (which is determined by the INSERT_METHOD option)
+#
+# 				This differs from violations in the MERGE table itself.
+#
+# 			) If REPLACE detects a unique key violation, it will change only the corresponding row in the underlying table it is writing to; that is,
+# 				the first or last table, as determined by the INSERT_METHOD option.
+#
+# 		Similar considerations apply for INSERT_/ETC/_ON_DUPLICATE_KEY_UPDATE
+#
+# 		) MERGE tables do not support partitioning. That is, you cannot partition a MERGE table, nor can any of a MERGE table's underlying MyISAM tables be partitioned.
+#
+# 		) You should not use ANALYZE_TABLE, REPAIR_TABLE, OPTIMIZE_TABLE, ALTER_TABLE, DROP_TABLE, DELETE without a WHERE clause, or TRUNCATE_TABLE on any of the
+# 			tables that are mapped into an open MERGE table.
+#
+# 			If you do so, the MERGE table may still refer to the original table and yield unexpected results. To work around this problem, ensure that
+# 			no MERGE tables remain open by issuing a FLUSH_TABLES statement prior to performing any of the named operations.
+#
+# 			The unexpected results include the possibility that the operation on the MERGE table will report table corruption. If this occurs after one of the
+# 			named operations on the underlying MyISAM tables, the corruption message is spurious. To deal with this, issue a FLUSH_TABLES statement after modifying
+# 			the MyISAM tables.
+#
+# 		) DROP_TABLE on a table that is in use by a MERGE table does not work on Windows because the MERGE storage engine's table mapping is hidden from the upper
+# 			layer of MySQL.
+#
+# 			Windows does not permit open files to be deleted, so you first must flush all MERGE tables (with FLUSH_TABLES) or drop the MERGE table before dropping
+# 			the table.
+#
+# 		) The definition of the MyISAM tables and the MERGE table are checked when the tables are accessed (for example, as part of a SELECT or INSERT statement).
+#
+# 			The checks ensure that the definitions of the tables and the parent MERGE table definition match by comparing column order, types, sizes and associated
+# 			indexes.
+#
+# 			If there is a difference between the tables, an error is returned and the statement fails. Because these checks take place when the tables are opened,
+# 			any changes to the definition of a single table, including column changes, column ordering, and engine alterations will cause the statement to fail.
+#
+# 		) The order of indexes in the MERGE table and its underlying tables should be the same. If you use ALTER_TABLE to add a UNIQUE index to a table used
+# 			in a MERGE table, and then use ALTER_TABLE to add  a nonunique index on the MERGE table, the index ordering is different for the tables if there was
+# 			already a nonunique index in the underlying table.
+#
+# 			(This happens because ALTER_TABLE puts UNIQUE indexes before nonunique indexes to facilitate rapid detection of duplicate keys)
+#
+# 			Consequently, queries on tables with such indexes may return unexpected results.
+#
+# 		) If you encounter an error message similar to ERROR 1017 (HY000): Can't find file: 'tbl_name.MRG' (errno: 2), it generally indicates that some of the
+# 			underlying tables do not use the MyISAM storage engine. Confirm that all of these tables are MyISAM.
+#
+# 		) The maximum number of rows in a MERGE table is 2^64 (~1.844E+19; the same as for a MyISAM table). It is not possible to merge multiple MyISAM tables
+# 			into a single MERGE table that would have more than this number of rows.
+#
+# 		) Use of underlying MyISAM tables of differing row formats with a parent MERGE table is currently known to fail. See bug #32364
+#
+# 		) You cannot change the union list of a nontemporary MERGE table when LOCK_TABLES is in effect. The following does NOT work:
+#
+# 			CREATE TABLE m1 /etc/ ENGINE=MRG_MYISAM /ETC/;
+# 			LOCK TABLES t1 WRITE, t2 WRITE, m1 WRITE;
+# 			ALTER TABLE m1 /etc/ UNION=(t1,t2) /etc/;
+#
+# 			However, you can do this with a temporary MERGE table.
+#
+# 		) You cannot create a MERGE table with CREATE /etc/ SELECT, neither as a temporary MERGE table, nor as a nontemporary MERGE table. For example:
+#
+# 			CREATE TABLE m1 /etc/ ENGINE=MRG_MYISAM /ETC/ SELECT /ETC/;
 # 
+# 			Attempts to do this result in an error: tbl_name is not BASE TABLE.
+#
+# 		) In some cases, differing PACK_KEYS table option values among the MERGE and underlying tables cause unexpected results if the underlying
+# 			tables contain CHAR or BINARY columns.
+#
+# 			As a workaround, use ALTER TABLE to ensure that all involved tables have the same PACK_KEYS value. (Bug #50646)
+#
+# 16.8 THE FEDERATED STORAGE ENGINE
+#
+# 		16.8.1 FEDERATED STORAGE ENGINE OVERVIEW
+# 		16.8.2 HOW TO CREATE FEDERATED TABLES
+# 		16.8.3 FEDERATED STORAGE ENGINE NOTES AND TIPS
+# 		16.8.4 FEDERATED STORAGE ENGINE RESOURCES
+#
+# The FEDERATED storage engine lets you access data from a remote MySQL database without using replication or cluster technology.
+#
+# Querying a local FEDERATED table automatically pulls the data from the remote (federated) tables. No data is stored on the local tables.
+#
+# To include the FEDERATED storage engine if you build MySQL from source, invoke CMake with the -DWITH_FEDERATED_STORAGE_ENGINE option.
+#
+# The FEDERATED storage engine is not enabled by default in the running server; to enable FEDERATED, you must start the MySQL server binary
+# using the --federated option.
+#
+# To examine the source for the FEDERATED engine, look in the storage/federated directory of a MySQL source distrib.
+#
+# 16.8.1 FEDERATED STORAGE ENGINE OVERVIEW
+#
+# When you create a table using one of the standard storage engines (such as MyISAM, CSV or InnoDB), the table consists of the table
+# definition and the associated data.
+#
+# When you create a FEDERATED table, the table definition is the same, but the physical storage of the data is handled on a remote server.
+#
+# A FEDERATED table consists of two elements:
+#
+# 		) A remote server with a database table, which in turn consists of the table definition (stored in the MySQL data dictionary) and the
+# 			associated table.
+#
+# 			The table type of the remote table may be any type supported by the remote mysqld server, including MyISAM or InnoDB.
+#
+# 		) A local server with a database table, where the table definition matches that of the corresponding table on the remote server.
+#
+# 			The table definition is stored in the data dictionary.
+#
+# 			There is no data file on the local server. Instead, the table definition includes a connection string that points to the remote table.
+#
+# When executing queries and statements on a FEDERATED table on the local server, the operations that would normally insert, update or delete
+# information from a local data file are instead sent to the remote server for execution, where they update the data file on the remote server
+# or return matching rows from the remote server.
+#
+# The basic structure of a FEDERATED table setup is shown in FIGURE 16.2, "FEDERATED TABLE STRUCTURE"
+#
+# FIGURE 16.2 FEDERATED TABLE STRUCTURE
+#
+# 		[ Local Server ] 									[ Remote Server ]
+#
+# 				V 														V
+#
+# 		[ Federated Table ] 	< 	Queries/Data 	-> [ Remote Table ]
+#
+# 				V 														V 				>
+#  		
+# 		[ .frm File ] 										[ .frm File ] 		[ Data ]
+#
+# When a client issues an SQL statement that refers to a FEDERATED table, the flow of information between the local server (where the SQL statement is executed),
+# and the remote server (where the data is physically stored) is as follows:
+#
+# 		1. The storage engine looks through each column that the FEDERATED table has and constructs an appropriate SQL statement that refers to the remote table.
+#
+# 		2. The statement is sent to the remote server using the MySQL client API.
+#
+# 		3. The remote server processes the statement and the local server retrieves any result that the statement produces (an affected-rwos count or a result set)
+#
+# 		4. If the statement produces a result set, each column is converted to internal storage engine format that the FEDERATED engine expects and can use to display
+# 			the result to the client that issued the original statement.
+#
+# The local server communicates with the remote server using MySQL client C API functions. It invokes mysql_real_query() to send the statement.
+#
+# To read a result set, it uses mysql_store_result() and fetches rows one at a time using mysql_fetch_row()
+#
+# 16.8.2 HOW TO CREATE FEDERATED TABLES
+#
+# 16.8.2.1 CREATING A FEDERATED TABLE USING CONNECTION
+# 16.8.2.2 CREATING A FEDERATED TABLE USING CREATE SERVER
+#
+# To create a FEDERATED table you should follow these steps:
+#
+# 		1. Create the table on the remote server. Alternatively, make a note of the table definition of an existing table, perhaps using the SHOW_CREATE_TABLE statement.
+#
+# 		2. Create the table on the local server with an identical table definition, but adding the connection information that links the local table to the remote table.
+#
+# For example, you could create the following table on the remote server:
+#
+# 		CREATE TABLE test_table (
+# 			id 	INT(20) NOT NULL AUTO_INCREMENT,
+# 			name 	VARCHAR(32) NOT NULL DEFAULT '',
+# 			other INT(20) NOT NULL DEFAULT '0',
+# 			PRIMARY KEY (id),
+# 			INDEX name (name),
+# 			INDEX other_key (other)
+# 		) 
+# 		ENGINE=MyISAM
+# 		DEFAULT CHARSET=utf8mb4;
+#
+# To create the local table that will be federated to the remote table, there are two options available.
+#
+# You can either create the local table and specify the connection string (containing the server name, login, password)
+# to be used to connect to the remote table using the CONNECTION, or you can use an existing connection that you have 
+# previously created using the CREATE_SERVER statement.
+#
+# IMPORTANT:
+#
+# 		WHen you create the local table it must have an identical field definition to the remote table
+#
+# NOTE:
+#
+# 		You can improve the performance of a FEDERATED table by adding indexes to the table on the host.
+#
+# 		The optimization will occur because the query sent to the remote server will include the contents of the WHERE
+# 		clause and will be sent ot the remote server and subsequently executed locally.
+#
+# 		This reduces the network traffic that would otherwise request the entire table from the server for local processing.
+#
+# 16.8.2.1 CREATING A FEDERATED TABLE USING CONNECTION
+#
+# To use the first method, you must specify the CONNECTION string after the engine type in a CREATE_TABLE statement. For example:
+#
+# 		CREATE TABLE federated_table (
+# 			id 		INT(20) NOT NULL AUTO_INCREMENT,
+# 			name 		VARCHAR(32) NOT NULL DEFAULT '',
+# 			other 	INT(20) NOT NULL DEFAULT '0',
+# 			PRIMARY KEY (id),
+# 			INDEX name (name),
+# 			INDEX other_key (other)
+# 		)
+# 		ENGINE=FEDERATED
+# 		DEFAULT CHARSET=utf8mb4
+# 		CONNECTION='mysql://fed_user@remote_host:9306/federated/test_table';
+#
+# NOTE:
+#
+# 		CONNECTION replaces the COMMENT used in some previous versions of MySQL.
+#
+# The CONNECTION string contains the information required to connect to the remote server containing the table that will be used
+# to physically store the data.
+#
+# The connection string specifies the server name, login credentials, port number and database/table information.
+#
+# in the example, the remote table is on the server remote_host, using port 9306.
+#
+# The name and port number should match the host name (or IP address) and port number of the remote MySQL server instance
+# you want to use as your remote table.
+#
+# The format of the connection string is as follows:
+#
+# 		scheme://user_name[:password]@host_name[:port_num]/db_name/tbl_name
+#
+# Where:
+#
+# 		) scheme: A recognized connection protocol. Only mysql is supported as the scheme value at this point.
+#
+# 		) user_name: The user name for the connection. This user must have been created on the remote server, and must have suitable
+# 			privileges to perform the required actions (SELECT, INSERT, UPDATE and so forth) on the remote table.
+#
+# 		) password (OPtional): The corresponding password for user_name
+#
+# 		) host_name: The host name or IP address of the remote server
+#
+# 		) port_num: (Optional) The port number for the remote server. The default is 3306
+#
+# 		) db_name: The name of the database holding the remote table
+#
+# 		) tbl_name: The name of the remote table. The name of the local and the remote table do not have to match.
+#
+# Sample connection strings:
+#
+# 		CONNECTION='mysql://username:password@hostname:port/database/tablename'
+# 		CONNECTION='mysql://username@hostname/database/tablename'
+# 		CONNECTION='mysql://username:password@hostname/database/tablename'
+#
+# 16.8.2.2 CREATING A FEDERATED TABLE USING CREATE SERVER
+#
+# If you are creating a number of FEDERATED tables on the same server, or if you want to simplify the process of creating
+# FEDERATED tables, you can use the CREATE_SERVER statement to define the server connection parameters, just as you would
+# with the CONNECTION string.
+#
+# The format of the CREATE_SERVER statement is:
+#
+# 		CREATE SERVER
+# 		server_name
+# 		FOREIGN DATA WRAPPER wrapper_name
+# 		OPTIONS (option [, option] /etc/)
+#
+# The sever_name is used in the connection string when creating a new FEDERATED table.
+#
+# For example, to create a server connection identical to the CONNECTION string:
+#
+# 		CONNECTION='mysql://fed_user@remote_host:9306/federated/test_table';
+#
+# You would use the following statement:
+#
+# 		CREATE SERVER fedlink
+# 		FOREIGN DATA WRAPPER mysql
+# 		OPTIONS (USER 'fed_user', HOST 'remote_host', PORT 9306, DATABASE 'federated');
+#
+# To create a FEDERATED table that uses this connection, you still use the CONNECTION keyword, but specify
+# the name you used in the CREATE_SERVER statement.
+#
+# 		CREATE TABLE test_table (
+# 			id 		INT(20) NOT NULL AUTO_INCREMENT,
+# 			name 		VARCHAR(32) NOT NULL DEFAULT '',
+# 			other 	INT(20) NOT NULL DEFAULT '0',
+# 			PRIMARY KEY (id),
+# 			INDEX name (name),
+# 			INDEX other_key (other)
+# 		)
+# 		ENGINE=FEDERATED
+# 		DEFAULT CHARSET=utf8mb4
+# 		CONNECTION='fedlink/test_table'
+#
+# The connection name in this example contains the name of the connection (fedlink) and the name of the table (test_table) to link to,
+# separated by a slash.
+#
+# If you specify only the connection name without a table name, the table name of the local table is used instead.
+#
+# For more information on CREATE_SERVER, see SECTION 13.1.18, "CREATE SERVER SYNTAX"
+#
+# The CREATE_SERVER statement accepts the same arguments as the CONNECTION string. The CREATE_SERVER statement updates the rows in the 
+# mysql.servers table.
+#
+# See the following table for information on the correspondence between parameters in a connection string, options in the CREATE_SERVER
+# statement, and the columns in the mysql.servers table. For reference, the format of the CONNECTION string is as follows:
+#
+# 		scheme://user_name[:password]@host_name[:port_num]/db_name/tbl_name
+#
+# DESCRIPTION 			CONNECTION STRING 		CREATE_SERVER OPTION 		MYSQL.SERVERS COLUMN
+#
+# Connection scheme 	scheme 						wrapper_name 					Wrapper
+#
+# Remote user 			user_name 					USER 								Username
+#
+# Remote password 	password 					PASSWORD 						Password
+#
+# Remote host 			host_name 					HOST 								Host
+#
+# Remote port 			port_num 					PORT 								Port
+#
+# Remote database 	db_name 						DATABASE 						Db
+#
+# 16.8.3 FEDERATED STORAGE ENGINE NOTES AND TIPS
+#
+# You should be aware of the following points when using the FEDERATED storage engine:
+#
+# 		) FEDERATED tables may be replicated to other slaves, but you must ensure that hte slave servers are able to 
+# 			use the user/password combination that is defined in the CONNECTION string (or the row in the mysql.servers table)
+# 			to connect to the remote server.
+#
+# THe following items indicate features that hte FEDERATED storage engine does and does not support:
+#
+# 		) The remote server must be a MySQL server
+#
+# 		) The remote table that a FEDERATED table points to must exist before you try to access the table through the FEDERATED table
+#
+# 		) it is possible for one FEDERATED table to point to another, but you must be careful not to create a loop
+#
+# 		) A FEDERATED table does not support indexes in the usual sense; because access to the table data is handled remotely,
+# 			it is actually the remote table that makes use of indexes.
+#
+# 			HTis means that, for a query that cannot use any indexes and so requires a full table scan, the server fetches 
+# 			all rows from the remote table and filters them locally.
+#
+# 			This occurs regardless of any WHERE or LIMIT used with this SELECT statement; these clauses are applied locally
+# 			to the returned rows.
+#
+# 			Queries that fail to use indexes can thus cause poor performance and network overload. In addition, since returned
+# 			rows must be stored in memory, such a query can also lead to the local server swapping or even hanging.
+#
+# 		) Care should be taken when creating a FEDERATED table since the index definition from an equivalent MyISAM or other table
+# 			may not be supported.
+#
+# 			For example, creating a FEDERATED table with an index prefix on VARCHAR, TEXT or BLOB columns will fail.
+#
+# 			The following definition in MyISAM is valid:
+#
+# 				CREATE TABLE `T1`(`A` VARCHAR(100), UNIQUE KEY(`A`(30))) ENGINE=MYISAM;
+#
+# 			The key prefix in this example is incompatible with the FEDERATED engine, and the equivalent statement will fail:
+#
+# 				CREATE TABLE `T1`(`A` VARCHAR(100), UNIQUE KEY(`A`(30))) ENGINE=FEDERATED
+# 					CONNECTION='MYSQL://127.0.0.1:3306/TEST/T1';
+#
+# 			If possible, you should try to separate the column and index definition when creating tables on both the remote server
+# 			and the local server to avoid these index issues.
+#
+# 		) Internally, the implementation uses SELECT, INSERT, UPDATE and DELETE, but not HANDLER.
+#
+# 		) THe FEDERATED storage engine supports SELECT, INSERT, UPDATE, DELETE, TRUNCATE_TABLE, and indexes.
+#
+# 			It does not support ALTER_TABLE, or any Data Definition Language Statements that directly affect
+# 			the structure of the table, other than DROP_TABLE.
+#
+# 			The current implementation does not use prepared statements.
+#
+# 		) FEDERATED accepts INSERT_/ETC/_ON_DUPLICATE_KEY_UPDATE statements, but if a duplicate-key violation occurs,
+# 			the statement fails with an error.
+#
+# 		) Transactions are not supported
+#
+# 		) FEDERATED performs bulk-insert handling such that multiple rows are sent ot the remote table in a batch, which improves
+# 			performance.
+#
+# 			Also, if the remote table is transactional, it enables the remote storage engine to perform statement rollback properly
+# 			should an error occur.
+#
+# 			This capability has the following limitations:
+#
+# 				) The size of the insert cannot exceed the maximum packet size between servers. If hte inserts exceeds this size,
+# 					it is broken into multiple packets and the rollback problem can occur.
+#
+# 				) Bulk-insert handling does not occur for INSERT_/ETC/_ON_DUPLICATE_KEY_UPDATE
+#
+# 		) THere is no way for the FEDERATED engine to know if the remote table has changed. The reason for htis is that this table must work like
+# 			a data file that would never be written to by anything other than the database systems.
+#
+# 			The integrity of the data in the local table  could be breached if there was any change to the remote database.
+#
+# 		) When using a CONNECTION string, you cannot use an '@' character in the password. You can get round this limitation by using the
+# 			CREATE_SERVER statement to create a server connection.
+#
+# 		) The insert_id and timestamp options are not propagated to the data provider
+#
+# 		) Any DROP_TABLE statement issued against a FEDERATED table drops only the local table, not the remote table
+#
+# 		) FEDERATED tables do not work with the query cache
+#
+# 		) User-defined partitioning is not supported for FEDERATED tables.
+#
+# 16.8.4 FEDERATED STORAGE ENGINE RESOURCES
+#
+# The following additional resources are available for the FEDERATED storage engine:
+#
+# 		) //Forum link
+#
+# 16.9 THE EXAMPLE STORAGE ENGINE
+#
+# The EXAMPLE storage engine is a stub engine that does nothing. Its purpose is to serve as an example in the MySQL
+# source code that illustrates how to begin writing new storage engines.
+#
+# As such, it is primarily of interest to devs.
+#
+# To enable the EXAMPLE storage engine if you build MySQL from source, invoke CMake with the -DWITH_EXAMPLE_STORAGE_ENGINE option.
+#
+# To examine the source for the EXAMPLE engine, look in the storage/example directory of a MySQL source distrib.
+#
+# WHen you create an EXAMPLE table, no files are created. No data can be stored into the table. Retrieveals return an empty result.
+#
+# 		mysql> CREATE TABLE test (i INT) ENGINE = EXAMPLE;
+# 		Query OK, 0 rows affected (0.78 sec)
+#
+# 		mysql> INSERT INTO test VALUES(1),(2),(3);
+# 		ERROR 1031 (HY000): Table storage engine for 'test' doesn't have this option
+#
+# 		mysql> SELECT * FROM test;
+# 		Empty set (0.31 sec)
+#
+# The EXAMPLE storage engine does not support indexing.
+#
+# The EXAMPLE storage enigne does not support parititoning.
+#
+# 16.10 OTHER STORAGE ENGINES
+#
+# Other storage engines may be available from third parties and community members that have used the Custom Storage Engine interface.
+#
+# Third party engines are not supported by MySQL. For further information, documentation, installation guides, bug reporting or for any
+# help or assistance with these engines, please contact the developer of the engine.
+#
+# For more information on developing a customer storage engine that can be used with the PLuggable Storage Engine Architechture,
+# see MySQL Internals: WRITING A CUSTOM STORAGE ENGINE. (https://dev.mysql.com/doc/internals/en/custom-engine.html - Cover this next after this Doc is done)
+#
+# 16.11 OVERVIEW OF MYSQL STORAGE ENGINE ARCHITECHTURE
+#
+# 16.11.1 PLUGGABLE STORAGE ENGINE ARCHITECHTURE
+# 16.11.2 THE COMMON DATABASE SERVER LAYER
+#
+# The MySQL pluggable storage engine architechture enables a database professional to select a specialized storage engine for a particular
+# application need while being completely shielded from the need to manage any specific application coding requirements.
+#
+# The MySQL server architechture isolates the application programmer and DBA from all of the low-level implementation details at the storage
+# level, providing a consistent and easy application model and API.
+#
+# Thus, although there are different capabilities across different storage engines, the application is shielded from these differences.
+#
+# The pluggable storage engine architechture provides a standard set of management and support services that are common among all underlying
+# storage engines. The storage engines themselves are the components of the database server that actually perform actions on the underlying
+# data that is maintained at the physical server level.
+#
+# This efficient and modular architechture provide huge benefits for those wishing to specifically target a particular application need -
+# such as data warehousing, transaction processing or high availability situations - while enjoying the advantage of utilizing a set of
+# interfaces and services that are independent of any one storage engine.
+#
+# The application programmer and DBA interact with the MySQL database through Connector APIs and service layers that are above
+# the storage engines.
+#
+# If application changes bring about requirements that demand the underlying storage engine change, or that one or more storage engines
+# be added ot support new needs, no significant coding or process changes are required to make things work.
+#
+# The MySQL server architechture shields the application from the underlying compelxity of the storage engine by presenting
+# a consistent and easy-to-use API that applies across storage engines.
+#
+# 16.11.1 PLUGGABLE STORAGE ENGINE ARCHITECHTURE
+#
+# MySQL Server uses a pluggable storage engine architechture that enables storage engines to be loaded into and unloaded
+# from a running MySQL server.
+#
+# PLUGGING IN A STORAGE ENGINE
+#
+# Before a storage engine can be used, the storage engine plugin shared library must be loaded into MySQL using the INSTALL_PLUGIN
+# statement. For example, if the EXAMPLE engine plugin is named example and the shared library is named ha_example.so, so you load
+# it with the following statement:
+#
+# 		INSTALL PLUGIN example SONAME 'ha_example.so';
+#
+# To install a pluggable storage engine, the plugin file must be located in teh MySQL plugin directory, and the user issuing
+# the INSTALL_PLUGIN statement must have INSERT privilege for the mysql.plugin table
+#
+# The shared library must be located in teh MySQL server plugin directory, the location of which is given by the plugin_dir system variable.
+#
+# UNPLUGGING A STORAGE ENGINE
+#
+# To unplug a storage engine, use the UNINSTALL_PLUGIN statement:
+#
+# 		UNINSTALL PLUGIN example;
+#
+# If you unplug a storage engine that is needed by existing tables, those tables become inaccessible, but will still be present
+# on disk (where applicable)
+#
+# Ensure that there are no tables using a storage engine before you unplug the storage engine.
+#
+# 16.11.2 THE COMMON DATABASE SERVER LAYER
+#
+# A MySQL pluggable storage engine is the component in the MySQL database server that is responsible for performing the actual
+# data I/O operations for a database as well as enabling and enforcing certain feature sets that target a specific application need.
+#
+# A major benefit of using specific storage engines is that you are only delivered the features needed for a particular application,
+# and therefore you have less system overhead in teh database, with the end result being more efficient and higher database performance.
+#
+# This is one of the reasons that MySQL has always been known to have such high performance, matching or beating proprietary databases
+# in industry stnadard benchmarks.
+#
+# From a technical perspective, what are some of the unique supporting infrastructure components that are in a storage engine?
+#
+# Some of the key feature differentations include:
+#
+# 		) Concurrency: Some applications have more granular lock requirements (such as row-level locks) than others. Choosing the right
+# 			locking strategy can reduce overhead and therefore improvve overall performance.
+#
+# 			This area also includes support for capabilities such as multi-version concurrency control or "snapshot" read.
+#
+# 		) Transaction Support: Not every application needs transactions, but for those that do, there are very well defined requirements
+# 			such as ACID compliance and more
+#
+# 		) Referential Integrity: The need to have the server enforce relational database referential integrity through DDL defined foreign keys
+#
+# 		) Physical Storage: This involves everything from the overall page size for tables and indexes as well as the format used for storing data to physical disk
+#
+# 		) Index Support: Different application scenarios tend ot benefit from different index strategies. Each storage engine generally has its own indexing
+# 			methods, although some (such as B-tree indexes) are common to nearly all engines.
+#
+# 		) Memory caches: Different applications respond better to some memory caching strategies than others, so although some memory caches are common
+# 			to all storage engines (such as those used for user connections), others are uniquely defined only when a particular storage engine is put in play.
+#
+# 		) Performance Aids: This includes multiple i/O threads for parallel operations, thread concurrency, database checkpointing, bulk insert handling and more.
+#
+# 		) Miscellaneous Target Features: This may include support for geospatial operations, security restrictions for certain data manipulation operations, and
+# 			other similar features.
+#
+# Each set of the pluggable storage engine infrastructure components are designed to offer a selective set of benefits for a particular application.
+#
+# Conversely, avoidihg a set of component features helps reduce unnecessary overhead. It stands to reason that understanding a particular applications
+# set of requirements and selecting hte proper MySQL storage engine can have a dramatic impact on overall system efficiency and performance.
+#
+# CHAPTER 17 REPLICATION
+#
+# TABLE OF CONTENTS
+#
+# 17.1 CONFIGURING REPLICATION
+# 17.2 REPLICATION IMPLEMENTATION
+# 17.3 REPLICATION SOLUTIONS
+# 17.4 REPLICATION NOTES AND TIPS
+#
+# Replication enables data from one MySQL database server (the master) to be copied to one or more MySQL database servers (the slaves)
+#
+# Replication is asynch by default, slavees do not need to be connected permanently to receive updates from the master. Depending on the
+# configuration, you can replicate all databases, selected databases or even selected tables within a database.
+#
+# Advantages of replication in MySQL include:
+#
+# 		) Scale-out solutions - spreading the load among multiple slaves to improve performance. In this environment, all writes and updates
+# 			must take place on the master server.
+#
+# 			Reads, however, may take place on one or more slaves. This model can improve the performance of writes (since the master is dedicated
+# 			to updates), while dramatically increasing read speed across an increasing number of slaves.
+#
+# 		) Data Security - because data is replicated to the slave, and the slave can pause the replication process, it is possible to run backup
+# 			services on the slave without corrupting the corresponding master data.
+#
+# 		) Analytics - live data can be created on the master, while the analysis of teh information can take place on the slave without affecting
+# 			the performance of the master.
+#
+# 		) Long-distance data distribution - You can use replication to create a local copy for a remote site ot use, without permanent access
+# 			to the master.
+#
+# For information on how to use replication in such scenarios, see SECTION 17.3, "REPLICATION SOLUTIONS"
+#
+# MySQL 8.0 supports different methods of replication. The traditional method is based on replicating events from the master's binary log,
+# and requires the log files and positions in them to be synchornized between master and slave.
+#
+# The newer method based on global transaction identifiers (GTIDs) is transactional and therefore does not require working with log files
+# or positions within these files, which greatly simplifies many common replication tasks.
+#
+# Replication using GTIDs guarantees consistency between master and slave as long as all transactions commited on teh master have also
+# been applied on the slave.
+#
+# For morei nformation about GTIDs and GTID-based replication in MySQL, see SECTION 17.1.3, "REPLICATION WITH GLOBAL TRANSACTION IDENTIFIERS"
+#
+# For information on using binary log file position based replication, see SECTION 17.1, "CONFIGURING REPLICATION"
+#
+# https://dev.mysql.com/doc/refman/8.0/en/replication.html
+#
