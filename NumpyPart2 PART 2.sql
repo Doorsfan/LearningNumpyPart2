@@ -62017,5 +62017,860 @@
 #
 # For information on using binary log file position based replication, see SECTION 17.1, "CONFIGURING REPLICATION"
 #
-# https://dev.mysql.com/doc/refman/8.0/en/replication.html
+# Replication in MySQL supports different types of synchronization. The original type of synchronization is one-way, asynch replication, in which one
+# server acts as the master, while one or more other servers act as slaves.
 #
+# This is in contrast to the synchronous replication which is a characteristic of NDB cluster (see CHAPTER 22, MYSQL NDB CLUSTER 8.0)
+#
+# In MySQL 8.0, semisynchronous replication is supported in addition to the built-in asynchronous replication. With semisynchronous replication,
+# a commit performed on the master blocks before returning to the session that performed the transaction until at least one slave aknowledges that
+# it has received and logged the events for the transaction; see SECTION 17.3.11, "SEMISYNCHRONOUS REPLICATION"
+#
+# MySQL 8.0 also supports delayed replication such that a slave server deliberately lags behind the master by at least a specified amount of time;
+# see SECTION 17.3.12, "DELAYED REPLICATION"
+#
+# For scenarios where synchronous replication is required, use NDB Cluster (see CHAPTER 22, MYSQL NDB CLUSTER 8.0)
+#
+# There are a number of solutions available for setting up replication between servers, and the best method to use depends on the presence
+# of data and the engine types you are using. For more information on the available options, see SECTON 17.1.2, "SETTING UP BINARY LOG FILE POSITION BASED REPLICATION"
+#
+# There are two core types of replication format. Statement Based Replication (SBR), which replicates entire SQL statements, and Row Based Replication (RBR),
+# which replicates only the changed rows. You can also use a third variety, Mixed Based Replication (MBR). For more information on the different replication
+# formats, see SECTION 17.2.1, "REPLICATION FORMATS"
+#
+# Replication is controlled through a number of different options and variables. For more information, see SECTION 17.1.6, "REPLICATION AND BINARY LOGGING OPTIONS AND
+# VARIABLES"
+#
+# You can use replication to solve a number of different problems, including performance, supporting the backup of different databases, and as part of a larger solution
+# to alleviate system failures. For information on how to address these issues, see SECTION 17.3, "REPLICATION SOLUTIONS"
+#
+# For notes and tips on how different data types and statements are treated during replication, including details of replication features, version compatibility,
+# upgrades, and potential problems and their resolution, see SECTION 17.4, "REPLICATION NOTES AND TIPS".
+#
+# For answers to some questions often asked by those who are new to MySQL Replication, see SECTION A. 13, "MYSQL 8.0 FAQ: REPLICATION"
+#
+# For detailed information on the implementation of replication, how replication works, the process and contents of the binary log, background threads
+# and the rules used to decide how statements are recorded and replicated, see SECTION 17.2, "REPLICATION IMPLEMENTATION"
+#
+# 17.1 CONFIGURING REPLICATION
+#
+# 17.1.1 BINARY LOG FILE POSITION BASED REPLICATION CONFIGURATION OVERVIEW
+# 17.1.2 SETTING UP BINARY LOG FILE POSITION BASED REPLICATION
+# 17.1.3 REPLICATION WITH GLOBAL TRANSACTION IDENTIFIERS
+# 17.1.4 MYSQL MULTI-SOURCE REPLICATION
+# 17.1.5 CHANGING REPLICATION MODES ON ONLINE SERVERS
+# 17.1.6 REPLICATION AND BINARY LOGGING OPTIONS AND VARIABLES
+# 17.1.7 COMMON REPLICATION ADMINISTRATION TASKS
+#
+# This section describes how to configure the different types of replication available in MySQL and includes the setup and configuration
+# required for a replication environment, including step-by-step instructions for creating a new replication environment. The major components
+# of this section are:
+#
+# 		) For a guide to setting up two or more servers for replication using binary log file positions, SECTION 17.1.2, "SETTING UP BINARY LOG FILE POSITION BASED REPLICATION",
+# 		deals with the configuration of the servers and provides methods for copying data between the master and slaves.
+#
+# 		) For a guide to setting up two or more servers for replication using GTID transactions, SECTION 17.1.3, "REPLICATION WITH GLOBAL TRANSACTION IDENTIFIERS", deals with
+# 			the configuration of the servers.
+#
+# 		) Events in the binary log are recorded using a number of formats. These are referred to as statement-based replication (SBR) or row-based replication (RBR).
+#
+# 			A third type, mixed-format replication (MIXED), uses SBR or RBR replication automatically to take advantage of the benefits of both SBR and RBR formats
+# 			when appropriate.
+#
+# 			The different formats are discussed in SECTION 17.2.1, "REPLICATION FORMATS"
+#
+# 		) Detailed information on the different configuration options and variables that apply to replication is provided in SECTION 17.1.6, "REPLICATION AND BINARY LOGGING
+# 			OPTIONS AND VARIABLES"
+#
+# 		) Once started, the replication process should require little administration or monitoring. However, for advice on common tasks that you may want to execute,
+# 			see SECTION 17.1.7, "COMMON REPLICATION ADMINISTRATION TASKS"
+#
+# 17.1.1 BINARY LOG FILE POSITION BASED REPLICATION CONFIGURATION OVERVIEW
+#
+# This section describes replication between MySQL servers based on the binary log file position method, where the MySQL instance operating
+# as the master (the source of the database changes) writes updates and changes as "events" to the binary log.
+#
+# The information in the binary log is stored in different logging formats according to the database changes being recorded. Slaves are configured
+# to read the binary log from the master and to execute the events in the binary log on the slave's local database.
+#
+# Each slave receives a copy of the entire contents of the binary log. It is the responsibility of the slave to decide which statements in the binary
+# log should be executed.
+#
+# Unless you specify otherwise, all events in the master binary log are executed on the slave. If required, you can configure the slave to process
+# onl events that apply to particular databases or tables.
+#
+# 	IMPORTANT:
+#
+# 		You cannot configure the master to log only certain events.
+#
+# Each slave keeps a record of teh binary log coordinates: the file name and position within the file that it has read and processed from the master.
+#
+# This means that multiple slaves can be connected to the master and executing different parts of the same binary log. Because the slaves control this
+# process, individual slaves can be connected and disconnected from the server without affecting the master's operation.
+#
+# Also, because each slave records the current position within the binary log, it is possible for slaves to be disconnected, reconnect and then resume
+# processing.
+#
+# The master and each slave must be configured with a unique ID (using the server-id option). In addition, each slave must be configured with information
+# about the master host name, log file name, and position within that file. These details can be controlled from within a MySQL session using the 
+# CHANGE_MASTER_TO statement on the slave.
+#
+# The details are stored within the slave's master info repository (see SECTION 17.2.4, "REPLICATION RELAY AND STATUS LOGS")
+#
+# 17.1.2 SETTING UP BINARY LOG FILE POSITION BASED REPLICATION
+#
+# 17.1.2.1 SETTING THE REPLICATION MASTER CONFIGURATION
+# 17.1.2.2 SETTING THE REPLICATION SLAVE CONFIGURATION
+# 17.1.2.3 CREATING A USER FOR REPLICATION
+# 17.1.2.4 OBTAINING THE REPLICATION MASTER BINARY LOG COORDINATES
+# 17.1.2.5 CHOOSING A METHOD FOR DATA SNAPSHOTS
+# 17.1.2.6 SETTING UP REPLICATION SLAVES
+# 17.1.2.7 SETTING THE MASTER CONFIGURATION ON THE SLAVE
+# 17.1.2.8 ADDING SLAVES TO A REPLICATION ENVIRONMENT
+#
+# This section describes how to set up a MySQL server to use binary log file position based replication. There are a number of different
+# methods for setting up replication, and the exact method to use depends on how you are setting up replication, and whether you already
+# have data within your master database.
+#
+# There are some generic tasks that are common to all setups:
+#
+# 		) On the master, you must ensure that binary logging is enabled, and configure a unique server ID. This might require a server restart.
+# 			See SECTION 17.1.2.1, "SETTING THE REPLICATION MASTER CONFIGURATION"
+#
+# 		) On each slave that you want to connect to the master, you must configure a unique server ID. This might require a server restart.
+# 			See SECTION 17.1.2.2, "SETTING THE REPLICATION SLAVE CONFIGURATION"
+#
+# 		) Optionally, create a separate user for your slaves to use during authentication with the master when reading the binary log for
+# 			replication.
+#
+# 			See SECTION 17.1.2.3, "CREATING A USER FOR REPLICATION"
+#
+# 		) Before creating a data snapshot or starting the replication process, on the master you should record the current position in the
+# 			binary log. You need this information when configuring the slave so that the slave knows where within the binary log to start
+# 			executing events.
+#
+# 			See SECTION 17.1.2.4, "OBTAINING THE REPLICATION MASTER BIANRY LOG COORDINATES"
+#
+# 		) If you already have data on the master and want to use it to synchronize the slave, you need to create a data snapshot to copy the
+# 			data to the slave.
+#
+# 			The storage engine you are using has an impact on how you create the snapshot. When you are using MyISAM, you must stop processing
+# 			statements on the master to obtain a read-lock, then obtain its current binary log coordinates and dump its data, before permitting
+# 			the master to continue executing statements.
+#
+# 			If you do not stop the execution of statements, the data dump and the master status information will not match, resulting in inconsistent
+# 			or corrupted databases on the slaves.
+#
+# 			For more information on replicating a MyISAM master, see SECTION 17.1.2.4, "OBTAINING THE REPLICATION MASTER BINARY LOG COORDINATES"
+#
+# 			If you are using InnoDB, you do not need a read-lock and a transaction that is long enough to transfer the data snapshot is sufficient.
+# 			For more information, see SECTION 15.18, "INNODB AND MYSQL REPLICATION"
+#
+# 		) Configure the slave with settings for connecting to the master, such as the host name, login credentials, and binary log file name and
+# 			position.
+#
+# 			See SECTION 17.1.2.7, "SETTING THE MASTER CONFIGURATION ON THE SLAVE"
+#
+# 			NOTE:
+#
+# 				Certain steps within the setup process require the SUPER privilege. If you do not have this privilege, it might not be possible
+# 				to enable replication.
+#
+# After configuring the basic options, select your scenario:
+#
+# 		) To set up replication for a fresh installation of a master and slaves that contain no data, see SECTION 17.1.2.6.1, "SETTING UP REPLICATION WITH NEW MASTER AND SLAVES"
+#
+# 		) To set up replication of a new master using the data from an existing MySQL server, see SECTION 17.1.2.6.2, "SETTING UP REPLICATION WITH EXISTING DATA"
+#
+# 		) To add replication slaves to an existing replication environment, see SECTION 17.1.2.8, "ADDING SLAVES TO A REPLICATION ENVIRONMENT"
+#
+# Before administering MySQL replication servers, read this entire chapter and try all statements mentioned in SECTION 13.4.1, "SQL STATEMENTS FOR CONTROLLING MASTER SERVERS",
+# and SECTION 13.4.2, "SQL STATEMENTS FOR CONTROLLING SLAVE SERVERS"
+#
+# Also familiarize yourself with the replication startup options described in SECTION 17.1.6, "REPLICATION AND BINARY LOGGING OPTIONS AND VARIABLES"
+#
+# 17.1.2.1 SETTING THE REPLICATION MASTER CONFIGURATION
+#
+# To configure a master to use binary log file position based replication, you must ensure that binary logging is enabled, and establish
+# a unique server ID.
+#
+# If this has not already been done, a server restart is required.
+#
+# Binary logging is required on the master because the binary log is the basis for replicating changes from the master to its slaves.
+# Binary logging is enabled by default (the log_bin system variable is set to ON). The --log-bin option tells the server what base name
+# to use for binary log files.
+#
+# It is recommended that you specify this option to give the binary log files a non-default base name, so that if the host name changes,
+# you can easily continue to use the same binary log file names (See SECTION B.4.7, "KNOWN ISSUES IN MYSQL")
+#
+# Each server within a replication topology must be configured with a unique server ID, which you can specify using the --server-id option.
+#
+# This server ID is used to identify individual servers within the replication topology, and must be a positive integer between 1 and (2^32)-1
+#
+# If you set a server ID of 0 on a master, it refuses any connections from slaves, and if you set a server ID of 0 on a slave, it refuses
+# to connect to a master.
+#
+# Other than that, how you organize and select the numbers is your choice, so long as each server ID is different from every other server ID
+# in use by any other server in the replication topology.
+#
+# The server_id system variable is set to 1 by default. A server can be started with this default server ID, but an informational
+# message is issued if you did not specify a server ID explicitly.
+#
+# NOTE:
+#
+# 		The following options also have an impact on the replication master:
+#
+# 			) For the greatest possible durability and consistency in a replication setup using InnoDB with transactions, you should use
+# 				innodb_flush_log_at_trx_commit=1 and sync_binlog=1 in the replication master's my.cnf file
+#
+# 			) Ensure that the skip-networking option is not enabled on the replication master. If networking has been disabled,
+# 				the slave cannot communicate with the master and replication fails.
+#
+# 17.1.2.2 SETTING THE REPLICATION SLAVE CONFIGURATION
+#
+# Each replication slave must have a unique server ID. If this has not already been done, this part of slave setup requires a server restart.
+#
+# If the slave server ID is not already set, or the current value conflicts with the value that you have chosen for the master server,
+# shut down the slave server and edit the [mysqld] section of the configuration file to specify a unique server ID. For example:
+#
+# 		[mysqld]
+# 		server-id=2
+#
+# After making the changes, restart the server.
+#
+# If you are setting up multiple slaves, each one must have a unique nonzero server-id value that differs from that of the master
+# and from any of the other slaves.
+#
+# Binary logging is enabled by default on all servers. A slave is not required to have binary logging enabled for replication to take place.
+#
+# However, binary logging on a slave means that the slaves binary log can be used for data backups and crash recovery.
+#
+# Slaves that have binary logging enabled can also be used as part of a more complex replication topology. For example, you might want
+# to set up replication servers using this chained arrangement:
+#
+# 		A -> B -> C
+#
+# Here, A serves as the master for the slave B, and B serves as the master for the slave C. For this to work, B must be both a master
+# and a slave. Updates received from A must be logged by B to its binary log, in order to be passed on to C.
+#
+# In addition to binary logging, this replication topology requires the --log-slave-updates option to be enabled.
+#
+# With this option, the slave writes updates that are received from a master server and performed by the slave's SQL thread
+# to the slave's own binary log.
+#
+# The --log-slave-updates option is enabled by default.
+#
+# If you need to disable binary logging or slave update logging on a slave server, you can do this by specifying the --skip-log-bin
+# and --skip-log-slave-updates options for the slave.
+#
+#
+# 17.1.2.3 CREATING A USER FOR REPLICATION
+#
+# Each slave connects to the master using a MySQL user name and password, so there must be a user account on the master that the slave
+# can use to connect. The user name is specified by the MASTER_USER option on the CHANGE MASTER TO command when you set up a replication slave.
+#
+# Any account can be used for this operation, providing it has been granted the REPLICATION_SLAVE privilege. You can choose to create a different
+# account for each slave, or connect to the master using the same account for each slave.
+#
+# Although you do not have to create an account specifically for replication, you should be aware that the replication user name and password
+# are stored in plain text in the master info repository table mysql.slave_master_info (see SECTION 17.2.4.2, "SLAVE STATUS LOGS")
+#
+# Therefore, you may want to create a separate account that has privileges only for the replication process, to minimize the possibility
+# of compromise to other accounts.
+#
+# To create a new account, use CREATE_USER. To grant this account the privileges required for replication, use the GRANT statement.
+#
+# If you create an account solely for the purpose of replication, that account needs only the REPLICATION_SLAVE privilege. For example,
+# to set up a new user, repl, that can connect for replication from any host within the example.com domain, issue these statements on the master:
+#
+# 		mysql> CREATE USER 'repl'@'%.example.com' IDENTIFIED BY 'password';
+# 		mysql> GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%.example.com';
+#
+# See SECTION 13.7.1, "ACCOUNT MANAGEMENT STATEMENTS", for more information on statements for manipulation of user accounts.
+#
+# IMPORTANT:
+#
+# 		To connect to the replication master using a user account that authenticates with the caching_sha2_password plugin, you must
+# 		either set up a secure connection as described in SECTION 17.3.9, "SETTING UP REPLICATION TO USE ENCRYPTED CONNECTIONS",
+# 		or enable the unencrypted connection to support password exchange using an RSA key pair.
+#
+# 		The caching_sha2_password authentication plugin is the default for new users created from MySQL 8.0 (for details, see
+# 		SECTION 6.4.1.3, "CACHING SHA-2 PLUGGABLE AUTHENTICATION")
+#
+# 		IF the user account that you create or use for replication (as specified by the MASTER_USER option) uses this authentication
+# 		plugin, and you are not using a secure connection, you must enable RSA key-pair based password exchange for a successful
+# 		connection.
+#
+# 17.1.2.4 OBTAINING THE REPLICATION MASTER BINARY LOG COORDINATES
+#
+# To configure the slave to start the replication process at the correct point, you need to note the master's current coordinates
+# within its binary log.
+#
+# WARNING:
+#
+# 		This procedure uses FLUSH_TABLES_WITH_READ_LOCK, which blocks COMMIT operations for InnoDB tables.
+#
+# If you are planning to shut down the master to create a data snapshot, you can optionally skip this procedure and instead store
+# a copy of the binary log index file along with the data snapshot.
+#
+# In that situation, the master creates a new binary log file on restart. The maser binary log coordinates where the slave must start
+# the replication process are therefore the start of that new file, which is the next binary log file on the master following after the
+# files that are listed in the copied binary log index file.
+#
+# To obtain the master binary log coordinates, follow these steps:
+#
+# 		1. Start a session on the master by connecting to it with the command-line client, and flush all tables and block write statements
+# 			by executing the FLUSH_TABLES_WITH_READ_LOCK statement:
+#
+# 				mysql> FLUSH TABLES WITH READ LOCK;
+#
+# 			WARNING:
+#
+# 				Leave the client from which you issued the FLUSH_TABLES statement running so that the read lock remains in effect.
+
+# 				If you exit the client, the lock is released.
+#
+# 		2. In a different session on the master, use the SHOW_MASTER_STATUS statement to determine the current binary log file name and position:
+#
+# 			mysql> SHOW MASTER STATUS;
+# 			+-----------------------+-----------------+----------------+-----------------+
+# 			| File 						| Position 			| Binlog_Do_DB   | Binlog_Ignore_DB|
+# 			+-----------------------+-----------------+----------------+-----------------+
+# 			| mysql-bin.0000003 		| 73 					| test 			  | manual,mysql 	  |
+# 			+-----------------------+-----------------+----------------+-----------------+
+#
+# 			The File column shows the name of the log file and the Position column shows you the position within the file.
+# 
+# 			In this example, the binary log file is mysql-bin.0000003 and the position is 73. Record these values.
+#
+# 			You need them later when you are setting up the slave. They represent the replication coordinates at which
+# 			the slave should begin processing new updates from the master.
+#
+# 			If the master has been running previously with binary logging disabled, the log file name and position values
+# 			displayed by SHOW_MASTER_STATUS or mysqldump --master-data will be empty.
+#
+# 			IN that case, the values that you need to use later when specifying the slave's log file and position are the
+# 			empty string ('') and 4.
+#
+# You now have the information you need to enable the slave to start reading from the binary log in the correct place to
+# start replication.
+#
+# The next step depends on whether you have existing data on the master. Choose one of the following options:
+#
+# 		) If you have existing data that needs to be synchronized with the slave before you start replication, leave the client
+# 			running so that the lock remains in place.
+#
+# 			This prevents any further changes being made, so that the data copied to the slave is in synch with the master.
+#
+# 			Proceed to SECTION 17.1.2.5, "CHOOSING A METHOD FOR DATA SNAPSHOTS"
+#
+# 		) If you are setting up a new master and slave replication group, you can exit the first session to release the read lock.
+#
+# 			See SECTION 17.1.2.6.1, "SETTING UP REPLICATION WITH NEW MASTER AND SLAVES" for how to proceed.
+#
+# 17.1.2.5 CHOOSING A METHOD FOR DATA SNAPSHOTS
+#
+# If the master database contains existing data it is necessary to copy this data to each slave. There are different
+# ways to dump the data from the master database.
+#
+# THe following sections describe possible options.
+#
+# To select the appropriate method of dumping the database, choose between these options:
+#
+# 		) Use the mysqldump tool to create a dump of all the databases you want to replicate. This is the recommended method, especially
+# 			when using InnoDB.
+#
+# 		) If your database is stored in binary portable files, you can copy the raw data files to a slave. This can be more efficient than using
+# 			mysqldump and importing the file on each slave, because it skips the overhead of updating indexes as the INSERT statements are replayed.
+#
+# 			With storage engines such as InnoDB this is not recommended.
+#
+# 17.1.2.5.1 CREATING A DATA SNAPSHOT USING MYSQLDUMP
+#
+# To create a snapshot of the data in an existing master database, use the mysqldump tool. ONce the data dump has been completed, import this
+# data into the slave before starting the replication process.
+#
+# The following example dumps all databases to a file named dbdump.db, and includes teh --master-data option which automatically appends the
+# CHANGE_MASTER_TO statement required on the slave to start the replication process:
+#
+# 		shell> mysqldump --all-databases --master-data > dbdump.db
+#
+# NOTE:
+#
+# 		If you do not use --master-data, then it is necessary to lock all tables in a separate session manually.
+#
+# 		See SECTION 17.1.2.4, "OBTAINING THE REPLICATION MASTER BINARY LOG COORDINATES"
+#
+# It is possible to exclude certain databases from the dump using the mysqldump tool. If you want to choose which databases
+# to include in the dump, do not use --all-databases.
+#
+# Choose one of these options:
+#
+# 		) Exclude all the tables in the database using --ignore-table option
+#
+# 		) Name only  those databases which you want dumped using the ---databases option.
+#
+# NOTE:
+#
+# 		By default, if GTIDs are in use on teh master (gtid_mode=ON), mysqldump includes the GTIDs from the gtid_executed
+# 		set on the master in the dump output to add them to the gtid_purged set on the slave.
+#
+# 		If you are dumping only specific databases or tables, it is important to note that the value that is included
+# 		by mysqldump includes the GTIDs of all transactions in the gtid_executed set on the master, even those that
+# 		changed suppressed parts of the database, or other databases on the server taht were not included in the partial dump.
+#
+# 		Check the description for mysqldump's --set-gtid-purged option to find the outcome of the default behavior for the
+# 		MySQL server version you are using, and how to change the behavior if this outcome is not suitable for your situation.
+#
+# For more information, see SECTION 4.5.4 "mysqldump -- A Database Backup Program"
+#
+# To import the data, either copy the dump file to the slave, or access the file from the master when connecting remotely
+# to the slave.
+#
+# 17.1.2.5.2 CREATING A DATA SNAPSHOT USING RAW DATA FILES
+#
+# This section describes how to create a data snapshot using the raw files which make up the database.
+#
+# Employing this method with a table using a storage engine that has complex caching or logging algorithms
+# requires extra steps to produce a perfect "point in time" snapshot.
+#
+# The initial copy command could leave out cache information and logging updates, even if you have acquired
+# a global read lock. How the storage engine responds to this depends on its crash recovery abilities.
+#
+# If you use InnoDB tables, you can use the mysqlbackup command from the MySQL Enterprise Backup component
+# to produce a consistent snapshot. This command records the log name and offset corresponding to the snapshot
+# to be used on the slave.
+#
+# MySQL Enterprise Backup is a commerical prod that is included as part of a MySQL Enterprise sub.
+#
+# See SECTION 30.2, "MYSQL ENTERPRISE BACKUP OVERVIEW" for detailed information.
+#
+# This method also does not work reliably if the master and slave have different values for ft_stopword_file,
+# ft_min_word_len or ft_max_word_len and you are copying tables having full-text indexes.
+#
+# Assuming the above exceptions do not apply to your database, use the cold backup technique to obtain a reliable
+# binary snapshot of InnoDB tables: do a slow shutdown of the MySQL Server, then copy the data files manually.
+#
+# To create a raw data snapshot of MyISAM tables when your MySQL data files exist on a single file system, you
+# can use standard file copy tools such as cp or copy, a remote copy tool such as scp or rsync, an archiving
+# tool such as zip or tar, or a file system snapshot tool such as dump.
+#
+# If you are replicating only certain databases, copy only those files that relate to those tables.
+#
+# For InnoDB, all tables in all databases are stored in the system tablespace files, unless you have the
+# innodb_file_per_table option enabled.
+#
+# The following files are not required for replication:
+#
+# 		) Files relating to the mysql database.
+#
+# 		) The master info repository file master.info, if used; the use of this file is now deprecated (see SECTION 17.2.4, "REPLICATION RELAY AND STATUS LOGS")
+#
+# 		) The master's binary log files, with the exception of the binary log index file if you are going to use this to locate the master
+# 			binary log coordinates for the slave.
+#
+# 		) Any relay log files.
+#
+# Depending on whether you are using InnoDB tables or not, choose one of the following:
+#
+# If you are using InnoDB tables, and also get the most consistent results with a raw data snapshot, shut down the master server during the process,
+# as follows:
+#
+# 		1. Acquire a read lock and getthe master's status. See SECTION 17.1.2.4, "OBTAINING THE REPLICATION MASTER BINARY LOG COORDINATES"
+#
+# 		2. In a separate session, shut down the master server:
+#
+# 			shell> mysqladmin shutdown
+#
+# 		3. Make a copy of the MySQL data files. The following examples show common ways to do this. You need to choose only oen of them:
+#
+# 			shell> tar cf /tmp/db.tar ./data
+# 			shell> zip -r /tmp/db.zip ./data
+# 			shell> rsync --recursive ./data/tmp/dbdata
+#
+# 		4. Restart the master server
+#
+# If you are not using InnoDB tables, you can get a snapshot of the system from a system without shutting down the server as described
+# in the following steps:
+#
+# 		1. Acquire a read lock and get the master's status. See SECTION 17.1.2.4, "OBTAINING THE REPLICATION MASTER BINARY LOG COORDINATES"
+#
+# 		2. Make a copy of the MySQL data files. The following examples show common ways to do this. You need to choose only one of them:
+#
+# 			shell> tar cf /tmp/db.tar ./data
+# 			shell> zip -r /tmp/db.zip ./data
+# 			shell> rsync --recursive ./data/tmp/dbdata
+#
+# 		3. In the client where you acquired the read lock, release the lock
+#
+# 			mysql> UNLOCK TABLES;
+#
+# ONce you ahve created the archive or copy of the database, copy the files to each slave before starting the slave replication process.
+#
+# 17.1.2.6 SETTING UP REPLICATION SLAVES
+#
+# The following sections describes how to set up slaves. Before you proceed, ensure that you have:
+#
+# 		) COnfigured the MySQL master with the necessary configuration properties. See SECTION 17.1.2.1, "SETTING THE REPLICATION MASTER CONFIGURATION"
+#
+# 		) Obtained the master status information, or a copy of the master's binary log index file made during a shutdown for the data snapshot.
+#
+# 			See SECTION 17.1.2.4, "OBTAINING THE REPLICATION MASTER BINARY LOG COORDINATES"
+#
+# 		) on the master, released the read lock:
+#
+# 			mysql> UNLOCK TABLES;
+#
+# 		) On the slave, edited the MySQL configuration. See SECTION 17.1.2.2, "SETTING THE REPLICATION SLAVE CONFIGURATION"
+#
+# The next steps depend on whether you have existing data to import to the slave or not. See SECTION 17.1.2.5, "CHOOSING A METHOD FOR DATA SNAPSHOTS"
+# for more information.
+#
+# Choose one of the following:
+#
+# 		) If you do not have a snapshot of a database to import, see SECTION 17.1.2.6.1, "SETTING UP REPLICATION WITH NEW MASTER AND SLAVES"
+#
+# 		) If you have a snapshot of a database to import, see SECTION 17.1.2.6.2, "SETTING UP REPLICATION WITH EXISTING DATA"
+#
+# 17.1.2.6.1 SETTING UP REPLICATION WITH NEW MASTER AND SLAVES
+#
+# When there is no snapshot of a previous database to import, configure the slave to start the replication from the new master.
+#
+# To set up replication between a master and a new slave:
+#
+# 		1. Start up the MySQL slave
+#
+# 		2. Execute a CHANGE_MASTER_TO statement to set the master replication server configuration. See SECTION 17.1.2.7, "SETTING THE MASTER CONFIGURATION ON THE SLAVE"
+#
+# Perform these slave setup steps on each slave.
+#
+# This method can also be used if you are setting up new servers but have an existing dump of the databases from a different server that you want to
+# load into your replication configuration.
+#
+# By loading the data into a new master, teh data is automatically replicated to the slaves.
+#
+# If you are setting up a new replication environment using the data from a different existing database server to create a new master, run the
+# dump file generated from that server on the new master.
+#
+# The database updates are automatically propagated to the slaves:
+#
+# 		shell> mysql -h master < fulldb.dump
+#
+# 17.1.2.6.2 SETTING UP REPLICATION WITH EXISTING DATA
+#
+# When setting up replication with existing data, transfer the snapshot from the master to the slave before starting replication.
+#
+# The process for importing data to the slave depends on how you create the snapshot of data on the master.
+#
+# Choose one of the following:
+#
+# If you used mysqldump:
+#
+# 		1. Start the slave, using the --skip-slave-start option so that replication does not start
+#
+# 		2. Import the dump file:
+#
+# 			shell> mysql < fulldb.dump
+#
+# If you created a snapshot using the raw data files:
+#
+# 		1. Extract the data files into your slave data directory. For example:
+#
+# 			shell> tar xvf dbdump.tar
+#
+# 			You may need to set permissions and ownership on the files so that the slave server can access and modify them.
+#
+# 		2. Start the slave, using the --skip-slave-start option so that replication does not start.
+#
+# 		3. Configure the slave with the replication coordinates from the master. This tells the slave the binary log file and position
+# 			within the file where replication needs to start.
+#
+# 			Also, configure the slave with the login credentials and host name of the master. For more information on the CHANGE_MASTER_TO
+# 			statement required, see SECTION 17.1.2.7, "SETTING THE MASTER CONFIGURATION ON THE SLAVE"
+#
+# 		4. Start the slave threads:
+#
+# 			mysql> START SLAVE;
+#
+# After you have performed this procedure, the slave connects to the master and replicates any updates that have occurred on the master
+# since the snapshot was taken.
+#
+# Error messages are issued to the slave's error log if it is not able to replicate for any reason.
+#
+# The slave uses information logged in its master info log and relay log info to keep track of how much of the master's binary log it has
+# processed.
+#
+# From MySQL 8.0, by default, the repositories for these slave status logs are tables named slave_master_info and slave_relay_log_info
+# in the mysql database.
+#
+# The alternative settings --master-info-repository=FILE and --relay-log-info-repository=FILE, where the repositories are files named
+# master.info and relay-log.info in the data directory, are now deprecated and will be removed in a future release.
+#
+# Do NOT remove or edit these tables (or files, if used) unless you know exactly what you are doing and fully understand the implications.
+#
+# Even in that case, it is prefrred that you use the CHANGE_MASTER_TO statement to change replication parameters.
+#
+# The slave uses the values specified in the statement to update the slave status logs automatically.
+#
+# See SECTION 17.2.4, "REPLICATION RELAY AND STATUS lOGS", for more information.
+#
+# NOTE:
+#
+# 		The contents of the master info log overrides some of the server options specified on the command line or in my.cnf
+#
+# 		See SECTION 17.1.6, "REPLICATION AND BINARY LOGGING OPTIONS AND VARIABLES", for more details.
+#
+# A single snapshot of the master suffices for multiple slaves. To set up additional slaves, use the same master snapshot and
+# follow the slave portion of the procedure just as described.
+#
+# 17.1.2.7 SETTING THE MASTER CONFIGURATION ON THE SLAVE
+#
+# To set up the slave to communicate with the master for replication, configure the slave with the necessary connection information.
+#
+# To do this, execute the following statement on the slave, replacing the option values with the actual values relevant to your system:
+#
+# 		mysql> CHANGE MASTER TO
+# 			->  		MASTER_HOST='master_host_name',
+# 			-> 		MASTER_USER='replication_user_name',
+# 			-> 		MASTER_PASSWORD='replication_password',
+# 			-> 		MASTER_LOG_FILE='recorded_log_file_name',
+# 			-> 		MASTER_LOG_POS=recorded_log_position;
+#
+# NOTE:
+#
+# 		Replication cannot use Unix socket files. You must be able to connect to the master MySQL server using TCP/IP
+#
+# The CHANGE_MASTER_TO statement has other options as well. For example, it is possible to set up secure replication using SSL.
+#
+# For a full list of options, and information about the maximum permissible length for the string-valued options, see SECTION 13.4.2.1, "CHANGE MASTER TO SYNTAX"
+#
+# IMPORTANT:
+#
+# 		As noted in SECTION 17.1.2.3, "CREATING A USER FOR REPLICATION", if you are not using a secure connection and the user account named in the
+# 		MASTER_USER option authenticates with the caching_sha2_password plugin (the default from MySQL 8.0), you must specify the
+# 		MASTER_PUBLIC_KEY_PATH or GET_MASTER_PUBLIC_KEY option in the CHANGE MASTER TO statement to enable RSA key-pair based password exchange.
+#
+# 17.1.2.8 ADDING SLAVES TO A REPLICATION ENVIRONMENT
+#
+# You can add another slave to an existing replication configuration without stopping the master. To do this, you can set up the new slave
+# by copying the data directory of an existing slave, and giving the new slave a different server ID (which is user-specified) and server
+# UUID (which is generated at startup)
+#
+# To duplicate an existing slave:
+#
+# 		1. Stop the existing slave and record the slave status information, particularly the master binary log file and relay log file positions.
+#
+# 			You can view the slave status either in the Performance Schema replication tables (see SECTION 26.12.11, "PERFORMANCE SCHEMA REPLICATION TABLES"),
+# 			or by issuing SHOW_SLAVE_STATUS as follows:
+#
+# 				mysql> STOP SLAVE;
+# 				mysql> SHOW SLAVE STATUS\G
+#
+# 		2. Shut down the existing slave:
+#
+# 				shell> mysqladmin shutdown
+#
+# 		3. Copy the data directory from the existing slave to the new slave, including the log files and relay log files.
+#
+# 			You can do this by creating an archive using tar or WinZip, or by performing a direct copy using a tool such as cp or rsync.
+#
+# 			IMPORTANT:
+#
+# 				) Before copying, verify that all the files relating to the existing slave actually are stored in the data directory.
+#
+# 					For example, the InnoDB system tablespace, undo tablespace, and redo log might be stored in an alternative location.
+#
+# 					InnoDB tablespace files and file-per-table tablespaces might have been created in other directories.
+#
+# 					The binary logs and relay logs for the slave might be in their own directories outside the data directory.
+#
+# 					Check through the system variables that are set for the existing slave and look for any alternative paths
+# 					that have been specified.
+#
+# 					If you find any, copy these directories over as well.
+#
+# 				) During copying, if files have been used for the master info and relay log info repositories (see SECTION 17.2.4,
+# 					"REPLICATION RELAY AND STATUS LOGS"), ensure that you also copy these files from the existing slaves to the
+# 					new slave.
+#
+# 					If tables have been used for the repositories, which is the default from MySQL 8.0, the tables are in the data directory.
+#
+# 				) After copying, delete the auto.cnf file from the copy of the data directory on the new slave, so that the new slave is started
+# 					with a different generated server UUID. The server UUID must be unique.
+#
+# a common problem that is encountered when adding new replication slaves is that the new slaves fails with a series of warning and error messages like this:
+#
+# 		071118 16:44:10 [Warning] Neither --relay-log nor --relay-log-index were used; so
+# 		replication may break when this MySQL server acts as a slave and has his hostname
+# 		changed! Please use '--relay-log=new_slave_hostname-relay-bin' to avoid this problem.
+#
+# 		071118 16:44:10 [ERROR] Failed to open the relay log './old_slave_hostname-relay-bin.003525'
+# 		(relay_log_pos 22940879)
+# 		071118 16:44:10 [ERROR] Could not find target log during relay log initialization
+# 		071118 16:44:10 [ERROR] Failed to initialize the master info structure
+#
+# The situation can occur if the --relay-log option is not specified, as the relay log files contain the host name
+# as part of their file names.
+#
+# This is also true of the relay log index file if the --relay-log-index option is not used.
+#
+# See SECTION 17.1.6, "REPLICATION AND BINARY LOGGING OPTIONS AND VARIABLES", for more information about
+# these options.
+#
+# To avoid this problem, use the same value for --relay-log on the new slave that was used on the existing slave.
+#
+# If this option was not set explicitly on the existing slave, use existing_slave_hostname-relay-bin.
+#
+# If this is not possible, copy the existing slave's relay log index file to the new slave and set the --relay-log-index
+# bin.index 
+#
+# Alternatively, if you have already treid to start the new slave after following the remaining steps in this section
+# and have encountered errors like those described here, then perform the following steps:
+#
+# 		a. If you have not already done so, issue STOP_SLAVE on the new slave.
+#
+# 			If you have already started the existing slave again, issue STOP_SLAVE on the existing slave as well.
+#
+# 		b. Copy the contents of the existing slave's relay log index file into the new slave's relay log index file,
+# 			making sure to overwrite any content already in the file.
+#
+# 		c. Proceed with the remaining steps in this section.
+#
+# 4. When copying is complete, restart the existing slave.
+#
+# 5. On the new slave, edit the configuration and give the new slave a unique server ID (using the server-id option),
+# 		that is not used by the master or any of the existing slaves.
+#
+# 6. Start the new slave server, specifying the --skip-slave-start option so that replication does ont start yet.
+#
+# 		use the perofrmance Schema replication tables or issue SHOW_SLAVE_STATUS to confirm that hte new slave
+# 		has the correct settings when compared with the existing slave.
+#
+# 		Also display the server ID and server UUID and verify that these are correct and unique for the new slave.
+#
+# 7. Start the slave threads by issuing a START_SLAVE statement:
+#
+# 		mysql> START SLAVE;
+#
+# The new slave now uses the information in its master info repository to start teh replication process.
+#
+# 17.1.3 REPLICATION WITH GLOBAL TRANSACTION IDENTIFIERS
+#
+# 17.1.3.1 GTID FORMAT AND STORAGE
+# 17.1.3.2 GTID LIFE CYCLE
+# 17.1.3.3 GTID AUTO-POSITIONING
+# 17.1.3.4 SETTING UP REPLICATION USING GTIDS
+# 17.1.3.5 USING GTIDS FOR FAILOVER AND SCALEOUT
+# 17.1.3.6 RESTRICTIONS ON REPLICATION WITH GTIDS
+# 17.1.3.7 STORED FUNCTION EXAMPLES TO MANIPULATE GTIDS
+# 
+# This section explains transaction-based replication using global transaction identifiers (GTIDs). When using GTIDs, each transaction
+# can be identified and tracked as it is committed on the originating server and applied by any slaves; This means that it is not necessary
+# when using GTIDs to refer to log files or positions within those files when starting a new slave or failing over to a new master,
+# which greatly simplifies these tasks.
+#
+# Because GTID-based replication is completely transaction-based, it is simple to determine whether masters and slaves are consistent:
+# As long as all transactions commited on a master are also committed on a slave, consistency between the two is guaranteed.
+#
+# You can use either statement-based or row-based replication with GTIDs (see SECTION 17.2.1, "REPLICATION FORMATS"); however,
+# for best results, we recommend that you use the row-based format.
+#
+# GTIDs are always preserved between master and slave. This means that you can always determine the source for any transaction applied
+# on any slave by examining its binary log.
+#
+# In addition, once a transaction with a given GTID is committed on a given server, any subsequent transaction having the same GTID
+# is ignored by that server.
+#
+# Thus, a transaction committed on the master can be applied no more than once on the slave, which helps to guarantee consistency.
+#
+# This section discusses the following topics:
+#
+# 		) How GTIDs are defined and created, and how they are represented in a MySQL server (see SECTION 17.1.3.1, "GTID FORMAT AND STORAGE")
+#
+# 		) The life cycle of a GTID (see SECTION 17.1.3.2, "GTID lIFE CYCLE")
+#
+# 		) The auto-positioning function for synchronizing a slave and master that use GTIDs (see SECTION 17.1.3.3, "GTID AUTO-POSITIONING")
+#
+# 		) A general procedure for setting up and starting GTID-based replication (see SECTION 17.1.3.4, "SETTING UP REPLICATION USING GTIDS")
+#
+# 		) Suggested methods for provisioning new replication servers when using GTIDs (see SECTION 17.1.3.5, "USING GTIDS FOR FAILOVER AND SCALEOUT")
+#
+# 		) Restrictions and limitations that you should be aware of when using GTID-based replication (see SECTION 17.1.3.6, "RESTRICTIONS ON REPLICATION WITH GTIDS")
+#
+# 		) Stored functions that you can use to work with GTIDS (see SECTION 17.1.3.7, "STORED FUNCTION EXAMPLES TO MANIPULATE GTIDS")
+#
+# For information about MySQL Server options and variables relating to GTID-based replication, see SECTION 17.1.6.5, "GLOBAL TRANSACTION ID OPTIONS AND VARIABLES".
+#
+# See also SECTION 12.18, "FUNCTIONS USED WITH GLOBAL TRANSACTION IDENTIFIERS (GTIDS)", which describes SQL functions supported by MySQL 8.0 for use with GTIDs.
+#
+# 17.1.3.1 GTID FORMAT AND STORAGE
+#
+# A global transaction identifier (GTID) is a unique identifier created and associated with each transaction committed on the server of origin
+# (the master).
+#
+# This identifier is unique not only to the server on which it originated, but is unique across all servers in a given replication topology.
+#
+# GTID assignment distinguishes between client transactions, which are committed on the master, and replicated transactions, which are reproduced
+# on a slave.
+#
+# When a client transaction is committed on the master, it is assigned a new GTID, provided that the transaction was written to the binary log.
+#
+# Client transactions are guaranteed to have monotonically increasing GTIDs without gaps between the generated numbers.
+#
+# If a client transaction is not written to the binary log (for example, because the transaction was filtered out, or the transaction
+# was read-only), it is not assigned a GTID on the server of origin.
+#
+# Replicated transactions retain the same GTID that was assigned to the transaction on the server of origin.
+#
+# the GTID is presented before the replicated transaction begins to execute, and is persisted even if the replicated
+# transaction is not written to the binary log on the slave, or is filtered out on the slave.
+#
+# The MYSQL system table mysql.gtid_executed is used to preserve the assigned GTIDs of all the transactions applied
+# on a MySQL server, except those that are stored in a currently active binary log file.
+#
+# The auto-skip function for GTIDs means that a transaction committed on the master can be applied no more than once
+# on the slave, which helps to guarantee consistency.
+#
+# Once a transaction with a given GTID has been committed on a given server, any attempt to execute a subsequent
+# transaction with the same GTID is ignored by that server.
+#
+# No error is raised, and no statement in the transaction is executed.
+#
+# If a transaction with a given GTID has started to execute on a server, but has not yet committed or rolled back, any attempt
+# to start a concurrent transaction on teh server with the same GTID will block.
+#
+# The server neither begins to execute the concurrent transaction nor returns control to the client. Once the first attempt
+# at the transaction commits or rolls back, concurrent sessions that were blocking on the same GTID may proceed.
+#
+# If the first attempt rolled back, one concurrent session proceeds to attempt the transaction, and any other concurrent sessions
+# that were blocking on the same GTID remain blocked.
+#
+# If the first attempt committed, all the concurrent sessions stop being blocked, and auto-skip all the statements of the transaction.
+#
+# A GTID is represented as a pair of coordinates, seperated by a colon character (:), as shown here:
+#
+# 		GTID = source_id:transaction_id
+#
+# The source_id identifies the originating server. Normally, the master's server_uuid is used for this purpose.
+#
+# The transaction_id is a sequence number determined by the order in which the transaction was committed on the master.
+#
+# For example, the first transaction to be committed has 1 as its transaction_id, and the tenth transaction to be
+# committed on the same originating server is assigned a transaction_id of 10.
+#
+# It is not possible for a transaction to have 0 as a sequence number in a GTID.
+#
+# For example, the twenty-third transaction to be committed originally on the server with the UUID
+# 3E11FA47-71CA-11E1-9E33-C80AA94295962 has this GTID:
+#
+# 		3E11FA47-71CA-11E1-9E33-C80AA9429562:23
+#
+# The GTID for a transaction is shown in the output from mysqlbinlog, and it is used to identify an individual
+# transaction in the Performance Schema replication status tables, for example, replication_applier_status_by_worker
+#
+# The value stored by the gtid_next system variable (@@GLOBAL.gtid_next) is a single GTID.
+#
+# GTID SETS
+#
+# https://dev.mysql.com/doc/refman/8.0/en/replication-gtids-concepts.html
+# 
