@@ -62872,5 +62872,719 @@
 #
 # GTID SETS
 #
-# https://dev.mysql.com/doc/refman/8.0/en/replication-gtids-concepts.html
+# A GTID set is a set comprising one or more single GTIDs or ranges of GTIDs. GTID sets are used in a MySQL server in several ways.
+# For example, the values stored by the gtid_executed and gtid_purged system variables are GTID sets.
+#
+# The START_SLAVE clauses UNTIL SQL_BEFORE_GTIDS and UNTIL SQL_AFTER_GTIDS can be used to make a slave process transactions only
+# up to the first GTID in a GTID set, or stop after the last GTID in a GTID set. The built-in functions GTID_SUBSET() and GTID_SUBTRACT()
+# require GTID sets as input.
+#
+# A range of GTIDs originating from the same server can be collapsed into a single expression, as shown here:
+#
+# 		3E11FA47-71CA-11E1-9E33-C80AA9429562:1-5
+#
+# The above example represents the first through fifth transactions originating on teh MySQL server whose server_uuid
+# is 3E11FA47-71CA-11E1-9E33-C800AA9429562
+#
+# Multiple single GTIDs or ranges of GTIDs originating from the same server can also be included in a single expression,
+# with the GTIDs or ranges separated by colons, as in the following example:
+#
+# 		3E11FA47-71CA-11E1-9E33-C80AA9429562:1-3:11:47-49
+#
+# A GTID set can include any combination of single GTIDs and ranges of GTIDs, and it can include GTIDs originating from
+# different servers.
+#
+# This example shows the GTID set stored in the gtid_executed system variable (@@GLOBAL.gtid_executed) of a slave that
+# has applied transactions from more than one master:
+#
+# 		2174B383-5441-11E8-B90A-C80AA9429562:1-3, 24DA167-0C0C-11E8-8442-00059A3C7B00:1-19
+#
+# When GTID sets are returned from server variables, UUIDs are in alphabetical order, and numeric intervals are merged
+# and in ascending order.
+#
+# The syntax for a GTID set is as follows:
+#
+# 		gtid_set:
+# 			uuid_set [, uuid_set] /etc/
+# 			| ''
+#
+# 		uuid_set:
+# 			uuid:interval[:interval] /etc/
+#
+# 		uuid:
+# 			hhhhhhhh-hhhh-hhhh-hhhh-hhhhhhhh
+#
+# 		h:
+# 				[0-9|A-F]
+#
+# 		interval:
+# 			n[-n]
+#
+# 			(n >= 1)
+#
+# mysql.gtid_executed Table
+#
+# GTIDs are stored in a table named gtid_executed, in the mysql database. A row in this table contains, for each GTID or set of GTIDs
+# that it represents, the UUID of the originating server, and the starting and ending transaction IDs of the set; for a row referencing
+# only a single GTID, these last two values are the same.
+#
+# The mysql.gtid_executed table is created (if it does not already exist) when MySQL Server is installed or upgraded, using a CREATE_TABLE
+# statement similar to that shown here:
+#
+# 		CREATE TABLE gtid_executed (
+# 			source_uuid CHAR(36) NOT NULL,
+# 			interval_start BIGINT(20) NOT NULL,
+# 			interval_end BIGINT(20) NOT NULL,
+# 			PRIMARY KEY (source_uuid, interval_start)
+# 		)
+#
+# WARNING:
+#
+# 		As with other MySQL system tables, do not attempt to create or modify this table yourself.
+#
+# The mysql.gtid_executed table is provided for internal use by the MySQL server. It enables a slave to use GTIDs
+# when binary logging is disabled on the slave, and it enables retention of the GTID state when the binary logs
+# have been lost.
+#
+# Note that the mysql.gtid_executed table is cleared if you issue RESET_MASTER.
+#
+# GTIDs are stored in the mysql.gtid_executed table only when gtid_mode is ON or ON_PERMISSIVE. The point at which
+# GTIDs are stored depends on whether binary logging is enabled or disabled:
+#
+# 		) If binary logging is disabled (log_bin is OFF), or if log_slave_updates is disabled, the server stores the GTID
+# 			belonging to each transaction together with the transaction in the table.
+#
+# 			in addition, the table is compressed periodically at a user-configurable rate; see mysql.gtid_executed Table Compression,
+# 			for more information.
+#
+# 			This situation can only apply on a replication slave where binary logging or slave update logging is disabled. It does not
+# 			apply on a replication master, because on a master, binary logging must be enabled for replication to take place.
+#
+# 		) If binary logging is enabled (log_bin is ON), whenever the binary log is rotated or the server is shut down, the server
+# 			writes GTIDs for all transactions that were written into the previous binary log into the mysql.gtid_executed table.
+#
+# 			This situation applies on a replication master, or a replication slave where binary logging is enabled.
+#
+# 			In the event of the server stopping unexpectedly, the set of GTIDs from the current binary log file is not saved
+# 			in the mysql.gtid_executed table.
+#
+# 			These GTIDs are added to the table from the binary log file during recovery. The exception to this is if you disable
+# 			binary logging when the server is restarted (using --skip-log-bin or --disable-log-bin)
+#
+# 			In this situation, the server cannot access the binary log file to recover the GTIDs, so replication cannot be started.
+#
+# 			When binary logging is enabled, the mysql.gtid_executed table does not hold a complete record of the GTIDs for all executed
+# 			transactions. That information is provided by the global value of the gtid_executed system variable.
+#
+# 			Always use @@GLOBAL.gtid_executed, which is updated after every commit, to represent the GTID state for the MySQL server,
+# 			and do not query the mysql.gtid_executed table
+#
+# The MySQL server can write to the mysql.gtid_executed table even when the server is in read only or super read only mode, so that
+# the binary log file can still be rotated in these modes.
+#
+# If the mysql.gtid_executed table cannot be accessed for writes, and the binary log file is rotated for any reason other than reaching
+# the maximum file size (max_binlog_size), the current binary log file continues to be used.
+#
+# AN error message is returned ot the client that requested the rotation, and a warning is logged on the server. If the mysql.gtid_executed
+# table cannot be accessed for writes and max_binlog_size is reached, the server responds according to its binlog_error_action setting.
+#
+# If IGNORE_ERROR is set, an error is logged on the server and binary logging is halted, or if ABORT_SERVER is set, the server shuts down.
+#
+# mysql.gtid_executed Table Compression
+#
+# Over the course of time, the mysql.gtid_executed table can become filled with many rows referring to individual GTIDs that originate
+# on the same server, and whose transaction IDs make up a range, similar to what is shown ehre:
+#
+# 		+-------------------------------------------+----------------+---------------+
+# 		| source_uuid 										  | interval_start | interval_end  |
+# 		+-------------------------------------------+----------------+---------------+
+# 		| 3E11FA47-71CA-11E1-9E33-C80AA949562 		  | 37 				 | 37 			  |
+# 		| 3E11FA47-71CA-11E1-9E33-c80 //etc// 		  | 38 				 | 38 			  |
+# 		| /etc/
+#
+# To save space, the MySQL server compresses the mysql.gtid_executed table periodically by replacing each such set of rows with
+# a single row that spans the entire interval of transaction identifiers, like this:
+#
+# 		+------------------------------------------+---------------+---------------+
+# 		| //etc/ 											 | 37 			  | 43 				|
+# 		/etc/
+#
+# You can control the number of transactions that are allowed to elapse before the table is compressed, and thus the compression
+# rate, by setting the gtid_executed_compression_period system variable.
+#
+# This variable's default value is 1000, meaning that by default, compression of the table is performed after each 1000
+# transactions.
+#
+# Setting gtid_executed_compression_period to 0 prevents the compression from being performed at all, and you should be prepared
+# for a potentially large increase in the amount of disk space that may be required by the gtid_executed table if you do this.
+#
+# 	NOTE:
+#
+# 		When binary logging is enabled, the value of gtid_executed_compression_period is not used and the mysql.gtid_executed table
+# 		is compressed on each binary log rotation.
+#
+# Compression of the mysql.gtid_executed table is performed by a dedicated foreground thread named thread/sql/compress_gtid_table.
+#
+# This thread is not listed in the output of SHOW_PROCESSLIST, but it can be viewed as a row in the threads table, as shown here:
+#
+# 		mysql> SELECT * FROM performance_schema.threads WHERE NAME LIKE '%gtid%'\G
+# 		******************************* 1. row **********************************
+# 						THREAD_ID: 26
+# 							NAME  : thread/sql/compress_gtid_table
+# 							TYPE  : FOREGROUND
+# 				PROCESSLIST_ID : 1
+# 			PROCESSLIST_USER  : NULL
+# 			PROCESSLIST_HOST  : NULL
+# 			PROCESSLIST_DB 	: NULL
+# 		  PROCESSLIST_COMMAND: Daemon
+# 			PROCESSLIST_TIME  : 1509
+# 			PROCESSLIST_STATE : Suspending
+# 			PROCESSLIST_INFO  : NULL
+# 			PARENT_THREAD_ID  : 1
+# 			ROLE 				   : NULL
+# 					INSTRUMENTED: YES
+# 					HISTORY 	   : YES
+# 				CONNECTION_TYPE: NULL
+# 				THREAD_OS_ID   : 18677
+#
+# The thread/sql/compress_gtid_table thread normally sleeps until gtid_executed_compression_period transactions have been executed,
+# then wakes up to perform compression of the mysql.gtid_executed table as described previously.
+#
+# It then sleeps until another gtid_executed_compression_period transactions have taken place, then wakes up to perform
+# the compression again, repeating this loop indefinetly.
+#
+# Setting htis value to 0 when binary logging is disabled means that the thread always sleeps and never wakes up.
+#
+# 17.1.3.2 GTID LIFE CYCLE
+#
+# The life cycle of a GTID consists of the following steps:
+#
+# 		1. A transaction is executed and committed on the master. This client transaction is assigned a GTID composed of
+# 			the master's UUID and the smallest nonzero transaction sequence number not yet used on this server.
+#
+# 			The GTID is written to the master's binary log (immediately preceding the transaction itself in the log).
+#
+# 			If a client transaction is not written to the binary log (for example, because the transaction was filtered out,
+# 			or the transaction was read-only), it is not assigned a GTID.
+#
+# 		2. If a GTID was assigned for the transaction, the GTID is persisted atomically at commit time by writing it to the
+# 			binary log at the beginning of the transaction (as a Gtid_log_event)
+#
+# 			Whenever the binary log is rotated or the server is shut down, the server writes GTIDs for all transactions that
+# 			were written into the previous binary log file into the mysql.gtid_executed table
+#
+# 		3. If a GTID was assigned for the transaction, the GTID is externalized non-atomically (very shortly after the transaction
+# 			is committed) by adding it to the set of GTIDs in the gtid_executed system variable (@@GLOBAL.gtid_executed).
+#
+# 			This GTID set contains a representation of the set of all committed GTID transactions, and it is used in 
+# 			replication as a token that represents the server state. With binary logging enabled (as required for the master),
+# 			the set of GTIDs in the gtid_executed system variable is a complete record of the transactions applied, but the
+# 			mysql.gtid_executed table is not, because the most recent history is still in the current binary log file.
+#
+# 		4. After the binary log data is transmitted to the slave and stored in the slave's relay log (using established mechanisms
+# 			for this process, see SECTION 17.2, "REPLICATION IMPLEMENTATION", for details), the slave reads the GTID and sets the
+# 			value of its gtid_next system variable as this GTID.
+#
+# 			This tells the slave that the next transaction must be logged using this GTID. It is important to note that the slave
+# 			sets gtid_next in a session context.
+#
+# 		5. The slave verifies that no thread has yet taken ownership of the GTID in the gtid_next in order to process the transaction.
+#
+# 			By reading and checking the replicated transaction's GTID first, before processing the transaction itself, the slave 
+# 			guarantees not only that no previous transaction having this GTID has been applied on the slave, but also that no other
+# 			session has already read this GTID but has not yet committed the associated transaction.
+#
+# 			So if multiple clients attempt to apply the same transaction concurrently, the server resolves this by letting only
+# 			one of them execute.
+#
+# 			The gtid_owned system variable (@@GLOBAL.gtid_owned) for the slave shows each GTID that is currently in use and the ID
+# 			of the thread that owns it. If the GTID has already been used, no error is raised, and the auto-skip function is used
+# 			to ignore the transaction.
+#
+# 		6. If the GTID has not been used, the slave applies the replicated transaction. Because gtid_next is set to the GTID already
+# 			assigned by the master, the slave does not attempt to generate a new GTID for this transaction, but instead uses the
+# 			GTID stored in gtid_next
+#
+# 		7. If binary logging is enabled on the slave, the GTID is persisted atomically at commit time by writing it to the binary
+# 			log at the beginning of the transaction (as a Gtid_log_event).
+#
+# 			Whenever the binary log is rotated or the server is shut down, the server writes GTIDs for all transactions that were
+# 			written into the previous binary log file into the mysql.gtid_executed table.
+#
+# 		8. If binary logging is disabled on the slave, the GTID is persisted atomically by writing it directly into the mysql.gtid_executed
+# 			table.
+#
+# 			MySQL appends a statement to the transaction to insert the GTID into the table. From MySQL 8.0, this operation is atomic for
+# 			DDL statements as well as for DML statements.
+#
+# 			In this situation, the mysql.gtid_executed table is a complete record of the transactions applied on the slave.
+#
+# 		9. Very shortly after the replicated transaction is committed on the slave, the GTID is externalized non-atomically by adding
+# 			it to the set of GTIDs in the gtid_executed system variable.
+#
+# 			(@@GLOBAL.gtid_executed) for the slave. As for the master, this GTID set contains a representation of the set of all 
+# 			committed GTID transactions.
+#
+# 			If binary logging is disabled on the slave, the mysql.gtid_executed table is also a complete record of the transactions
+# 			applied on the slave.
+#
+# 			If binary logging is enabled on the slave, meaning that some GTIDs are only recorded in the binary log, the set of
+# 			GTIDs in the gtid_executed system variable is the only complete record.
+#
+# Client transactions that are completely filtered out on the master are not assigned a GTID, therefore they are not added
+# to the set of transactions in the gtid_executed system variable, or added to the mysql.gtid_executed table.
+#
+# However, the GTIDs of replicated transactions that are completely filtered out on the slave are persisted. If binary logging
+# is enabled on the slave, the filtered-out transaction is written to the binary log as a Gtid_log_event followed by an empty
+# transaction containing only BEGIN and COMMIT statements.
+#
+# If binary logging is disabled, the GTID of the filtered-out transaction is written to the mysql.gtid_executed table.
+#
+# Preserving the GTIDs for filtered-out transactions ensures that the mysql.gtid_executed table and the set of GTIDs in the
+# gtid_executed system variable can be compressed.
+#
+# It also ensures that the filtered-out transactions are not retrieved again if the slave reconnects to the master, as explained
+# in SECTION 17.1.3.3, "GTID AUTO-POSITIONING"
+#
+# On a multithreaded replication slave (with slave_parallel_workers > 0), transactions can be applied in parallel, so replicated
+# transactions can commit out of order (unless slave_preserve_commit_order=1 is set)
+#
+# When that happens, the set of GTIDs in the gtid_executed system variable will contain multiple GTID ranges with gaps
+# between them. (On a master or a single-threaded replication slave, there will be monotonically increasing GTIDs without
+# gaps between the numbers)
+#
+# Gaps on multithreaded replication slaves only occur among the most recently applied transactions, and are filled in as replication
+# progresses.
+#
+# When replication threads are stopped cleanly using the STOP_SLAVE statement, ongoing transactions are applied so that the gaps
+# are filled in.
+#
+# In the event of a shutdown such as a server failure or the use of the KILL statement to stop replication threads, the gaps
+# might remain.
+#
+# WHAT CHANGES ARE ASSIGNED A GTID?
+#
+# The typical scenario is that the server generates a new GTID for a committed transaction. However, GTIDs can also be assigned
+# to other changes besides transactions, and in some cases a single transaction can be assigned multiple GTIDs.
+#
+# Every database change (DDL or DML) that is written to the binary log is assigned a GTID. This includes changes that are
+# autocommitted, and changes that are committed using BEGIN and COMMIT or START TRANSACTION statements.
+#
+# A GTID is also assigned to the creation, alteration, or deletion of a database, and of a non-table database
+# object such as a procedure, function, trigger, event, view, user, role or grant.
+#
+# Non-transactional updates as well as transactional updates are assigned GTIDs. In addition, for a non-transactional
+# update, if a disk write failure occurs while attempting to write to the binary log cache and a gap is therefore
+# created in the binary log, the resulting incident log event is assigned a GTID.
+#
+# When a table is automatically dropped by a generated statement in the binary log, a GTID is assigned to the statement.
+#
+# Temporary tables are dropped automatically when a replication slave begins to apply events from a master that has just
+# been started, and when statement-based replication is in use (binlog_format=STATEMENT) and a user session that has
+# open temporary table disconnects. 
+#
+# Tables that use the MEMORY storage engine are deleted automatically the first time they are accessed after the server is
+# started, because rows might have been lost during the shutdown.
+#
+# When a transaction is not written to the binary log on the server of origin, the server does not assign a GTID to it.
+#
+# This includes transactions that are rolled back and transactions that are executed while binary logging is disabled
+# on the server of origin, either globally (with --skip-log-bin specified in the server's configuration) or for the
+# session (SET @@SESSION.sql_log_bin = 0)
+#
+# This also includes no-op transactions where row-based replication is in use (binlog_format=ROW)
+#
+# XA transactions are assigned separate GTIDs for the XA PREPARE phase of the transaction and the XA COMMIT or XA ROLLBACK
+# phase of the transaction.
+#
+# XA transactions are persistently prepared so that users can commit them or roll them back in the case of a failure
+# (which in a replication topology might include a failover to another server)
+#
+# The two parts of the transaction are therefore replicated separately, so they must have their own GTIDs, even though
+# a non-XA transaction that is rolled back would not have a GTID.
+#
+# In the following special cases, a single statement can generate multiple transactions, and therefore be assigned
+# multiple GTIDs:
+#
+# 		) A stored procedure is invoked that commits multiple transactions. One GTID is generated for each transaction
+# 			that the procedure commits.
+#
+# 		) A multi-table DROP_TABLE statement drops tables of different types. Multiple GTIDs can be generated if any 
+# 			of the tables use storage engines that do not support atomic DDL, or if any of the tables are temporary tables.
+#
+# 		) A CREATE_TABLE_/ETC/_SELECT statement is issued when row-based replication is in use (binlog_format=ROW)
+#
+# 			One GTID is generated for the CREATE_TABLE action and one GTID is generated for the row-insert actions.
+#
+# THE gtid_next SYSTEM VARIABLE
+#
+# By default, for new transactions committed in user sessions, the server automatically generates and assigns a new
+# GTID.
+#
+# When the transaction is applied on a replication slave, the GTID from the server of origin is preserved. You can change
+# this behavior by setting the session value of the gtid_next system variable:
+#
+# 		) When gtid_next is set to AUTOMATIC, which is the default, and a transaction is committed, and written to the binary log,
+# 			the server automatically generates and assigns a new GTID.
+#
+# 			If a transaction is rolled back or not written to the binary log for another reason, the server does not generate
+# 			and assign a GTID.
+#
+# 		) If you set gtid_next to a valid GTID (consisting of a UUID and a transaction sequence number, separated by a colon),
+# 			the server assigns that GTID to your transaction.
+#
+# 			This GTID is assigned and added to gtid_executed even when the transaction is not written to the binary log,
+# 			or when the transaction is empty.
+#
+# Note that after you set gtid_next to a specific GTID, and the transaction has been committed or rolled back, an explicit
+# SET @@SESSION.gtid_next statement must be issued before any other statement.
+#
+# You can use this to set the GTID value back to AUTOMATIC if you do not want to assign any more GTIDs explicitly.
+#
+# When replication applier threads apply replicated transactions, they use this technique, setting @@SESSION.gtid_next
+# explicitly to the GTID of the replicated transaction as assigned on the server of origin.
+#
+# This means the GTID from the server of origin is retained, rather than a new GTID being generated and assigned
+# by the replication slave.
+#
+# It also means the GTID is added to gtid_executed on the replication slave even when binary logging or slave update
+# logging is disabled on the slave, or when the transaction is a no-op or is filtered out on the slave.
+#
+# It is possible for a client to simulate a replicated transaction by setting @@SESSION.gtid_next to a specific
+# GTID before executing the transaction. This technique is used by mysqlbinlog to generate a dump of the binary log
+# that the client can replay to preserve GTIDs.
+#
+# A simulated replicated transaction committed through a client is completely equivalent to a replicated transaction
+# committed through a replication applied thread, and they cannot be distinguished after the fact.
+#
+# THE gtid_purged SYSTEM VARIABLE
+#
+# The set of GTIDs in the gtid_purged system variable (@@GLOBAL.gtid_purged) contains the GTIDs of all the transactions
+# that have been committed on the server, but do not exist in any binary log file on the server.
+#
+# gtid_purged is a subset of gtid_executed. The following categories of GTIDs are in gtid_purged:
+#
+# 		) GTIDs of replicated transactions that were committed with binary logging disabled on the slave
+#
+# 		) GTIDs of transactions that were written to a binary log file that has now been purged.
+#
+# 		) GTIDs that were added explicitly to the set by the statement SET @@GLOBAL.gtid_purged
+#
+# You can change the value of gtid_purged in order to record on the server that the transactions in a certain GTID set
+# have been applied, although they do not exist in any binary log on the server.
+#
+# When you add GTIDs to gtid_purged, they are also added to gtid_executed. An example use case for this action is when
+# you are restoring a backup of one or more databases on a server, but you do not have the relevant binary logs containing
+# the transactions on the server.
+#
+# Before MySQL 8.0, you could only change the value of gtid_purged when gtid_executed (and therefore gtid_purged) was empty.
+#
+# From MySQL 8.0, this restriction does not apply, and you can also choose whether to replace the whole GTID set in gtid_purged
+# with a specified GTID set, or to add a specified GTID set to the GTIDs already in gtid_purged.
+#
+# For details of how to do this, see the description for gtid_purged.
+#
+# The sets of GTIDs in the gtid_executed and gtid_purged system variables are initialized when the server starts. Every binary
+# log file begins with the event Previous_gtids_log_event, which contains the set of GTIDs in all previous binary log files
+# (composed from the GTIDs in the preceding file's Previous_gtids_log_event, and the GTIDs of every Gtid_log_event in the preceding
+# file itself)
+#
+# The contents of Previous_gtids_log_event in the oldest and most recent binary log files are used to compute the gtid_executed
+# and gtid_purged sets at server startup:
+#
+# 		) gtid_executed is computed as the union of the GTIDs in Previous_gtids_log_event in the most recent binary log file,
+# 			the GTIDs of transactions in that binary log file, and the GTIDs stored in the mysql.gtid_executed table.
+#
+# 			This GTID set contains all the GTIDs that have been used (or added explicitly to gtid_purged) on the server,
+# 			whether or not they are currently in a binary log file on the server.
+#
+# 			It does not include the GTIDs for transactions that are currently being processed on the server (@@GLOBAL.gtid_owned)
+#
+# 		) gtid_purged is computed by first adding the GTIDs in Previous_gtids_log_event in the most recent binary log file and the
+# 			GTIDs of transactions in that binary log file.
+#
+# 			THis step gives the set of GTIDs that are currently, or were once, recorded in a binary log on the server (gtids_in_binlog)
+#
+# 			Next, the GTIDs in Previous_gtids_log_event in the oldest binary log file are subtracted from gtids_in_binlog.
+#
+# 			This step gives the set of GTIDs that are currently recorded in a binary log on the server (gtids_in_binlog_not_purged).
+#
+# 			Finally, gtids_in_binlog_not_purged is subtracted from gtid_executed. The result is the set of GTIDs that have been used
+# 			on the server, but are not currently recorded in a binary log file on the server, and this result is used to initialize
+# 			gtid_purged.
+#
+# If binary logs from MySQL 5.7.7 or older are involved in these computations, it is possible for incorrect GTID sets to be
+# computed for gtid_executed and gtid_purged, and they remain incorrect even if the server is later restarted.
+#
+# For details, see the description for the binlog_gtid_simple_recovery system variable, which controls how the binary logs
+# are iterated to compute the GTID sets. If one of the situations described there applies on a server, set binlog_gtid_simple_recovery=FALSE
+# in the server's configuration file before starting it.
+#
+# That setting makes the server iterate all the binary log files (not just the newest and oldest) to find where GTID events start to appear.
+#
+# This process could take a long time if the server has a large number of binary log files without GTID events.
+#
+# RESETTING THE GTID EXECUTION HISTORY
+#
+# If you need to reset the GTID execution history on a server, use the RESET_MASTER statement. For example, you might need to do this after
+# carrying out test queries to verify a replication setup on new GTID-enabled servers, or when you want to join a new server to a replication
+# group but it contains some unwanted local transactions that are not accepted by Group Replication.
+#
+# 	WARNING:
+#
+# 		Use RESET_MASTER with caution to avoid losing any wanted GTID execution history and binary log files.
+#
+# Before issuing RESET_MASTER, ensure that you have backups of the server's binary log files and binary log index file, if any,
+# and obtain and save the GTID set held in the global value of the gtid_executed system variable (for example, by issuing a SELECT @@GLOBAL.gtid_executed
+# statement and saving the results)
+#
+# If you are removing unwanted transactions from that GTID set, use mysqlbinlog to examine the contents of the transactions to ensure that they 
+# have no value, contain no data that must be saved or replicated, and did not result in data changes on the server.
+#
+# When you issue RESET_MASTER, the following reset operations are carried out:
+#
+# 		) The value of the gtid_purged system variable is set to an empty string ('')
+#
+# 		) The global value (but not the session value) of the gtid_executed system variable is set to an empty string.
+#
+# 		) The mysql.gtid_executed table is cleared (see mysql.gtid_executed Table)
+#
+# 		) If the server has binary logging enabled, the existing binary log files are deleted and the binary log index file is cleared.
+#
+# Note that RESET_MASTER is the method to reset the GTID execution history even if the server is a replication slave where binary logging
+# is disabled.
+#
+# RESET_SLAVE has no effect on the GTID execution history.
+#
+# 17.1.3.3 GTID AUTO-POSITIONING
+#
+# GTIDs replace the file-offset pairs previously required to determine points for starting, stopping, or resuming the flow of data between
+# master and slave.
+#
+# When GTIDs are in use, all the information that the slave needs for synchronizing with the master is obtained directly from the replication
+# data stream.
+#
+# To start a slave using GTID-based replication, you do not include MASTER_LOG_FILE or MASTER_LOG_POS options in the CHANGE_MASTER_TO statement
+# used to direct the slave to replicate from a given master.
+#
+# These options specify the name of the log file and the starting position within the file, but with GTIDs the slave does not need this nonlocal
+# data. Instead, you need to enable the MASTER_AUTO_POSITION option. For full instructions to configure and start masters and slaves using
+# GTID-based replication, see SECTION 17.1.3.4, "SETTING UP REPLICATION USING GTIDS"
+#
+# The MASTER_AUTO_POSITION option is disabled by default. If multi-source replication is enabled on the slave, you need to set the option for
+# each applicable replication channel.
+#
+# Disabling the MASTER_AUTO_POSITION option again makes the slave revert to file-based replication, in which case you must also specify
+# one or both of the MASTER_LOG_FILE or MASTER_LOG_POS options.
+#
+# When a replication slave has GTIDs enabled (GTID_MODE=ON, ON_PERMISSIVE, or OFF_PERMISSIVE) and the MASTER_AUTO_POSITION option enabled,
+# auto-positioning is activated for connection to the master. The master must have GTID_MODE=ON set in order for the connection to succeed.
+#
+# In the initial handshake, the slave sends a GTID set containing the transactions that it has already received, committed, or both.
+#
+# This GTID set is equal to the union of the set of GTIDs in the gtid_executed system variable (@@GLOBAL.gtid_executed), and the set of
+# GTIDs recorded in the Performance Schema replication_connection_status table as received transactions (the result of the statement
+# SELECT RECEIVED_TRANSACTION_SET FROM PERFORMANCE_SCHEMA.replication_connection_status)
+#
+# The master responds by sending all transactions recorded in its binary log whose GTID is not included in the GTID set sent by the slave.
+#
+# This exchange ensures that the master only sends the transactions with a GTID that the slave has not already received or committed. If the
+# slave receives transactions from more than one master, as in the case of a diamond topology, the auto-skip function ensures that the
+# transactions are not applied twice.
+#
+# If any of the transactions that should be sent by the master have been purged from the master's binary log, or added to the set
+# of GTIDs in the gtid_purged system variable by another method, the master sends the error ER_MASTER_HAS_PURGED_REQUIRED_GTIDS to
+# the slave, and replication does not start.
+#
+# The GTIDs of the missing purged transactions are identified and listed in the master's error log in the warning message ER_FOUND_MISSING_GTIDS.
+#
+# The slave cannot recover automatically from this error because parts of the transaction history that are needed to catch up with the master have
+# been purged.
+#
+# Attempting to reconnect without the MASTER_AUTO_POSITION option enabled only results in the loss of the purged transactions on the slave.
+#
+# The correct approach to recover from this situation is for the slave to replicate the missing transactions listed in the ER_FOUND_MISSING_GTIDS
+# message from another source, or for the slave to be replaced by a new slave created from a more recent backup.
+#
+# Consider revising the binary log expiration period (binlog_expire_logs_seconds) on the master to ensure that the situation does not occur again.
+#
+# If during the exchange of transactions it is found that the slave has received or committed transactions with the master's UUID in the GTID,
+# but the master itself does not have a record of them, the master sends the error ER_SLAVE_HAS_MORE_GTIDS_THAN_MASTER to the slave and replication
+# does not start.
+#
+# This situation can occur if a master that does not have sync_binlog=1 set experiences a power failure or operating system crash, and loses committed
+# transactions that have not yet been synchronized to the binary log file, but have been received by the slave.
+#
+# The master and slave can diverge if any clients commit transactions on the master after it is restarted, which can lead to the situation where the master
+# and slave are using the same GTID for different transactions.
+#
+# The correct approach to recover from this situation is to check manually whether the master and slave have diverged. 
+#
+# If the same GTID is now in use for different transactions, you either need to perform manual conflict resolution for individual
+# transactions as required, or remove either the master or the slave from the replication topology. If the issue is only missing transactions
+# on the master, you can make the master into a slave instead, allow it to catch up with the other servers in the replication topology,
+# and then make it a master again if needed.
+#
+# 17.1.3.4 SETTING UP REPLICATION USING GTIDS
+#
+# This section describes a process for configuring and starting GTID-based replication in MySQL 8.0. This is a "cold start" procedure that
+# assumes either that you are starting the replication master for the first time, or that it is possible to stop it;
+#
+# For information about provisioning replication slaves using GTIDs from a running master, see SECTION 17.1.3.5, "USING GTIDS FOR FAILOVER
+# AND SCALEOUT"
+#
+# For information about changing GTID mode on servers online, see SECTION 17.1.5, "CHANGING REPLICATION MODES ON ONLINE SERVERS"
+#
+# The key steps in this startup process for the simplest possible GTID replication topology, consisting of one master and one slave,
+# are as follows:
+#
+# 	1. If replication is already running, synchronize both servers by making them read-only
+#
+# 	2. Stop both servers
+#
+# 	3. Restart both servers with GTIDs enabled and the correct options configured.
+#
+# 		The mysqld options necesssary to start the servers as described are discussed in the example that follows later in this section.
+#
+# 	4. Instruct the slave to use the master as the replication data source and to use auto-positioning. The SQL statements needed to 
+# 		accomplish this step are described in the example that follows later in this section.
+#
+# 	5. Take a new backup. Binary logs containing transactions without GTIDs cannot be used on servers where GTIDs are enabled, so backups
+# 		taken before this point cannot be used with your new configuration.
+#
+# 	6. Start the slave, then disable read-only mode on both servers, so that they can accept updates.
+#
+# In the following example, two servers are already running as master and slave, using MySQL's binary log position-based replication
+# protocol.
+#
+# If you are starting with new servers, see SECTION 17.1.2.3, "CREATING A USER FOR REPLICATION" for information about adding a specific
+# user for replication connections and SECTION 17.1.2.1, "SETTING THE REPLICATION MASTER CONFIGURATION" for information about setting
+# the server_id variable.
+#
+# The following examples show how to store mysqld startup options in server's option file, see SECTION 4.2.2.2, "USING OPTION FILES"
+# for more information. Alternatively, you can use startup options when running mysqld.
+#
+# Most of the steps that follow require the use of the MySQL root account or another MySQL user account that has the SUPER privilege.
+# mysqladmin shutdown requires either the SUPER privilege or the SHUTDOWN privilege.
+#
+# Step 1: Synchronize the servers.
+#
+# 	This step is only required when working with servers which are already replicating without using GTIDs. For new servers
+# 	proceed to Step 3.
+#
+# 	Make the servers read-only by setting the read_only system variable to ON on each server by issuing the following:
+#
+# 		mysql> SET @@GLOBAL.read_only = ON;
+#
+# Wait for all ongoing transactions to commit or roll back. Then, allow the slave to catch up with the master.
+#
+# It is extremely important that you make sure the slave has processed all updates before continuing.
+#
+# If you use binary logs for anything other than replication, for example to do point in time backup and restore, wait until
+# you do not need the old binary logs containing transactions without GTIDs.
+#
+# Ideally, wait for the server to purge all binary logs, and wait for any existing backup to expire.
+#
+# IMPORTANT:
+#
+# 		It is important to understand that logs containing transactions without GTIDs cannot be used on servers where GTIDs
+# 		are enabled.
+#
+# 		Before proceeding, you must be sure that transactions without GTIDs do not exist anywhere in the topology.
+#
+# STEP 2: STOP BOTH SERVERS. Stop each server using mysqladmin as shown here, where username is the user name for a MySQL user
+# 	having sufficient privileges to shut down the server:
+#
+# 		shell> mysqladmin -uusername -p shutdown
+#
+# Then supply this user's password at the prompt.
+#
+# STEP 3: START BOTH SERVERS WITH GTIDS ENABLED.
+#
+# To enable GTID-based replication, each server must be started with GTID mode enabled by setting the gtid_mode
+# variable to ON, and with the enforce_gtid_consistency variable enabled to ensure that only statements which
+# are safe for GTID-based replication are logged.
+#
+# For example:
+#
+# 		gtid_mode=ON
+# 		enforce-gtid-consistency=true
+#
+# In addition, you should start slaves with the --skip-slave-start option before configuring the slave settings.
+#
+# For more information on GTID related options and variables, see SECTION 17.1.6.5, "GLOBAL TRANSACTION ID OPTIONS AND VARIABLES"
+#
+# It is not mandatory to have binary logging enabled in order to use GTIDs when using the mysql.gtid_executed table.
+#
+# Masters must always have binary logging enabled in order to be able to replicate. However, slave servers can use GTIDS but without
+# binary logging.
+#
+# If oyu need to disable binary logging on a slave server, you can do this by specifying the --skip-log-bin and --skip-log-slave-updates
+# options for the slave.
+#
+# STEP 4: CONFIGURE THE SLAVE TO USE GTID-BASED AUTO-POSITIONING
+#
+# Tell the slave to use the master with GTID based transactions as the replication data source, and to use GTID-based auto-positioning
+# rather than file-based positioning. Issue a CHANGE_MASTER_TO statement on the slave, including the MASTER_AUTO_POSITION option in the
+# statement to tell the slave that the master's transactions are identified by GTIDs.
+#
+# You may also need to supply appropriate values for the master's host name and port number as well as the user name and password for
+# a replication user account which can be used by the slave to connect to the master; if these have already been set prior to Step 1
+# and no further changes need to be made, the corresponding options can safely be omitted from the statement shown here.
+#
+# 		mysql> CHANGE MASTER TO
+# 			  > 		MASTER_HOST = host,
+# 			  > 		MASTER_PORT = port,
+#			  > 		MASTER_USER = user,
+# 			  > 		MASTER_PASSWORD = password,
+# 			  > 		MASTER_AUTO_POSITION = 1;
+#
+# Neither the MASTER_LOG_FILE option nor the MASTER_LOG_POS option may be used with MASTER_AUTO_POSITION set equal to 1.
+#
+# Attempting to do so causes the CHANGE_MASTER_TO statement to fail with an error.
+#
+# STEP 5: TAKE A NEW BACKUP
+#
+# Existing backups that were made before you enabled GTIDs can no longer be used on these servers now that you have enabled
+# GTIDs. Take a new backup at this point, so that you are not left without a usable backup.
+#
+# For instance, you can execute FLUSH_LOGS on the server where you are taking backups. Then either explicitly take a backup
+# or wait for the next iteration of any periodic backup routine you may have set up.
+#
+# STEP 6: START THE SLAVE AND DISABLE READ-ONLY MODE
+#
+# Start the slave like this:
+#
+# 		mysql> START SLAVE;
+#
+# The following step is only necessary if you configured a server to be read-only in Step 1. To allow the server to begin
+# accepting updates again, issue the following statement:
+#
+# 		mysql> SET @@GLOBAL.read_only = OFF;
+#
+# GTID-based replication should now be running, and you can begin (or resume) activity on the master as before.
+#
+# SECTION 17.1.3.5, "USING GTIDS FOR FAILOVER AND SCALEOUT", discusses creation of new slaves when using GTIDS.
+#
+# 17.1.3.5 USING GTIDS FOR FAILOVER AND SCALEOUT
+#
+# there are a number of techniques when using MySQL Replication with Global Transaction Identifiers (GTIDS) for provisioning
+# a new slave which can then be used for scaleout, being promoted to master as necessary for failover.
+#
+# THis section describes the following techniques:
+#
+# 		) SIMPLE REPLICATION
+#
+# 		) COPYING DATA AND TRANSACTIONS TO THE SLAVE
+#
+# 		) INJECTING EMPTY TRANSACTIONS
+#
+# 		) EXCLUDING TRANSACTIONS WITH GTID_PURGED
+#
+# 		) RESTORING GTID MODE SLAVES
+#
+# Global transaction identifiers were added to MySQL Replication for the purpose of simplifying in general management of the replication
+# data flow and of failover activities in particular.
+#
+# https://dev.mysql.com/doc/refman/8.0/en/replication-gtids-failover.html
 # 
