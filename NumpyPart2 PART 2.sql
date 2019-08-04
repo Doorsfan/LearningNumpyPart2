@@ -63586,5 +63586,1341 @@
 # Global transaction identifiers were added to MySQL Replication for the purpose of simplifying in general management of the replication
 # data flow and of failover activities in particular.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/replication-gtids-failover.html
+# Each identifier unique identifies a set of binary log events that together make up a transaction.
+#
+# GTIDs play a key role in applying changes to the database: the server automatically skips any transaction having an identifier
+# which the server recognizes as one that it has processed before.
+#
+# THis behavior is critical for automatic replication positioning and correct failover.
+#
+# The mapping between identifiers and sets of events comprising a given transaction is captured in the binary log. This poses some challenges
+# when provisioning a new server with data from another existing server.
+#
+# To reproduce the identifier set on the new server, it is necessary to copy the identifiers from the old server to the new one,
+# and to preserve the relationship between the identifiers and the actual events. This is necessary for restoring a slave that is
+# immediately available as a candidate to become a new master on failover or switchover.
+#
+# SIMPLE REPLICATION.
+#
+# The easiest way to reproduce all identifiers and transactions on a new server is to make the new server into the slave of a master
+# that has the entire execution history, and enable global transaction identifiers on both servers. See SECTION 17.1.3.4, "SETTING UP REPLICATION USING GTIDS",
+# for more information.
+#
+# Once replication is started, the new server copies the entire binary log from the master and thus obtains all information about all GTIDS.
+#
+# THis method is simple and effective, but requires the slave to read the binary log from the master; it can sometimes take a comparatively long time
+# for the new slave to catch up with the master, so this method is not suitable for fast failover or restoring from backup.
+#
+# THis section explains how to avoid fetching all of the execution history from the master by copying binrary log files to the new server.
+#
+# COPYING DATA AND TRANSACTIONS TO THE SLAVE
+#
+# Executing the entire transaction history can be time-consuming when the source server has processed a large number of transactions previously,
+# and this can represent a major bottleneck when setting up a new replication slave.
+#
+# To eliminate this requirement, a snapshot of the data set, the binary logs and the global transaction information the source server contains
+# can be imported to the new slave.
+#
+# The source server can be either the master or the slave, but you must ensure that the source has processed all required transactions before
+# copying the data.
+#
+# There are several variants of this method, teh difference being in the manner in which data dumps and transactions from binary logs are
+# transfered to the slave, as outlined here:
+#
+# 		DATA SET
+#
+# 			1. Create a dump file using mysqldump on the source server. Set the mysqldump option --master-data (with the default value of 1)
+# 				to include a CHANGE_MASTER_TO statement with binary logging information. Set the --set-gtid-purged option to AUTO (the default)
+# 				or ON, to include information about executed transactions in the dump.
+#
+# 				Then use the mysql client to import the dump file on the target server.
+#
+# 			2. Alternatively, create a data snapshot of the source server using raw data files, then copy these files to the target server,
+# 				following the instructions in SECTION 17.1.2.5, "CHOOSING A METHOD FOR DATA SNAPSHOTS"
+#
+# 				If you use InnoDB tables, you can use the mysqlbackup command from the MySQL Enterprise Backup component to produce a consistent
+# 				snapshot.
+#
+# 				THis command records the log name and offset corresponding to the snapshot to be used on teh slave.
+#
+# 				MySQL Enterprise Backup is a com prod that is included as part of a MySQL Enterprise Sub.
+#
+# 				See SECTION 30.2, "MYSQL ENTERPRISE BACKUP OVERVIEW" for detailed information.
+#
+# 			3. Alternatively, stop both the source and target servers, copy the contents of the source's data directory to the new slave's
+# 				data directory, then restart the slave.
+#
+# 				If you use this method, the slave must be configured for GTID-Based replication, in other words with gtid_mode=ON.
+#
+# 				For instructions and important information for this method, see SECTION 17.1.2.8, "ADDING SLAVES TO A REPLICATION ENVIRONMENT"
+#
+# TRANSACTION HISTORY
+#
+# 	If the source server has a complete transaction history in its binary logs (that is, the GTID set @@GLOBAL.gtid_purged is empty), you can
+# 	use these methods.
+#
+# 		1. Import the binary logs from the source server to the new slave using mysqlbinlog, with the --read-from-remote-server and --read-from-remote-master
+# 			options.
+#
+# 		2. Alternatively, copy the source server's binary log files to the slave. You can make copies from the slave using mysqlbinlog with the
+# 			--read-from-remote-server and --raw options.
+#
+# 			These can be read into the slave by using mysqlbinlog > file (without the --raw option) to export the binary log files to SQL files,
+# 			Then passing these files to the mysql client for processing.
+#
+# 			Ensure that all of the binary log files are processed using a single mysql process, rather than multiple connections.
+#
+# 			For example:
+#
+# 				shell> mysqlbinlog copied-binlog.0000001 copied-binlog.0000002 | mysql -u root -p
+#
+# 			For more information, see SECTION 4.6.8.3, "USING MYSQLBINLOG TO BACK UP BINARY lOG FILES"
+#
+# This method has the advantage that a new server is available almost immediately; only those transactions that were committed while the snapshot
+# or dump file was being replayed still need to be obtained from the existing master.
+#
+# This means that the slave's availability is not instantenous, but only a relatively short amount of time should be reuqired for the slave
+# to catch up with these few remaining transactions.
+#
+# Copying over binary logs to the target server in advance is usually faster than reading the entire transaction execution history from the master
+# in real time.
+#
+# However, it may not always be feasible to move these files to the target when required, due to size or other considerations.
+#
+# The two remaining methods for provisioning a new slave discussed in this section use other means to transfer information about transactions
+# to the new slave.
+#
+# INJECTING EMPTY TRANSACTIONS
+#
+# THe master's global gtid_executed variable contains the set of all transactions executed on the master. Rather than copy the binary
+# logs when taking a snapshot to provision a new server, you can instead note the content of gtid_executed on the server from which
+# the snapshot was taken.
+#
+# Before adding the new server to the replication chain, simply commit an empty transaction on the new server for each transaction
+# identifier contained in the master's gtid_executed, like this:
+#
+# 		SET GTID_NEXT='aaa-bbb-ccc-ddd:N';
+#
+# 		BEGIN;
+# 		COMMIT;
+#
+# 		SET GTID_NEXT='AUTOMATIC';
+#
+# Once all transaction identifiers have been reinstated in this way using empty transactions, you must flush and purge the
+# slave's binary logs, as shown here, where N is the nonzero suffix of the current binary log file name:
+#
+# 		FLUSH lOGS;
+# 		PURGE BINARY lOGS TO 'master-bin.00000N';
+#
+# You should do this to prevent this server from flooding the replication stream with false transactions in the event that it is later
+# promoted to master. (The FLUSH_LOGS statement forces the creation of a new binary log file; PURGE_BINARY_LOGS purges the empty
+# transactions, but retains their identifiers)
+#
+# THis method creates a server that is essentialy a snapshot, but in time is able to become a master as its binary log history converges
+# with that of the replication stream (that is, as it catches up with the master or masters). This outcome is similar in effect ot that
+# obtained using the remaining provisioning method, which we discuss in the next few paragraphs.
+#
+# EXCLUDING TRANSACTIONS WITH GTID_PURGED
+#
+# The master's global gtid_purged variable contains the set of all transactions that havve been purged from the master's binary
+# log.
+#
+# AS with the method discussed previously (see INJECTING EMPTY TRANSACTIONS), you can record the value of gtid_executed on the server
+# from which the snapshot was taken (in place of copying the binary logs to the new server).
+#
+# Unlike the previous method, there is no need to commit empty transactions (or to issue PURGE_BINARY_LOGS); instead, you can set
+# gtid_purged on the slave directly, based on the value of gtid_executed on the server from which the backup or snapshot was taken.
+#
+# As with the method using empty transactions, this method creates a server that is functionally a snapshot, but in time is able
+# to become a master as its binary log history converegs with that of the replication mater or group.
+#
+# RESTORING GTID MODE SLAVES
+#
+# When restoring a slave in a GTID based replication setup that has encountered an error, injecting an empty transaction may not
+# solve the problem because an event does not have a GTID.
+#
+# Use mysqlbinlog to find the new transaction, which is probably the first transaction in the next log file after the event.
+#
+# Copying everything up to the COMMIT for that transaction, being sure to include the SET @@SESSION.gtid_next.
+#
+# Even if you are not using row-based replication, you can still run binary log row events in the command line client.
+#
+# Stop the slave and run the transaction you copied. The mysqlbinlog output sets the delimiter to /*!*/; so set it back:
+#
+# 			mysql> DELIMITER ;
+#
+# Restart replication from the correct pos, automatically:
+#
+# 			mysql> SET GTID_NEXT=automatic;
+# 			mysql> RESET SLAVE;
+# 			mysql> START SLAVE;
+#
+# 17.1.3.6 RESTRICTIONS ON REPLICATION WITH GTIDS
+#
+# Because GTID-based replication is dependent on transactions, some features otherwise available in MySQL are not supported
+# when using it.
+#
+# This section provides information about restrictions on and limitations of replication with GTIDS.
+#
+# UPDATES INOVLVING NONTRANSACTIONAL STORAGE ENGINES
+#
+# When using GTIDS, updates to tables using nontransactional storage engines such as MyISAM cannot be made in the same statement
+# or transaction as updates to tables using transactional storage engines such as InnoDB.
+#
+# This restriction is due to the fact that updates to tables that use a nontransactional storage engine mixed with updates to tables
+# that use a transactional storage engine within the same transaction can result in multiple GTIDS being assigned to the same transaction.
+#
+# Such problems can also occur when the master and the slave use different storage engines for their respective versions of the same table,
+# where one storage engine is transactional and the other is not.
+#
+# ALso be aware that triggers that are defined to operate on nontransactional tables can be the cause of these problems.
+#
+# In any of the cases just mentioned, the one-to-one correspondence between transactions and GTIDS is broken, with the result that GTID-based
+# replication cannot function correctly.
+#
+# CREATE TABLE /ETC/ SELECT STATEMENTS.
+#
+# CREATE_TABLE_/ETC/_SELECT statements are not allowed when using GTID-based replication. When binlog_format is set to 
+# STATEMENT, a CREATE TABLE /ETC/ SELECT statement is recorded in the binary log as one transaction with one GTID, but if ROW Format
+# is used, the statement is recorded as two transactions with two GTIDS.
+#
+# If a master used STATEMENT format and a slave used ROW format, the slave would be unable to handle the transaction correctly,
+# therefore the CREATE_TABLE_/ETC/_SELECT statement is disallowed with GTIDS to prevent this scenario.
+#
+# TEMPORARY TABLES
+#
+# When binlog_format is set to STATEMENT, CREATE_TEMPORARY_TABLE and DROP_TEMPORARY_TABLE statements cannot be used inside transactions,
+# procedures, functions and triggers when GTIDS are in use on the server (that is, when the enforce_gtid_consistency system variable is set to ON)
+#
+# They can be used outside these contexts when GTIDs are in use, provided that autocommit=1 is set. From MySQL 8.0.13, when binlog_format is set
+# to ROW or MIXED, CREATE_TEMPORARY_TABLE and DROP_TEMPORARY_TABLE statements are allowed inside a transaction, procedure, function or trigger
+# when GTIDs are in use.
+#
+# The statements are not written to the binary log and are therefore not replicated to slaves. The use of row-based replication means that
+# the slaves remain in sync without the need to replicate temporary tables.
+#
+# If the removal of these statements from a transaction results in an empty transaction, the transaction is not written to the binary log.
+#
+# PREVENTING EXECUTION OF UNSUPPORTED STATEMENTS
+#
+# To prevent execution of statements that would cause GTID based replication to fail, all servers must be started with the --enforce-gtid-consistency
+# option when enabling GTIDs. This causes statements of any of the types discussed previously in this section to fail with an error.
+#
+# Note that --enforce-gtid-consistency only takes effect if binary logging takes place for a statement. If binary logging is disabled on the server,
+# or if statements are not written to the binary log because they are removed by a filter, GTID consistency is not checked or enforced for the
+# statements that are not logged.
+#
+# For information about other required startup options when enabling GTIDs, see SECTION 17.1.3.4, "SETTING UP REPLICATION USING GTIDs"
+#
+# SKIPPING TRANSACTIONS
+#
+# sql_slave_skip_counter is not supported when using GTIDs. If you need to skip transactions, use the value of the master's gtid_executed
+# variable instead; see INJECTING EMPTY TRANSACTIONS, for more information.
+#
+# IGNORING SERVERS
+#
+# The IGNORE_SERVER_IDS option of the CHANGE_MASTER_TO statement is depricated when using GTIDs, because transactions that have already
+# been applied are automatically ignored.
+#
+# Before starting GTID-based replication, check for and clear all ignored server ID lists that have previously been set on the servers
+# involved.
+#
+# The SHOW_SLAVE_STATUS statement, which can be issued for individual channels, displays the last of ignored server IDs if there is one.
+#
+# If there is no list, the Replicate_Ignore_Server_Ids field is blank.
+#
+# GTID MODE AND MYSQLDUMP
+#
+# It is possible to import a dump made using mysqldump into a MySQL server running with GTID mode enabled, provided that there are no
+# GTIDs in teh target server's binary log.
+#
+# GTID MODE AND MYSQL_UPGRADE
+#
+# Prior to MySQL 8.0.16, when the server is running with global transaction identifiers (GTIDs) enabled (gtid_mode=ON), do not enable
+# binary logging by mysql_upgrade (the --write-binlog option)
+#
+# As of MySQL 8.0.16, the server performs the entire MySQL upgrade procedure, but disables binary logging during the upgrade,
+# so there is no issue.
+#
+# 17.1.3.7 STORED FUNCTION EXAMPLES TO MANIPULATE GTIDS
+#
+# MySQL includes some built-in (native) functions for use with GTID-based replication. These functions are as follows:
+#
+# 		GTID_SUBSET(set1, set2)
+#
+# 			Given two sets of global transaction identifiers set1 and set2, returns true if all GTIDs in set1 are also in set2.
+#
+# 			Returns false otehrwise.
+#
+# 		GTID_SUBTRACT(set1, set2)
+#
+# 			Given two sets of global transaction identifiers set1 and set2, returns only those GTIDs from set1 that are not in set2.
+#
+# 		WAIT_FOR_EXECUTED_GTID_SET(gtid_set[, timeout])
+#
+# 			Wait until the server has applied all of the transactions whose global transaction identifiers are contained in gtid_set.
+#
+# 			The optional timeout stops the function from waiting after the specified number of seconds have elapsed.
+#
+# For details of these functions, see SECTION 12.18, "FUNCTIONS USED WITH GLOBAL TRANSACTION IDENTIFIERS (GTIDs)"
+#
+# You can define your own stored functions to work with GTIDs. For information on defining stored functions, see CHAPTER 24, STORED OBJECTS.
+#
+# The following examples show some useful stored functions that can be created based on the built-in GTID_SUBSET() and GTID_SUBTRACT() functions.
+#
+# Note that in these stored functions, the delimiter command has been used to change the MySQL statement delimiter to a vertical bar, as follows:
+#
+# 		mysql> delimiter |
+#
+# All of tehse functions take string repersentations of GTID sets as arguments, so GTID sets must always be quoted when used with them.
+#
+# This function returns nonzero (true) if two GTID sets are the same set, even if they are not formatted in the same way.
+#
+# 		CREATE FUNCTION GTID_IS_EQUAL(gtid_set_1 LONGTEXT, gtid_set_2 LONGTEXT)
+# 		RETURNS INT
+# 			RETURN GTID_SUBSET(gtid_set_1, gtid_set_2) AND GTID_SUBSET(gtid_set_2, gtid_set_1)|
+#
+# This function returns nonzero (true) if two GTID sets are disjoint.
+#
+# 		CREATE FUNCTION GTID_IS_DISJOINT(gtid_set_1 LONGTEXT, gtid_set_2 LONGTEXT)
+# 		RETURNS INT
+# 			RETURN GTID_SUBSET(gtid_set_1, GTID_SUBTRACT(gtid_set_1, gtid_set_2))|
+#
+# This function returns nonzero (true) if two GTID sets are disjoint, and sum is the union of the two sets.
+#
+# 		CREATE FUNCTION GTID_IS_DISJOINT_UNION(gtid_set_1 LONGTEXT, gtid_set_2 LONGTEXT, sum LONGTEXT)
+# 		RETURNS INT
+# 			RETURN GTID_IS_EQUAL(GTID_SUBTRACT(sum, gtid_set_1), gtid_set_2) AND
+# 					 GTID_IS_EQUAL(GTID_SUBTRACT(sum, gtid_set_2), gtid_set_1)|
+#
+# This function returns a normalized form of the GTID set, in all uppercase, with no whitespace and no duplicates.
+#
+# The UUIDsa re arranged in alphabetic order and intervals are arranged in numeric order.
+#
+# 		CREATE FUNCTION GTID_NORMALIZE(g LONGTEXT)
+# 		RETURNS LONGTEXT
+# 		RETURN GTID_SUBTRACT(g, '')|
+#
+# This function returns the union of two GTID sets.
+#
+# 		CREATE FUNCTION GTID_UNION(gtid_set_1 LONGTEXT, gtid_set_2 LONGTEXT)
+# 		RETURNS LONGTEXT
+# 			RETURN GTID_NORMALIZE(CONCAT(gtid_set_1, ',', gtid_set_2))|
+#
+# THis function returns the intersection of two GTID sets.
+#
+# 		CREATE FUNCTION GTID_INTERSECTION(gtid_set_1 LONGTEXT, gtid_set_2 LONGTEXT)
+# 		RETURNS LONGTEXT
+# 			RETURN GTID_SUBTRACT(gtid_set_1, GTID_SUBTRACT(gtid_set_1, gtid_set_2))|
+#
+# This function returns the symmetric difference between two GTID sets, that is, the GTIDs that exist in gtid_set_1 but not in gtid_set_2,
+# and also the GTIDs that exist in gtid_set_2 but not in gtid_set_1
+#
+# 		CREATE FUNCTION GTID_SYMMETRIC_DIFFERENCE(gtid_set_1 LONGTEXT, gtid_set_2 LONGTEXT)
+# 		RETURNS LONGTEXT
+# 			RETURN GTID_SUBTRACT(CONCAT(gtid_set_1, ',', gtid_set_2), GTID_INTERSECTION(gtid_set_1, gtid_set_2))|
+#
+# This function removes from a GTID set all the GTIDs from a specified origin, and returns the remaining GTIDs, if any.
+#
+# The UUID is the identifier used by the server where the transaction originated, which is normally the server_uuid value.
+#
+# 		CREATE FUNCTION GTID_SUBTRACT_UUID(gtid_set LONGTEXT, uuid TEXT)
+# 		RETURNS LONGTEXT
+# 			RETURN GTID_SUBTRACT(gtid_set, CONCAT(UUID, ':1-', (1 << 83) - 2))|
+#
+# THis function reverses the previously listed function to return only those GTIDs from the GTID set that originate form the server
+# with the specified identifier (UUID)
+#
+# 		CREATE FUNCTION GTID_INTERSECTION_WITH_UUID(gtid_set LONGTEXT, uuid TEXT)
+# 		RETURNS LONGTEXT
+# 			RETURN GTID_SUBTRACT(gtid_set, GTID_SUBTRACT_UUID(gtid_set, uuid))|
+#
+# EXAMPLE 17.1 VERIFYING THAT A REPLICATION SLAVE IS UP TO DATE
+#
+# The built-in functions GTID_SUBSET and GTID_SUBTRACT can be used to check that a replication slave has applied at least every transaction
+# that a master has applied.
+#
+# To perform this check with  GTID_SUBSET, execute the following statement on the slave:
+#
+# 		SELECT GTID_SUBSET(master_gtid_executed, slave_gtid_executed)
+#
+# If this returns 0(false), some GTIDs in master_gtid_executed are not present in slave_gtid_executed, so the master has applied
+# some transactions that the slave has not applied, and the slave is therefore not up to date.
+#
+# To perform the check with GTID_SUBTRACT, execute the following statement on the slave:
+#
+# 		SELECT GTID_SUBTRACT(master_gtid_executed, slave_gtid_executed)
+#
+# This statement returns any GTIDs that are in master_gtid_executed but not in slave_gtid_executed. If any GTIDs are returned,
+# the master has applied some tranasctions that the slavev has not applied, and the slave is therefore not up to date.
+#
+# EXAMPLE 17.2 BACKUP AND RESTORE SCENARIO
+#
+# The stored functions GTID_IS_EQUAL, GTID_IS_DISJOINT, and GTID_IS_DISJOINT_UNION could be used to verify backup and restore
+# operations involving multiple databases and servers.
+#
+# In this example scenario, server1 contains database db1, and server 2 contains db2.
+#
+# The goal is to copy database db2 to server1 and the result on server1 should be the union of the two databases.
+#
+# The preocedure used is to back up server2 using mysqlpump or mysqldump, then restore this backup on server1.
+#
+# Provided the backup program's option --set-gtid-purged was set to ON or the default of AUTO, the program's output contains
+# a SET @@GLOBAL.gtid_purged statement that will add the gtid_executed set from server2 to the gtid_purged set on server1.
+#
+# The gtid_purged set contains the GTIDs of all the transactions that have been committed on a server but do not exist
+# in any binary log file on the server.
+#
+# When database db2 is copied to server1, the GTIDs of the transactions committed on server2, which are not in the
+# binary log files on server1, must be added to server1's gtid_purged set to make the set complete.
+#
+# The stored functions can be used to assist with the following steps in this scenario:
+#
+# 		) use GTID_IS_EQUAL to verify that the backup operation computed the correct GTID set for the SET @@GLOBAL.gtid_purged statement.
+#
+# 			On server2, extract that statement from the mysqlpump or mysqldump output, and store the GTID set into a local variable,
+# 			such as $gtid_purged_set 
+#
+# 			Then execute the following statement:
+#
+# 				server2> SELECT GTID_IS_EQUAL($gtid_purged_set, @@GLOBAL.gtid_executed);
+#
+# 			IF the result is 1, the two GTID sets are equal, and the set has been computed correctly.
+#
+# 		) Use GTID_IS_DISJOINT to verify that the GTID set in the mysqlpump or mysqldump output does not overlap with the gtid_executed
+# 			set on server1.
+#
+# 			If there is any overlap, with identical GTIDs present on both servers for some reason, you will see errors when copying
+# 			database db2 to server1. To check, on server1, extract and store the gtid_purged set from the output into a local variable
+# 			as above, then execute the following statement:
+#
+# 			server1> SELECT GTID_IS_DISJOINT($gtid_purged_set, @@GLOBAL.gtid_executed);
+#
+# 			If the result is 1, there is no overlap between the two GTID sets, so no duplicate GTIDs are present.
+#
+# 		) Use GTID_IS_DISJOINT_UNION to verify that the restore operation resulted in the correct GTID state on server1.
+#
+# 			Before restoring the backup, on server1, obtain the existing gtid_executed set by executing the following statement:
+#
+# 				server1> SELECT @@GLOBAL.gtid_executed;
+#
+# 			Store the result in a local variable $original_gtid_executed. Also store the gtid_purged set in a local variable 
+# 			as described above.
+#
+# 			When the backup from server2 has been restored onto server1, execute the following statement to verify the
+# 			GTID state:
+#
+# 				server1> SELECT GTID_IS_DISJOINT_UNION($original_gtid_executed,
+# 																	$gtid_purged_set,
+# 																	@@GLOBAL.gtid_executed);
+#
+# 			If the result is 1, the stored function has verified that the original gtid_executed set from server1 ($original_gtid_executed)
+# 			and the gtid_purged set that was added from server2($gtid_purged_set) have no overlap, and also that the updated gtid_executed
+# 			set on server1 now consists of the previous gtid_executed set from server1 plus the gtid_purged set from server2, which is
+# 			the desired result.
+#
+# 			Ensure that this check is carried out before any further transactions take place on server1, otherwise the new transactions
+# 			in the gtid_executed set will cause it to fail.
+#
+# EXAMPLE 17.3 SELECTING THE MOST-UP-TO-DATE SLAVE FOR MANUAL FAILOVER
+#
+# The stored function GTID_UNION could be used to identify the most up-to-date replication slave from a set of slaves, in order to perform
+# a manual failover operation after a replication master has stopped unexpectedly.
+#
+# If some of the slaves are experiencing replication lag, this stored function can be used to compute the most up-to-date slave
+# without waiting for all the slaves to apply their existing relay logs, and therefore to minimize the failover time.
+#
+# The function can return the union of the gtid_executed set on each slave with the set of transactions received by the slave, which is
+# recorded in the Performance Schema table replication_connection_status. You can compare these results to find which slave's record
+# of transactions is the most up-to-date, even if not all of the transactions have been committed yet.
+#
+# On each replication slave, compute the complete record of transactions by issuing the following statement:
+#
+# 		SELECT GTID_UNION(RECEIVED_TRANSACTION_SET, @@GLOBAL.gtid_executed)
+# 			FROM performance_schema.replication_connection_status
+# 			WHERE channel_name = 'name';
+#
+# You can then compare the results from each slave to see which one has the most up-to-date record of transactions, and use this slave
+# as the new replication master.
+#
+# EXAMPLE 17.4 CHECKING FOR EXTRANEOUS TRANSACTIONS ON A REPLICATION SLAVE
+#
+# The stored function GTID_SUBTRACT_UUID could be used to check whether a replication slave has received transactions that did not originate from its
+# designated master or masters.
+#
+# If it has, there might be an issue with your replication setup, or with a proxy, router, or load balancer. This function works by removing from a
+# GTID set all the GTIDs from a specified originating server, and returning the remaining GTIDs, if any.
+#
+# For a replication slave with a single master, issue the following statement, giving the identifier of the originating replication master,
+# which is normally the server_uuid value:
+#
+# 		SELECT GTID_SUBTRACT_UUID(@@GLOBAL.gtid_executed, server_uuid_of_master);
+#
+# If the result is not empty, the transactions returned are extra transactions that did not originate from the designated master.
+#
+# For a slave in a multi-master replication topology, repeat the function, for example:
+#
+# 		SELECT GTID_SUBTRACT_UUID(GTID_SUBTRACT_UUID(@@GLOBAL.gtid_executed,
+# 																   server_uuid_of_master_1),
+# 																	server_uuid_of_master_2);
+#
+# If the result is not empty, the transactions returned are extra transactions that did not originate from any of the designated masters.
+#
+# EXAMPLE 17.5 VERIFYING THAT A SERVER IN A REPLICATION TOPOLOGY IS READ-ONLY
+#
+# The stored function GTID_INTERSECTION_WITH_UUID could be used to verify that a server has not originated any GTIDs and is in a read-only
+# state.
+#
+# The function returns only those GTIDs from the GTID set that originate from the server with the specified identifier. If any of the 
+# transactions in the server's gtid_executed set have the server's own identifier, the server itself originated those transactions.
+#
+# You can issue the following statement on the server to check:
+#
+# 		SELECT GTID_INTERSECTION_WITH_UUID(@@GLOBAL.gtid_executed, my_server_uuid);
+#
+# EXAMPLE 17.6 VALIDATING AN ADDITIONAL SLAVE IN A MULTI-MASTER REPLICATION SETUP
+#
+# The stored function GTID_INTERSECTION_WITH_UUID could be used to find out if a slave attached to a multi-master replication setup
+# has applied all the transactions originating from one particular master.
+#
+# In this scenario, master1 and master2 are both masters and slaves and replicate to each other.
+#
+# master2 also has its own replication slave. The replication slave will also receive and apply master1's transactions if master2
+# is configured with log_slave_updates=ON, but it will not do so if master2 uses log_slave_updates=OFF.
+#
+# Whatever the case, we currently only want to find out if the replication slave is up to date with master2. In this situaton,
+# the stored function GTID_INTERSECTION_WITH_UUID can be used to identify the transactions that master2 originated, discarding
+# the transactions that master2 has replicated from master1.
+#
+# The built-in function GTID_SUBSET can then be used to compare the result of the gtid_executed set on the slave. If the slave
+# is up to date with master2, the gtid_executed set on the slave contains all the transactions in the intersection set
+# (the transactions that originated from master2)
+#
+# To carry out this check, store master2's gtid_executed set, master2's server UUID, and the slave's gtid_executed set,
+# into client-side variables as follows:
+#
+# 		$master2_gtid_executed :=
+# 			master2> SELECT @@GLOBAL.gtid_executed;
+# 		$master2_server_uuid :=
+# 			master2> SELECT @@GLOBAL.server_uuid;
+# 		$slave_gtid_executed :=
+# 			slave> SELECT @@GLOBAL.gtid_executed;
+#
+# Then use GTID_INTERSECTION_WITH_UUID and GTID_SUBSET with these variables as input, as follows:
+#
+# 		SELECT GTID_SUBSET(GTID_INTERSECTION_WITH_UUID($master2_gtid_executed,
+# 																	  $master2_server_uuid),
+# 																	  $slave_gtid_executed);
+#
+# The server identifier from master2($master2_server_uuid) is used with GTID_INTERSECTION_WITH_UUID to identify and return only
+# those GTIDs from master2's gtid_executed set that originated on master2, omitting those that originated on master1.
+#
+# The resulting GTID set is then compared with the set of all executed GTIDs on the slave, using GTID_SUBSET. If this statement
+# returns nonzero (true), all the identified GTIDs from master2 (the first set input) are also in the slave's gtid_executed set
+# (the second set input), meaning that the slave has replicated all the transactions that originated from master2.
+#
+# 17.1.4 MYSQL MULTI-SOURCE REPLICATION
+#
+# 17.1.4.1 MYSQL MULTI-SOURCE REPLICATION OVERVIEW
+# 17.1.4.2 MULTI-SOURCE REPLICATION TUTORIALS
+# 17.1.4.3 MULTI-SOURCE REPLICATION MONITORING
+# 17.1.4.4 MULTI-SOURCE REPLICATION ERROR MESSAGES
+#
+# This section describes MySQL Multi-Source Replication, which enables you to replicate from multiple immediate masters in parallel.
+#
+# THis section describes multi-source replication, and how to configure, monitor and troubleshoot it.
+#
+# 17.1.4.1 MYSQL MULTI-SOURCE REPLICATION OVERVIEW
+#
+# MySQL Multi-Source Replication enables a replication slave to receive transactions from multiple sources simultaneously.
+#
+# Multi-source replication can be used to back up multiple servers to a single server, to merge table shards, and consolidate
+# data from multiple servers to a single server.
+#
+# Multi-source replication does not implement any conflict detection or resolution when applying the transactions, and those tasks
+# are left to the application if required.
+#
+# In a multi-source replication topology, a slave creates a replication channel for each master that it should receive transactions
+# from.
+#
+# See SECTION 17.2.3, "REPLICATION CHANNELS". The following sections describe how to set up multi-source replication.
+#
+# 17.1.4.2 MULTI-SOURCE REPLICATION TUTORIALS
+#
+# This section provides tutorials on how to configure masters and slaves for multi-source replication, and how to start, stop
+# and reset multi-source slaves.
+#
+# 17.1.4.2.1 CONFIGURING MULTI-SOURCE REPLICATION
+#
+# This section explains how to configure a multi-source replication topology, and provides details about configuring masters
+# and slaves.
+#
+# Such a topology requires at least two masters and one slave configured.
+#
+# Masters in a multi-source replication topology can be configured to use either global transaction identifier (GTID) based
+# replication, or binary log position-based replication.
+#
+# See SECTION 17.1.3.4, "SETTING UP REPLICATION USING GTIDs" for how to configure a master using GTID based replication.
+#
+# Se SECTION 17.1.2.1, "SETTING THE REPLICATION MASTER CONFIGURATION" for how to configure a master using file position
+# based replication.
+#
+# slaves in a multi-source replication topology require TABLE repositories for the master info log and relay log info log,
+# which are the default in MySQL 8.0
+#
+# Multi-source replication is not compatible with FILE based repositories, and the FILE setting for the --master-info-repository
+# and --relay-log-info-repository options is now deprecated.
+#
+# To modify an existing replication slave that is using a FILE repository for the slave status logs to use TABLE repositories,
+# convert the existing replication repositories dynamically by running the following commands:
+#
+# 		STOP SLAVE;
+# 		SET GLOBAL master_info_repository = 'TABLE';
+# 		SET GLOBAL relay_log_info_repository = 'TABLE';
+#
+# 17.1.4.2.2 ADDING A GTID BASED MASTER TO A MULTI-SOURCE REPLICATION SLAVE
+#
+# THis section assumes you have enabled GTID based transactions on the master using gtid_mode=ON, enabled a replication user,
+# and ensured that the slave is using TABLE based replication repositories.
+#
+# Use the CHANGE_MASTER_TO statement to add a new master to a channel by using a FOR CHANNEL channel clause.
+#
+# For more information on replication channels, see SECTION 17.2.3, "REPLICATION CHANNELS"
+#
+# For example, to add a new master with the host name master1 using port 3451 to a channel called master-1:
+#
+# 		CHANGE MASTER TO MASTER_HOST='master1', MASTER_USER='rpl', MASTER_PORT=3451, MASTER_PASSWORD='', \
+# 		MASTER_AUTO_POSITION = 1 FOR CHANNEL 'master-1';
+#
+# Multi-source replication is compatible with auto-positioning. See SECTION 13.4.2.1, "CHANGE MASTER TO SYNTAX"
+# for more information.
+#
+# Repeat this process for each extra master that you want to add to a channel, changing the host name, port and channels
+# as appropriate.
+#
+# 17.1.4.2.3 ADDING A BINARY LOG BASED MASTER TO A MULTI-SOURCE REPLICATION SLAVE
+#
+# This section assumes that binary logging is enabled on the master (which is the default), the slave is using TABLE based
+# replication repositories (which is the default in MySQL 8.0), and that you have enabled a replication user and noted
+# the current binary log position.
+#
+# You need to know the current MASTER_LOG_FILE and MASTER_LOG_POSITION. Use the CHANGE_MASTER_TO statement to add a new
+# master to a channel by specifying a FOR CHANNEL channel clause. For example, to add a new master with the host name
+# master1 using port 3451 to a channel called master-1:
+#
+# 		CHANGE MASTER TO MASTER_HOST='master1', MASTER_USER='rpl', MASTER_PORT=3451, MASTER_PASSWORD='' \
+# 		MASTER_LOG_FILE='master1-bin.000006', MASTER_LOG_POS=628 FOR CHANNEL 'master-1';
+#
+# Repeat this process for each extra master that you want to add to a channel, changing the host name, port and channel
+# as appropriate.
+#
+# 17.1.4.2.4 STARTING MULTI-SOURCE REPLICATION SLAVES
+#
+# ONce you have added all of the channels you want to use as replication masters, use a START SLAVE thread_types statement
+# to start replication. When you have enabled multiple channels on a slave, you can choose to either start all channels,
+# or select a specific channel to start.
+#
+# 		) To start all currently configured replication channels.
+#
+# 			START SLAVE thread_types;
+#
+# 		) To start only a named channel, use a FOR CHANNEL channel clause:
+#
+# 			START SLAVE thread_types FOR CHANNEL channel;
+#
+# Use the thread_types option to choose specific threads you want the above statements to start on the slave. 
+#
+# See SECTION 13.4.2.6, "START SLAVE SYNTAX" for more information.
+#
+# 17.1.4.2.5 STOPPING MULTI-SOURCE REPLICATION SLAVES
+#
+# The STOP SLAVE statement can be used to stop a multi-source replication slave. By default, if you use the STOP SLAVE
+# statement on a multi-source replication slave all channels are stopped.
+#
+# Optionally, use the FOR CHANNEL channel clause to stop only a specific channel.
+#
+# 		) To stop all currently configured replication channels:
+#
+# 			STOP SLAVE thread_types;
+#
+# 		) To stop only a named channel, use a FOR CHANNEL channel clause:
+#
+# 			STOP SLAVE thread_types FOR CHANNEL channel;
+#
+# Use the thread_types option to choose specific threads you want the above statements to stop on the slave. See SECTION 13.4.2.7,
+# "STOP SLAVE SYNTAX" for more information.
+#
+# 17.1.4.2.6 RESETTING MULTI-SOURCE REPLICATION SLAVES
+#
+# The RESET SLAVE statement can be used to reset a multi-source replication slave. By default, if you use the RESET SLAVE statement
+# on a multi-source replication slave all channels are reset.
+#
+# Optionally, use the FOR CHANNEL channel clause to reset only a specific channel.
+#
+# 		) To reset all currently configured replication channels:
+#
+# 			RESET SLAVE;
+#
+# 		) TO reset only a named channel, use a FOR CHANNEL channel clause:
+#
+# 			RESET SLAVE FOR CHANNEL channel;
+#
+# See SECTION 13.4.2.4, "RESET SLAVE SYNTAX" for more information.
+#
+# 17.1.4.3 MULTI-SOURCE REPLICATION MONITORING
+#
+# To monitor the status of replication channels the following options exist:
+#
+# 		) Using the replication Performance Schema tables. The first column of these tables is Channel_Name.
+#
+# 			This enables you to write complex queries based on Channel_Name as a key.
+#
+# 			See SECTION 26.12.11, "PERFORMANCE SCHEMA REPLICATION TABLES"
+#
+# 		) Using SHOW SLAVE STATUS FOR CHANNEL channel. By default, if the FOR CHANNEL channel clause is not used,
+# 			this statement shows the slave status for all channels with one row per channel.
+#
+# 			The identifier Channel_name is added as a column in the result set.
+#
+# 			If a FOR CHANNEL channel clause is provided, the results show the status of only the named replication channel.
+#
+# 			NOTE:
+#
+# 				The SHOW_VARIABLES statement does not work with multiple replication channels. The information that was available
+# 				through these variables has been migrated to the replication performance tables.
+#
+# 				Using a SHOW_VARIABLES statement in a topology with multiple channels show the status of only the default channel.
+#
+# 17.1.4.3.1 MONITORING CHANNELS USING PERFORMANCE SCHEMA TABLES
+#
+# This section explains how to use the replication Performance Schema tables to monitor channels. You can choose to monitor
+# all channels, or a subset of the existing channels.
+#
+# To monitor the connection status of all channels:
+#
+# 		mysql> SELECT * FROM replication_connection_status\G;
+# 		*********************** 1. row *************************
+# 		CHANNEL_NAME: master1
+# 		GROUP_NAME:
+# 		SOURCE_UUID: 046e41f8-a223-11e4-a975-0811960cc264
+# 		THREAD_ID: 24
+# 		SERVICE_STATE: ON
+# 		COUNT_RECEIVED_HEARTBEATS: 0
+# 		LAST_HEARTBEAT_TIMESTAMP: 0000-00-00 00:00:00
+# 		RECEIVED_TRANSACTION_SET: 046e41f8-a223-11e4-a975-0811960cc264:4-37
+# 		LAST_ERROR_NUMBER: 0
+# 		LAST_ERROR_MESSAGE:
+# 		LAST_ERROR_TIMESTAMP: 0000-00-00 00:00:00
+# 		*********************** 2. row **************************
+# 		CHANNEL_NAME: master2
+# 		GROUP_NAME:
+# 		SOURCE_UUID: 7475e474-a223-11e4-a978-0811960cc264
+# 		THREAD_ID: 26
+# 		SERVICE_STATE: ON
+# 		COUNT_RECEIVED_HEARTBEATS: 0
+# 		LAST_HEARTBEAT_TIMESTAMP: 0000-00-00 00:00:00
+# 		RECEIVED_TRANSACTION_SET: 7475e474-a223-11e4-a978-0811960cc264:4-6
+# 		LAST_ERROR_NUMBER: 0
+# 		LAST_ERROR_MESSAGE:
+# 		LAST_ERROR_TIMESTAMP: 0000-00-00 00:00:00
+# 		2 rows in set (0.00 sec)
+#
+# In the above output there are two channels enabled, and as shown by the CHANNEL_NAME field they are called master1 and master2.
+#
+# The addition of the CHANNEL_NAME field enables you to query the Performance Schema tables for a specific channel.
+#
+# To monitor the connection status of a named channel, use a WHERE CHANNEL_NAME=channel clause:
+#
+# 		mysql> SELECT * FROM replication_connection_status WHERE CHANNEL_NAME='master1'\G
+# 		******************************* 1. row ***************************
+# 		CHANNEL_NAME: master1
+# 		GROUP_NAME:
+# 		SOURCE_UUID: 046e41f8-a223-11e4-a975-0811960cc264
+# 		THREAD_ID: 24
+# 		SERVICE_STATE: ON
+# 		COUNT_RECEIVED_HEARTBEATS: 0
+# 		LAST_HEARTBEAT_TIMESTAMP: 0000-00-00 00:00:00
+# 		RECEIVED_TRANSACTION_SET: 046e41f8-a223-11e4-a975-0811960cc264:4-37
+# 		LAST_ERROR_NUMBER: 0
+# 		LAST_ERROR_MESSAGE:
+# 		LAST_ERROR_TIMESTAMP: 0000-00-00 00:00:00
+# 		1 row in set (0.00 sec)
+#
+# Similarly, the WHERE CHANNEL_NAME=channel clause can be used to monitor the other replication Performance Schema tables
+# for a specific channel.
+#
+# For more information, see SECTION 26.12.11, "PERFORMANCE SCHEMA REPLICATION TABLES"
+#
+# 17.1.4.4 MULTI-SOURCE REPLICATION ERROR MESSAGES
+#
+# Error codes and messages provides information about errors encountered in a multi-source replication topology.
+#
+# These error codes and messages are only emitted when multi-source replication is enabled, and provide information related
+# to the channel which generated the error. For example:
+#
+# 		Slave is already running and Slave is already stopped have been replaced with Replication thread(s) for channel channel_name
+# 		are already running and Replication thread(s) for channel channel_name are already stopped respectively.
+#
+# The server log messages have also been changed to indicate which channel the log messages relate to. This makes debugging
+# and tracing easier.
+#
+# 17.1.5 CHANGING REPLICATION MODES ON ONLINE SERVERS
+#
+# 17.1.5.1 REPLICATION MODE CONCEPTS
+# 17.1.5.2 ENABLING GTID TRANSACTIONS ONLINE
+# 17.1.5.3 DISABLING GTID TRANSACTIONS ONLINE
+# 17.1.5.4 VERIFYING REPLICATION OF ANONYMOUS TRANSACTIONS
+#
+# This section describes how to change the mode of replication being used without having to take the server offline.
+#
+# 17.1.5.1 REPLICATION MODE CONCEPTS
+#
+# TO be able to safely configure the replication mode of an online server it is important ot understand some key concepts
+# of replication.
+#
+# This section explains these concepts and is essential reading before attempting to modify the replication mode of an online server.
+#
+# The modes of replication available in MySQL rely on different techniques for identifying transactions which are logged. The types
+# of transactions used by replication are as follows:
+#
+# 		) GTID transactions are identified by a global transaction identifier (GTID) in the form UUID:NUMBER. Every GTID transaction
+# 			in a log is always preceeded by a Gtid_log_event 
+#
+# 			GTID transactions can be addressed using either the GTID or using the file name and position.
+#
+# 		) ANonymous transactions do not have a GTID assigned, and MySQL ensures that every anonymous transaction in a log is preceded
+# 			by an Anonymous_gtid_log_event.
+#
+# 			In previous versions, anonymous transactions were not preceded by any particular event. Anonymous transactions can
+# 			only be addressed using file name and position.
+#
+# When using GTIDs you can take advantage of auto-positioning and automatic fail-over, as well as use WAIT_FOR_EXECUTED_GTID_SET(),
+# session_track_gtids, and monitor replicated transactions using Performance Schema tables.
+#
+# With GTIDs enabled you cannot use sql_slave_skip_counter, instead use empty transactions.
+#
+# Transactions in a relay log that was received from a master running a previous version of MySQL may not be preceded by any
+# particular event at all, but after being replayed and logged in the slave's binary log, they are preceded with an
+# Anonymous_gtid_log_event.
+#
+# The ability to configure the replication mode online means that the gtid_mode and enforce_gtid_consistency variables are now
+# both dynamic and can be set from a top-level statement by an account that has privileges sufficient to set global system variables.
+#
+# See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES". In MYSQL 5.6 and earlier, both of these variables could only be configured
+# using the appropriate option at server start, meaning that changes to the replication mode required a server restart.
+#
+# In all versions gtid_mode could be set to ON or OFF, which corresponded to whether GTIDs were used to identify transactions
+# or not.
+#
+# When gtid_mode=ON it is not possible to replicate anonymous transactions, and when gtid_mode=OFF only anonymous transactions
+# can be replicated.
+#
+# When gtid_mode=OFF_PERMISSIVE then new transactions are anonymous while permitting replicated transactions to be either GTID
+# or anonymous transactions. When gtid_mode=ON_PERMISSIVE then new transactions use GTIDs while permitting replicated transactions
+# to be either GTID or anonymous transactions.
+#
+# THis means it is possible to have a replication topology that has servers using both anonymous and GTID transactions.
+#
+# For example a master with gtid_mode=ON could be replicating to a slave with gtid_mode=ON_PERMISSIVE. The valid values
+# for gtid_mode are as follows and in this order:
+#
+# 		) OFF
+#
+# 		) OFF_PERMISSIVE
+#
+# 		) ON_PERMISSIVE
+#
+# 		) ON
+#
+# It is important to note that the state of gtid_mode can only be changed by one step at a time based on the above order.
+#
+# For example, if gtid_mode is currently set to OFF_PERMISSIVE, it is possible to change to OFF or ON_PERMISSIVE but not to ON.
+#
+# This is to ensure that the process of changing from anonymous transactions to GTID transactions online is correctly handled
+# by teh server.
+#
+# When you switch between gtid_mode=ON and gtid_mode=OFF, the GTID state (in other words the value of gtid_executed) is persistent.
+#
+# This ensures that the GTID set that has been applied by the server is always retained, regardless of changes between
+# types of gtid_mode.
+#
+# The fields related to GTIDs display the correct information regardless of the currently selected gtid_mode.
+#
+# This means that fields which display GTID sets, such as gtid_executed, gtid_purged, RECEIVED_TRANSACTION_SET in the
+# replication_connection_status Performance Schema table, and the GTID related results of SHOW_SLAVE_STATUS, now return
+# the empty string when there are no GTIDs present.
+#
+# Fields htat display a single GTID, such as CURRENT_TRANSACTION in the Performance Schema replication_applier_status_by_worker
+# table, now displays ANONYMOUS when GTID transactions are not being used.
+#
+# Replication from a master using gtid_mode=ON provides the ability to use auto-positioning, configured using the CHANGE MASTER
+# TO MASTER_AUTO_POSITION = 1; statement.
+#
+# The replication topology being used impacts on whether it is possible to enable auto-positioning or not, as this feature
+# relies on GTIDs and is not compatible with anonymous transactions.
+#
+# An error is generated if auto-positiong is enabled and an anonymous transaction is encountered. It is strongly recommended
+# to ensure there are no anonymous transactions remaining in the topology before enabling auto-positioning. 
+#
+# See SECTION 17.1.5.2, "ENABLING GTID TRANSACTIONS ONLINE"
+#
+# The valid combinations of gtid_mode and auto-positioning on master and slave are shown in the following table, where the
+# master's gtid_mode is shown on the horizontal and the slave's gtid_mode is on teh vertical.
+#
+# The meaning of each entry is as follows:
+#
+# 		) Y: the gtid_mode of master and slave is compatible
+#
+# 		) N: The gtid_mode of master and slave is not compatible
+#
+# 		) *: Auto-positioning can be used with this combination
+#
+# TABLE 17.1 VALID COMBINATIONS OF MASTER AND SLAVE GTID_MODE
+#
+# 		gtid_mode 					MASTER OFF 		MASTER OFF_PERMISSIVE 		MASTER ON_PERMISSIVE 		MASTER ON
 # 
+# 		Slave OFF 					Y 						Y 										N 								N
+#
+# 		Slave OFF_PERMISSIVE 	Y 						Y 										Y 								Y*
+#
+# 		Slave ON_PERMISSIVE 		Y 						Y 										Y 								Y*
+#
+# 		Slave ON 					N 						N 										Y 								Y*
+#
+# 	The currently selected gtid_mode also impacts on the gtid_next variable.
+#
+# The following table shows the behavior of the server for the different values of gtid_mode and
+# gtid_next.
+#
+# The meaning of each entry is as follows:
+#
+# 		) ANONYMOUS: generate an anonymous transaction
+#
+# 		) Error: generate an error and fail to execute SET GTID_NEXT
+#
+# 		) UUID:NUMBER: Generate a GTID with the specified UUID:NUMBER
+#
+# 		) New GTID: generate a GTID with an automatically generated number.
+#
+# TABLE 17.2 VALID COMBINATION OF GTID_MODE and GTID_NEXT
+#
+# 		// 								gtid_next AUTOMATIC 		gtid_next AUTOMATIC 		gtid_next ANONYMOUS 			gtid_next UUID:NUMBER 
+# 											bin log on   				bin log off  				// 				 					//
+#
+# 		gtid_mode OFF 					ANONYMOUS 					ANONYMOUS 					ANONYMOUS 							Error
+#
+# 		gtid_mode OFF_PERMISSIVE	ANONYMOUS 					ANONYMOUS 					ANONYMOUS 							UUID:NUMBER
+#
+# 		gtid_mode ON_PERMISSIVE 	New GTID 					ANONYMOUS 					ANONYMOUS 							UUID:NUMBER
+#
+# 		gtid_mode ON 					New GTID 					ANONYMOUS 					Error 								UUID:NUMBER
+#
+# When the binary log is off and gtid_next is set to AUTOMATIC, then no GTID is generated.
+#
+# This is consistent with the behavior of previous versions.
+#
+# 17.1.5.2 ENABLING GTID TRANSACTIONS ONLINE
+#
+# This section describes how to enable GTID transactions, and optionally auto-positioning, on servers that are already online and
+# 	using anonymous transactions.
+#
+# This procedure does not require taking the server offline and is suited to use in production. However, if you have the possibility
+# to take the servers offline when enabling GTID transactions that process is easier.
+#
+# Before you start, ensure that the servers meet the following pre-conditions:
+#
+# 		) All servers in your topology must use MySQL 5.7.6 or later. You cannot enable GTID transactions online on any single server
+# 			unless all servers which are in the topology are using this version.
+#
+# 		) All servers have gtid_mode set to the default value OFF.
+#
+# The following procedure can be paused at any time and later resumed where it was, or reversed by jumping to the corresponding
+# step of SECTION 17.1.5.3, "DISABLING GTID TRANSACTIONS ONLINE", the online procedure to disable GTIDs.
+#
+# This makes the procedure fault-tolerant because any unrelated issues that may appear in the middle of the procedure can be
+# handled as usual, and then the procedure continued where it was left off.
+#
+# NOTE:
+#
+# 		It is crucial that you complete every step before continuing to the next step.
+#
+# To enable GTID transactions:
+#
+# 		1. On each server, execute:
+#
+# 				SET @@GLOBAL.ENFORCE_GTID_CONSISTENCY = WARN;
+#
+# 			Let the server run for a while with your normal workload and monitor the logs. If this step causes any warnings in the log,
+# 			ajdust your application so that it only uses GTID-compatible features and does not generate any warnings.
+#
+# 			IMPORTANT:
+#
+# 				THis is the first important step. You must ensure htat no warnings are being generated in teh error logs before going to the next step.
+#
+# 		2. On each server, execute:
+#
+# 				SET @@GLOBAL.ENFORCE_GTID_CONSISTENCY = ON;
+#
+# 		3. On each server, execute:
+#
+# 				SET @@GLOBAL.GTID_MODE = OFF_PERMISSIVE;
+#
+# 			It does not matter which server executes this statement first, but it is important that all servers complete this
+# 			step before any server begins the next step.
+#
+# 		4. ON each server, execute:
+#
+# 				SET @@GLOBAL.GTID_MODE = ON_PERMISSIVE;
+#
+# 			It does not matter which server executes this statement first.
+#
+# 		5. On each server, wait until the status variable ONGOING_ANONYMOUS_TRANSACTION_COUNT is zero. This can be checked using:
+#
+# 				SHOW STATUS LIKE 'ONGOING_ANONYMOUS_TRANSACTION_COUNT';
+#
+# 			NOTE:
+#
+# 				ON a replication slave, it is theoretically possible that this shows zero and then nonzero again.
+#
+# 				This is not a problem, it suffices that it shows zero once.
+#
+# 		6. Wait for all transactions generated up to stpe 5 to replicate to all servers. You can do this without stopping updates: the only
+# 			important thing is that all anonymous transactions get replicated.
+#
+# 			See SECTION 17.1.5.4, "VERIFYING REPLICATION OF ANONYMOUS TRANSACTIONS" for one method of checking that all anonymous transactions
+# 			have replicated to all servers.
+#
+# 		7. If you use binary logs for anything other than replication, for example point in time backup and restore, wait until you do not need
+# 			the old binary logs having transactions without GTIDs.
+#
+# 			For instance, after step 6 has completed, you can execute FLUSH_LOGS on the server where you are taking backups.
+#
+# 			Then either explicitly take a backup or wait for the next iteration of any periodic backup routine you may have set up.
+#
+# 			Ideally, wait for the server to purge all binary logs that existed when step 6 was completed. Also wait for any backup
+# 			taken before step 6 to expire.
+#
+# 			IMPORTANT:
+#
+# 				This is the second important point. It is vital to understand that binary logs containing anonymous transactions,
+# 				without GTIDs cannot be used after the next step.
+#
+# 				After this step, you must be sure that transactions without GTIDs do not exist anywhere in the topology.
+#
+# 		8. on each server, execute:
+#
+# 			SET @@GLOBAL.GTID_MODE = ON;
+#
+# 		9. On each server, add gtid_mode=ON and enforce_gtid_consistency=ON to my.cnf
+#
+# 			You are now guaranteed that all transactions have a GTID (except transactions generated in step 5 or earlier, which have already
+# 			been processed)
+#
+# 			To start using the GTID protocol so that you can later perform automatic fail-over, execute the following on each slave.
+#
+# 			Optionally, if you use multi-source replication, do this for each channel and include the FOR CHANNEL channel clause:
+#
+# 				STOP SLAVE [FOR CHANNEL 'channel'];
+# 				CHANGE MASTER TO MASTER_AUTO_POSITION = 1 [FOR CHANNEL 'channel'];
+# 				START SLAVE [FOR CHANNEL 'channel'];
+#
+# 17.1.5.3 DISABLING GTID TRANSACTIONS ONLINE
+#
+# This section describes how to disable GTID transactions on servers that are already online. This procedure does not require taking the
+# server offline and is suited to use in production.
+#
+# However, if you have the possibility to take the servers offline when disabling GTIDs mode that process is easier.
+#
+# THe process is similar to enabling GTID transactions while the server is online, but reversing the steps.
+#
+# The only thing that differs is the point at which you wait for logged transactions to replicate.
+#
+# Before you start, ensure that the servers meet the following pre-conditions:
+#
+# 		) ALL servers in your topology must use MySQL 5.7.6 or later. You cannot disable GTID transactions online on any single
+# 			server unless ALL Servers which are in the topology qre using this version.
+#
+# 		) ALl servers have gtid_mode set to ON
+#
+# 		) The --replicate-same-server-id option is not set on any server. You cannot disable GTID transactions if this option is
+# 			set together with the --log-slave-updates option (which is the default) and binary logging is enabled (which is also the default).
+#
+# 			Without GTIDs, this combination of options causes infinite loops in circular replication.
+#
+# 			1. Execute the following on each slave, and if you are using multi-source replication, do it for each channel and include the FOR CHANNEL channel clause:
+#
+# 				STOP SLAVE [FOR CHANNEL 'channel'];
+# 				CHANGE MASTER TO MASTER_AUTO_POSITION = 0, MASTER_LOG_FILE = file, \
+# 				MASTER_LOG_POS = position [FOR CHANNEL 'channel'];
+# 				START SLAVE [FOR CHANNEL 'channel'];
+#
+# 			2. On each server, execute:
+#
+# 				SET @@GLOBAL.GTID_MODE = ON_PERMISSIVE;
+#
+# 			3. On each server, execute:
+#
+# 				SET @@GLOBAL.GTID_MODE = OFF_PERMISSIVE;
+#
+# 			4. On each server, wait until the variable @@GLOBAL.GTID_OWNED is equal to the empty string. This can be checked using:
+#
+# 				SELECT @@GLOBAL.GTID_OWNED;
+#
+# 				On a replication slave, it is theoretically possible that this is empty and then nonempty again. This is not a problem,
+# 				it suffices that it is empty once.
+#
+# 			5. Wait for all transactions that currently exist in any binary log to replicate to all slaves. See SECTION 17.1.5.4, "VERIFYING 
+# 				REPLICATION OF ANONYMOUS TRANSACTIONS" for one method of checking that all anonymous transactions have replicated to all servers.
+#
+# 			6. If you use binary logs for anything else than replication, for example to do point in time backup or restore: wait until you do
+# 				not need the old binary logs having GTID transactions.
+#
+# 				For instance, after step 5 has completed, you can execute FLUSH_LOGS on the server where you are taking the backup.
+#
+# 				Then either explicitly take a backup or wait for the next iteration of any periodic backup routine you may have set up.
+#
+# 				Ideally, wait for the server to purge all binary logs that existed when step 5 was completed. Also wait for any backup taken
+# 				before step 5 to expire.
+#
+# 				iMPORTANT:
+#
+# 					This is the one important point during this procedure.
+#
+# 					It is important to understand that logs containing GTID transactions cannot be used after
+# 					the next step. Before proceeding you must be sure that GTID transactions do not exist anywhere
+# 					in the topology.
+#
+# 			7. On each server, execute:
+#
+# 				SET @@GLOBAL.GTID_MODE = OFF;
+#
+# 			8. On each server, set gtid_mode=OFF in my.cnf
+#
+# 				If you want to set enforce_gtid_consistency=OFF, you can do so now. After setting it, you should add enforce_gtid_consistency=OFF
+# 				to your configuration file.
+#
+# 	If you want to downgrade to an earlier version of MYSQL, you can do so now, using the normal downgrading procedure.
+#
+# 17.1.5.4 VERIFYING REPLICATION OF ANONYMOUS TRANSACTIONS
+#
+# This section explains how to monitor a replication topology and verify that all anonymous transactions have been replicated.
+#
+# This is helpful when changing the replication mode online as you can verify that it is safe to change to GTID transactions.
+#
+# There are several possible ways to wait for transactions to replicate:
+#
+# The simplest method, which works regardless of your topology but relies on timing is as follwos:
+#
+# 	If you are sure that the slave never lags more than N seconds, just wait for a bit more than N seconds.
+#
+# 	Or wait for a day, or wahtever time period you consider safe for your deployment.
+#
+# A safer method in the sense that it does not depend on timing: if you only have a master with one or more slaves, do the following:
+#
+# 		1. ON the master, execute:
+#
+# 				SHOW MASTER STATUS;
+#
+# 			Note down the values in the File and Position column.
+#
+# 		2. On every slave, use the file and position information from the master to execute:
+#
+# 			SELECT MASTER_POS_WAIT(file, position);
+#
+# If you have a master and multiple levels of slaves, or in other words you ahve slaves of slaves, repeat step 2 on each level, starting
+# from the master, then all the direct slaves, then all the slaves of slaves, etc.
+#
+# If you use a circular replication topology where multiple servers may have write clients, perform step 2 for each master-slave connection,
+# until you have completed the full circle.
+#
+# Repeat the whole process so that you do the full circle twice.
+#
+# For example, suppose you have three servers A, B, and C replicating in a circle so that A -> B -> C -> A 
+#
+# The procedure is then:
+#
+# 		) Do step 1 on A and step 2 on B
+#
+# 		) Do step 1 on B and step 2 on C
+#
+# 		) Do step 1 on C and step 2 on A
+#
+# 		) Do step 1 on A and step 2 on B
+# 		
+# 		) Do step 1 on B and step 2 on C
+#
+# 		) Do step 1 on C and step 2 on A
+#
+# 17.1.6 REPLICATION AND BINARY LOGGING OPTIONS AND VARIABLES
+#
+# 17.1.6.1 REPLICATION AND BINARY LOGGING OPTION AND VARIABLE REFERENCE
+# 17.1.6.2 REPLICATION MASTER OPTIONS AND VARIABLES
+# 17.1.6.3 REPLICATION SLAVE OPTIONS AND VARIABLES
+# 17.1.6.4 BINARY LOGGING OPTIONS AND VARIABLES
+# 17.1.6.5 GLOBAL TRANSACTION ID OPTIONS AND VARIABLES
+#
+# The following sections contain information about mysqld options and server variables that are used in replication and for controlling
+# the binary log.
+#
+# Options and variables for use on replication masters and replication slaves are covered separately, as are options and variables
+# relating to binary logging and global transaction identifiers (GTIDs).
+#
+# A set of quick reference tables providing basic info about these options and variables is also included.
+#
+# Of particular importance is the --server-id option
+#
+# 		PROPERTY 							VALUE
+#
+# 		Cmd line 							--server-id=#
+#
+# 		Sys var 								server_id
+#
+# 		Scope 								Global
+#
+# 		Dynamic 								Yes
+#
+# 		SET_VAR HINT 						No
+#
+# 		Type 									INteger
+#
+# 		Default (>= 8.0.3) 				1
+# 		
+# 		Default (<= 8.0.2) 				0
+#
+# 		Minimum value 						0
+# 	
+# 		Max 									4294967295
+#
+# Specifies the server ID. The server_id system variable is set to 1 by default. The server can be started with this default ID, but when
+# binary logging is enabled, an informational message is issued if you did not specify a server ID explicitly using the --server-id option.
+#
+# For servers that are used in a replication topology, you must specify a unique server ID for eachh replication server, in the range from
+# 1 to 2^32-1 
+#
+# "Unique" means that each ID must be different from every other ID in use by any other replication master or slave. 
+#
+# For additional information, see SECTION 17.1.6.2, "REPLICATION MASTER OPTIONS AND VARIABLES", and SECTION 17.1.6.3, "REPLICATION SLAVE OPTIONS AND VARIABLES"
+#
+# If the server ID is set to 0, binary logging takes place, but a master with server ID of 0 refuses any connections from slaves, and a salve with a server-id
+# of 0 refuses to connect to a master.
+#
+# Note that although you can change the server ID dynamically to a nonzero value, doing so does not enable replication to start immediately.
+#
+# You must change the server ID and then restart the server to initialize the replication slave.
+#
+# For more information, see SECTION 17.1.2.2, "SETTING THE REPLICATION SLAVE CONFIGURATION"
+#
+# server_uuid
+#
+# The MySQL server generates a true UUID in addition to the default or user-supplied server ID set in the server_id system variable.
+#
+# This is avaialble as the global, read-only variable server_uuid
+#
+# NOTE:
+#
+# 		The presence of the server_uuid system variable does not change the requirement for setting a unique --server-id for each MySQL server
+# 		as part of preparing and running MySQL replication, as described earlier in this section.
+#
+# PROPERTY 					VALUE
+#
+# SYS VAR 					server_uuid
+#
+# SCOPE 						Global
+#
+# DYNAMIC 					No
+#
+# SET_VAR Hint 			No
+#
+# Type 						String
+#
+# When starting the MySQL server automatically obtains a UUID as follows:
+#
+# 		1. Attempt to read and use the UUID written in the file data_dir/auto.cnf (where data_dir is the server's data directory)
+#
+# 		2. If data_dir/auto.cnf is not found, generate a new UUID and save it to this file, creating the file if necessary.
+#
+# The auto.cnf file has a format similar to that used for my.cnf or my.ini files. auto.cnf has only a single [auto] section containing
+# a single server_uuid setting and value; 
+#
+# The file's contents appear similar to what is shown here:
+#
+# 		[auto]
+# 		server_uuid=8a94f357-aab4-11df-86ab-c80aa9429562
+#
+# IMPORTANT:
+#
+# 		THe auto.cnf file is automatically generated; do not attempt to write or modify this file.
+#
+# When using MySQL replication, masters and slaves know each other's UUIDs. The value of a slave's UUID can be seen in the
+# output of SHOW_SLAVE_HOSTS.
+#
+# Once START_SLAVE has been executed, the value of the master's UUID is available on the slave in the output of SHOW_SLAVE_STATUS
+#
+# NOTE:
+#
+# 		Issuing a STOP_SLAVE or RESET_SLAVE statement does not reset the master's UUID as used on the slave.
+#
+# A server's server_uuid is also used in GTID's for transactions originating on that server. For more information, see SECTION 17.1.3,
+# "REPLICATION WITH GLOBAL TRANSACTION IDENTIFIERS"
+#
+# When starting, the slave I/O thread generates an error and aborts if its master's UUID is equal to its own unless the
+# --replicate-same-server-id option has been set.
+#
+# IN addition, the slave I/O thread generates a warning if either of the following is true:
+#
+# 		) No master having the expected server_uuid exists
+#
+# 		) The master's server_uuid has changed, although no CHANGE_MASTER_TO statement has ever been executed.
+#
+# 17.1.6.1 REPLICATION AND BINARY LOGGING OPTION AND VARIABLE REFERENCE
+#
+# The following two lists provide basic information about the MySQL command-line options and system variables applicable to replication
+# and the binary log.
+#
+# The command-line options and system variables in the following list relate to replication masters and replication slaves.
+#
+# SECTION 17.1.6.2, "REPLICATION MASTER OPTIONS AND VARIABLES", provides more detailed information about options and variables
+# relating to replication master servers.
+#
+# FOr more information about options and variables relating to replication slaves, see SECTION 17.1.6.3, "REPLICATION SLAVE OPTIONS AND VARIABLES"
+#
+# 		) abort-slave-event-count: Option used by mysql-test for debugging and testing of replication
+#
+# 		) auto_increment_increment: AUTO_INCREMENT columns are incremented by this value
+#
+# 		) auto_increment_offset: Offset added to AUTO_INCREMENT columns
+#
+# 		) binlog_expire_logs_seconds: Purge binary logs after this many seconds
+#
+# 		) binlog_gtid_simple_recovery: Controls how binary logs are iterated during GTID recovery
+#
+# 		) Com_change_master: Count of CHANGE MASTER TO statements
+#
+# 		) Com_show_master_status: Count of SHOW MASTER STATUS statements
+#
+# 		) Com_show_slave_hosts: Count of SHOW SLAVE HOSTS statements
+#
+# 		) Com_show_slave_status: Count of SHOW SLAVE STATUS statements
+#
+# 		) Com_slave_start: Count of START SLAVE statements
+#
+# 		) Com_slave_stop: Count of STOP SLAVE statements
+#
+# 		) disconnect-slave-event-count: OPtion used by mysql-test for debugging and testing of replication
+#
+# 		) enforce-gtid-consistency: Prevents execution of statements that cannot be logged in a transactionally safe manner
+#
+# 		) enforce_gtid_consistency: Prevents execution of statements that cannot be logged in a transactionally safe manner
+#
+# 		) expire_logs_days: Purge binary logs after this many days
+#
+# 		) gtid-executed-compression-period: Compress gtid_executed table each time this many transactions have occurred. 0 means never
+# 				compress this table.
+#
+# 				Applies only when binary logging is disabled.
+#
+# 		) gtid-mode: Controls whether GTID based logging is enabled and what type of transactions the logs can contain
+#
+# 		) gtid_executed: 			
+#
+# https://dev.mysql.com/doc/refman/8.0/en/replication-options-reference.html
