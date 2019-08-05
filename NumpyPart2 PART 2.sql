@@ -64921,6 +64921,1269 @@
 #
 # 		) gtid-mode: Controls whether GTID based logging is enabled and what type of transactions the logs can contain
 #
-# 		) gtid_executed: 			
+# 		) gtid_executed: Global: All GTIDs in the binary log (global) or current transaction (session). read-only
 #
-# https://dev.mysql.com/doc/refman/8.0/en/replication-options-reference.html
+# 		) gtid_executed_compression_period: Compress gtid_executed table each time this many transactions have occurred. 0 means never compress
+# 			this table.
+#
+# 			Applies only when binary logging is disabled.
+#
+# 		) gtid_mode: Controls whether GTID based logging is enabled and what type of transactions the logs can contain
+#
+# 		) gtid_next: Specifies the GTID for the next statement to execute; see documentation for details
+#
+# 		) gtid_owned: The set of GTIDs owned by this client (session), or by all clients, together with the thread ID of the owner (global). Read-only
+#
+# 		) gtid_purged: The set of all GTIDs that have been purged from the binary log.
+#
+# 		) init_slave: Statements that are executed when a slave connects to a master
+#
+# 		) log-bin-trust-function-creators: If equal to 0 (the default), then when --log-bin is used, creation of a stored function is allowed only
+# 			to users having the SUPER privilege and only if the function created does not break binary logging
+#
+# 		) log_builtin_as_identified_by_password: Whether to log CREATE/ALTER USER, GRANT in backward-compatible fashion
+#
+# 		) log_statements_unsafe_for_binlog: Disables error 1592 warnings being written to the error log
+#
+# 		) master-info-file: The location and name of the master info log as a file (deprecated)
+#
+# 		) master-info-repository: Whether to write master status information and replication I/O thread location in the master's binary logs to a table or file (deprecated)
+#
+# 		) master-retry-count: Number of tries the slave makes to connect to the master before giving up
+#
+# 		) master_info_repository: Whether to write master status information and replication I/O thread location in the master's binary logs to a table or a file (deprecated)
+#
+# 		) max_relay_log_size: If nonzero, relay log is rotated automatically when its size exceeds this value. If zero, size at which rotation occurs is determined by the value
+# 				of max_binlog_size.
+#
+# 		) original_commit_timestamp: The time when a transaction was committed on the original master
+#
+# 		) immediate_server_version: The MySQL Server Release number of the server that is the immediate master in a replication topology
+#
+# 		) original_server_version: The MySQL Server release number of the server where a transaction was originally committed.
+#
+# 		) relay-log: The location and base name to use for relay logs
+#
+# 		) relay-log-index: The location and name to use for the file that keeps a list of the last relay logs
+#
+# 		) relay-log-info-file: The location and name of the relay log info log as a file (deprecated)
+#
+# 		) relay-log-info-repository: Whether to write the replication SQL thread's location in the relay logs to a table or a file (deprecated)
+#
+# 		) relay-log-recovery: Enables automatic recovery of relay log files from master at startup
+#
+# 		) relay_log_basename: Complete path to relay log, including filename
+#
+# 		) relay_log_index: The name of the relay log index file
+#
+# 		) relay_log_info_file: The name of the file in which the slave records information about the relay logs
+#
+# 		) relay_log_info_repository: Whether to write the replication SQL thread's location in the relay logs to a file or a table
+#
+# 		) relay_log_purge: Determines whether relay logs are purged
+#
+# 		) relay_log_recovery: Whether automatic recovery of relay log files from master at startup is enabled; must be enabled for a crash-safe slave
+#
+# 		) relay_log_space_limit: Maximum space to use for all relay logs
+#
+# 		) replicate-do-db: Tells the slave SQL thread to restrict replication to the specified database
+#
+# 		) replicate-do-table: Tells the slave SQL thread to restrict replication to the specified table
+#
+# 		) replicate-ignore-db: Tells the slave SQL thread not to replicate to the specified database
+#
+# 		) replicate-ignore-table: Tells the slave SQL thread not to replicate to the specified table
+#
+# 		) replicate-rewrite-db: Updates to a database with a different name than the original
+#
+# 		) replicate-same-server-id: In replication, if enabled, do not skip events having our server id
+#
+# 		) replicate-wild-do-table: Tells the slave thread to restrict replication to the tables that match the specified wildcard pattern
+#
+# 		) replicate-wild-ignore-table: Tells the slave thread not to replicate to the tables that match the given wildcard pattern
+#
+# 		) report-host: Host name or IP of the slave to be reported to the master during slave registration
+#
+# 		) report-password: An arbitrary password that the slave server should report to the master. Not the same as the password for teh MYSQL replication user account.
+#
+# 		) report-port: Port for connecting to slave reported to the master during slave registration
+#
+# 		) report-user: An arbitrary user name that a slave server should report ot the master. Not the same as the name used with the MySQL replication user account
+#
+# 		) Rpl_semi_sync_master_clients: Number of semisynchronous slaves
+#
+# 		) rpl_semi_sync_master_enabled: Whether semisynchronous replication is enabled on the master
+#
+# 		) Rpl_semi_sync_master_net_avg_wait_time: The average time the master waited for a slave reply
+#
+# 		) Rpl_semi_sync_master_net_wait_time: The total time the master waited for slave replies
+#
+# 		) Rpl_semi_sync_master_net_waits: The total number of times the master waited for slave replies
+#
+# 		) Rpl_semi_sync_master_no_times: Number of times the master turned off semisynchronous replication
+#
+# 		) Rpl_semi_sync_master_no_tx: Number of commits not acknowledged successfully
+#
+# 		) Rpl_semi_sync_master_status: Whether semisynchronous replication is operational on the master
+#
+# 		) Rpl_semi_sync_master_timefunc_failures: Number of times the master failed when calling time functions
+#
+# 		) rpl_semi_sync_master_timeout: Number of milliseconds to wait for slave acknowledgement
+#
+# 		) rpl_semi_sync_master_trace_level: The semisynchronous replication debug trace level on teh master
+#
+# 		) Rpl_semi_sync_master_tx_avg_wait_time: The average time the master waited for each transaction
+#
+# 		) Rpl_semi_sync_master_tx_wait_time: The total time the master waited for transactions
+#
+# 		) Rpl_semi_sync_master_tx_waits: The total number of times the master waited for transactions
+#
+# 		) rpl_semi_sync_master_wait_for_slave_count: How many slave acknowledgements the master must receive per transaction before proceeding
+#
+# 		) rpl_semi_sync_master_wait_no_slave: Whether master waits for timeout even with no slaves
+#
+# 		) rpl_semi_sync_master_wait_point: The wait point for slave transaction receipt acknowledgement
+#
+# 		) Rpl_semi_sync_master_wait_pos_backtraverse: The total number of times the master waited for an event with binary coordinates lower than events
+# 			waited for previously
+#
+# 		) Rpl_semi_sync_master_wait_sessions: Number of sessions currently waiting for slave replies
+#
+# 		) Rpl_semi_sync_master_yes_tx: Number of commits acknowledged successfully
+#
+# 		) rpl_semi_sync_slave_enabled: Whether semisynchronous replication is enabled on slave
+#
+# 		) Rpl_semi_sync_slave_status: Whether semisynchronous replication is operational on slave
+#
+# 		) rpl_semi_sync_slave_trace_level: The semisynchronous replication debug trace level on the slave
+#
+# 		) rpl_read_size: Set the minimum amount of data in bytes that is read from the binary log files and relay log files
+#
+# 		) rpl_stop_slave_timeout: Set the number of seconds that STOP SLAVE waits before timing out
+#
+# 		) server_uuid: The server's globally unique ID, automatically (re)generated at server start
+#
+# 		) show-slave-auth-info: Show user name and password in SHOW SLAVE HOSTS on this master
+#
+# 		) skip-slave-start: If set, slave is not autostarted
+#
+# 		) slave-checkpoint-group: Maximum number of transactions processed by a multithreaded slave before a checkpoint operation is called to update progress status.
+#	 			Not supported by NDB Cluster.
+#
+# 		) slave-checkpoint-period: Update progress status of multithreaded slave and flush relay log info to disk after this number of milliseconds. Not supported by NDB Cluster.
+#
+# 		) slave-load-tmpdir: The location where the slave should put its temporary files when replicating a LOAD DATA statement
+#
+# 		) slave-max-allowed-packet: Maximum size, in bytes, of a packet that can be sent from a replication master to a slave; overrides max_allowed_packet
+#
+# 		) slave-net-timeout: Number of seconds to wait for more data from a master/slave connection before aborting the read
+#
+# 		) slave-parallel-type: Tells the slave to use timestamp information (LOGICAL_CLOCK) or database partitioning (DATABASE) to parallelize transactions.
+# 			The default is LOGICAL_CLOCK
+#
+# 		) slave-parallel-workers: Number of applier threads for executing replication transactions in parallel. The default is 4 applier threads.
+# 			Set to 0 to disable slave multithreading.
+#
+# 			Not supported by MySQL Cluster.
+#
+# 		) slave-pending-jobs-size-max: Maximum size of slave worker queues holding events not yet applied
+#
+# 		) slave-rows-search-algorithms: Deprecated, use the default setting
+#
+# 		) slave-skip-errors: Tells the slave thread to continue replication when a query returns an error from the provided list
+#
+# 		) slave_checkpoint_group: Maximum number of transactions processed by a multithreaded slave before a checkpoint operation is called
+# 			to update progress status. Not supported by NDB Cluster.
+#
+# 		) slave_checkpoint_period: Update progress status of multithreaded slave and flush relay log info to disk after this number of milliseconds.
+#
+# 			Not supported by NDB Cluster.
+#
+# 		) slave_compressed_protocol: Use compression of master/slave protocol
+#
+# 		) slave_exec_mode: Allows for switching the slave thread between IDEMPOTENT mode (key and some other errors suppressed) and STRICT mode;
+# 			STRICT mode is the default, except for NDB Cluster, where IDEMPOTENT is always used.
+#
+# 		) Slave_heartbeat_period: The slave's replication heartbeat interval, in seconds
+#
+# 		) Slave_last_heartbeat: SHows when the latest heartbeat signal was received, in TIMESTAMP format
+#
+# 		) slave_max_allowed_packet: Maximum size, in bytes, of a packet that can be sent from a replication master to a slave; overrides max_allowed_packet
+#
+# 		) Slave_open_temp_tables: Number of temporary tables that the slave SQL thread currently has open
+#
+# 		) slave_parallel_type: Tells the slave to use timestamp information (LOGICAL_CLOCK) or database partitioning (DATABASE) to parallelize transactions
+#
+# 		) slave_parallel_workers: Number of applier threads for executing replication transactions in parallel. A value of 0 disables slave multithreadingd.
+#
+# 			Not supported by MySQL Cluster.
+#
+# 		) slave_pending_jobs_size_max: Maximum size of slave worker queues holding events not yet applied
+#
+# 		) slave_preserve_commit_order: Ensures that all commits by slave workers happen in the same order as on the master to maintain consistency when using
+# 			parallel applier threads.
+#
+# 		) Slave_received_heartbeats: Number of heartbeats received by a replication slave since previous reset
+#
+# 		) Slave_retried_transactions: The total number of times since startup that the replication slave SQL thread has retried transactions
+#
+# 		) slave_rows_search_algorithms: Deprecated, use the default setting
+#
+# 		) Slave_rows_last_search_algorithm_used: Search algorithm most recently used by this slave to locate rows for row-based replication (index,
+# 				table, or hash scan)
+#
+# 		) Slave_running: The state of this server as a replication slave (slave I/O thread status)
+#
+# 		) slave_transaction_retries: Number of times the slave SQL thread will retry a transaction in case it failed with a deadlock or elapsed
+# 			lock wait timeout, before giving up and stopping
+#
+# 		) slave_type_conversions: Controls type conversion mode on replication slave. Value is a list of zero or more elements from the list: ALL_LOSSY, ALL_NON_LOSSY,
+# 			Set to an empty string to disallow type conversions between master and slave.
+#
+# 		) sql_log_bin: Controls binary logging for the current session
+#
+# 		) sql_slave_skip_counter: Number of events from the master that a slave server should skip. Not compatible with GTID replication.
+#
+# 		) sync_master_info: Synchronize master info to disk after every #th event
+#
+# 		) sync_relay_log: Synchronize relay log to disk after every #th event
+#
+# 		) sync_relay_log_info: Synchronize relay info file to disk after every #th event
+#
+# 		) transaction_write_set_extraction: Defines the algorithm used to hash the writes extracted during a transaction
+#
+# The command-line options and system variables in the following list relate to the binary log. SECTION 17.1.6.4, "BINARY LOGGING OPTIONS AND VARIABLES",
+# provides more detailed information about options and variables relating to binary logging.
+#
+# For additional general information about the binary log. See SECTION 5.4.4, "THE BINARY LOG"
+#
+# 		) binlog-checksum: Enable/Disable binary log checksums
+#
+# 		) binlog-do-db: Limits binary logging to specific databases
+#
+# 		) binlog_format: Specifies the format of the binary log
+#
+# 		) binlog-ignore-db: Tells the master that updates to the given database should not be logged to the binary log
+#
+# 		) binlog-row-event-max-size: Binary log max event size
+#
+# 		) binlog_encryption: Enable encryption for binary log files and relay log files on this server
+#
+# 		) binlog_rotate_encryption_master_key_at_startup: Rotate the binary log master key at server startup
+#
+# 		) Binlog_cache_disk_use: Number of transactions that used a temporary file instead of the binary log cache
+#
+# 		) binlog_cache_size: Size of the cache to hold the SQL statements for the binary log during a transaction
+#
+# 		) Binlog_cache_use: Number of transactions that used the temporary binary log cache
+#
+# 		) binlog_checksum: Enable/Disable binary log checksums
+#
+# 		) binlog_direct_non_transactional_updates: Causes updates using statement format to nontransactional engines to be written directly to binary log.
+# 			See documentation before using.
+#
+# 		) binlog_error_action: Controls what happens when the server cannot write to the binary log.
+#
+# 		) binlog_group_commit_sync_delay: Sets the number of microseconds to wait before synchronizing transactions to disk
+#
+# 		) binlog_group_commit_sync_no_delay_count: Sets the maximum number of transactions to wait for before aborting the current delay specified by
+# 			binlog_group_commit_sync_delay
+#
+# 		) binlog_max_flush_queue_time: How long to read transactions before flushing to binary log
+#
+# 		) binlog_order_commit: Whether to commit in same order as writes to binary log
+#
+# 		) binlog_row_image: Use full or minimal images when logging row changes
+#
+# 		) binlog_row_metadata: Configures the amount of table related metadata binary logged when using row-based logging
+#
+# 		) binlog_row_value_options: Enables binary logging of partial JSON updates for row-based replication
+#
+# 		) binlog_rows_query_log_events: When enabled, enables logging of rows query log events when using row-based logging.
+#
+# 			Disabled by default. Do not enable when producing logs for pre-5.6 slaves/readers
+#
+# 		) Binlog_stmt_cache_disk_use: Number of nontransactional statements that used a temporary file instead of the binary
+# 			log statement cache
+#
+# 		) binlog_stmt_cache_size: Size of the cache to hold nontransactional statements for the binary log during a transaction
+#
+# 		) Binlog_stmt_cache_use: Number of statements that used the temporary binary log statement cache
+#
+# 		) binlog_transaction_dependency_tracking: Source of dependency information (commit timestamps or transaction write sets)
+# 			from which to assess which transactions can be executed in parallel by slave's multithreaded applier.
+#
+# 		) binlog_transaction_dependency_history_size: Number of row hashes kept for looking up transaction that last updated some row
+#
+# 		) Com_show_binlog_events: Count of SHOW BINLOG EVENTS statements
+#
+# 		) Com_show_binlogs: Count of SHOW BINLOG statements
+#
+# 		) log-bin: Specifies the base name for binary log files
+#
+# 		) log-bin-index: Specifies the name for the binary log index file
+#
+# 		) log-bin-use-v1-row-events: Deprecated, use the default setting OFF
+#
+# 		) log-slave-updates: Tells the slave to log the updates performed by its SQL thread to its own binary log
+#
+# 		) log_bin: Whether the binary log is enabled
+#
+# 		) log_bin_basename: Path and base name for binary log files
+#
+# 		) log_bin_use_v1_row_events: Deprecated, use the default setting OFF
+#
+# 		) log_slave_updates: Whether the slave should log the updates performed by its SQL thread to its own binary log. Read-only; set using the --log-slave-updates server option
+#
+# 		) master-verify-checksum: Cause master to examine checksums when reading from the binary log
+#
+# 		) master_verify_checksum: Cause master to read checksums from binary log
+#
+# 		) max-binlog-dump-events: Option used by mysql-test for debugging and testing of replication
+#
+# 		) max_binlog_cache_size: Can be used to restrict the total size used to cache a multi-statement transaction
+#
+# 		) max_binlog_size: Binary log will be rotated automatically when size exceeds this value
+#
+# 		) max_binlog_stmt_cache_size: Can be used to restrict the total size used to cache all nontransactional statements during a transaction
+#
+# 		) slave-sql-verify-checksum: Cause slave to examine checksums when reading from the relay log
+#
+# 		) slave_sql_verify_checksum: Cause salve to examine checksums when reading from relay log
+#
+# 		) sporadic-binlog-dump-fail: Option used by mysql-test for debugging and testing of replication
+#
+# 		) sync_binlog: Synchronously flush binary log to disk after every #th event
+#
+# For a listing of all command-line options, system and status variables used with mysqld, see SECTION 5.1.4, "SERVER OPTION, SYSTEM VARIABLE, AND STATUS VARIABLE REFERENCE"
+#
+# 17.1.6.2 REPLICATION MASTER OPTIONS AND VARIABLES
+#
+# This section describes the server options and system variables that you can use on replication master servers. You can specify the options either
+# on the command line or in an option file.
+#
+# You can specify system variable values using SET.
+#
+# On the master and each slave, you must use the server-id option to establish a unqiue replication ID. For each server, you should pick a unique
+# positive integer in the range from 1 to 2^32-1, and each ID must be different from every other ID in use by any other replication master or slave.
+#
+# Example: server-id=3
+#
+# For options used on the master for controlling binary logging, see SECTION 17.1.6.4, "BINARY LOGGING OPTIONS AND VARIABLES"
+#
+# STARTUP OPTIONS FOR REPLICATION MASTERS
+#
+# The following list describes startup options for controlling replication master servers. Replication-related system variables are discussed
+# later in this section.
+#
+# 		) --show-slave-auth-info
+#
+# 			PROPERTY 			VALUE
+#
+# 			Cmd line 			--show-slave-auth-info[={OFF|ON}]
+# 			Type 					Boolean
+# 			Default 				OFF
+#
+# 			Display slave user names and passwords in the output of SHOW_SLAVE_HOSTS on the master server for slaves started with the --report-user
+# 			and --report-password options.
+#
+# SYSTEM VARIABLES USED ON REPLICATION MASTERS
+#
+# THe following system variables are used for or by replication masters:
+#
+# 		) auto_increment_increment
+#
+# 			Property 			VALUE
+#
+# 			Cmd line 			--auto-increment-increment=#
+# 			Sys var 				auto_increment_increment
+# 			Scope 				Global, Session
+# 			Dynamic 				Yes
+# 			SET_VAR Hint 		Yes
+# 			Type 					Integer
+# 			Default 				1
+# 			Min 					1
+# 			Max 					65535
+#
+# 			auto_increment_increment and auto_increment_offset are intended for use with master-to-master replication, and can be used to control
+# 			the operation of AUTO_INCREMENT columns. Both variables have global and session values, and each can assume an integer value
+# 			between 1 and 65,535 inclusive.
+#
+# 			Setting the value of either of these two variables to 0 causes its value to be set to 1 instead. Attempting to set the value
+# 			of either of these two variables to an integer greater than 65,535 or less than 0 cause its value to be set to 65,535 instead.
+#
+# 			Attempting to set the value of auto_increment_increment or auto_increment_offset to a noninteger value produces an error,
+# 			and the actual value of the variable remains unchanged.
+#
+# 			As of MySQl 8.0.14, setting the session value of this system variable is a restricted operation. The session user must have
+# 			privileges sufficient to set restricted session variables.
+#
+# 			See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 			NOTE:
+#
+# 				auto_increment_increment is also supported for use with NDB tables.
+#
+# 			When Group Replication is started on a server, the value of auto_increment_increment is changed to the value of group_replication_auto_increment_increment,
+# 			which defaults to 7, and the value of auto_increment_offset is changed to the server ID.
+#
+# 			The changes are reverted when Group Replication is stopped. These changes are only made and reverted if auto_increment_increment and auto_increment_offset
+# 			each have their default value of 1. If their values have already been modified from the default, Group Replication does not alter them.
+#
+# 			From MySQL 8.0, the system variables are also not modified when Group Replication is in single-primary mode, where only one server writes.
+#
+# 			auto_increment_increment and auto_increment_offset affect AUTO_INCREMENT column behavior as follows:
+#
+# 				) auto_increment_increment controls the interval between successive column values. For example:
+#
+# 					mysql> SHOW VARIABLES LIKE 'auto_inc%';
+# 					+---------------------------------------+-------+
+# 					| Variable_name 								 | Value |
+# 					+---------------------------------------+-------+
+# 					| auto_increment_increment 				 | 1 	   |
+# 					| auto_increment_offset 					 | 1 		|
+# 					+---------------------------------------+-------+
+# 					2 rows in set (0.00 sec)
+#
+# 					mysql> CREATE TABLE autoinc1
+# 						-> (col INT NOT NULL AUTO_INCREMENT PRIMARY KEY);
+# 					Query OK, 0 rows affected (0.04 sec)
+#
+# 					mysql> SET @@auto_increment_increment=10;
+# 					Query OK, 0 rows affected (0.00 sec)
+#
+# 					mysql> SHOW VARIABLES LIKE 'auto_inc%';
+# 					+-------------------------------------+--------+
+# 					| Variable_name 							  | Value  |
+# 					+-------------------------------------+--------+
+# 					| auto_increment_increment 			  | 10 	  |
+# 					| auto_increment_offset 				  | 1 	  |
+# 					+-------------------------------------+--------+
+# 					2 rows in set (0.01 sec)
+#
+# 					mysql> INSERT INTO autoinc1 VALUES (NULL), (NULL), (NULL), (NULL);
+# 					Query OK, 4 rows affected (0.00 sec)
+# 					Records: 4  Duplicates: 0  Warnings: 0
+#
+# 					mysql> SELECT col FROM autoinc1;
+# 					+--------+
+# 					| col 	|
+# 					+--------+
+# 					| 1 		|
+# 					| 11 	   |
+# 					| 21 		|
+# 					| 31 		|
+# 					+--------+
+# 					4 rows in set (0.00 sec)
+#
+# 				) auto_increment_offset determines the starting point for the AUTO_INCREMENT column value. Consider the following,
+# 					assuming that these statements are executed during the same session as the example given in the description
+# 					for auto_increment_increment:
+#
+# 						mysql> SET @@auto_increment_offset=5;
+# 						Query OK, 0 rows affected (0.00 sec)
+#
+# 						mysql> SHOW VARIABLES LIKE 'auto_inc%';
+# 						+-------------------------------------+--------+
+# 						| Variable_name 							  | Value  |
+# 						+-------------------------------------+--------+
+# 						| auto_increment_increment 			  | 10 	  |
+# 						| auto_increment_offset 				  | 5 	  |
+# 						+-------------------------------------+--------+
+# 						2 rows in set (0.00 sec)
+#
+# 						mysql> CREATE TABLE autoinc2
+# 							-> (col INT NOT NULL AUTO_INCREMENT PRIMARY KEY);
+# 						Query OK, 0 rows affected (0.06 sec)
+#
+# 						mysql> INSERT INTO autoinc2 VALUES (NULL), (NULL), (NULL), (NULL);
+# 						Query OK, 4 rows affected (0.00 sec)
+# 						Records: 4 	Duplicates: 0 	Warnings: 0
+#
+# 						mysql> SELECT col FROM autoinc2;
+# 						+---------+
+# 						| col 	 |
+# 						+---------+
+# 						| 5 		 |
+# 						| 15 		 |
+# 						| 25 		 |
+# 						| 35 		 |
+# 						+---------+
+# 						4 rows in set (0.02 sec)
+#
+# 					When the value of auto_increment_offset is greater than that of auto_increment_increment, the value of auto_increment_offset is ignored.
+#
+# 					If either of these variables is changed, and then new rows inserted into a table containing an AUTO_INCREMENT column, the results may seem
+# 					counterintuitive because the series of AUTO_INCREMENT values is calculated without regard to any values already present in the column,
+# 					and hte next value inserted is the least value in the series that is greater than the maximum existing value in the AUTO_INCREMENT column.
+#
+# 					The series is calculated like this:
+#
+# 						auto_increment_offset + N x auto_increment_increment
+#
+# 					where N is a positive integer value in the series [1,2,3,/etc/]. For example:
+#
+# 						mysql> SHOW VARIABLES LIKE 'auto_inc%';
+# 						+-----------------------------+--------+
+# 						| Variable_name 					| Value  |
+# 						+-----------------------------+--------+
+# 						| auto_increment_increment    | 10 		|
+# 						| auto_increment_offset 		| 5 	   |
+# 						+-----------------------------+--------+
+# 						2 rows in set (0.00 sec)
+#
+# 						mysql> SELECT col FROM autoinc1;
+# 						+------+
+# 						| col  |
+# 						+------+
+# 						| 1 	 |
+# 						| 11 	 |
+# 						| 21   |
+# 						| 31 	 |
+# 						+------+
+# 						4 rows in set (0.00 sec)
+#
+# 						mysql> INSERT INTO autoinc1 VALUES (NULL), (NULL), (NULL), (NULL);
+# 						Query OK, 4 rows affected (0.00 sec)
+# 						Records: 4 	Duplicates: 0 	Warnings: 0
+#
+# 						mysql> SELECT col FROM autoinc1;
+# 						+------+
+# 						| col  |
+# 						+------+
+# 						| 1 	 |
+# 						| 11 	 |
+# 						| 21   |
+# 						| 31   |
+# 						| 35   |
+# 						| 45   |
+# 						| 55 	 |
+# 						| 65 	 |
+# 						+------+
+# 						8 rows in set (0.00 sec)
+#
+# 					The values shown for auto_increment_increment and auto_increment_offset generates the series 5 + N x 10, that is [5, 15, 25, 35, 45, /etc/]
+#
+# 					The highest value present in tthe col column prior to the INSERT is 31, and the next available value in the AUTO_INCREMENT series is 35,
+# 					so the inserted values for col begin at the point and the results are as shown for the SELECT query.
+#
+# 					It is not possible to restrict the effects of these two variables to a single table; these variables control the behavior of all AUTO_INCREMENT
+# 					columns in all tables on the MySQL server. If the global value of either variable is set, its effects persist until the global value is
+# 					changed or overridden by setting the session value, or until mysqld is restarted.
+#
+# 					If the local value is set, the new value affects AUTO_INCREMENT columns for all tables into which new rows are inserted by
+# 					the current user for the duration of the session, unless the values are changed during that session.
+#
+# 					The default value of auto_increment_increment is 1. See SECTION 17.4.1.1, "REPLICATION AND AUTO_INCREMENT"
+#
+# 				) auto_increment_offset
+#
+# 					Property 			Value
+#
+# 					Cmd line 			--auto-increment-offset=#
+# 					Sys var 				auto_increment_offset
+# 					Scope 				Global, Session
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		Yes
+# 					Type 					Integer
+# 					Default 				1
+# 					Min 					1
+# 					Max 					65535
+#
+# 					This variable has a default value of 1. It is left with its default value, and Group Replication is started on the server in multi-primary mode,
+# 					it is changed to the server ID.
+#
+# 					For more information, see the description for auto_increment_increment
+#
+# 					As of MySQL 8.0.14, setting the session value of this system variable is a restricted operation. The session user must have privileges
+# 					sufficient to set restricted session variables.
+#
+# 					See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 					NOTE:
+#
+# 						auto_increment_offset is also supported for use with NDB tables
+#
+# 				) immediate_server_version
+#
+# 					Property 			Value
+#
+# 					Introduced 			8.0.14
+# 					Sys var 				immediate_server_version
+# 					Scope 				Session
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		No
+# 					Type 					Integer
+#
+# 					For internal use by replication. This session system variable holds the MySQL Server release number of the server that is the immediate
+# 					master in a replication topology (for example, 80014 for a MySQL 8.0.14 server instance)
+#
+# 					If this immediate server is at a release that does not support hte session system variable, the value of the variable is set to 0 (UNKNOWN_SERVER_VERSION)
+#
+# 					The value of the variable is replicated from a master to a slave. With this information the slave can correctly process data originating from a master
+# 					at an older release, by recognizing where syntax changes or semantic changes have occurred between the releases involved and handling these appropriately.
+#
+# 					The information can also be used in a Group Replication environment where one or more members of the replication group is at a newer release than the
+# 					others.
+#
+# 					The value of the variable can be viewed in the binary log for each transaction (as part of the Gtid_log_event, or Anonymous_gtid_log_event
+# 					if GTIDs are not in use on the server), and could be helpful in debugging cross-version replication issues.
+#
+# 					Setting the session value of this system variable is a restricted operation. See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 					However, note that the variable is not intended for users to set; it is set automatically by the replication infrastructure.
+#
+# 				) original_server_version
+#
+# 					Property 			Value
+#
+# 					Introduced 			8.0.14
+# 					Sys var 				original_server_version
+# 					Scope 				Session
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		No
+# 					Type 					Integer
+#
+# 					For internal use by replication. This session system variable holds the MySQL Server release number of the server where a transaction
+# 					was originally committed (for example, 80014 for a MySQL 8.0.14 server instance)
+#
+# 					If this original server is at a release that does not support the session system variable, the value of the variable is set to 0
+# 					(UNKNOWN_SERVER_VERSION).
+#
+# 					Note that when a release number is set by the original server, the value of the variable is reset to 0 if the immediate server or
+# 					any other intervening server in the replication topology does not support the session system variable, and so does not replicate
+# 					its value.
+#
+# 					The value of the variable is set and used in the same way as for the immediate_server_version system variable. If the value of
+# 					the variable is the same as that for the immediate_server_version system variable, only the latter is recorded in the binary log,
+# 					with an indicator that the original server version is the same.
+#
+# 					In a Group Replication Environment, view change log events, which are special transactions queued by each group member when a new
+# 					member joins the group, are tagged with the server version of the group member queuing the transaction.
+#
+# 					This ensures that the server version of the original donor is known to the joining member. Because the view change log events
+# 					queued for a particular view change have the same GTID on all members, for this case only.
+#
+# 					Instances of the same GTID might have a different original server version.
+#
+# 					Setting the session value of this system variable is a restricted operation. See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 					However, note that the variable is not intended for users to set; it is set automatically by the replication infrastructure.
+#
+# 				) rpl_semi_sync_master_enabled
+#
+# 					Property 			Value
+#
+# 					Cmd line 			--rpl-semi-sync-master-enabled[={OFF|ON}]
+# 					Sys var 				rpl_semi_sync_master_enabled
+# 					Scope 				Global
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		No
+# 					Type 					Boolean
+# 					Default 				OFF
+#
+# 					Controls whether semisynchronous replication is enabled on the master. To enable or disable the plugin, set this variable
+# 					to ON or OFF (or 1 or 0), respectively.
+#
+# 					The default is OFF.
+#
+# 					This variable is available only if the master-side semisynchronous replication plugin is installed.
+#
+# 				) rpl_semi_sync_master_timeout
+#
+# 					Property 			Value
+#
+# 					Cmd line 			--rpl-semi-sync-master-timeout=#
+# 					Sys var 				rpl_semi_sync_master_timeout
+# 					Scope 				Global
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		No
+# 					Type 					Integer
+# 					Default 				10000
+#
+# 					A value in milliseconds that controls how long the master waits on a commit for acknowledgement from a slave before
+# 					timing out and reverting to asynch replication.
+#
+# 					The default value is 10000 (10 seconds)
+#
+# 					This variable is available only if the master-side semisynch replication plugin is installed.
+#
+# 				) rpl_semi_sync_master_trace_level
+#
+# 					Property 			Value
+#
+# 					Cmd line 			--rpl-semi-sync-master-trace-level=#
+# 					Sys var 				rpl_semi_sync_master_trace_level
+# 					Scope 				Global
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		No
+# 					Type 					INteger
+# 					Default 				32
+#
+# 					The semisynch replication debug trace level on the master. Four levels are defined:
+#
+# 						) 1 = general level (for example, time function failures)
+#
+# 						) 16 = detail level (more verbose information)
+#
+# 						) 32 = net wait level (more information about network waits)
+#
+# 						) 64 = function level (information about function entry and exit)
+#
+# 					This variable is available only if the master-side semisynch replication plugin is installed.
+#
+# 				) rpl_semi_sync_master_wait_for_slave_count
+#
+# 					Property 			Value
+#
+# 					Cmd line 			--rpl-semi-sync-master-wait-for-slave-count=#
+# 					Sys var 				rpl_semi_sync_master_wait_for_slave_count
+# 					Scope 				Global
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		No
+# 					Type 					Integer
+# 					Default 				1
+# 					Min 					1
+# 					Max 					65535
+#
+# 					The number of slave acknowledements the master must receive per transaction before proceeding. By default
+# 					rpl_semi_sync_master_wait_for_slave_count is 1, meaning that semisynchronous replication proceeds after
+# 					receiving a single slave acknowledgement.
+#
+# 					Performance is best for small values of this variable.
+#
+# 					For example, if rpl_semi_sync_master_wait_for_slave_count is 2, then 2 slaves must acknowledge receipt of the
+# 					transaction before the timeout period configured by rpl_semi_sync_master_timeout for semisynch replication to proceed.
+#
+# 					If less slaves acknowledge receipt of the transaction during the timeout period, the master reverts to normal replication.
+#
+# 					NOTE:
+#
+# 						This behavior also depends on rpl_semi_sync_master_wait_no_slave
+#
+# 					This variable is available only if the master-side semisynch replication plugin is installed.
+#
+# 				) rpl_semi_sync_master_wait_no_slave
+#
+# 					Property 			Value
+#
+# 					Cmd line 			--rpl-semi-sync-master-wait-no-slave[={OFF|ON}]
+# 					Sys var 				rpl_semi_sync_master_wait_no_slave
+# 					Scope 				Global
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		No
+# 					Type 					Boolean
+# 					Default 				ON
+#
+# 					Controls whether the master waits for timeout period configured by rpl_semi_sync_master_timeout to expire, even if
+# 					the slave count drops to less than the number of slaves configured by rpl_semi_sync_master_wait_for_slave_count during
+# 					the timeout period.
+#
+# 					When the value of rpl_semi_sync_master_wait_no_slave is ON (the default), it is permissible for the slave count to drop
+# 					to less than rpl_semi_sync_master_wait_for_slave_count during the timeout period.
+#
+# 					As long as enough slaves acknowledge the transaction before the timeout period expires, semisynch replication continues.
+#
+# 					When the value of rpl_semi_sync_master_wait_no_slave is OFF, if the slave count drops to less than the number configured
+# 					in rpl_semi_sync_master_wait_for_slave_count at any time during the timeout period configured by rpl_semi_sync_master_timeout,
+# 					the master reverts to normal replication.
+#
+# 					This variable is available only if the master-side semisynch replication plugin is installed.
+#
+# 				) rpl_semi_sync_master_wait_point
+#
+# 					Property 			Value
+#
+# 					Cmd line 			--rpl-semi-sync-master-wait-point=value
+# 					Sys var 				rpl_semi_sync_master_wait_point
+# 					Scope 				Global
+# 					Dynamic 				Yes
+# 					SET_VAR Hint 		No
+# 					Type 					Enumeration
+# 					Default 				AFTER_SYNC
+# 					Valid 				AFTER_SYNC 
+# 											AFTER_COMMIT
+#
+# 					This variable controls the point at which a semisynch replication master waits for slave acknowledgement of transaction receipt
+# 					before returning a status to the client that committed the transaction.
+#
+# 					These values are permitted:
+#
+# 						) AFTER_SYNC (the default): The master writes each transaction to its binary log and the slave, and syncs the binary log to disk.
+# 							The master waits for slave acknowledgement of transaction receipt after the sync.
+#
+# 							Upon receiving acknowledgement, the master commits the transaction to the storage engine and returns a result to the client,
+# 							which then can proceed.
+#
+# 						) AFTER_COMMIT: The master writes each transaction to its binary log and the slave, syncs the binary log, and commits the transaction
+# 							to the storage engine.
+#
+# 							The master waits for slave acknowledgement of transaction receipt after the commit. Upon receiving acknowledgement, the master
+# 							returns a result to the client, which then can proceed.
+#
+# 					The replication characteristics of these settings differ as follows:
+#
+# 						) With AFTER_SYNC, all clients see the committed transaction at the same time: After it has been acknowledged by the slave and
+# 							committed to the storage engine on the master.
+#
+# 							Thus, all clients see the same data on the master.
+#
+# 							In the event of master failure, all transactions committed on the master have been replicated to the slave (saved to its relay log).
+#
+# 							A crash of the master and failover to the slave is lossless because the slave is up to date. Note, however, that the master
+# 							cannot be restarted in this scenario and must be discarded, because its binary log might contain uncommitted transactions
+# 							that would cause a conflict with the slave when externalized after binary log recovery.
+#
+# 						) With AFTER_COMMIT, the client issuing the transaction gets a return status only after the server commits to the storage engine
+# 							and receives slave acknowledgement. After the commit and before slave acknowledgement, other clients can see the committed
+# 							transaction before the committing client.
+#
+# 							If something goes wrong such that the slave does not process the transaction, then in the event of a master crash and failover
+# 							to the slave, it is possible that such clients will see a loss of data relative to what they saw on the master.
+#
+# 					This variable is available only if the master-side semisynch replication plugin is installed.
+#
+# 					With the addition of rpl_semi_sync_master_wait_point in MySQL 5.7, a version compatibility constraint was created because it increments
+# 					the semisynch interface version: Servers for MySQL 5.7 and higher do not work with semisynch replication plugins from older versions,
+# 					nor do servers from older versions work with semisynchronous replication plugins for MySQL 5.7 and higher.
+#
+# 17.1.6.3 REPLICATION SLAVE OPTIONS AND VARIABLES
+#
+# This section explains the server options and system variables that apply to slave replication servers and contains the following:
+#
+# 		) STARTUP OPTIONS FOR REPLICATION SLAVES
+#
+# 		) OPTIONS FOR LOGGING SLAVE STATUS TO TABLES
+#
+# 		) SYSTEM VARIABLES USED ON REPLICATION SLAVES
+#
+# Specify the options either on the command line or in an option file. Many of the options can be set while the server is running by using
+# the CHANGE_MASTER_TO statement.
+#
+# Specify system variable values using SET.
+#
+# SERVER ID. On the master and each slave, you must use the server-id option to establish a unique replication ID in the range from 1 to 2^32-1
+#
+# "Unique" means that each ID must be different from every other ID in use by any other replication master or slave. Example my.cnf file:
+#
+# 		[mysqld]
+# 		server-id=3
+#
+# STARTUP OPTIONS FOR REPLICATION SLAVES
+#
+# This section explains startup options for controlling replication slave servers. Many of these options can be set while the server is
+# running by using the CHANGE_MASTER_TO statement.
+#
+# Others, such as the --replicate-* options, can be set only when the slave server starts. Replication-related system variables are
+# discussed later in this section.
+#
+# 		) --log-slave-updates
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--log-slave-updates[={OFF|ON}]
+# 			Sys var 				log_slave_updates
+# 			Scope 				Global
+# 			Dynamic 				No
+# 			SET_VAR Hint 		No
+# 			Type 					Boolean
+# 			Default (>= 8.0.3) ON
+# 			Default (<= 8.0.2) OFF
+#
+# 			This option makes a slave write updates that are received from a master server and performed by the slave's SQL thread to the slave's
+# 			own binary log.
+#
+# 			Binary logging, which is controlled by the --log-bin option and is enabled by default, must also be enabled on the slave for updates
+# 			to be logged.
+#
+# 			--log-slave-updates is enabled by default, unless you specify --skip-log-bin to disable binary logging, in which case MySQL also disables
+# 			slave update logging by default.
+#
+# 			If you need to disable slave update logging when binary logging is enabled, specify --skip-log-slave-updates.
+#
+# 			--log-slave-updates enables replication servers to be chained. For example, you might want to set up replication servers using this arrangement:
+#
+# 				A -> B -> C
+#
+# 			Here, A serves as the master for the slave B, and B serves as the master for the slave C. For this to work, B must be both a master and a slave.
+#
+# 			With binary logging and the --log-slave-updates option enabled, which are the default settings, updates received from A are logged by B to its
+# 			binary log, and can therefore be passed on to C.
+#
+# 		) --master-info-file=file_name
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--master-info-file=file_name
+# 			Deprecated 			8.0.18
+# 			Type 					File name
+# 			Default 				master.info
+#
+# 			The name for the master info log, if --master-info-repository=FILE is set. The default name is master.info in the data directory.
+#
+# 			--master-info-file and the setting --master-info-repository=FILE are deprecated, as the use of a file for the master info log has been
+# 			superseded by crash-safe slave tables.
+#
+# 			For information about the master info log, see SECTION 17.2.4.2, "SLAVE STATUS LOGS"
+#
+# 		) --master-retry-count=count
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--master-retry-count=#
+# 			Deprecated 			Yes
+# 			Type 					Integer
+# 			Default 				86400
+# 			Min 					0
+# 			Max (64-bit) 		/a lot/
+# 			Max (32-bit) 		/less/
+#
+# 			The number of times that the slave tries to reconnect to the master before giving up. The default value is 86400 times.
+#
+# 			A value of 0 means "infinite", and the slave attempts to connect forever. Reconnection attempts are triggered when the slave
+# 			reaches its connection timeout (specified by the --slave-net-timeout option) without receiving data or a heartbeat signal
+# 			from the master.
+#
+# 			Reconnection is attempted at intervals set by the MASTER_CONNECT_RETRY option of the CHANGE_MASTER_TO statement
+# 			(which defaults to every 60 seconds)
+#
+# 			THis option is deprecated and will be removed in a future MySQL release. Use the MASTER_RETRY_COUNT option of the CHANGE_MASTER_TO
+# 			statement instead.
+#
+# 		) --max-relay-log-size=size
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--max-relay-log-size=#
+# 			Sys var 				max_relay_log_size
+# 			Scope 				Global
+# 			Dynamic 				Yes
+# 			SET_VAR Hint 		No
+# 			Type 					Integer
+# 			Default 				0
+# 			Min 					0
+# 			Max 					1073741824
+#
+# 			The size at which the server rotates relay log files automatically. If this value is nonzero, the relay log is rotated automatically
+# 			when its size exceeds this value.
+#
+# 			If this value is zero (the default), the size at which relay log rotation occurs is determined by the value of max_binlog_size
+#
+# 			For more information, see SECTION 17.2.4.1, "THE SLAVE RELAY LOG"
+#
+# 		) --relay-log=file_name
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--relay-log=file_name
+# 			Sys var 				relay_log
+# 			Scope 				Global
+# 			Dynamic 				No
+# 			SET_VAR Hint 		No
+# 			Type 					File name
+#
+# 			The base name for the relay log. The server creates relay log files in sequence by adding a numeric suffix to the base name.
+#
+# 			For the default replication channel, the default base name for relay logs is host_name-relay-bin, using the name of the host machine.
+#
+# 			For non-default replication channels, the default base name for relay logs is host_name-relay-bin-channel, where channel is the name
+# 			of the replication channel recorded in this relay log.
+#
+# 			The default location for relay log files is the data directory. You can use the --relay-log option to specify an alternative location,
+# 			by adding a leading absolute path name to the base name to specify a different directory.
+#
+# 			The relay log and relay log index on a replication server cannot be given the same name as the binary log and binary log index, whose
+# 			names are specified by the --log-bin and --log-bin-index options.
+#
+# 			The server issues an error message and does not start if the binary log and relay log file base names would be the same.
+#
+# 			Due to the manner in which MySQL parses server options, if you specify this option, you must supply a value; the default base name
+# 			is used only if the option is not actually specified.
+#
+# 			If you use the --relay-log option without specifying a value, unexpected behavior is likely to result: this behavior depends on the
+# 			other options used, the order in which they are specified, and whether they are specified on the command line or in an option file.
+#
+# 			For more information about how MySQL handles server options, see SECTION 4.2.2, "SPECIFYING PROGRAM OPTIONS"
+#
+# 			If you specify this option, the value specified is also used as the base name for the relay log index file. You can override this behavior
+# 			by specifying a different relay log index file base name using the --relay-log-index option.
+#
+# 			When the server reads an entry from the index file, it checks whether the entry contains a relative path.
+#
+# 			If it does, the relative part of the path is replaced with the absolute path set using the --relay-log option. An absolute path remains
+# 			unchanged; in such a case, the index must be edited manually to enable the new path or paths to be used.
+#
+# 			Previously, manual intervention was required whenever relocating the binary log or relay log files.
+#
+# 			(Bug #11745230, Bug #12133)
+#
+# 			You may find the --relay-log option useful in performing the following tasks:
+#
+# 				) Creating relay logs whose names are independent of host names
+#
+# 				) If you need to put the relay logs in some area other than the data directory because your relay logs tend to be very large
+# 					and you do not want to decrease max_relay_log_size
+#
+# 				) To increase speed by using load-balancing between disks
+#
+# 			You can obtain the relay log file name (and path) from the relay_log_basename system variable
+#
+# 		) --relay-log-index=file_name
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--relay-log-index=file_name
+# 			Sys var 				relay_log_index
+# 			Scope 				Global
+# 			Dynamic 				No
+# 			SET_VAR Hint 		No
+# 			Type 					File name
+#
+# 			The name for the relay log index file. If you do not specify the --relay-log-index option, but the --relay-log option is specified,
+# 			its value is used as the default base name for the relay log index file.
+#
+# 			If the --relay-log option is also not specified, then for the default replication channel, the default name is host_name-relay-bin.index,
+# 			using the name of the host machine. For non-default replication channels, the default name is host_name-relay-bin-channel.index,
+# 			where channel is the name of the replication channel recorded in this relay log index.
+#
+# 			THe default location for relay log files is the data directory, or any other location that was specified using the --relay-log option.
+#
+# 			YOu can use the --relay-log-index option to specify an alternative location, by adding a leading absolute path name to the base name
+# 			to specify a different directory.
+#
+# 			The relay log and relay log index on a replication server cannot be given the same names as the binary log and binary log index,
+# 			whose names are specified by the --log-bin and --log-bin-index options.
+#
+# 			The server issues an error message and does not start if the binary log and relay log file base names would be the same.
+#
+# 			Due to the manner in which MySQL parses server options, if you specify this option, you must supply a value; the default base name
+# 			is used only if the option is not actually specified.
+#
+# 			If you use the --relay-log-index option without specifying a value, unexpected behavior is likely to result; this behavior depends
+# 			on the other options used, the order in which they are specified, and whether they are specified on the command line or in an
+# 			option file.
+#
+# 			For more information about how MySQL handles server options, see SECTION 4.2.2, "SPECIFYING PROGRAM OPTIONS"
+#
+# 		) --relay-log-info-file=file_name
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--relay-log-info-file=file_name
+# 			Deprecated 			8.0.18
+# 			Type 					File name
+# 			Default 				relay-log.info
+#
+# 			The name for the relay log info file, when --relay-log-info-repository is set to FILE. The default name is relay-log.info
+# 			in teh data directory.
+#
+# 			--relay-log-info-file and the setting --relay-log-info-repository=FILE are deprecated, as the use of a file for the relay
+# 			log info log has been superseded by crash-safe slave tables. For information about the relay log info log, see SECTION 17.2.4.2, "SLAVE STATUS LOGS"
+#
+# 		) --relay-log-purge={0|1}
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--relay-log-purge[={OFF|ON}]
+# 			Sys var 				relay_log_purge
+# 			Scope 				Global
+# 			Dynamic 				Yes
+# 			SET_VAR Hint 		No
+# 			Type 					Boolean
+# 			Default 				ON
+#
+# 			Disable or enable automatic purging of relay logs as soon as they are no longer needed. The default value is 1 (enabled). This is a global variable
+# 			that can be changed dynamically with SET GLOBAL relay_log_purge = N.
+#
+# 			Disabling purging of relay logs when using the --relay-log-recovery option risks data consistency and is therefore not crash-safe.
+#
+# 		) --relay-log-recovery={0|1}
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--relay-log-recovery[={OFF|ON}]
+# 			Type 					Boolean
+# 			Default 				OFF
+#
+# 			Enables automatic relay log recovery immediately following server startup. The recovery process creates a new relay log file, initializes the
+# 			SQL thread position to this new relay log, and initializes the I/O thread to the SQL thread position.
+#
+# 			Reading of the relay log from the master then continues. This should be used following a crash on the replication slave to ensure that no
+# 			possibly corrupted relay logs are processed. The default value is 0 (disabled)
+#
+# 			To provide a crash-safe slave, this option must be enabled (set to 1), --relay-log-info-repository must be set to TABLE, and relay-log-purge
+# 			must be enabled.
+#
+# 			Enabling the --relay-log-recovery option when relay-log-purge is disabled risks reading the relay log from files that were not purged, leading
+# 			to data inconsistency, and is therefore not crash-safe.
+#
+# 			See MAKING REPLICATION RESILIENT TO UNEXPECTED HALTS, for more information.
+#
+# 			When using a multithreaded slave (in other words slave_parallel_workers is greater than 0), inconsistencies such as gaps can occur in the
+# 			sequence of transactions that have been executed from the relay log.
+#
+# 			Enabling the --relay-log-recovery option when there are inconsistencies causes an error and the option has no effect.
+#
+# 			The solution in this situation is to issue START_SLAVE_UNTIL_SQL_AFTER_MTS_GAPS, which brings the server to a more consistent
+# 			state, then issue RESET_SLAVE to remove the relay logs. See SECTION 17.4.1.33, "REPLICATION AND TRANSACTION INCONSISTENCIES"
+# 			for more information.
+#
+# 			NOTE:
+#
+# 				This option does not affect the following Group Replication channels:
+#
+# 					) group_replication_applier
+#
+# 					) group_replication_recovery
+#
+# 				Any other channels running on a group are affected, example a channel which is replicating from an outside master or another group.
+#
+# 		) --relay-log-space-limit=size
+#
+# 			Property 				Value
+#
+# 			Cmd line 				--relay-log-space-limit=#
+# 			Sys var 					relay_log_space_limit
+# 			Scope 					Global
+# 			Dynamic 					No
+# 			SET_VAR Hint 			No
+# 			Type 						Integer
+# 			Default 					0
+# 			Min 						0
+# 			Max (64-bit) 			//a lot//
+# 			Max (32-bit) 			//less//
+#
+# 			This option places an upper limit on the total size in bytes of all relay logs on the slave. A value of 0 means "no limit".
+#
+# 			This is useful for a slave server host that has limited disk space. When the limit is reached, the I/O thread stops reading 
+# 			binary log events from the master server until the SQL thread has caught up and deleted some unused relay logs.
+#
+# 			Note that this limit is not absolute: There are cases where the SQL thread needs more events before it can delete relay
+# 			logs.
+#
+# 			In that case, the I/O thread exceeds the limit until it becomes possible for the SQL thread to delete some relay logs
+# 			because not doing so would cause a deadlock.
+#
+# 			You should not set --relay-log-space-limit to less than twice the value of --max-relay-log-size (or --max-binlog-size if
+# 			--max-relay-log-size is 0)
+#
+# 			In that  case, there is a chance that the I/O thread waits for free space because --relay-log-space-limit is exceeded,
+# 			but the SQL thread has no relay log to purge and is unable to satisfy the I/O thread.
+#
+# 			This forces the I/O thread to ignore --relay-log-space-limit temporarily.
+#
+# 		) --replicate-do-db=db_name
+#
+# 			Property 				Value
+#
+# 			Cmd line 				--replicate-do-db=name
+# 			Type 						String
+#
+# 			Creates a replication filter using the name of a database. Such filters can also be created using CHANGE_REPLICATION_FILTER_REPLICATE_DO_DB
+#
+# 			This option supports channel specific replication filters, enabling multi-source replication slaves to use specific filters for different sources.
+# 			To configure a channel specific replication filter on a channel named channel_1 use --replicate-do-db:channel_1:db_name.
+#
+# 			In this case, the first colon is interpreted as a separator and subsequent colons are literal colons. 
+#
+# 			See SECTION 17.2.5.4, "REPLICATION CHANNEL BASED FILTERS" for more information.
+#
+# 			NOTE:
+#
+# 				Global replication filters cannot be used on a MySQL server instance that is configured for Group Replication, because filtering
+# 				transactions on some servers would make the group unable to reach agreement on a consistent state.
+#
+# 				Channel specific replication filters can be used on replication channels that are not directly involved with Group Replication,
+# 				such as where a group member also acts as a replication slave to a master that is outside the group.
+#
+# 				They cannot be used on the group_replication_applier or group_replication_recovery channels.
+#
+# 			The precise effect of this replication filter depends on whether statement-based or row-based replication is in use.
+#
+# 			STATEMENT-BASED REPLICATION.
+#
+# 			Tell the slave SQL thread to restrict replication to statements where the default database (that is, the one selected by USE)
+# 			is db_name.
+#
+# 			To specify more than one database, use this option multiple times, once for each database; however, doing so does not replicate
+# 			cross-database statements such as UPDATE some_db.some_table SET foo='bar' while a different database (or no database) is selected.
+#
+# 			WARNING:
+#
+# 				To specify multiple databases you must use multiple instances of this option. Because database names can contain commas,
+# 				if you supply a comma separated list then the list is treated as the name of a single database.
+#
+# 			An example of what does not work as you might expect when using statement-based replication: If the slave is started with
+# 			--replicate-do-db=sales and you issue the following statements on the master, the UPDATE statement is not replicated:
+#
+# 				USE prices;
+# 				UPDATE sales.january SET amount=amount+1000;
+#
+# 			The main reason for this "check just the default database" behavior is that it is difficult from the statement alone to
+# 			know whether it should be replicated (for example, if you are using multiple-table DELETE statements or multiple-table 
+# 			UPDATE statements that act across multiple databases)
+#
+# 			It is also faster to check only the default database rather than all databases if there is no need.
+#
+# 			ROW-BASED REPLICATION
+#
+# 			Tells the slave SQL thread to restrict replication to database db_name. Only tables belonging to db_name are changed;
+# 			the current database has no effect on this.
+#
+# 			Suppose that the slave is started with --replicate-do-db=sales and row-based replication is in effect, and then the
+# 			following statements are run on the master:
+#
+# 				USE prices;
+# 				UPDATE sales.february SET amount=amount+100;
+#
+# 			The feburary table in the sales database on the slave is changed in accordance with the UPDATE statement; this occurs
+# 			whether or not the USE statement was issued.
+#
+# 			However, issuing the following statements on the master has no effect on the slave when using row-based replication
+# 			and --replicate-do-db=sales:
+#
+# 				USE prcies;
+# 				UPDATE prices.march SET amount=amount-25;
+#
+# 			Even if the statement USE prices were changed to USE sales, the UPDATE statement's effect would still not be replicated.
+#
+# 			Another important difference in how --replicate-do-db is handled in statement-based replication as opposed to row-based
+# 			replication occurs with regard to statements that refer to multiple databases.
+#
+# 			Suppose that the slave is started with --replicate-do-db=db1, and the following statements are executed on the master:
+#
+# 				USE db1;
+# 				UPDATE db1.table1 SET col1 = 10, db2.table2 SET col2 = 20;
+#
+# 			If you are using statement-based replication, then both tables are updated on the slave.
+#
+# 			However, when using row-based replication, only table1 is affected on the slave; since table2 is in a different database,
+# 			tabl2 on the slave is not changed by the UPDATE.
+#
+# 			Now suppose that, instead of the USE db1 statement, a USE db4 statement had been used:
+#
+# 				USE db4;
+# 				UPDATE db1.table1 SET col1 = 10, db2.table2 SET col2 = 20;
+#
+# 			In this case, the UPDATE statement would have no effect on the slave when using statement-based replication.
+#
+# 			However, if you are using row-based replication, the UPDATE would change table1 on the slave, but not table2-
+# 			in other words, only tables in teh database named by --replicate-do-db are changed, and the choice of default
+# 			database has no effect on this behavior.
+#
+# 			If you need cross-database updates to work, use --replicate-wild-do-table=db_name.% instead.
+#
+# 			See SECTION 17.2.5, "HOW SERVERS EVALUATE REPLICATION FILTERING RULES"
+#
+# 			NOTE:
+#
+# 				This option affects replication in the same manner that --binlog-do-db affects binary logging, and the effects
+# 				of the replication format on how --replicate-do-db affects replication behavior are the same as those of the
+# 				logging format on the behavior of --binlog-do-db.
+#
+# 				This option has no effect on BEGIN, COMMIT or ROLLBACK statements.
+#
+# 		) --replicate-ignore-db=db_name
+#
+#			https://dev.mysql.com/doc/refman/8.0/en/replication-options-slave.html
+#
