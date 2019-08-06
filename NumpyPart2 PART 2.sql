@@ -66185,5 +66185,703 @@
 #
 # 		) --replicate-ignore-db=db_name
 #
-#			https://dev.mysql.com/doc/refman/8.0/en/replication-options-slave.html
+# 			Property 			Value
+#
+# 			Cmd line 			--replicate-ignore-db=name
+# 			Type 					String
+#
+# 			Creates a replication filter using the name of a database. Such filters can also be created using CHANGE_REPLICATION_FILTER_REPLICANT_IGNORE_DB
+#
+# 			This option supports channel specific replication filters, enabling multi-source replication slaves to use specific filters for different
+# 			sources.
+#
+# 			To configure a channel specific replication filter on a channel named channel_1 use --replicate-ignore-db:channel_1:db_name
+#
+# 			In this case, the first colon is interpreted as a separator and subsequent colons are literal colons. 
+# 			See SECTION 17.2.5.4, "REPLICATION CHANNEL BASED FILTERS" for more information.
+#
+# 			NOTE:
+#
+# 				Global replication filters cannot be used on a MySQL server instance that is configured for Group Replication, because filtering
+# 				transactions on some servers would make the group unable to reach agreement on a consistent state.
+#
+# 				Channel specific replication filters can be used on replication channels that are not directly involved with Group Replication,
+# 				such as where a group member also acts as a replication slave to a master that is outside the group.
+#
+# 				They cannot be used on the group_replication_applier or group_replication_recovery channels.
+#
+# 			To specify more than one database to ignore, use this option multiple times, once for each database. Because database names
+# 			can contain commas, if you supply a comma separated list then the list will be treated as the name of a single database.
+#
+# 			As with --replicate-do-db, the precise effect of this filtering depends on whether statement-based or row-based replication
+# 			is in use, and are described in the next several paragraphs.
+#
+# 			STATEMENT-BASED REPLICATION
+#
+# 			Tells the slave SQL thread not to replicate any statement where the default database (that is, the one selected by USE)
+# 			is db_name
+#
+# 			ROW-BASED REPLICATION
+#
+# 			Tells the slave SQL thread not to update any tables in the database db_name. The default database has no effect.
+#
+# 			When using statement-based replication, the following example does not work as you might expect. Suppose that the
+# 			slave is started with --replicate-ignore-db=sales and you issue the following statements on the master:
+#
+# 				USE prices;
+# 				UPDATE sales.january SET amount=amount+1000;
+#
+# 			The UPDATE statement is replicated in such a case because --replicate-ignore-db applies only to the default
+# 			database (determined by the USE statement).
+#
+# 			Because the sales database was specified explicitly in the statement, the statement has not been filtered.
+#
+# 			However, when using row-based replication, the UPDATE statement's effects are not propagated to the slave,
+# 			and the slave's copy of the sales.january table is unchanged; in this instance, --replicate-ignore-db=sales
+# 			causes all changes made to tables in the master's copy of the sales database to be ignored by the slave.
+#
+# 			You should not use this option if you are using cross-database updates and you do not want these updates
+# 			to be replicated. See SECTION 17.2.5, "HOW SERVERS EVALUATE REPLICATION FILTERING RULES"
+#
+# 			If you need cross-database updates to work, use --replicate-wild-ignore-table=db_name.% instead
+#
+# 			See SECTION 17.2.5, "HOW SERVERS EVALUATE REPLICATION FILTERING RULES"
+#
+# 			NOTE:
+#
+# 				This option affects replication in the same manner that --binlog-ignore-db affects binary logging,
+# 				and the effects of the replication format on how --replicate-ignore-db affects replication behavior
+# 				are the same as those of the logging format on the behavior of --binlog-ignore-db
+#
+# 				This option has no effect on BEGIN, COMMIT or ROLLBACK statements.
+#
+# 		) --replicate-do-table=db_name.tbl_name
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--replicate-do-table=name
+# 			Type 					String
+#
+# 			Creates a replication filter by telling the slave SQL thread to restrict replication to a given table. To specify
+# 			more than one table, use this option multiple times, once for each table.
+#
+# 			This works for both cross-database updates and default database updates, in contrast to --replicate-do-db.
+#
+# 			See SECTION 17.2.5, "HOW SERVERS EVALUATE REPLICATION FILTERING RULES"
+#
+# 			YOu can also create such a filter by issuing a CHANGE_REPLICATION_FILTER_REPLICATE_DO_TABLE statement.
+#
+# 			This option suppports channel specific replication filters, enabling multi-source replication slaves
+# 			to use specific filters for different sources. To configure a channel specific replication filter 
+# 			on a channel named channel_1 use --replicate-do-table:channel_1:db_name.tbl_name.
+#
+# 			In this case, the first colon is interpreted as a separator and subsequent colons are literal colons.
+#
+# 			See SECTION 17.2.5.4, "REPLICATION CHANNEL BASED FILTERS" for more information.
+#
+# 			NOTE:
+#
+# 				Global replication filters cannot be used on a MySQL server instance that is configured for Group Replication,
+# 				because filtering transactions on some servers would make the group unable to reach agreement on a consistent state.
+#
+# 				Channel specific replication filters can be used on replication channels that are not directly involved with Group
+# 				Replication, such as where a group member also acts as a replication slave to a master that is outside the group.
+#
+# 				They cannot be used on the group_replication_applier or group_replication_recovery channels.
+#
+# 			This option affects only statements that apply to tables. It does not affect statements that apply only to other
+# 			database objects, such as stored routines.
+#
+# 			To filter statements operating on stored routines, use one or more of the --replicate-*-db options.
+#
+# 		) --replicate-ignore-table=db_name.tbl_name
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--replicate-ignore-table=name
+# 			Type 					String
+#
+# 			Creates a replication filter by telling the slave SQL thread not to replicate any statement that updates the specified table, even if 
+# 			any other tables might be updated by the same statement.
+#
+# 			To specify more than one table to ignore, use this option multiple times, once for each table. This works for cross-database
+# 			updates, in contrast to --replicate-ignore-db.
+#
+# 			See SECTION 17.2.5, "HOW SERVERS EVALUATE REPLICATION FILTERING RULES"
+#
+# 			You can also create such a filter by issuing a CHANGE_REPLICATION_FILTER_REPLICATE_IGNORE_TABLE statement.
+#
+# 			This option supports channel specific replication filters, enabling multi-source replication slaves to use specific filters
+# 			for different sources.
+#
+# 			To configure a channel specific replication filter on a channel named channel_1 use --replicate-ignore-table:channel_1:db_name.tbl_name
+#
+# 			In this case, the first colon is interpreted as a separator and subsequent colons are literal colons.
+#
+# 			See SECTION 17.2.5.4, "REPLICATION CHANNEL BASED FILTERS" for more information.
+#
+# 			NOTE:
+#
+# 				Global replication filters cannot be used on a MySQL server instance that is configured for Group Replication, because filtering
+# 				transactions on some servers would make the group unable to reach agreement on a consistent state.
+#
+# 				Channel specific replication filters can be used on replication channels that are not directly involved with Group Replication,
+# 				such as where a group member also acts as a replication slave to a master that is outside the group.
+#
+# 				They cannot be used on the group_replication_applier or group_replication_recovery channels.
+#
+# 			This option affects only statements that apply to tables. It does not affect statements that apply only to other database objects,
+# 			such as stored routines.
+#
+# 			To filter statements operating on stored routines, use one or more of the --replicate-*-db options.
+#
+# 		) --replicate-rewrite-db=from_name->to_name
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--replicate-rewrite-db=old_name->new_name
+# 			Type 					String
+#
+# 			Tells the slave to create a replication filter that translates the default database (that is, the one selected by USE) to to_name
+# 			if it was from_name on the master.
+#
+# 			Only statements involving tables are affected (not statements such as CREATE_DATABASE, DROP_DATABASE, and ALTER_DATABASE),
+# 			and only if from_name is the default database on the master.
+#
+# 			To specify multiple rewrites, use this option multiple times. The server uses the first one with a from_name value that matches.
+#
+# 			The database name translation is done before the --replicate-* rules are tested. You can also create such a filter by issuing a
+# 			CHANGE_REPLICATION_FILTER_REPLICATE_REWRITE_DB statement.
+#
+# 			If you use this option on the command line and the > character is special to your command interpreter, quote the option value.
+#
+# 			For example:
+#
+# 				shell> mysqld --replicate-rewrite-db="olddb->newdb"
+#
+# 			This option supports channel specific replication filters, enabling multi-source replication slaves to use specific filters
+# 			for different sources.
+#
+# 			Specify the channel name followed by a colon, followed by the filter specification. THe first colon is interpreted as a separator,
+# 			and any subsequent colons are interpreted as literal colons.
+#
+# 			For example, to configure a channel specific replication filter on a channel named channel_1, use:
+#
+# 				shell> mysqld --replicate-rewrite-db=channel_1:db_name1->db_name2
+#
+# 			If you use a colon but do not specify a channel name, the option configures the replication filter for the default replication channel.
+#
+# 			See SECTION 17.2.5.4, "REPLICATION CHANNEL BASED FILTERS" for more information.
+#
+# 			NOTE:
+#
+# 				Global replication filters cannot be used on a MySQL server instance that is configured for Group Replication, because
+# 				filtering transactions on some servers would make the group unable to reach agreement on a consistent state.
+#
+# 				Channel specific replication filters can be used on replication channels that are not directly involved with 
+# 				Group Replication, such as where a group member also acts as a replication slave to a master that is outside
+# 				the group.
+#
+# 				They cannot be used on the group_replication_applier or group_replication_recovery channels.
+#
+# 			Statements in which table names are qualified with database names when using this option do not work with table-level
+# 			replication filtering options such as --replicate-do-table.
+#
+# 			Suppose we have a database named a on the master, one named b on the slave, each containing a table t, and have
+# 			started the master with --replicate-rewrite-db='a->b'
+#
+# 			At a later point in time, we execute DELETE_FROM_a.t 
+#
+# 			in this case, no relevant filtering rule works, for the reasons shown here:
+#
+# 				a. --replicate-do-table=a.t does not work because the slave has table t in database b
+#
+# 				b. --replicate-do-table=b.t does not match the original statement and so is ignored.
+#
+# 				c. --replicate-do-table=*.t is handled identically to --replicate-do-table=a.t, and thus does not work, either.
+#
+# 			Similarly, the --replication-rewrite-db option does not work with cross-database updates.
+#
+# 		) --replicate-same-server-id
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--replicate-same-server-id[={OFF|ON}]
+# 			Type 					Boolean
+# 			Default 				OFF
+#
+# 			This option is for use on replication slaves. THe default is 0 (FALSE). With this option set to 1 (TRUE), the slave does not skip
+# 			events that have its own server ID.
+#
+# 			This setting is normally useful only in rare configurations.
+#
+# 			When binary logging is enabled on a replication slave, the combination of the --replicate-same-server-id and --log-slave-updates
+# 			options on the slave can cause infinite loops in replication if the server is part of a circular replication topology.
+#
+# 			(In MySQL 8.0, binary logging is enabled by default, and slave update logging is the default when binary logging is enabled)
+#
+# 			However, the use of global transaction identifiers (GTIDs) prevents this situation by skipping the execution of transactions
+# 			that have already been applied.
+#
+# 			If gtid_mode=ON is set on the slave, you can start the server with this combination of options, but you cannot change to
+# 			any other GTID mode while the server is running. If any other GTID mode is set, the server does not start with this
+# 			combination of options.
+#
+# 			By default, the slave I/O thread does not write binary log events to the relay log if they have the slave's server ID
+# 			(this optimization helps save disk usage)
+#
+# 			If you want to use --replicate-same-server-id, be sure to start the slave with this option before you make the slave
+# 			read its own events that you want the slave SQL thread to execute.
+#
+# 		) --replicate-wild-do-table=db_name.tbl_name
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--replicate-wild-do-table=name
+# 			Type 					String
+#
+# 			Creates a replication filter by telling the slave thread to restrict replication to statements where any of the updated 
+# 			tables match the specified database and table name patterns.
+#
+# 			Patterns can contain the % and _ wildcard characters, which have the same meaning as for the LIKE pattern-matching operator.
+#
+# 			To specify more than one table, use this option multiple times, once for each table. This works for cross-database updates.
+#
+# 			See SECTION 17.2.5, "HOW SERVERS EVALUATE REPLICATION FILTERING RULES"
+#
+# 			You can also create such a filter by issuing a CHANGE_REPLICATION_FILTER_REPLICATE_WILD_DO_TABLE statement.
+#
+# 			THis option supports channel specific replication filters, enabling multi-source replication slaves to use specific
+# 			filters for different sources.
+#
+# 			To configure a channel specific replication filter on a channel named channel_1 use --replicate-wild-do-table:channel_1:db_name.tbl_name
+#
+# 			In this case, the first colon is interpreted as a separator and subsequent colons are literal colons.
+#
+# 			See SECTION 17.2.5.4, "REPLICATION CHANNEL BASED FILTERS" for more information.
+#
+# 			NOTE:
+#
+# 				Global replication filters cannot be used on a MySQL server instance that is configured for Group Replication, because filtering
+# 				transactions on some servers would make the group unable to reach agreement on a consistent state.
+#
+# 				Channel specific replication filters can be used on replication channels that are not directly involved with Group Replication,
+# 				such as where a group member also acts as a replication slave to a master that is outside the group.
+#
+# 				They cannot be used on the group_replication_applier or group_replication_recovery channels.
+#
+# 			This option applies to tables, views, and triggers. IT does not apply to stored procedures and functions, or events. To filter
+# 			statements operating on the latter objects, use one or more of the --replicate-*-db options.
+#
+# 			As an example, --replicate-wild-do-table=foo%.bar% replicates only updates that use a table where the database name starts
+# 			with foo and the table name starts with bar.
+#
+# 			If the table name pattern is %, it matches any table name and the option also applies to database-level statements
+# 			(CREATE_DATABASE, DROP_DATABASE and ALTER_DATABASE)
+#
+# 			For example, if oyu use --replicate-wild-do-table=foo%.%, database-level statements are replicated if the database name
+# 			matches the pattern foo%.
+#
+# 			To include literal wilcard characters in the database or table name patterns, escape them with a backslash.
+#
+# 			For example, to replicate all tables of a database that is named my_own%db, but not replicate tables from
+# 			the my1ownAABCdb database, you should escape the _ and % characters like this:
+#
+# 				--replicate-wild-do-table=my\_own\%db 
+#
+# 			If you use the option on the command line, you might need to double the backslashes or quote the option value,
+# 			depending on your command interpreter.
+#
+# 			For example, with the bash shell, you would need to type --replicate-wild-do-table=my\\_own\\%db
+#
+# 		) --replicate-wild-ignore-table=db_name.tbl_name
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--replicate-wild-ignore-table=name
+# 			Type 					String
+#
+# 			Creates a replication filter which keeps the slave thread from replicating a statement in which any table matches
+# 			the given wildcard pattern.
+#
+# 			To specify more than one table to ignore, use this option multiple times, once for each table.
+#
+# 			This works for cross-database updates. See SECTION 17.2.5, "HOW SERVERS EVALUATE REPLICATION FILTERING RULES"
+#
+# 			You can also create such a filter by issuing a CHANGE_REPLICATION_FILTER_REPLICATE_WILD_IGNORE_TABLE statement.
+#
+# 			This option supports channel specific replication filters, enabling multi-source replication slaves to use
+# 			specific filters for different sources.
+#
+# 			To configure a channel specific replication filter on a channel named channel_1 use --replicate-wild-ignore:channel_1:db_name.tbl_name
+#
+# 			In this case, the first colon is interpreted as a separator and subsequent colons are literal colons.
+#
+# 			See SECTION 17.2.5.4, "REPLICATION CHANNEL BASED FILTERS" for more information.
+#
+# 			NOTE:
+#
+# 				Global replication filters cannot be used on a MySQL server instance that is configured for Group Replication, because filtering
+# 				transactions on some servers would make the group unable to reach agreement on a consistent state.
+#
+# 				Channel specific replication filters can be used on replication channels that are not directly involved with Group Replication,
+# 				such as where a group member also acts as a replication slave to a master that is outside the group.
+#
+# 				They cannot be used on the group_replication_applier or group_replication_recovery channels.
+#
+# 			As an example, --replicate-wild-ignore-table=foo%.bar% does not replicate updates that use a table where the database name starts
+# 			with foo and the table name starts with bar.
+#
+# 			For information about how matching works, see the description of the --replicate-wild-do-table option.
+#
+# 			The rules for including literal wildcard characters in the option value are the same as for --replicate-wild-ignore-table as well.
+#
+# 		) --report-host=host_name
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--report-host=host_name
+# 			Sys var 				report_host
+# 			Scope 				Global
+# 			Dynamic 				No
+# 			SET_VAR Hint 		No
+# 			Type 					String
+#
+# 			The host name or IP address of the slave to be reported to the master during slave registration.
+#
+# 			This value appears in the output of SHOW_SLAVE_HOSTS on the master server.
+#
+# 			Leave the value unset if you do not want the slave to register itself with the master.
+#
+# 			NOTE:
+#
+# 				It is not sufficient for the master to simply read the IP address of the slave from the TCP/IP socket after
+# 				the slave connects.
+#
+# 				Due tot NAT and other routing issues, that IP may not be valid for connecting to the slave from the master or other hosts.
+#
+# 		) --report-password=password
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--report-password=name
+# 			Sys var 				report_password
+# 			Scope 				Global
+# 			Dynamic 				No
+# 			SET_VAR Hint 		No
+# 			Type 					String
+#
+# 			The account password of the slave to be reported to the master during slave registration. This value appears in the output of 
+# 			SHOW_SLAVE_HOSTS on the master server if the master was started with --show-slave-auth-info.
+#
+# 			ALthough the name of this option might imply otherwise, --report-password is not connected to the MySQL user privilege system
+# 			and so is not necessarily (or even likely to be) the same as the password for the MySQL replication user account.
+#
+# 		) --report-port=slave_port_num
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--report-port=port_num
+# 			Sys var 				report_port
+# 			Scope 				Global
+# 			Dynamic 				No
+# 			SET_VAR Hint 		No
+# 			Type 					Integer
+# 			Default 				[slave_port]
+# 			Min 					0
+# 			Max 					65535
+#
+# 			The TCP/IP port number for connecting to the slave, to be reported to the master during slave registration. Set this only
+# 			if the slave is listening on a nondefault port or if you have a special tunnel from the master or other clients to the slave.
+#
+# 			If you are not sure, do not use this option.
+#
+# 			The default value for this option is the port number actually used by the slave (Bug #13333431)
+#
+# 			This is also the default value displayed by SHOW_SLAVE_HOSTS
+#
+# 		) --report-user=user_name
+#
+# 			Property 			Value#
+# 			
+# 			Cmd line 			--report-user=name
+# 			Sys var 				report_user
+# 			Scope 				Global
+# 			Dynamic 				No
+# 			SET_VAR Hint 		No
+# 			Type 					String
+#
+# 			The account user name of the slave to be reported to the master during slave registration.
+#
+# 			This value appears in the output of SHOW_SLAVE_HOSTS on the master server if the master was started
+# 			with --show-slave-auth-info
+#
+# 			Although the name of this option might imply otherwise, --report-user is not connected to the MySQL 
+# 			user privilege system and so is not necessarily or even liekly, to be the same as the name of
+# 			the MySQL replication user account.
+#
+# 		) --slave-checkpoint-group=#
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--slave-checkpoint-group=#
+# 			Type 					INteger
+# 			Default 				512
+# 			Min 					32
+# 			Max 					524280
+# 			Block Size 			8
+#
+# 			Sets the maximum number of transactions that can be processed by a multithreaded slave before a checkpoint
+# 			operation is called to update its status as shown by SHOW_SLAVE_STATUS
+#
+# 			Setting this option has no effect on slaves for which multithreading is not enabled.
+#
+# 			NOTE:
+#
+# 				Multithreaded slaves are not currently supported by the NDB cluster, which silently ignores the setting
+# 				for this option.
+#
+# 				See SECTION 22.6.3, "KNOWN ISSUES IN NDB CLUSTER REPLICATION", for more information
+#
+# 			This option works in combination with the --slave-checkpoint-period option in such a way that, when either limit
+# 			is exceeded, the checkpoint is executed and the counters tracking both the number of transactions and the time
+# 			elapsed since the last checkpoint are reset.
+#
+# 			The minimum allowed value for this option is 32, unless the server was built using -DWITH_DEBUG, in which case
+# 			the minimum value is 1. The effective value is always a multiple of 8, you can set it to a value that is not such
+# 			a multiple, but the server rounds it down ot hte next lower multiple of 8 before storing the value.
+#
+# 			(Exception: No such rounding is performed by the debug server)
+#
+# 			Regardless of how the server was built, teh default value is 512, and the maximum allowed value is 524280.
+#
+# 		) --slave-checkpoint-period=#
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--slave-checkpoint-period=#
+# 			Type 					Integer
+# 			Default 				300
+# 			Min 					1
+# 			Max 					4G
+#
+# 			Sets the maximum time (in ms) that is allowed to pass before a checkpoint operation is called to update the status
+# 			of a multithreaded slave as shown by SHOW_SLAVE_STATUS.
+#
+# 			Setting this option has no effect on slaves for which multithreading is not enabled.
+#
+# 			NOTE:
+#
+# 				Multithreaded slaves are not currently supported by NDB Cluster, which silently ignores the setting for this option.
+#
+# 				See SECTON 22.6.3, "KNOWN ISSUES IN NDB CLUSTER REPLICATION", for more information.
+#
+# 			This option works in combination with the --slave-checkpoint-group option in such a way that, when either limit is exceeded,
+# 			the checkpoint is executed and the counters tracking both the number of transactions and the time elapsed since the last 
+# 			checkpoint are reset.
+#
+# 			The minimum allowed value for this option is 1, unless the server was built using -DWITH_DEBUG, in which case the minimum
+# 			value is 0.
+#
+# 			Regardless of how the server was built, the default value is 300, and the maximum possible value is 4294967296 (4GB)
+#
+# 		) --slave-parallel-workers
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--slave-parallel-workers=#
+# 			Type 					Integer
+# 			Default 				0
+# 			Min 					0
+# 			Max 					1024
+#
+# 			Enables multithreading on the slave and sets the number of slave applier threads for executing replication transactions in parallel.
+#
+# 			WHen the value is a number greater than 0, the slave is a multithreaded slave with the specified number of applier threads, plus a 
+# 			coordinator thread to manage them.
+#
+# 			If you are using multiple replication channels, each channel has this number of threads.
+#
+# 			Retrying of transactions is supported when multithreading is enabled on a slave. When slave_preserve_commit_order=1, transactions
+# 			on a slave are externalized on the slave in the same order as they appear in the slave's relay log.
+#
+# 			The way in which transactions are distributed among applier threads is configured by --slave-parallel-type.
+#
+# 			To disable parallel execution, set this option to 0, which gives the slave a single applier thread and no coordinator thread.
+#
+# 			With this setting, the --slave-parallel-type and slave_preserve_commit_order options have no effect and are ignored.
+#
+# 			NOTE:
+#
+# 				Multithreaded slaves are not currently supported by NDB Cluster, which silently ignores the setting for this option.
+#
+# 				See SECTION 22.6.3, "KNOWN ISSUES IN NDB CLUSTER REPLICATION", for more information.
+#
+# 		) --slave-pending-jobs-size-max=#
+#
+# 			Property 			VAlue
+#
+# 			Cmd line 			--slave-pending-jobs-size-max=#
+# 			Type 					Integer
+# 			Default (>= 8.0.12) 128M
+# 			Default (<= 8.0.11) 16M
+# 			Min 					1024
+# 			Max 					16Eib
+# 			Block size 			1024
+#
+# 			For multithreaded slaves, this option sets the maximum amount of memory (in bytes) available to slave worker queues holding events
+# 			not yet applied.
+#
+# 			Setting this option has no effect on slaves for which multithreading is not enabled.
+#
+# 			The minimum possible value for this option is 1024 bytes; the default is 128MB. The maximum possible value is 18446744073709551615 (16 exibytes)
+#
+# 			Values that are not exact multiples of 1024 byts are rounded down to the next lower multiple of 1024 bytes prior to being stored.
+#
+# 			The value of this variable is a soft limit and can be set to match the normal workload. If an unusually large event exceeds this size,
+# 			the transaction is held until all the slave workers have empty queues, and then processed.
+#
+# 			All subsequent transactions are held until the large transaction has been completed.
+#
+# 		) --skip-slave-start
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--skip-slave-start[={OFF|ON}]
+# 			Type 					Boolean
+# 			Default 				OFF
+#
+# 			Tells the slave server not to start the slave threads when the server starts. To start the threads later, use a START_SLAVE statement.
+#
+# 		) --slave-load-tmpdir=dir_name
+#
+# 			Property 			value
+#
+# 			Cmd line 			--slave-load-tmpdir=dir_name
+# 			Sys var 				slave_load_tmpdir
+# 			Scope 				Global
+# 			Dynamic 				No
+# 			SET_VAR Hint 		No
+# 			Type 					Directory name
+# 			Default 				Value of --tmpdir
+#
+# 			The name of the directory where the slave creates temporary files. This option is by default equal to the value of the tmpdir
+# 			system variable, or the default that applies when that system variable is not specified.
+#
+# 			When the slave SQL thread replicates a LOAD_DATA statement, it extracts the file to be loaded from the relay log info temporary files,
+# 			and then loads these into the tbale.
+#
+# 			If the file loaded on the master is huge, the temporary files on the slave are huge, too.
+#
+# 			Therefore, it might be advisable to use this option to tell the slave to put temporary files in a directory located in some file system
+# 			that has a lot of available space.
+#
+# 			in that case, the relay logs are huge as well, so you might also want ot use the --relay-log option to place the relay logs in that file system.
+#
+# 			The directory specified by this option should be located in a disk-based file system (not a memory-based file system) so that the temporary
+# 			files used to replicate LOAD_DATA can survive machine restarts.
+#
+# 			The directory also should not be one that is cleared by the operating system during the system startup process.
+#
+# 			However, replication can now continue after a restart if the temporary files have been removed.
+#
+# 		) slave-max-allowed-packet=bytes
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--slave-max-allowed-packet=#
+# 			Type 					Integer
+# 			Default 				1073741824
+# 			Min 					1024
+# 			Max 					1073741824
+#
+# 			This option sets the maximum packet size in bytes that the slave SQL and I/O threads can handle. It is possible for a replication master
+# 			to write binary log events longer than its max_allowed_packet setting once the event header is added.
+#
+# 			The setting for slave_max_allowed_packet must be larger than the max_allowed_packet setting on the master, so that large updates using
+# 			row-based replication do not cause replication to fail.
+#
+# 			The corresponding server variable slave_max_allowed_packet always has a value that is a positive integer multiple of 1024;
+# 			If you set it to some value that is not such a multiple, the value is automatically rounded down to the next highest multiple of 1024.
+#
+# 			(For example, if you start the server with --slave-max-allowed-packet=10000, the value used is 9216; setting 0 as the value causes
+# 			1024 to be used)
+#
+# 			A truncation warning is issued in such cases.
+#
+# 			The maximum (and default) value is 1073741824 (1GB); the minimum is 1024.
+#
+# 		) --slave-net-timeout=seconds
+#
+# 			property 			Value
+#
+# 			Cmd line 			--slave-net-timeout=#
+# 			Sys var 				slave_net_timeout
+# 			Scope 				Global
+# 			Dynamic 				Yes
+# 			SET_VAR Hint 		No
+# 			Type 					Integer
+# 			Default 				60
+# 			Min 					1
+#
+# 			The number of seconds to wait for more data or a heartbeat signal from the master before the slave considers the connection
+# 			broken, aborts the read, and tries to reconnect.
+#
+# 			The default value is 60 seconds (one min)
+#
+# 			the first retry occurs immediately after the timeout. The interval between retries is controlled by the MASTER_CONNECT_RETRY
+# 			option for the CHANGE_MASTER_TO statement, and the number of reconnection attempts is limited by teh MASTER_RETRY_COUNT option
+# 			for the CHANGE_MASTER_TO statement.
+#
+# 			The heartbeat interval, which stops the connection timeout occurring in teh absence of data if teh connection is still good,
+# 			is controlled by the MASTER_HEARTBEAT_PERIOD option for the CHANGE_MASTER_TO statement.
+#
+# 			The heartbeat interval defaults to half the value of --slave-net-timeout, and it is recorded in the master info log and shown
+# 			in the replication_connection_configuration Performance Schema table.
+#
+# 			Note that a change to the value or default setting of --slave-net-timeout does not automatically change the heartbeat interval,
+# 			whether that has been set explicitly or is using a previously calculated default.
+#
+# 			If the connection timeout is changed, you must also issue CHANGE_MASTER_TO to adjust the heartbeat interval to an appropriate
+# 			value so that it occurs before the connection timeout.
+#
+# 		) --slave-parallel-type=type
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--slave-parallel-type=type
+# 			Type 					Enumeration
+# 			Default 				DATABASE
+# 			Valid 				DATABASE
+# 									LOGICAL_CLOCK
+#
+# 			When using a multithreaded slave (slave_parallel_workers is greater than 0), this option specifies the policy used to decide
+# 			which transactions are allowed to execute in parallel on the slave.
+#
+# 			This option has no effect on slaves for which multithreading is not enabled. The possible values are:
+#
+# 				) lOGICAL_CLOCK: Transactions that are part of the same binary log group commit on a master are applied in parallel on a slave.
+#
+# 					The dependencies between transactions are tracked based on their timestamps to provide additional parallelilzation where possible.
+#
+# 					When this value is set, the binlog_transaction_dependency_tracking system variable can be used on the master to specify that write
+# 					sets are used for parallelilzation in place of timestamps, if a write set is available for the transaction and gives improved
+# 					results compared to timestamps.
+#
+# 				) DATABASE: Transactions that update different databases are applied in parallel. This value is only appropriate if data is partitioned
+# 					into multiple databases which are being updated independently and concurrently on the master.
+#
+# 					There must be no cross-database constraints, as such constraints may be violated on the slave.
+#
+# 			When slave_preserve_commit_order=1 is set, you can only use LOGICAL_CLOCK
+#
+# 			If your replication topology uses multiple levels of slaves, LOGICAL_CLOCK may achieve less parallelilzation for each level the slave
+# 			is away from the master.
+#
+# 			You can reduce this effect by using binlog_transaction_dependency_tracking on the master to specify that write sets are used instead
+# 			of timestamps for parallelization where possible.	
+#
+# 		) slave-rows-search-algorithms=list			
+#
+# 			https://dev.mysql.com/doc/refman/8.0/en/replication-options-slave.html			
 #
