@@ -66883,5 +66883,855 @@
 #
 # 		) slave-rows-search-algorithms=list			
 #
-# 			https://dev.mysql.com/doc/refman/8.0/en/replication-options-slave.html			
+# 			Property 			Value
+#
+# 			Cmd line 			--slave-rows-search-algorithms=list
+# 			Deprecated 			8.0.18
+# 			Type 					Set
+# 			Default (>= 8.0.2) INDEX_SCAN, HASH_SCAN
+# 			Default (<= 8.0.1) TABLE_SCAN, INDEX_SCAN
+# 			Valid 				TABLE_SCAN, INDEX_SCAN
+# 									INDEX_SCAN, HASH_SCAN
+# 									TABLE_SCAN, HASH_SCAN
+# 									TABLE_SCAN, INDEX_SCAN, HASH_SCAN (equivalent to INDEX_SCAN, HASH_SCAN)
+#
+# 			When preparing batches of rows for row-based logging and replication, this option controls how the rows are
+# 			searched for matches, in particular whether hash scans are used.
+#
+# 			The use of this option is now deprecated. The default setting INDEX_SCAN, HASH_SCAN is optimal for performance
+# 			and works correctly in all scenarios.
+#
+# 		) --slave-skip-errors=[err_code1, err_code2, /etc/|all|ddl_exist_errors]
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--slave-skip-errors=name
+# 			Sys var 				slave_skip_errors
+# 			Scope 				Global
+# 			Dynamic 				No
+# 			SET_VAR Hint 		No
+# 			Type 					String
+# 			Default 				OFF
+# 			Valid 				OFF
+# 									[list of error codes]
+# 									all
+# 									ddl_exist_errors
+#
+# 			Normally, replication stops when an error occurs on the slave, which gives you the opportunity to resolve the
+# 			inconsistency in the data manually. This option causes the slave SQL thread to continue replication when a
+# 			statement returns any of the errors listed in the option value.
+#
+# 			Do not use this option unless you fully understand why you are getting errors. If there are no bugs in your
+# 			replication setup and client programs, and no bugs in MySQL itself, an error that stops replication should
+# 			never occur.
+#
+# 			Indiscriminate use of this option results in slaves becoming hopelessly out of synchrony with the master,
+# 			with you having no idea why this has occurred.
+#
+# 			For error codes, you could use the numbers provided by the error message in your slave error log and in
+# 			the output of SHOW_SLAVE_STATUS.
+#
+# 			APPENDIX B, ERRORS, ERROR CODES, AND COMMON PROBLEMS, lists server error codes.
+#
+# 			The shorthand value ddl_exist_errors is equivalent to the error code list 1007, 1008, 1050, 1051, 1054, 1060, 1061, 1068, 1094, 1146
+#
+# 			You can also (but should not) use the very nonrecommended value of all to cause the slave to ignore all error messages and keeps
+# 			going regardless of what happens.
+#
+# 			Needless to say, if you use all, there are no guarantees regarding the integrity of your data.
+#
+# 			Consider this a warning.
+#
+# 			EXAMPLES:
+#
+# 				--slave-skip-errors=1062,1053
+# 				--slave-skip-errors=all
+# 				--slave-skip-errors=ddl_exist_errors
+#
+# 		) --slave-sql-verify-checksum={0|1}
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--slave-sql-verify-checksum[={OFF|ON}]
+# 			Type 				Boolean
+# 			Default 			ON
+#
+# 			When this option is enabled, the slave examines checksums read from the relay log, in the event of a mismatch, the slave stops with an error.
+#
+# 	The following options are used internally by the MySQL test suite for replication testing and debugging. They are not intended for use in a production setting.
+#
+# 		) --abort-slave-event-count
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--abort-slave-event-count=#
+# 			Type 				Integer
+# 			Default 			0
+# 			Min 				0
+#
+# 			When this option is set to some positive integer value other than 0 (the default) it affects replication behavior as follows: After the slave
+# 			SQL thread has started, value log events are permitted to be executed; after that, the slave SQL thread does not receive any more events,
+# 			just as if the network connection from the master were cut.
+#
+# 			The slave thread continues to run, and the output from SHOW_SLAVE_STATUS displays Yes in both the Slave_IO_Running and the
+# 			Slave_SQL_Running columns, but no further events are read from the relay log.
+#
+# 		) --disconnect-slave-event-count
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--disconnect-slave-event-count=#
+# 			Type 				Integer
+# 			Default 			0
+#
+# OPTIONS FOR LOGGING SLAVE STATUS TO TABLES
+#
+# Replication slave status information is logged to an InnoDB table in the mysql database. Before MySQL 8.0, this information could
+# alternatively be logged to a file in the data directory, but the use of that format is now deprecated.
+#
+# Writing of the master info log and the relay log info log can be configured separately using the two server options listed here:
+#
+# 		) --master-info-repository={TABLE|FILE}
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--master-info-repository={FILE|TABLE}
+# 			Type 					String
+# 			Default (>= 8.0.2) TABLE
+# 			Default (<= 8.0.1) FILE
+# 			Valid 				FILE
+# 									TABLE
+#
+# 			THis option determines whether the slave server logs master status and connection information to an InnoDB table in the mysql database,
+# 			or to a file in the data directory.
+#
+# 			The default setting is TABLE. As an InnoDB table, the master info log is named mysql.slave_master_info. The TABLE setting is required
+# 			when multiple replication channels are configured.
+#
+# 			The FILE Setting is deprecated, and will be removed in the future.
+#
+# 			As a file, the master info log is named master.info by default, and you can change this name using the --master-info-file option.
+#
+# 			THe setting for the location of this slave status log has a direct influence on the effect had by the setting of the sync_master_info
+# 			system variable.
+#
+# 			You can only change the setting when no replication threads are executing.
+#
+# 		) --relay-log-info-repository={TABLE|FILE}
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--relay-log-info-repository={FILE|TABLE}
+# 			Type 					String
+# 			Default (>= 8.0.2) TABLE
+# 			Default (<= 8.0.1) FILE
+# 			Valid 				FILE
+# 									TABLE
+#
+# 			This option determines whether the salve server logs its position in the relay logs to an InnoDB table in the mysql database, or to a file
+# 			in teh data directory.
+#
+# 			The default setting is TABLE. As an InnoDB table, the relay log info log is named mysql.slave_relay_log_info
+#
+# 			The TABLE setting is required when multiple replication channels are configured. The TABLE setting for the relay log info log
+# 			is also required to make replication resilient to unexpected halts, for which the --relay-log-recovery option must also be enabled.
+#
+# 			See MAKING REPLICATION RESILIENT TO UNEXPECTED HALTS for more information.
+#
+# 			The FILE setting is deprecated, and will be removed in a future release. As a file, the relay log info log is named relay-log.info
+# 			by default, and you can change this name using the --relay-log-info-file option.
+#
+# 			The setting for the location of this slave status log has a direct influence on the effect had by the setting of the sync_relay_log_info
+# 			system variable.
+#
+# 			You can only change the setting when no replication threads are executing.
+#
+# The slave status log tables and their contents are considered local to a given MySQL Server. They are not replicated, and changes to them are
+# not written to the binary log.
+#
+# For more information, see SECTION 17.2.4, "REPLICATION RELAY AND STATUS LOGS"
+#
+# SYSTEM VARIABLES USED ON REPLICATION SLAVES
+#
+# THe following list describes system variables for controlling replication slave servers.
+#
+# They can be set at server startup and some of them can be changed at runtime using SET.
+#
+# Server options used with replication slaves are listed earlier in this section.
+#
+# 		) init_slave
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--init-slave=name
+# 			Sys var 			init_slave
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				String
+#
+# 			This variable is similar to init_connect, but is a string to be executed by a slave server each time the SQL thread starts.
+#
+# 			The format of the string is the same as for the init_connect variable. The setting of this variable takes effect for subsequent
+# 			START_SLAVE statements.
+#
+# 			NOTE:
+#
+# 				The SQL thread sends an acknowledgement to the client before it executes init_slave. Therefore, it is not guarnateed that
+# 				init_slave has been executed when START_SLAVE returns.
+#
+# 				See SECTION 13.4.2.6, "START SLAVE SYNTAX", for more information.
+#
+# 		) log_slow_slave_statements
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--log-slow-slave-statements[={OFF|ON}]
+# 			Sys var 			log_slow_slave_statements
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			When the slow query log is enabled, this variable enables logging for queries that have taken more than long_query_item seconds
+# 			to execute on the slave.
+#
+# 			Note that if row-based replication is in use (binlog_format=ROW), log_slow_slave_statements has no effect. Queries are only
+# 			added to the slave's slow query log when they are logged in statement format in the binary log, that is, when binlog_format=STATEMENT
+# 			is set, or when binlog_format=MIXED is set and the statement is logged in statement format.
+#
+# 			SLow queries that are logged in row format when binlog_format=MIXED is set, or that are logged when binlog_format=ROW is set,
+# 			are not added to the slave's slow query log, even if log_slow_slave_statements is enabled.
+#
+# 			Setting log_slow_slave_statements has no immediate effect. The state of the variable applies on all subsequent START_SLAVE statements.
+#
+# 			Also note that the global setting for long_query_time applies for the lifetime of the SQL thread.
+#
+# 			If you change that setting, you must stop and restart the slave's SQL thread to implement the change there (for example, by issuing
+# 			STOP_SLAVE and START_SLAVE statements with the SQL_THREAD option)
+#
+# 		) master_info_repository
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--master-info-repository={FILE|TABLE}
+# 			Sys var 			master_info_repository
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				String
+# 			Default (>= 8.0.2) TABLE
+# 			Default (<= 8.0.1) FILE
+# 			Valid 			FILE
+# 								TABLE
+#
+# 			The setting of this variable determines whether the slave server logs master status and connection information to an InnoDB table
+# 			in the mysql database, or to a file in the data directory.
+#
+# 			The default setting is TABLE. As an InnoDB table, the master info log is named mysql.slave_master_info. The TABLE setting is required
+# 			when multiple replication channels are configured.
+#
+# 			The FILE setting is deprecated, and will be removed in a future release. As a file, the master info log is named master.info by default,
+# 			and you can change this name using the --master-info-file option.
+#
+# 			THe setting for the location of this slave status log has a direct influence on the effect had by the setting of the sync_master_info
+# 			system variable.
+#
+# 			You can only change the setting when no replication threads are executing.
+#
+# 		) max_relay_log_size
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--max-relay-log-size=#
+# 			Sys var 			max_relay_log_size
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			0
+# 			Min 				0
+# 			Max 				1073741824
+#
+# 			If a write by a replication slave to its relay log causes the current log file size to exceed the value of this variable, the slave
+# 			rotates the relay logs (closes the current file and opens the next one)
+#
+# 			If max_relay_log_size is 0, the server uses max_binlog_size for both the binary log and the relay log.
+#
+# 			If max_relay_log_size is greater than 0, it constraints the size of the relay log, which enables you to have different sizes
+# 			for the two logs.
+#
+# 			You must set max_relay_log_size to between 4096 bytes and 1GB (inclusive), or to 0. The default value is 0.
+#
+# 			See SECTION 17.2.2, "REPLICATION IMPLEMENTATION DETAILS"
+#
+# 		) relay_log
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--relay-log=file_name
+# 			Sys Var 			relay_log
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				File name
+#
+# 			The base name for relay log files, with no paths and no file extension. For the default replication channel, the default base name
+# 			for relay logs is host_name-relay-bin.
+#
+# 			For non-default replication channels, the default base name for relay logs is host_name-relay-bin-channel, where channel is the name
+# 			of the replication channel recorded in this relay log.
+#
+# 		) relay_log_basename
+#
+# 			Property 		Value
+#
+# 			Sys var 			relay_log_basename
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				File name
+# 			Default 			datadir + '/' + hostname + '-relay-bin'
+#
+# 			holds the name and complete path to the relay log file. This variable is set by the server and is read only.
+#
+# 		) relay_log_index
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--relay-log-index=file_name
+# 			Sys var 			relay_log_index
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				File name
+# 			Default 			*host_name*-relay-bin.index
+#
+# 			The name of the relay log index file for the default replication channel. The default name is host_name-relay-bin.index
+#
+# 		) relay_log_info_file
+#
+# 			property 		Value
+#
+# 			Cmd line 		--relay-log-info-file=file_name
+# 			Deprecated 		8.0.18
+# 			Sys var 			relay_log_info_file
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				File name
+# 			Default 			relay-log.info
+#
+# 			The name of the relay log info log, when relay_log_info_repository=FILE is set.
+#
+# 			The default name is relay-log.info in the data directory. relay_log_info_file and the setting relay_log_info_repository=FILE
+# 			are deprecated, as the use of a file for the relay log info log has been superseded by crash-safe slave tables.
+#
+# 			For information about the relay log info log, see SECTION 17.2.4.2, "SLAVE STATUS LOGS"
+#
+# 		) relay_log_info_repository
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--relay-log-info-repository=value
+# 			Sys var 			relay_log_info_repository
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				String
+# 			Default (>= 8.0.2) TABLE
+# 			Default (<= 8.0.1) FILE
+# 			Valid 			FILE
+# 								TABLE
+#
+# 			The setting of this variable determines whether the slave server logs its position in the relay logs to an InnoDB table in the mysql
+# 			database, or to a file in the data directory
+#
+# 			The default setting is TABLE. As an InnoDB table, the relay log info log is named mysql.slave_relay_log_info.
+#
+# 			The TABLE setting is required when multiple replication channels are configured. The TABLE setting for the relay log info log
+# 			is also required to make replication resilient to unexpected halts, for which the --relay-log-recovery option must also be
+# 			enabled.
+#
+# 			See MAKING REPLICATION RESILIENT TO UNEXPECTED HALTS for more information.
+#
+# 			The FILE setting is deprecated, and will be removed in a future release. As a file, the relay log info log is named 
+# 			relay-log.info by default, and you can change this name using the --relay-log-info-file option.
+#
+# 			The setting for the location of this slave status log has a direct influence on the effect had by the setting of the
+# 			sync_relay_log_info system variable.
+#
+# 			You can only change the setting when no replication threads are executing.
+#
+# 		) relay_log_purge
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--relay-log-purge[={OFF|ON}]
+# 			Sys var 			relay_log_purge
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			ON
+#
+# 			Disables or enables automatic purging of relay log files as soon as they are not needed any more. The default value is 1 (ON)
+#
+# 		) relay_log_recovery
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--relay-log-recovery[={OFF|ON}]
+# 			Sys var 			relay_log_recovery
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			Enables automatic relay log recovery immediately following server startup.
+#
+# 			The recovery process creates a new relay log file, initializes the SQL thread position to this new relay log,
+# 			and initializes the I/O thread to the SQL thread position.
+#
+# 			Reading of the relay log from the master then continues. This global variable is read-only; its value can be changed
+# 			by starting the slave with the --relay-log-recovery option, which should be used following a crash on the replication
+# 			slave to ensure that no possibly corrupted relay logs are processed, and must be used in order to guarantee a crash-safe
+# 			slave.
+#
+# 			The default value is 0 (disabled)
+#
+# 			This variable also interacts with relay-log-purge, which controls purging of logs when they are no longer needed.
+#
+# 			Enabling the --relay-log-recovery option when relay-log-purge is disabled risks reading the relay log from files
+# 			that were not purged, leading to data inconsistency, and is therefore not crash-safe.
+#
+# 			When relay_log_recovery is enabled and the slave has stopped due to errors encountered while running in multithreaded
+# 			mode, you can use START_SLAVE_UNTIL_SQL_AFTER_MTS_GAPS to ensure that all gaps are processed before switching back
+# 			to single-threaded mode or executing a CHANGE MASTER TO statement.
+#
+# 		) relay_log_space_limit
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--relay-log-space-limit=#
+# 			Sys var 			relay_log_space_limit
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			0
+# 			Min 				0
+# 			Max (64-bit) 	//a lot//
+# 			Max (32-bit) 	4294967295
+#
+# 			The maximum amount of space to use for all relay logs.
+#
+# 		) report_host
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--report-host=host_name
+# 			Sys var 			report_host
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				String
+#
+# 			The value of the --report-host option.
+#
+# 		) report_password
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--report-password=name
+# 			Sys var 			report_password
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				String
+#
+# 			The value of the --report-password option. Not the same as the password used for the MySQL replication user account.
+#
+# 		) report_port
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--report-port=port_num
+# 			Sys var 			report_port
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			[slave_port]
+# 			min 				0
+# 			Max 				65535
+#
+# 			The value of the --report-port option.
+#
+# 		) report_user
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--report-user=name
+# 			Sys var 			report_user
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				String
+#
+# 			The value of the --report-user option. Not the same as the name for the MySQL replication user account.
+#
+# 		) rpl_read_size
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--rpl-read-size=#
+# 			Introduced 		8.0.11
+# 			Sys var 			rpl_read_size
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			8192
+# 			Min 				8192
+# 			Max 				4294967295
+#
+# 			The rpl_read_size system variable controls the minimum amount of data in bytes that is read from the binary log files and relay log files.
+#
+# 			If heavy disk I/O activity for these files is impeding performance for the database, increasing the read size might reduce file reads and
+# 			I/O stalls when the file data is not currently cached by the OS.
+#
+# 			The minimum and default value for rpl_read_size is 8192 bytes. The value must be a multiple of 4KB.
+#
+# 			Note that a buffer the size of thisvalue is allocated for each thread that reads from the binary log and relay log files,
+# 			including dump threads on masters and coordinator threads on slaves.
+#
+# 			Setting a large value might therefore have an impact on memory consumption for servers.
+#
+# 		) rpl_semi_sync_slave_enabled
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--rpl-semi-sync-slave-enabled[={OFF|ON}]
+# 			Sys var 			rpl_semi_sync_slave_enabled
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			Controls whether semisynch replication is enabled on the slave. To enable or disable the plugin, set this variable to ON or OFF
+# 			(or 1 or 0), respectively.
+#
+# 			The default is OFF.
+#
+# 			This variable is available only if the slave-side semisynch replication plugin is installed.
+#
+# 		) rpl_semi_sync_slave_trace_level
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--rpl-semi-sync-slave-trace-level=#
+# 			Sys var 			rpl_semi_sync_slave_trace_level
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			32
+#
+# 			The semisynch replication debug trace level on the slave. See rpl_semi_sync_master_trace_level for the permissible values.
+#
+# 			This variable is available only if the slave-side semisynch replication plugin is installed.
+#
+# 		) rpl_stop_slave_timeout
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--rpl-stop-slave-timeout=seconds
+# 			Sys var 			rpl_stop_slave_timeout
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			31536000
+# 			Min 				2
+# 			Max 				31536000
+#
+# 			You can control the length of time (in seconds) that STOP_SLAVE waits before timing out by setting this variable.
+#
+# 			This can be used to avoid deadlocks between STOP SLAVE and other slave SQL statements using different client
+# 			connections to the slave.
+#
+# 			The maximum and default value of rpl_stop_slave_timeout is 31536000 seconds (1 year)
+#
+# 			The minimum is 2 seconds. Changes to this variable take effect for subsequent STOP_SLAVE statements.
+#
+# 			This variable affects only the client that issues a STOP SLAVE statement. When the timeout is reached, the issuing
+# 			client returns an error message stating that the command execution is incomplete.
+#
+# 			The client then stops waiting for the slave threads to stop, but the slave threads continue to try to stop, and the
+# 			STOP SLAVE instruction remains in effect.
+#
+# 			Once the slave threads are no longer busy, the STOP SLAVE statement is executed and the slave stops.
+#
+# 		) slave_checkpoint_group
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--slave-checkpoint-group=#
+# 			Sys var 			slave_checkpoint_group
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			512
+# 			Min 				32
+# 			Max 				524280
+# 			Block size 		8
+#
+# 			Sets the maximum number of transactions that can be processed by a multithreaded slave before a checkpoint operation
+# 			is called to update its status as shown by SHOW_SLAVE_STATUS.
+#
+# 			Setting this variable has no effect on slaves for which multithreading is not enabled. Setting this variable has no
+# 			immediate effect.
+#
+# 			The state of the variable applies on all subsequent START_SLAVE commands.
+#
+# 			NOTE:
+#
+# 				Multithreaded slaves are not currently supported by NDB CLuster, which silently ignores the setting for this variable.
+#
+# 				See SECTION 22.6.3, "KNOWN ISSUES IN NDB CLUSTER REPLICATION", for more information.
+#
+# 			This variable works in combination with the slave_checkpoint_period system variable in such a way that, when either limit
+# 			is exceeded, the checkpoint is executed and the counters tracking both the number of transactions and the time elapsed
+# 			since the last checkpoint are reset.
+#
+# 			The minimum allowed value for this variable is 32, unless the server was built using -DWITH_DEBUG, in which case the minimum
+# 			value is 1.
+#
+# 			The effective value is always a multiple of 8; you can set it to a value that is not such a multiple, but the server rounds
+# 			it down to the next lower multiple of 8 before storing the value.
+#
+# 			(Exception: No such rounding is performed by the debug server.)
+#
+# 			Regardless of how the server was built, the default value is 512, and the maximum allowed value is 524280.
+#
+# 		) slave_checkpoint_period
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--slave-checkpoint-period=#
+# 			Sys var 			slave_checkpoint_period
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			300
+# 			Min 				1
+# 			Max 				4G
+#
+# 			Sets the maximum time (in ms) that is allowed to pass before a checkpoint operation is called to update the status
+# 			of a multithreaded slave as shown by SHOW_SLAVE_STATUS.
+#
+# 			Setting this variable has no effect on slaves for which multithreading is not enabled. Setting this variable takes
+# 			effect for all replication channels immediately, including running channels.
+#
+# 			NOTE:
+#
+# 				Multithreaded slaves are not currently supported by NDB Cluster, which silently ignores the setting for this variable.
+#
+# 				See SECTION 22.6.3, "KNOWN ISSUES IN NDB CLUSTER REPLICATION", for more information.
+#
+# 			This variable works in combination with the slave_checkpoint_group system variable in such a way that, when either limit
+# 			is exceeded, the checkpoint is executed and the counters tracking both the number of transactions and the time elapsed
+# 			since the last checkpoint are reset.
+#
+# 			The minimum allowed value for this variable is 1, unless the server was built using -DWITH_DEBUG, in which case
+# 			the minimum value is 0.
+#
+# 			Regardless of how the server was built, the default value is 300, and the maximum possible value is 4294967296 (4GB)
+#
+# 		) slave_compressed_protocol
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--slave-compressed-protocol[={OFF|ON}]
+# 			Deprecated 		8.0.18
+# 			Sys var 			slave_compressed_protocol
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			Whether to use compression of the master/slave protocol if both master and slave support it. If this variable is disabled
+# 			(the default), connections are uncompressed.
+#
+# 			Changes to this variable take effect on subsequent connection attempts; this includes after issuing a START_SLAVE statement,
+# 			as well as reconnections made by a running I/O thread (for example, after setting the MASTER_RETRY_COUNT option for the
+# 			CHANGE_MASTER_TO statement)
+#
+# 			As of MySQL 8.0.18, if slave_compressed_protocol is enabled, it takes precedence over any MASTER_COMPRESSION_ALGORITHMS option
+# 			specified for the CHANGE_MASTER_TO statement.
+#
+# 			In this case, connections to the master use zlib compression if both the master and slave support that algorithm.
+#
+# 			If slave_compressed_protocol is disabled, the value of MASTER_COMPRESSION_ALGORITHMS applies.
+#
+# 			For more information, see SECTION 4.2.6, "CONNECTION COMPRESSION CONTROL"
+#
+# 			As of MySQL 8.0.18, this system variable is deprecated. It will be removed in a future MySQL version.
+#
+# 			See LEGACY CONNECTION COMPRESSION CONFIGURATION.
+#
+# 		) slave_exec_mode
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--slave-exec-mode=mode
+# 			Sys var 			slave_exec_mode
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Enumeration
+# 			Default 			IDEMPOTENT (NDB)
+# 								STRICT (Other)
+#
+# 			Valid 			IDEMPOTENT
+# 								STRICT
+#
+# 			Controls how a slave thread resolves conflicts and errors during replication. IDEMPOTENT mode causes suppression
+# 			of duplicate-key and no-key-found errors;
+#
+# 			STRICT means no such suppression takes place.
+#
+# 			IDEMPOTENT mode is intended for use in multi-master replication, circular replication, and some other special replication
+# 			scenarios for NDB Cluster Replication.
+#
+# 			(See SECTION 22.6.10, "NDB CLUSTER REPLICATION: MULTI-MASTER AND CIRCULAR REPLICATION", and SECTION 22.6.11, "NDB CLUSTER REPLICATION CONFLICT RESOLUTION",
+# 			for more information)
+#
+# 			NDB Cluster ignores any value explicitly set for slave_exec_mode, and always treats it as IDEMPOTENT.
+#
+# 			In MySQL Server 8.0, STRICT MODE is the default value.
+#
+# 			Setting this variable takes immediate effect for all replication channels, including running channels.
+#
+# 			For storage engines other than NDB, IDEMPOTENT mode should be used only when you are absolutely sure that duplicate-key errors and
+# 			key-not-found errors can safely be ignored.
+#
+# 			It is meant to be used in fail-over scenarios for NDB Cluster where multi-master replication or circular replication is employed,
+# 			and is not recommended for use in otehr cases.
+#
+# 		) slave_load_tmpdir
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--slave-load-tmpdir=dir_name
+# 			Sys var 			slave_load_tmpdir
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Dir name
+# 			Default 			Value of --tmpdir
+#
+# 			The name of the directory where the slave creates temporary files. Setting this variable takes effect for all replication
+# 			channels immediately, including running channels.
+#
+# 			This system variable is by default equal to the value of the tmpdir system variable, or the default that applies when that
+# 			system variable is not specified.
+#
+# 			When the slave SQL thread replicates a LOAD_DATA statement, it extracts the file to be loaded from the relay log into temporary
+# 			files, and then loads these into the table.
+#
+# 			If the file loaded on the master is huge, the temporary files on the slave are huge, too.
+#
+# 			Therefore, it might be advisable to use this option to tell the slave to put temporary files in a directory located in some
+# 			file system that has a lot of available space.
+#
+# 			In that case, the relay logs are huge as well, so you might also want to use the --relay-log option to place the relay logs
+# 			in that file system.
+#
+# 			The directory specified by this option should be located in a disk-based file system (not a memory-based file system) so that
+# 			the temporary files used to replicate LOAD_DATA can survive machine restarts.
+#
+# 			The directory also should not be one that is cleared by the operating system during the system startup process.
+#
+# 			However, replication can now continue after a restart if the temporary files have been removed.
+#
+# 		) slave_max_allowed_packet
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--slave-max-allowed-packet=#
+# 			Sys var 			slave_max_allowed_packet
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			1073741824
+# 			Min 				1024
+# 			Max 				1073741824
+#
+# 			This option sets the maximum packet size in bytes that the slave SQL and I/O threads can handle.
+#
+# 			Setting this variable takes effect for all replication channels immediately, including running channels.
+#
+# 			It is possible for a replication master to write binary log events longer than its max_allowed_packet
+# 			setting once the event header is added.
+#
+# 			THe setting for slave_max_allowed_packet must be larger than the max_allowed_packet setting on the master,
+# 			so that large updates using row-based replication do not cause replication to fail.
+#
+# 			This global variable always has a value that is a positive integer multiple of 1024; if you set it to some
+# 			value that is not, the value is rounded down to the next highest multiple of 1024 for it is stored or used;
+#
+# 			Setting slave_max_allowed_packet to 0 causes 1024 to be used.
+#
+# 			(A truncation warning is issued in all such cases)
+#
+# 			The default and maximum value is 1073741824 (1 GB); the minimum is 1024.
+#
+# 			slave_max_allowed_packet can also be set at startup, using the --slave-max-allowed-packet option.
+#
+# 		) slave_net_timeout
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--slave-net-timeout=#
+# 			Sys var 			slave_net_timeout
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			60
+# 			Min 				1
+#
+# 			The number of seconds to wait for more data or a heartbeat signal from the master before the slave considers the connection
+# 			broken, aborts the read, and tries to reconnect.
+#
+# 			Setting this variable has no immediate effect. The state of the variable applies on all subsequent START_SLAVE commands.
+#
+# 			The default value is 60 seconds (one minute). The first retry occurs immediately after the timeout. The interval between
+# 			retries is controlled by teh MASTER_CONNECT_RETRY option for the CHANGE_MASTER_TO statement, and the number of reconnection
+# 			attempts is limited by the MASTER_RETRY_COUNT option for the CHANGE_MASTER_TO statement.
+#
+# 			The heartbeat interval, which stops the connection timeout in the absence of data if the connection is still good,
+# 			is controlled by the MASTER_HEARTBEAT_PERIOD option for the CHANGE_MASTER_TO statement.
+#
+# 			The heartbeat interval defaults to half the value of slave_net_timeout, and it is recorded in the master info log
+# 			and shown in the replication_connection_configuration Performance Schema table.
+#
+# 			Note that a change to the value or default setting of slave_net_timeout does not automatically change the hearbeat
+# 			interval, whether that has been set explicitly or is using a previously calculated default.
+#
+# 			If the connection timeout is changed, you must also issue CHANGE_MASTER_TO to adjust the heartbeat interval
+# 			to an appropriate value so that it occurs before the connection timeout.
+#
+# 		) slave_parallel_type=type
+#
+# 			https://dev.mysql.com/doc/refman/8.0/en/replication-options-slave.html
 #
