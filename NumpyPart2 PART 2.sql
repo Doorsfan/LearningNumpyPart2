@@ -67733,5 +67733,822 @@
 #
 # 		) slave_parallel_type=type
 #
-# 			https://dev.mysql.com/doc/refman/8.0/en/replication-options-slave.html
+# 			Property 		Value
+#
+# 			Cmd line 		--slave-parallel-type=type
+# 			Type 				Enumeration
+# 			Default 			DATABASE
+# 			Valid 			DATABASE
+# 								LOGICAL_CLOCK
+#
+# 			When using a multithreaded slave (slave_parallel_workers is greater than 0), this variable specifies the policy used to decide
+# 			which transactions are allowed to execute in parallel on the slave. The variable has no effect on slaves for which multithreading
+# 			is not enabled.
+#
+# 			The possible values are:
+#
+# 				) LOGICAL_CLOCK: Transactions that are part of the same binary log group commit on a master are applied in parallel on a slave.
+#
+# 					The dependencies between transactions are tracked based on their timestamps to provide additional parallelization where
+# 					possible. When this value is set, the binlog_transaction_dependency_tracking system variable can be used on the master
+# 					to specify that write sets are used for parallelization in place of titmestamps, if a write set is available for the
+# 					transaction and gives improved results compared to timestamps.
+#
+# 				) DATABASE: Transactions that update different databases are applied in parallel. This value is only appropriate if data
+# 					is partitioned into multiple databases which are being updated independently and concurrently on the master.
+#
+# 					There must be no cross-database constraints, as such constraints may be violated on the slave.
+#
+# 			When slave_preserve_commit_order=1 is set, you can only use LOGICAL_CLOCK
+#
+# 			If your replication topology uses multiple levels of slaves, LOGICAL_CLOCK may achieve less parallelilzation for each level
+# 			that the slave is away from the master.
+#
+# 			You can reduce this effect by using binlog_transaction_dependency_tracking on the master to specify that write sets are
+# 			used instead of timestamps for parallelization where possible.
+#
+# 		) slave_parallel_workers
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--slave-parallel-workers=#
+# 			Sys var 			slave_parallel_workers
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			0
+# 			Min 				0
+# 			Max 				1024
+#
+# 			Enables multithreading on the slave and sets the number of slave applier threads for executing replication transactions
+# 			in parallel.
+#
+# 			When the value is a number greater than 0, the slave is a multithreaded server with the specified number of applier threads,
+# 			plus a coordinator thread to manage them.
+#
+# 			If you are using multiple replication channels, each channel has this number of threads.
+#
+# 			NOTE:
+#
+# 				Multithreaded slaves are not currently supported by NDB cluster, which silently ignores the setting for this variable.
+#
+# 				See SECTION 22.6.3, "KNOWN ISSUES IN NDB CLUSTER REPLICATION" for more information.
+#
+# 			Retrying of transactions is supported when multithreading is enabled on a slave. When slave_preserve_commit_order=1, transactions
+# 			on a slave are externalized on the slave in teh same order as they appear in the slave's relay log.
+#
+# 			The way in which transactions are distributed among applier threads is configured by --slave-parallel-type
+#
+# 			TO disable parallel execution, set this option to 0, which gives the slave a single applier thread and no coordinator thread.
+#
+# 			With this setting, the --slave-parallel-type and slave_preserve_commit_order options have no effect and are ignored.
+#
+# 			Setting slave_parallel_workers has no immediate effect. The state of the variable applies on all subsequent START_SLAVE statements.
+#
+# 		) slave_pending_jobs_size_max
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--slave-pending-jobs-size-max=#
+# 			Sys var 			slave_pending_jobs_size_max
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default (>= 8.0.12) 128M
+# 			Default (<= 8.0.11) 16M
+# 			Min 				1024
+# 			Max 				16EiB
+# 			Block Size 		1024
+#
+# 			For multithreaded slaves, this variable sets the maximum amount of memory (in bytes) available to slave worker queues holding
+# 			events not yet applied.
+#
+# 			Setting this variable has no effect on slaves for which multithreading is not enabled. Setting this variable has no immediate effect.
+#
+# 			The state of the variable applies on all subsequent START_SLAVE commands.
+#
+# 			The minimum possible value for this variable is 1024 bytes; the default is 128MB. The maximum possible value is (16 exibytes, a lot)
+#
+# 			Values that are not exact multiples of 1024 bytes are rounded down to the next lower multiple of 1024 bytes prior to being stored.
+#
+# 			The value of this variable is a soft limit and can be set to match the normal workload. If an unusually large event exceeds this size,
+# 			the transaction is held until all the slave workers have empty queues, and then processed.
+#
+# 			All subsequent transactions are held until the large transaction has been completed.
+#
+# 		) slave_preserve_commit_order
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--slave-preserve-commit-order[={OFF|ON}]
+# 			Sys var 			slave_preserve_commit_order
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			For multithreaded slaves, the setting 1 for this variable ensures that transactions are externalized on the slave in teh same order
+# 			as they appear in the slave's relay log, and prevents gaps in the sequence of transactions that have been executed from the relay log.
+#
+# 			This variable has no effect on slaves for which multithreading is not enabled. Note that slave_preserve_commit_order=1 does not preserve
+# 			the order of non-transactional DML updates, so these might commit before transactions that precede them in the relay log, which might
+# 			result in gaps.
+#
+# 			slave_preserve_commit_order=1 requires that --log-bin and --log-slave-updates are enabled on the slave, and --slave-parallel-type is
+# 			set to LOGICAL_CLOCK.
+#
+# 			With slave_preserve_commit_order enabled, the executing thread waits until all previous transactions are committed before committing.
+#
+# 			While the slave thread is waiting for other workers to commit their transactions it reports its status as:
+#
+# 				Waiting for preceding transaction to commit
+#
+# 			With this mode, a multithreaded slave never enters a state that the master was not in. This supports the use of replication for
+# 			read scale-out.
+#
+# 			See SECTION 17.3.5, "USING REPLICATION FOR SCALE-OUT"
+#
+# 			Before changing this variable, all replication threads (for all replication channels if you are using multiple replication channels)
+# 			must be stopped.
+#
+# 			If slave_preserve_commit_order=0 is set, the transactions that the slave applies in parallel may commit out of order. Therefore,
+# 			checking for the most recently executed transaction does not guarantee that all previous transactions from the master have been
+# 			executed on the slave.
+#
+# 			There is a chance of gaps in the sequence of transactions that have been executed from the slave's relay log.
+#
+# 			This has implications for logging and recovery when using a multithreaded slave.
+#
+# 			Note that the setting slave_preserve_commit_order=1 prevents gaps, but does not prevent master log position lag (where 
+# 			Exec_master_log_pos is behind the position up to which transactions have been executed)
+#
+# 			See SECTION 17.4.1.33, "REPLICATION AND TRANSACTION INCONSISTENCIES" for more information.
+#
+# 		) slave_rows_search_algorithms
+#
+# 			Property 			Value
+#
+# 			Cmd line 			--slave-rows-search-algorithms=value
+# 			Deprecated 			8.0.18
+# 			Sys var 				slave_rows_search_algorithms
+# 			Scope 				Global
+# 			Dynamic 				Yes
+# 			SET_VAR Hint 		No
+# 			Type 					Set
+# 			Default (>= 8.0.2) INDEX_SCAN, HASH_SCAN
+# 			Default (<= 8.0.1) TABLE_SCAN, INDEX_SCAN
+# 			Valid 				TABLE_SCAN, INDEX_SCAN
+# 									INDEX_SCAN, HASH_SCAN
+# 									TABLE_SCAN, HASH_SCAN
+# 									TABLE_SCAN, INDEX_SCAN, HASH_SCAN (equivalent to INDEX_SCAN, HASH_SCAN)
+#
+# 			When preparing batches of rows for row-based logging and replication, this system variable controls how the rows are searched
+# 			for matches, in particular whether hash scans are used.
+#
+# 			The use of this system variable is now deprecated. The default setting INDEX_SCAN, HASH_SCAN is optimal for performance
+# 			and works correctly in all scenarios.
+#
+# 		) slave_skip_errors
+#
+# 			Property 			Value
+#
+#			Cmd line 			--slave-skip-errors=name
+# 			Sys var 				slave_skip_errors
+# 			Scope 				Global
+# 			Dynamic 				No
+# 			SET_VAR Hint 		No
+# 			Type 					String
+# 			Default 				OFF
+# 			Valid 				OFF
+# 									[list of error codes]
+# 									all
+# 									ddl_exist_errors
+#
+# 			Normally, replication stops when an error occurs on the slave, which gives ou the opportunity to resolve the
+# 			inconsistency in teh data manually.
+#
+# 			This variable causes the slave SQL thread to continue replication when a statement returns any of the errors
+# 			listed in the variable value.
+#
+# 		) slave_sql_verify_checksum
+#
+# 			Property 			Value
+#
+#			Cmd line 			--slave-sql-verifyy-checksum[={OFF|ON}]
+# 			Sys var 				slave_sql_verify_checksum
+# 			Scope 				Global
+# 			Dynamic 				Yes
+# 			SET_VAR Hint 		No
+# 			Type 					Boolean
+# 			Default 				ON
+#
+# 			Cause the slave SQL thread to verify data using the checksums read from the relay log.
+#
+# 			In the event of a mismatch, the slave stops with an error. Setting this variable takes effect
+# 			for all replication channels immediately, including running channels.
+#
+# 			NOTE:
+#
+# 				The slave I/O thread always reads checksums if possible when accepting events from over the network.
+#
+# 		) slave_transaction_retries
+#
+# 			Property 			Value
+#
+#			Cmd line 			--slave-transaction-retries=#
+# 			Sys var 				slave_transaction_retries
+# 			Scope 				Global
+# 			Dynamic 				Yes
+# 			SET_VAR Hint 		No
+# 			Type 					Integer
+# 			Default 				10
+# 			Min 					0
+# 			Max (64 bit) 		//a lot//
+# 			Max (32 bit) 		//less//
+#
+# 			Sets the maximum number of times for replication slave SQL threads on a single-threaded or multithreaded slave to automatically
+# 			retry failed transactions before stopping.
+#
+# 			Setting this variable takes effect for all replication channels immediately, including running channels.
+#
+# 			The default value is 10. Setting the variable to 0 disables automatic retrying of transactions.
+#
+# 			If a replication slave SQL thread fails to execute a transaction because of an InnoDB deadlock or because the transaction's
+# 			execution time exceeded InnoDB's innodb_lock_wait_timeout or NDB's TransactionDeadlockDetectionTimeout or
+# 			TransactionInactiveTimeout, it automatically retries slave_transaction_retries times before stopping with an error.
+#
+# 			Transactions with a non-temprary error are not retried.
+#
+# 			The Performance Schema table replication_applier_status shows the number of retries that took place on each replication
+# 			channel, in the COUNT_TRANSACTIONS_RETRIES column.
+#
+# 			The Performance Schema table replication_applier_status_by_worker shows detailed information on transaction retries
+# 			by individual applier threads on a single-threaded or multithreaded replication slave, and identifies the errors
+# 			that caused the last transaction and the transaction currently in progress to be reattempted.
+#
+# 		) slave_type_conversions
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--slave-type-conversions=set
+# 			Sys var 			slave_type_conversions
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR hint 	No
+# 			Type 				Set
+# 			Default 			-
+# 			Valid 			ALL_LOSSY
+# 								ALL_NON_LOSSY
+# 								ALL_SIGNED
+# 								ALL_UNSIGNED
+#
+# 			Controls the type conversion mode in effect on the slave when using row-based replication. Its value is a comma-delimited set
+# 			of zero or more elements from the list:
+#
+# 			ALL_LOSSY, ALL_NON_lOSSY, ALL_SIGNED, ALL_UNSIGNED
+#
+# 			Set this variable to an empty string to disallow type conversions between the master and the slave.
+#
+# 			Setting this variable takes effect for all replication channels immediately, including running channels.
+#
+# 			For additional information on type conversion mode applicables to attribute promotion and demotion in row-based
+# 			replication, see ROW-BASED REPLICATION: ATTRIBUTE PROMOTION AND DEMOTION
+#
+# 		) sql_slave_skip_counter
+#
+# 			Property 		Value
+#
+#			Sys var 			sql_slave_skip_counter
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+#
+# 			The number of events from the master that a slave server should skip. Setting the option has no immediate effect.
+#
+# 			The variable applies to the next START_SLAVE statement; the next START_SLAVE statement also changes the value back to 0.
+# 			When this variable is set to a nonzero value and there are multiple replication channels configured, the START_SLAVE
+# 			statement can only be used with the FOR CHANNEL channel clause.
+#
+# 			This option is incompatible with GTID-based replication, and must not be set to a nonzero value when --gtid-mode=ON
+#
+# 			If you need to skip transactions when employing GTIDs, use gtid_executed from the master instead.
+#
+# 			See INJECTING EMPTY TRANSACTIONS, for information about how to do this..
+#
+# 			IMPORTANT:
+#
+#				If skipping the number of events specified by setting this variable would cause the slave to begin in the middle
+# 				of an event group, the slave continues to skip until it finds the beginning of the next event group and begins
+# 				from that point.
+#
+# 				For more information, see SECTION 13.4.2.5, "SET GLOBAL SQL_SLAVE_SKIP_COUNTER SYNTAX"
+#
+# 		) sync_master_info
+#
+# 			Property 		Value
+#
+#			Cmd line 		--sync-master-info=#
+# 			Sys var 			sync_master_info
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			10000
+# 			Min 				0
+# 			Max (64-bit) 	//a lot//
+# 			Max (32-bit) 	//less//
+#
+# 			The effects of this variable on a replication slave depend on whether the slave's master_info_repository is set to FILE or TABLE,
+# 			as explained in the following paragraphs.
+#
+#			master_info_repository = FILE. If the value of sync_master_info is greater than 0, the slave synchronizes its master.info file
+# 			to disk (using fdatasync()) after every sync_master_info events.
+#
+# 			If it is 0, the MySQL server performs no synchronization of the master.info file to disk; instead, the server relies on the
+# 			OS to flush its contents periodically as with any other file.
+#
+# 			master_info_repository = TABLE. If the value of sync_master_info is greater than 0, the slave updates its master info repository
+# 			table after every sync_master_info events.
+#
+# 			If it is 0, the table is never updated.
+#
+# 			The default value for sync_master_info is 10000. Setting this variable takes effect for all replication channels immediately,
+# 			including running channels.
+#
+# 		) sync_relay_log
+#
+# 			Property 		Value
+#
+#			Cmd line 		--sync-relay-log=#
+# 			Sys var 			sync_relay_log
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			10000
+# 			Min 				0
+# 			Max (64-bit) 	//a lot//
+# 			Max (32-bit) 	//less//
+#
+# 			If the value of this variable is greater than 0, the MySQL server synchronizes its relay log to disk (using fdatasync()) after every
+# 			sync_relay_log events are written to the relay log.
+#
+# 			Setting this variable takes effect for all replication channels immedaitely, including running channels.
+#
+# 			Setting sync_relay_log to 0 causes no synchronization to be done to disk; in this case, the server relies on the OS to flush the
+# 			relay log's contents from itme to time as for any other file.
+#
+# 			A value of 1 is the safest choice because in the events of a crash you lose at most one event from the relay log.
+#
+# 			However, it is also the slowest choice (unless the disk has a battery-backed cache, which makes synchronization very fast)
+#
+# 		) sync_relay_log_info
+#
+# 			Property 		Value
+#
+#			Cmd line 		--sync-relay-log-info=#
+# 			Sys var 			sync_relay_log_info
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				INteger
+# 			Default 			10000
+# 			Min 				0
+# 			Max (64-bit) 	//a lot//
+# 			Max (32-bit) 	//less//
+#
+# 			The default value for sync_relay_log_info is 10000. Setting this variable takes effect for all replication channels immediately, including
+# 			running channels.
+#
+# 			The effects of this variable on the replication slave depend on the server's relay_log_info_repository setting (FILE or TABLE)
+#
+# 			If the setting is TABLE, the effects of the variable also depend on whether the storage engine used by the relay log info table is
+# 			transactional (such as InnoDB) or not transactional (MyISAM).
+#
+# 			THe effects of these factors on the behavior of the server for sync_relay_log_info values of zero and greater than zero are as follows:
+#
+# 			sync_relay_log_info = 0
+# 			
+# 				) If relay_log_info_repository is set to FILE, the MySQL server performs no synchronization of the relay-log.info file to disk;
+# 					instead, the server relies on the OS to flush its contents periodically as with any other file.
+#
+# 				) If relay_log_info_repository is set to TABLE, and the storage engine for that table is transactional, the table is updated after
+# 					each transaction.
+#
+# 					(The sync_relay_log_info setting is effectively ignored in this case)
+#
+# 				) If relay_log_info_repository is set to TABLE, and the storage engine for that table is not transactional, the table is never updated.
+#
+# 			sync_relay_log_info = N > 0
+#
+# 				) If relay_log_info_repository is set to FILE, the slave synchronizes its relay-log.file to disk (using fdatasync()) after every N
+# 					transactions.
+#
+# 				) If relay_log_info_repository is set to TABLE, and the storage engine for that table is transactional, the table is updated after
+# 					each transaction.
+#
+# 					(The sync_relay_log_info setting is effectively ignored in this case)
+#
+# 				) if relay_log_info_repository is set to TABLE, and the storage engine for that table is not transactional, the table is updated
+# 					after every N events.
+#
+# 17.1.6.4 BINARY lOGGING OPTIONS AND VARIABLES
+#
+# ) Startup Options used with Binary Logging
+#
+# ) System Variables Used with Binary Logging
+#
+# You can use the mysqld options and system variables that are described in this section to affect the operation of the binary log
+# as well as to control which statements are written to the binary log.
+#
+# For additional information about the binary log, see SECTION 5.4.4, "THE BINARY LOG".
+#
+# For additional information about using MySQL server options and system variables, see SECTION 5.1.7, "SERVER COMMAND OPTIONS",
+# and SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# STARTUP OPTIONS USED WITH BINARY LOGGING
+#
+# The following list describes startup options for enabling and configuring the binary log. System variables used with binary
+# logging are discussed later in this section.
+#
+# 		) --binlog-row-event-max-size=N
+# 			
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-row-event-max-size=#
+# 			Sys var (>= 8.0.14) binlog_row_event_max_size
+# 			Scope (>= 8.0.14) Global
+# 			Dynamic (>= 8.0.14) No
+# 			SET_VAR Hint (>= 8.0.14) No
+# 			Type 				Integer
+# 			Default 			8192
+# 			Min 				256
+# 			Max (64-bit) 	//a lot//
+# 			Max (32-bit) 	//less//
+#
+# 			When row-based binary logging is used, this setting is a soft limit on the maximum size of a row-based binary log event,
+# 			in bytes. Where possible, rows stored in the binary log are grouped into events with a size not exceeding the value of this
+# 			setting.
+#
+# 			If an event cannot be split, the maximum size can be exceeded. The value must be (or else gets rounded down to) a multiple
+# 			of 256. The default is 8192 bytes.
+#
+# 		) --log-bin[=base_name]
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--log-bin=file_name
+# 			Type 				File name
+#
+# 			Specifies the base name to use for binary log files. With binary logging enabled, the server logs all statements that
+# 			change data to the binary log, which is used for backup and replication.
+#
+# 			The binary log is a sequence of files with a base name and numeric extension. The --log-bin option value is the base name
+# 			for the log sequence.
+#
+# 			The server creates binary log files in sequence by adding a numeric suffix to the base name.
+#
+# 			If you do not supply the --log-bin option, MySQL uses binlog as the default base name for the binary log files.
+#
+# 			For compatibility with earlier releases, if you supply the --log-bin option with no string or with an empty string,
+# 			the base name defaults to host_name-bin, using the name of the host machine.
+#
+# 			The default location for binary log files is the data directory. You can use the --log-bin option to specify an
+# 			alternative location, by adding a leading absolute path name to the base name to specify a different directory.
+#
+# 			When the server reads an entry from the binary log index file, which tracks the binary log files that have been used,
+# 			it checks whether the entry contains a relative path. If it does, the relative part of the path is replaced with the
+# 			absolute path set using the --log-bin option.
+#
+# 			AN absolute path recorded in the binary log index file remains unchanged; in such a case, the index file must be
+# 			edited manually to enable a new path or paths to be used.
+#
+# 			The binary log file base name and any specified path are available as the log_bin_basename system variable.
+#
+# 			In earlier MySQL versions, binary logging was disabled by default, and was enabled if you specified the --log-bin option.
+#
+# 			From MySQL 8.0, binary logging is enabled by default, whether or not you specify the --log-bin option. The exception is
+# 			if you use mysqld to initialize the data directory manually by invoking it with the --initialize or --initialize-insecure
+# 			option, when binary logging is disabled by default.
+#
+# 			It is possible to enable binary logging in this case by specifying the --log-bin option. When binary logging is enabled,
+# 			the log_bin system variable, which shows the status of binary logging on the server, is set to ON.
+#
+# 			To disable binary logging, you can specify the --skip-log-bin or --disable-log-bin option at startup. If either of these
+# 			options is specified and --log-bin is also specified, the option specified later takes precedence.
+#
+# 			When binary logging is disabled, the log_bin system variable is set to OFF.
+#
+# 			When GTIDs are in use on the server, if you disable binary logging when restarting the server after an abnormal
+# 			shutdown, some GTIDs are likely to be lost, causing replication to fail.
+#
+# 			In a normal shutdown, the set of GTIDs from the current binary log file is saved in the mysql.gtid_executed table.
+#
+# 			Following an abnormal shutdown where this did not happen, during recovery the GTIDs are added to the table from
+# 			the binary log file, provided that binary logging is still enabled.
+#
+# 			If binary logging is disabled for the server restart, the server cannot access the binary log file to recover the
+# 			GTIDs, so replication cannot be started.
+#
+# 			Binary logging can be disabled safely after a normal shutdown.
+#
+# 			The --log-slave-updates and --slave-preserve-commit-order options require binary logging. If you disable binary
+# 			logging, either omit these options, or specify --skip-log-slave-updates and --skip-slave-preserve-commit-order.
+#
+# 			MySQL disables these options by default when --skip-log-bin or --disable-log-bin is specified.
+#
+# 			If you specify --log-slave-updates or --slave-preserve-commit-order together with --skip-log-bin
+# 			or --disable-log-bin, a warning or error message is issued.
+#
+# 			In MySQL 5.7, a server ID had to be specified when binary logging was enabled, or the server would not start. In MySQL
+# 			8.0, the server_id system variable is set to 1 by default.
+#
+# 			The server can now be started with this default server ID when binary logging is enabled, but an informational message
+# 			is issued if you do not specify a server ID explicitly using the --server-id option.
+#
+# 			For servers that are used in a replication topology, you must specify a unique nonzero server ID for each server.
+#
+# 			For information on the format and management of the binary log, see SECTION 5.4.4, "THE BINARY LOG"
+#
+# 		) --log-bin-index[=file_name]
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--log-bin-index=file_name
+# 			Sys var 			log_bin_index
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				File name
+#
+# 			The name for the binary log index file, which contains the names of the binary log files. By default, it has the same
+# 			location and base name as the value specified for the binary log files using the --log-bin option, plus the extension
+# 			.index 
+#
+# 			If you do not specify --log-bin, the default binary log index file name is binlog.index
+#
+# 			If you specify --log-bin option with no string or an empty string, the default binary log index file name is
+# 			host_name-bin.index, using the name of the host machine.
+#
+# 			For information on the format and management of the binary log, see SECTION 5.4.4, "THE BINARY LOG"
+#
+# 		) --log-bin-trust-function-creators[={0|1}]
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--log-bin-trust-function-creators[={OFF|ON}]
+# 			Sys var 			log_bin_trust_function_creators
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			THis option sets the corresponding log_bin_trust_function_creators system variable.
+#
+# 			If no argument is given, the option sets the variable to 1. log_bin_trust_function_creators
+# 			affects how MySQL enforces restrictions on stored function and trigger creation.
+#
+# 			See SECTION 24.7, "STORED PROGRAM BINARY LOGGING"
+#
+# 		) --log-bin-use-v1-row-events[={OFF|ON}]
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--log-bin-use-v1-row-events[={OFF|ON}]
+# 			Deprecated 		8.0.18
+# 			Sys var 			log_bin_use_v1_row_events
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			This option is deprecated. Setting the option to ON enabled row-based replication with slaves running MySQL
+# 			Server 5.5 and earlier by writing the binary log using Version 1 binary log row events, instead of Version
+# 			2 binary log row events which are the default from MySQL 5.6
+#
+# STATEMENT SELECTION OPTIONS
+#
+# The options in the following list affect which statements are written to the binary log, and thus sent by a replication
+# master server to its slaves. There are also options for slave servers that control which statements received from
+# the master should be executed or ignored.
+#
+# For details, see SECTION 17.1.6.3, "REPLICATION SLAVE OPTIONS AND VARIABLES"
+#
+# 		) --binlog-do-db=db_name
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-do-db=name
+# 			Type 				String
+#
+# 			This option affects binary logging in a manner similar to the way that --replicate-do-db affects replication.
+#
+# 			The effects of this option depend on whether the statement-based or row-based logging format is in use, in the same way
+# 			that the effects of --replicate-do-db depend on whether statement-based or row-based replication is in use.
+#
+# 			You should keep in mind that the format used to log a given statement may not necessarily be the same as that indicated
+# 			by the value of binlog_format.
+#
+# 			For example, DDL statements such as CREATE_TABLE and ALTER_TABLE are always logged as statements, without regard
+# 			to the logging format in effect, so the following statement-based rules for --binlog-do-db always apply in
+# 			determining whether or not the statement is logged.
+#
+# 			STATEMENT-BASED LOGGING
+#
+# 			Only those statements are written to the binary log where the default database (that is, the one selected by USE)
+# 			is db_name.
+#
+# 			To specify more than one database, use this option multiple times, once for each database; however, doing so does
+# 			not cause cross-database statements such as UPDATE some_db.some_table SET foo='bar' to be logged while a different
+# 			database (or no database) is selected.
+#
+# 			WARNING:
+#
+# 				To specify multiple databases you must use multiple instances of this option. Because database names can contain
+# 				commas, the list will be treated as the name of a single database if you supply a comma-separated list.
+#
+# 			AN example of what does not work as you might expect when using statement-based logging: if the server is started
+# 			with --binlog-do-db=sales and you issue the following statements, the UPDATE statement is not logged:
+#
+# 				USE prices;
+# 				UPDATE sales.january SET amount=amount+1000;
+#
+# 			The main reason for this "just check the default database" behavior is that it is difficult from the statement
+# 			alone to know whether it should be replicated (for example, if you are using multiple-table DELETE statements
+# 			or multiple-table UPDATE statements that act across multiple databases)
+#
+# 			It is also faster to check only the default database rather than all databases if there is no need.
+#
+# 			Another case which may not be self-evident occurs when a given database is replicated even though it was not
+# 			specified when setting the option.
+#
+# 			If the server is started with --binlog-do-db=sales, the following UPDATE statement is logged even though prices
+# 			was not included when setting --binlog-do-db:
+#
+# 				USE sales;
+# 				UPDATE prices.discounts SET percentage = percentage + 10;
+#
+# 			Because sales is the default database when the UPDATE statement is issued, the UPDATE is logged.
+#
+# 			ROW-BASED LOGGING
+#
+# 			Logging is restricted to database db_name. Only changes to tables belonging to db_name are logged: the default
+# 			database has no effect on this.
+#
+# 			Suppose that the server is started with --binlog-do-db=sales and row-based logging is in effect, and then the
+# 			following statements are executed:
+#
+# 				USE prices;
+# 				UPDATE sales.february SET amount=amount+100;
+#
+# 			The changes to the february table in the sales database are logged in accordance with the UPDATE statement;
+# 			This occurs whether or not the USE statement was issued.
+#
+# 			However, when using the row-based logging format and --binlog-do-db=sales, changes made by the following 
+# 			UPDATE are not logged:
+#
+# 				USE prices;
+# 				UPDATE prices.march SET amount=amount-25;
+#
+# 			Even if the USE prices statement were changed to USE sales, the UPDATE statement's effects would still not
+# 			be written to the binary log.
+#
+# 			Another important difference in --binlog-do-db handling for statement-based logging as opposed to the row-based
+# 			logging occurs with regard to statements that refer to multiple databases.
+#
+# 			SUppose that hte server is started with --binlog-do-db=db1, and the following statements are executed:
+#
+# 				USE db1;
+# 				UPDATE db1.table1 SET col1 = 10, db2.table2 SET col2 = 20;
+#
+# 			If you are using statement-based logging, the updates to both tables are written to the binary log. However,
+# 			when using the row-based format, only the changes to table1 are logged; table2 is in a different DB, so it's
+# 			not changed by the UPDATE.
+#
+# 			Now suppose that, instead of the USE db1 statement, a USE db4 statement had been used:
+#
+# 				USE db4;
+# 				UPDATE db1.table1 SET col1 = 10, db2.table2 SET col2 = 20;
+#
+# 			In this case, the UPDATE statement is not written to the binary log when using statement-based logging.
+#
+# 			HOwever, when using row-based logging, the change to table1 is logged, but not that to table2 - in other
+# 			words, only changes to tables in the database named by --binlog-do-db are logged, and the choice of
+# 			default database has no effect on this behavior.
+#
+# 		) --binlog-ignore-db=db_name
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-ignore-db=name
+# 			Type 				String
+#
+# 			This option affects binary logging in a manner similar to the way that --replicate-ignore-db affects replication.
+#
+# 			The effects of this option depend on whether the statement-based or row-based logging format is in use, in the same
+# 			way that the effects of --replicate-ignore-db depend on whether statement-based or row-based replication is in use.
+#
+# 			You should keep in mind that the format used to log a given statement may not necessarily be the same as that indicated
+# 			by the value of binlog_format.
+#
+# 			For example, DDL statements such as CREATE_TABLE and ALTER_TABLE are always logged as statements, without regard to
+# 			the logging format in effect, so the following statement-based rules for --binlog-ignore-db always apply in determining
+# 			whether or not the statement is logged.
+#
+# 			STATEMENT-BASED LOGGING
+#
+# 			Tells the server to not log any statement where the default database (that is, the one selected by USE) is db_name
+#
+# 			When there is no default database, no --binlog-ignore-db options are applied, and such statements are always logged.
+# 			(Bug #11829838, Bug #60188)
+#
+# 			ROW-BASED FORMAT
+#
+# 			Tells the server not to log updates to any tables in the database db_name. The current database has no effect.
+#
+# 			When using statement-based logging, the following example does not work as you might expect. Suppose that the
+# 			server is started with --binlog-ignore-db=sales and you issue the following statements:
+#
+# 				USE prices;
+# 				UPDATE sales.january SET amount=amount+1000;
+#
+# 			The UPDATE statement is logged in such a case because --binlog-ignore-db applies only to the default database
+# 			(determined by the USE statement)
+#
+# 			Because the sales database was specified explicitly in the statement, the statement has not been filtered.
+# 			However, when using row-based logging, the UPDATE statement's effects are not written to the binary log,
+# 			which means that no changes to the sales.january table are logged; in this instance, --binlog-ignore-db=sales
+# 			causes ALL changes made to tables in teh master's copy of the sales database to be ignored for purposes
+# 			of binary logging.
+#
+# 			To specify more than one database to ignore, use this option multiple times, once for each database.
+#
+# 			Because database names can contain commas, the list will be treated as the name of a single database if
+# 			you supply a comma-separated list.
+#
+# 			You should not use this option if you are using cross-database updates and you do not want these updates to be logged.
+#
+# CHECKSUM OPTIONS
+#
+# MySQL supports reading and writing of binary log checksums. These are enabled using the two options listed here:
+#
+# 		) --binlog-checksum={NONE|CRC32}
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-checksum=type
+# 			Type 				String
+# 			Default 			CRC32
+# 			Valid 			NONE
+# 								CRC32
+#
+# 			Enabling this option causes the master ot write checksums for events written ot the binary log.
+#
+# 			Set to NONE to disable, or the name of the algorithm to be used for generating checksums; currently,
+# 			only CRC32 checksums are supported, and CRC32 is the default.
+#
+# 			You cannot change the setting for this option within a transaction.
+#
+# 		) --master-verify-checksum={0|1}
+#
+# 			Property 		Value
+# 			Cmd line 		--master-verify-checksum[={OFF|ON}]
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			Enabling this option causes the master to verify events from the binary log using checksums, and to stop with
+# 			an error in the event of a mismatch.
+#
+# 			Disabled by default.
+#
+# To control reading of checksums by the slave (from the relay) log, use the --slave-sql-verify-checksum option.
+#
+# TESTING AND DEBUGGING OPTIONS
+#
+# The following binary log options are used in replication testing and debugging. They are not intended for use in normal operations.
+#
+# 		) --max-binlog-dump-events=N
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--max-binlog-dump-events=#
+# 			Type 				Integer
+# 			Default 			0
+#
+# 			This option is used internally by the MySQL test suite for replication testing and debugging.
+#
+# 		) --sporadic-binlog-dump-fail
+#
+# 			Property 		Value
+#
+# 			
+#
+# 			https://dev.mysql.com/doc/refman/8.0/en/replication-options-binary-log.html
+#
 #
