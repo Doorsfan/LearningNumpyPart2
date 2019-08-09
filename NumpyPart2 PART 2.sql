@@ -68547,7 +68547,811 @@
 #
 # 			Property 		Value
 #
-# 			
+# 			Cmd line 		--sporadic-binlog-dump-fail[={OFF|ON}]
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			This option is used internally by the MySQL test suite for replication testing and debugging.
+#
+# SYSTEM VARIABLES USED WITH BINARY LOGGING
+#
+# The following list describes system variables for controlling binary logging. They can be set at server startup
+# and some of them can be changed at runtime using SET.
+#
+# Server options used to control binary logging are listed earlier in this section.
+#
+# 		) binlog_cache_size
+#
+# 			PROPERTY 		Value
+#
+# 			Cmd line 		--binlog-cache-size=#
+# 			Sys var 			binlog_cache_size
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			32768
+# 			Min 				4096
+# 			Max (64-bit) 	//A lot//
+# 			Max (32-bit) 	//less//
+#
+# 			the size of the memory buffer to hold changes to the binary log during a transaction. When binary logging is enabled
+# 			on the server (with the log_bin system variable set to ON), a binary log cache is allocated for each client if the
+# 			server supports any transactional storage engines.
+#
+# 			If the data for the transaction exceeds the space in the memory buffer, the excess data is stored in a temporary file.
+#
+# 			When binary log encryption is active on the server, the memory buffer is not encrypted, but (from MySQL 8.0.17) any temporary
+# 			file used to hold the binary log cache is encrypted.
+#
+# 			After each transaction is committed, the binary log cache is reset by clearing the memory buffer and truncating the temporary
+# 			file if used.
+#
+# 			If you often use large transactions, you can increase this cache size to get better performance by reducing or eliminating
+# 			the need to write to temporary files.
+#
+# 			The Binlog_cache_use and Binlog_cache_disk_use status variables can be useful for tuning the size of this variable.
+#
+# 			See SECTION 5.4.4, "THE BINARY LOG"
+#
+# 			binlog_cache_size sets the size for the transaction cache only; the size of the statement cache is governed by the binlog_stmt_cache_size
+# 			system variable.
+#
+# 		) binlog_checksum
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-checksum=name
+# 			Sys var 			binlog_checksum
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				String
+# 			Default 			CRC32
+# 			Valid 			NONE
+# 								CRC32
+#
+# 			When enabled, this variable causes the master to write a checksum for each event in the binary log.
+#
+# 			binlog_checksum supports the values NONE (disabled) and CRC32. The default is CRC32. You cannot change
+# 			the value of binlog_checksum within a transaction.
+#
+# 			When binlog_checksum is disabled (value NONE), the server verifies that it is writing only complete events
+# 			to the binary log by writing and checking the event length (rather than a checksum) for each event.
+#
+# 			Changing the value of this variable causes the binary log to be rotated; checksums are always written to
+# 			an entire binary log file, and never to only part of one.
+#
+# 			Setting this variable on the master to a value unrecognized by the slave causes the slave to set its own
+# 			binlog_checksum value to NONE, and to stop replication with an error.
+#
+# 			(Bug #13553750, Bug #61096)
+#
+# 			If backward compatibility with older slaves is a concern, you may want to set the value explicitly to NONE.
+#
+# 		) binlog_direct_non_transactional_updates
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-direct-non-transactional-updates[={OFF|ON}]
+# 			Sys var 			binlog_direct_non_transactional_updates
+# 			Scope 			Global, Session
+# 			Dynamic 			Yes
+# 			SET_VAR hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			Due to concurrency issues, a slave can become inconsistent when a transaction contains updates to both transactional
+# 			and nontransactional tables.
+#
+# 			MySQL tries to preserve casuality among these statements by writing nontransactional statements to the transaction
+# 			cache, which is flushed upon commit.
+#
+# 			However, problems arise when modifications done to nontransactional tables on behalf of a transaction become
+# 			immediately visible to other connections because these changes may not be written immediately into the binary log.
+#
+# 			The binlog_direct_non_transactional_updates variable offers one possible workaround to this issue. By default,
+# 			this variable is disabled.
+#
+# 			Enabling binlog_direct_non_transactional_updates causes updates to nontransactional tables to be written directly
+# 			to the binary log, rather than to the transaction cache.
+#
+# 			As of MySQL 8.0.14, setting the session value of this system variable is a restricted operation.
+#
+# 			The session user must have privileges sufficient to set restricted session variables. See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 			binlog_direct_non_transactional_updates works only for statements that are replicated using the statement-based binary logging format;
+# 			that is, it works only when the value of binlog_format is STATEMENT, or when binlog_format is MIXED and a given statement is being
+# 			replicated using the statement-based format.
+#
+# 			This variable has no effect when the binary log format is ROW, or when binlog_format is set to MIXED and a given statement is replicated
+# 			using the row-based format.
+#
+# 			IMPORTANT:
+#
+# 				Before enabling this variable, you must make certain that there are no dependencies between transactional and nontransactional
+# 				tables; an example of such a dependency would be the statement INSERT INTO myisam_table SELECT * FROM innodb_table
+#
+# 				Otherwise, such statements are likely to cause the slave to diverge from the master.
+#
+# 			This variable has no effect when the binary log format is ROW or MIXED.
+#
+# 		) binlog_encryption
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-encryption[={OFF|ON}]
+# 			Introduced 		8.0.14
+# 			Sys var 			binlog_encryption
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			Enables encryption for binary log files and relay log files on this server. OFF is the default.
+#
+# 			ON sets encryption on for binary log files and relay log files. Binary logging does not need to be
+# 			enabled on the server to enable encryption, so you can encrypt the relay log files on a slave that has
+# 			no binary log.
+#
+# 			To use encryption, a keyring plugin must be installed and configured to supply MySQL Server's keyring
+# 			service. For instructions to do this, see SECTION 6.4.4, "THE MYSQL KEYRING"
+#
+# 			Any supported keyring plugin can be used to store binary log encryption keys.
+#
+# 			When you first start the server with binary log encryption enabled, a new binary log encryption key is
+# 			generated before the binary log and relay logs are initialized.
+#
+# 			This key is used to encrypt a file password for each binary log file (if the server has binary logging enabled)
+# 			and relay log file (if the server has replication channels), and further keys generated from the file passwords
+# 			are used to encrypt the data in the files.
+#
+# 			Relay log files are encrypted for all channels, including Group Replication applier channels and new channels
+# 			thaht are created after encryption is activated.
+#
+# 			The binary log index file and relay log index file are never encrypted.
+#
+# 			If you activate encryption while the server is running, a new binary log encryption key is generated at that time.
+#
+# 			The exception is if encryption was active previously on the server and was then disabled, in which case the binary
+# 			log encryption key that was in use before it is used again.
+#
+# 			The binary log file and relay log files are rotated immediately, and file passwords for the new files and all
+# 			subsequent binary log files and relay log files are encrypted using this binary log encryption key.
+#
+# 			Existing binary log files and relay log files still present on the server are not automatically encrypted,
+# 			but you can purge them if they are no longer needed.
+#
+# 			If you deactivate encryption by changing the binlog_encryption system variable to OFF, the binary log file
+# 			and relay log files are rotated immediately and all subsequent logging is unencrypted.
+#
+# 			Previously encrypted files are not automatically decrypted, but the server is still able to read them.
+#
+# 			SUPER privileges or the BINLOG_ENCRYPTION_ADMIN privilege are required to activate or deactivate encryption
+# 			while the server is running.
+#
+# 			Group Replication applier channels are not included in the relay log rotation request, so unencrypted logging
+# 			for these channels does not start until their logs are rotated in normal use.
+#
+# 			For more information on binary log files and relay log file encryption, see SECTION 17.3.10, "ENCRYPTING BINARY LOG
+# 			FILES AND RELAY LOG FILES"
+#
+# 		) binlog_error_action
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-error-action[=value]
+# 			Sys var 			binlog_error_action
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Enumeration
+# 			Default 			ABORT_SERVER
+# 			Valid 			IGNORE_ERROR
+# 								ABORT_SERVER
+#
+# 			Controls what happens when the server encounters an error such as not being able to write to, flush or synchronize
+# 			the binary log, which can cause the master's binary log to become inconsistent and replication slaves to lose
+# 			synchronization.
+#
+# 			This variable defaults to ABORT_SERVER, which makes the server halt logging and shut down whenever it encounters
+# 			such an error with the binary log.
+#
+# 			On restart, recovery proceeds as in the case of an unexpected server halt (see SECTION 17.3.2, "HANDLING AN UNEXPECTED
+# 			HALT OF A REPLICATION SLAVE")
+#
+# 			When binlog_error_action is set to IGNORE_ERROR, if the server encounters such an error it continues the ongoing transcation,
+# 			logs the error then halts logging, and continues performing updates.
+#
+# 			To resume binary logging log_bin must be enabled again, which requires a server restart. This setting provides
+# 			backward compatibility with older versions of MySQL.
+#
+# 		) binlog_expire_logs_seconds
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-expire-logs-seconds=#
+# 			Introduced 		8.0.1
+# 			Sys var 			binlog_expire_logs_seconds
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default (>= 8.0.11) 2592000
+# 			Default (<= 8.0.4)  0
+# 			Min 					  0
+# 			Max 				4294967295
+#
+# 			Sets the binary log expiration period in seconds. After their expiration period ends, binary log files can be
+# 			automatically removed.
+#
+# 			Possible removals happen at startup and when the binary log is flushed. Log flushing occurs as indicated 
+# 			in SECTION 5.4, "MYSQL SERVER LOGS"
+#
+# 			The default binary log expiration period is 2592000 seconds, which equals 30 days (30*24*60*60 seconds)
+#
+# 			The default applies if neither binlog_expire_logs_seconds nor the deprecated system variable expire_logs_days
+# 			has a value set at startup. If a non-zero value for one of the variables binlog_expire_logs_seconds or
+# 			expire_logs_days is set at startup, this value is used as the binary log expiration period.
+#
+# 			If a non-zero value for both of those variables is set at startup, the value for binlog_expire_logs_seconds
+# 			is used as the binary log expiration period, and the value for expire_logs_days is ignored with a warning message.
+#
+# 			To disable automatic purging of the binary log, specify a value of 0 explicitly for binlog_expire_logs_seconds,
+# 			and do not specify a value for expire_logs_days.
+#
+# 			For compatibility with earlier releases, automatic purging is also disabled if you specify a value of 0
+# 			explicitly for expire_logs_days and do not specify a value for binlog_expire_logs_seconds.
+#
+# 			In that case, the default for binlog_expire_logs_seconds is not applied.
+#
+# 			To remove binary log files manually, use the PURGE_BINARY_LOGS statement. See SECTION 13.4.1.1, "PURGE BINARY LOGS SYNTAX"
+#
+# 		) binlog_format
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-format=format
+# 			Sys var 			binlog_format
+# 			Scope 			Global, Session
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Enumeration
+# 			Default 			ROW
+# 			Valid 			ROW
+# 								STATEMENT
+# 								MIXED
+#
+# 			This variable sets the binary logging format, and can be any one of STATEMENT, ROW, or MIXED.
+# 			See SECTION 17.2.1, "REPLICATION FORMATS"
+#
+# 			binlog_format can be set at startup or at runtime, except that under some conditions, changing this
+# 			variable at runtime is not possible or causes replication to fail, as described later.
+#
+# 			The default is ROW. Exception: In NDB Cluster, the default is MIXED; statement-based replication is not
+# 			supported for NDB Cluster.
+#
+# 			Setting the session value of this system variable is a restricted operation. The sesion user must have
+# 			privileges sufficient to set restricted session variables.
+#
+# 			See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 			The rules governing when changes to this variable take effect and how long the effect lasts are the
+# 			same as for other MySQL server system variables.
+#
+# 			For more information, see SECTION 13.7.5.1, "SET SYNTAX FOR VARIABLE ASSIGNMENT"
+#
+# 			When MIXED is specified, statement-based replication is used, except for cases where only row-based
+# 			replication is guaranteed to lead to proper results.
+#
+# 			For example, this happens when statements contain user-defined functions (UDF) or the UUID() function.
+#
+# 			For details of how stored programs (stored procedures and functions, triggers, and events) are handled
+# 			when each binary logging format is set, see SECTION 24.7, "STORED PROGRAM BINARY LOGGING"
+#
+# 			There are exceptions when you cannot switch the replication format at runtime:
+#
+# 				) The replication format cannot be changed from within a stored function or a trigger.
+#
+# 				) If a session has open temporary tables, the replication format cannot be changed for the session (SET @@SESSION.binlog_format)
+#
+# 				) If any replication channel has open temporary tables, the replication format cannot be changed globally
+# 					(SET @@GLOBAL.binlog_format or SET @@PERSIST.binlog_format)
+#
+# 				) If any replication channel applier thread is currently running, the replication format cannot be changed globally
+# 					(SET @@GLOBAL.binlog_format or SET @@PERSIST.binlog_format)
+#
+# 			Trying to switch the replication format in any of these cases (or attempting to set the current replication format) results
+# 			in an error.
+#
+# 			You can, however, use PERSIST_ONLY(SET @@PERSIST_ONLY.binlog_format) to change the replication format at any time, because
+# 			this action does not modify the runtime global system variable value, and takes effect only after a server restart.
+#
+# 			Switching the replication format at runtime is not recommended when any temporary tables exist, because temporary tables are
+# 			logged only when using statement-based replication, whereas with row-based replication and mixed replication, they are not logged.
+#
+# 			Changing the logging format on a replication master does not cause a replication slave to change its logging format to match.
+# 			Switching the replication format while replication is ongoing can cause issues if a replication slave has binary logging
+# 			enabled, and the change results in the slave using STATEMENT format logging while the master is using ROW or MIXED format logging.
+#
+# 			A replication slave is not able to convert binary log entries received in ROW logging format to STATEMENT format for use in its
+# 			own binary log, so this situation can cause replication to fail.
+#
+# 			For more information, see SECTION 5.4.4.2, "SETTING THE BINARY LOG FORMAT"
+#
+# 			The binary log format affects the behavior of the following server options:
+#
+# 				) --replicate-do-db
+#
+# 				) --replicate-ignore-db
+#
+# 				) --binlog-do-db
+#
+# 				) --binlog-ignore-db
+#
+# 			These effects are discussed in detail in the descriptions of the individual options.
+#
+# 		) binlog_group_commit_sync_delay
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-group-commit-sync-delay=#
+# 			Sys var 			binlog_group_commit_sync_delay
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			0
+# 			Min 				0
+# 			Max 				1000000
+#
+# 			Controls how many microseconds the binary log commit waits before synchronizing the binary log file to disk. By default
+# 			binlog_group_commit_sync_delay is set to 0, meaning that there is no delay. Setting binlog_group_commit_sync_delay to
+# 			a microsecond delay enables more transactions to be synchronized together to disk at once, reducing the overall time
+# 			to commit a group of transactions because the larger groups require fewer time units per group.
+#
+# 			When sync_binlog=0 or sync_binlog=1 is set, the delay specified by binlog_group_commit_sync_delay is applied for every
+# 			binary log commit group before synchronization (or in the case of sync_binlog=0, before proceeding)
+#
+# 			When sync_binlog is set to value n greater than 1, the delay is applied after every n binary log commit groups.
+#
+# 			Setting binlog_group_commit_sync_delay can increase the number of parallel committing transactions on any server
+# 			that has (or might have after a failover) a replication slave, and therefore can increase parallel execution on
+# 			the replication slaves.
+#
+# 			To benefit from this effect, the slaves servers must have slave_parallel_type=LOGICAL_CLOCK set, and the effect
+# 			is more significant when binlog_transaction_dependency_tracking=COMMIT_ORDER is also set.
+#
+# 			It is important to take into account both the master's throughput and the slaves throughput when you are
+# 			tuning the setting for binlog_group_commit_sync_delay.
+#
+# 			Setting binlog_dump_commit_sync_delay can also reduce the number of fsync() calls to the binary log on any server
+# 			(master or slave) that has a binary log.
+#
+# 			Note that setting binlog_group_commit_sync_delay increases the latency of transactions on the server, which might
+# 			affect client applications.
+#
+# 			Also, on highly concurrent workloads, it is possible for the delay to increase contention and therefore reduce
+# 			throughput. Typically, the benefits of setting a delay outweigh the drawbacks, but tuning should always be
+# 			carried out to determine the optimal setting.
+#
+# 		) binlog_group_commit_sync_no_delay_count
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-group-commit-sync-no-delay-count=#
+# 			Sys var 			binlog_group_commit_sync_no_delay_count
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			0
+# 			Min 				0
+# 			Max 				1000000
+#
+# 			The maximum number of transactions to wait for before aborting the current delay as specified by
+# 			binlog_group_commit_sync_delay.
+#
+# 			If binlog_group_commit_sync_delay is set to 0, then this option has no effect.
+#
+# 		) binlog_max_flush_queue_time
+#
+# 			Property 		Value
+#
+# 			cmd line 		--binlog-max-flush-queue-time=#
+# 			Deprecated 		Yes
+# 			Sys var 			binlog_max_flush_queue_time
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			0
+# 			Min 				0
+# 			Max 				100000
+#
+# 			binlog_max_flush_queue_time is deprecated, and is marked for eventual removal in a future MySQL release.
+#
+# 			Formerly, this system variable controlled the time in microseconds to continue reading transactions from
+# 			the flush queue before proceeding with group commit.
+#
+# 			It no longer has any effect.
+#
+# 		) binlog_order_commits
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-order-commits[={OFF|ON}]
+# 			Sys var 			binlog_order_commits
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			ON
+#
+# 			When this variable is enabled on a replication master (which is the default), transaction commit instructions
+# 			issued to storage engines are serialized on a single thread, so that transactions are always committed in the
+# 			same order as they are written to the binary log.
+#
+# 			Disabling this variable permits transaction commit instructions to be issued using multiple threads.
+#
+# 			Used in combination with binary log group commit, this prevents the commit rate of a single transaction
+# 			being a bottleneck to throughput, and might therefore produce a performance improvement.
+#
+# 			Transactions are written to the binary log at the point when all the storage engines involved have confirmed
+# 			that the transaction is prepared to commit.
+#
+# 			The binary log group commit logic then commits a group of transactions after their binary log write has taken
+# 			place.
+#
+# 			When binlog_order_commits is disabled, because multiple threads are used for this process, transactions in
+# 			a commit group might be committed in a different order from their order in the binary log.
+#
+# 			(Transactions from a single client always commit in chronological order)
+#
+# 			In many cases this does not matter, as operations carried out in separate transactions should produce
+# 			consistent results, and if that is not the case, a single transaction ought to be used instead.
+#
+# 			If you want to ensure that the transaction history on the master and on a multithreaded replication slave
+# 			remains identical, set slave_preserve_commit_order=1 on the replication slave.
+#
+# 		) binlog_rotate_encryption_master_key_at_startup
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-rotate-encryption-master-key-at-startup[={OFF|ON}]
+# 			Introduced 		8.0.14
+# 			Sys var 			binlog_rotate_encryption_master_key_at_startup
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			Specifies whehther or not the binary log master key is rotated at server startup. The binary log master key
+# 			is the binary log encryption key that is used to encrypt file passwords for the binary log files and relay
+# 			log files on the server.
+#
+# 			When a server is started for the first time with binary log encryption enabled (binlog_encryption=ON),
+# 			a new binary log encryption key is generated and used as the binary log master key.
+#
+# 			If the binlog_rotate_encryption_master_key_at_startup system variable is also set to ON, whenever the server
+# 			is restarted, a further binary log encryption key is generated and used as the binary log master key for
+# 			all subsequent binary log files and relay log files.
+#
+# 			If the binlog_rotate_encryption_master_key_at_startup system variable is set to OFF, which is the default,
+# 			the existing binary log master key is used again after the server restarts.
+#
+# 			For more information on binary log encryption keys and the binary log master key, see
+# 			SECTION 17.3.10, "ENCRYPTING BINARY LOG FILES AND RELAY LOG FILES"
+#
+# 		) binlog_row_event_max_size
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-row-event-max-size=#
+# 			Sys var (>= 8.0.14) binlog_row_event_max_size
+# 			Scope (>= 8.0.14) Global
+# 			Dynamic (>= 8.0.14) No
+# 			SET_VAR Hint (>= 8.0.14) No
+# 			Type 				INteger
+# 			Default 			8192
+# 			Min 				256
+# 			Max (64-bit) 	//a lot//
+# 			Max (32-bit) 	//less//
+#
+# 			When row-based binary logging is used, this setting is a soft limit on the maximum size of a row-based
+# 			binary log event, in bytes.
+#
+# 			Where possible, rows stored in the binary log are grouped into events with a size not exceeding the value
+# 			of this setting. If an event cannot be split, the maximum size can be exceeded.
+#
+# 			THe value must be (or else gets rounded down to) a multiple of 256. The default is 8192 bytes.
+#
+# 			This global system variable is read-only and can be set only at server startup. Its value can therefore only
+# 			be modified by using the PERSIST_ONLY keyword or the @@persist_only qualifier with the SET statement.
+#
+# 		) binlog_row_image
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-row-image=image_type
+# 			Sys var 			binlog_row_image
+# 			Scope 			Global, Session
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Enumeration
+# 			Default 			full
+# 			Valid 			full (Log all columns)
+# 								minimal (Log only changed columns, and columns needed to identify rows)
+# 								noblob (Log all columns, except for unneeded BLOB and TEXT columns)
+#
+# 			For MySQL row-based replication, this variable determines how row images are written to the binary log.
+#
+# 			Setting the session value of this system variable is a restricted operation. The session user must have privileges
+# 			sufficient to set restricted session variables.
+#
+# 			See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 			In MySQL row-based replication, each row change event contains two images, a "before" image whose columns are
+# 			matched against when searching for the row to be updated, and an "after" image containing the changes.
+#
+# 			NOrmally, MySQL logs full rows (that is, all columns) for both the before and after images.
+#
+# 			However, it is not strictly necessary to include every column in both images, and we can often save disk, memory,
+# 			and network usage by logging only those columns which are actually required.
+#
+# 			NOTE:
+#
+# 				When deleting a row, only the before image is logged, since there are no changed values to propagate following
+# 				the deletion.
+#
+# 				When inserting a row, only the after image is logged, since there is no existing row to be matched.
+#
+# 				Only when updating a row are both the before and after images required, and both written to the binary log.
+#
+# 			For the before image, it is necessary only that the minimum set of columns required to uniquely identify rows
+# 			is logged. If the table containing the row has a primary key, then only the primary key column or columns are
+# 			written to the binary log.
+#
+# 			Otherwise, if the table has a unique key all of whose columns are NOT NULL, then only the columns in the unique
+# 			key need be logged. (If the table has neither a primary key nor a unique key without any NULL columns, then all
+# 			columns must be used in the before image, and logged)
+#
+# 			IN the after image, it is necessary to log only the columns which have actually changed.
+#
+# 			You can cause the server to log full or minimal rows using the binlog_row_image system variable.
+# 			This variable actually takes one of three possible values, as shown in the following list:
+#
+# 				) full: Log all columns in both the before image and the after image
+#
+# 				) minimal: Log only those columns in the before image that are required to identify the row to be changed;
+# 					log only those columns in the after image where a value was specified by teh SQL statement, or generated
+# 					by auto-increment.
+#
+# 				) noblob: Log all columns (same as full), except for BLOB and TEXT columns that are not required to identify rows,
+# 					or that have not changed.
+#
+# 					NOTE:
+#
+# 						This variable is not supported by NDB Cluster; setting it has no effect on the logging of NDB tables.
+#
+# 			The default value is full.
+#
+# 			When using minimal or noblob, deletes and updates are guaranteed to work correctly for a given table if and only
+# 			if the following conditions are true for both the source and destination tables:
+#
+# 				) All columns must be present and in the same order; each column must use the same data type as its counterpart
+# 				in the other table.
+#
+# 				) The tables must have identical primary key definitions.
+#
+# 			(In other words, the tables must be identical with the possible exception of indexes that are not part of the table's
+# 			primary keys)
+#
+# 			If these conditions are not met, it is possible that the primary key column values in the destination table may prove
+#  		insufficient to provide a unique match for a delete or update.
+#
+# 			In this event, no warning or error is issued; the master and slave silently diverge, thus breaking consistency.
+#
+# 			Setting this variable has no effect when the binary logging format is STATEMENT. When binlog_format is MIXED,
+# 			the setting for binlog_row_image is applied to changes that are logged using row-based format, but this setting
+# 			has no effect on changes logged as statements.
+#
+# 			Setting binlog_row_image on either the global or session level does not cause an implicit commit; this means
+# 			that this variable can be changed while a transaction is in progress without affecting the transaction.
+#
+# 		) binlog_row_metadata
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-row-metadata=metadata_type
+# 			Introduced 		8.0.1
+# 			Sys var 			binlog_row_metadata
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Enumeration
+# 			Default 			MINIMAL
+# 			Valid 			FULL (All metadata is included)
+# 								MINIMAL (Limit included metadata)
+#
+# 			Configures the amount of table metadata added to the binary log when using row-based logging.
+# 			When set to MINIMAL, the default, only metadata related to SIGNED flags, column character set
+# 			and geometry types are logged.
+#
+# 			When set to FULL complete metadata for tables is logged, such as column name, ENUM or
+# 			SET string values, PRIMARY KEY information, and so on.
+#
+# 			The extended metadata serves the following purposes:
+#
+# 				) Slaves use the metadata to transfer data when its table structure is different from the master's
+#
+# 				) External software can use the metadata to decode row events and store the data into external databases,
+# 					such as a data warehouse.
+#
+# 		) binlog_row_value_options
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-row-value-options=#
+# 			Introduced 		8.0.3
+# 			Sys var 			binlog_row_value_options
+# 			Scope 			Global, Session
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Set
+# 			Default 			''
+# 			Valid 			PARTIAL_JSON
+#
+# 			When set to PARTIAL_JSON, this enables use of a space-efficient binary log format for updates that modify only a small
+# 			portion of a JSON document, which causes row-based replication to write only the modified parts of the JSON document
+# 			to the after-image for the update in the binary log (rather than writing the full document)
+#
+# 			This works for an UPDATE statement which modifies a JSON column using any sequence of JSON_SET(), JSON_REPLACE(),
+# 			and JSON_REMOVE(). If the modification requires more space than the full document, or if the server is unable to
+# 			generate a partial update, the full document is used instead.
+#
+# 			Setting the session value of this system variable is a restricted operation. The session user must have privileges
+# 			sufficient to set restricted session vars.
+#
+# 			See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 			PARTIAL_JSON is the only supported value; to unset binlog_row_value_option, set its value to the empty string.
+#
+# 			binlog_row_value_options=PARTIAL_JSON takes effect only when binary logging is enabled and binlog_format is set
+# 			to ROW or MIXED.
+#
+# 			Statement-based replication always logs only the modified parts of the JSON document, regardless of any value
+# 			set for binlog_row_value_options.
+#
+# 			To maximize the amount of space saved, use binlog_row_image=NOBLOB or binlog_row_image=MINIMAL together with
+# 			this option.
+#
+# 			binlog_row_image=FULL saves less space than either of these, since the full JSON document is stored in the
+# 			before-image, and the partial update is stored only in the after-image.
+#
+# 			mysqlbinlog output includes partial JSON updates in teh form of events encoded as base-64 strings using
+# 			BINLOG statements.
+#
+# 			If the --verbose option is specified, mysqlbinlog displays the partial JSON updates as readable JSON
+# 			using pseudo-SQL statements.
+#
+# 			MySQL Replication generates an error if a modification cannot be applied to the JSON document on the slave.
+#
+# 			This includes a failure to find the path. Be aware that, even with this and other safety checks, if a JSON
+# 			document on a slave has diverged from that on teh master and a partial update is applied, it remains
+# 			theoretically possible to produce a valid but unexpected JSON document on the slave.
+#
+# 		) binlog_rows_query_log_events
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-rows-query-log-events[={OFF|ON}]
+# 			Sys var 			binlog_rows_query_log_events
+# 			Scope 			Global, Session
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			This system variable affects row-based logging only. When enabled, it causes the server to write informational
+# 			log events such as row query log events into its binary log.
+#
+# 			This information can be used for debugging and related purposes, such as obtaining the original query issued
+# 			on tthe master when it cannto be reconstructed from the row updates.
+#
+# 			Setting the session value of this system variable is a restricted operation. The session user must have privileges
+# 			sufficient to set restricted session variables.
+#
+# 			See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 			These informational events are normally ignored by MySQL programs reading the binary log and so cause no issues
+# 			when replicating or restoring from backup.
+#
+# 			To view them, increase the verbosity level by using mysqlbinlog's --verbose option twice, either as -vv or
+# 			--verbose --verbose
+#
+# 		) binlog_stmt_cache_size
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-stmt-cache-size=#
+# 			Sys var 			binlog_stmt_cache_size
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR HInt 	No
+# 			Type 				Integer
+# 			Default 			32768
+# 			Min 				4096
+# 			Max (64-bit) 	//a lot//
+# 			Max (32-bit) 	//less//
+#
+# 			The size of the memory buffer for the binary log to hold nontransactional statements issued during a transaction.
+# 			When binary logging is enabled on the server (with the log_bin system variable set to ON), separate binary log
+# 			transaction and statement caches are allocated for each client if the server supports any transactional storage engines.
+#
+# 			If the data for the nontransactional statements used in the transaction exceeds teh space in the memory buffer, the
+# 			excess data is stored in a temporary file.
+#
+# 			When binary log encryption is active on the server, the memory buffer is not encrypted, but (from MySQL 8.0.17)
+# 			any temporary file used to hold the binary log cache is encrypted.
+#
+# 			After each transaction is committed, the binary log statement cache is reset by clearing the memory buffer
+# 			and truncating the temporary file if used.
+#
+# 			If you often use large nontransactional statements during transactions, you can increase this cache size to get
+# 			better performance by reducing or eliminating the need to write to temporary files.
+#
+# 			The Binlog_stmt_cache_use and Binlog_stmt_cache_disk_use status variables can be useful for tuning the size
+# 			of this variable.
+#
+# 			See SECTION 5.4.4, "THE BINARY LOG"
+#
+# 			The binlog_cache_size system variable sets the size for the transaction cache.
+#
+# 		) binlog_transaction_dependency_tracking
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-transaction-dependency-tracking=value
+# 			Introduced 		8.0.1
+# 			Sys var 			binlog_transaction_dependency_tracking
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Enumeration
+# 			Default 			COMMIT_ORDER
+# 			Valid 			COMMIT_ORDER
+# 								WRITESET
+# 								WRITESET_SESSION
+#
+# 			The source of dependnecy information that the master uses to determine which transactions can be executed in parallel by the slave's
+# 			multithreaded applier.
+#
+# 			This variable can take one of the three values described in the following list:
+#
+# 				) COMMIT_ORDER: Dependency information is generated from the master's commit timestamps. This is the default. This mode is also
+# 					used for any transactions without write sets, even if this variable's is WRITESET or WRITESET_SESSION; this is also the case
+# 					for transactions updating tables without primary keys and transactions updating tables having foreign key constraints.
+#
+# 				) WRITESET: Dependency information is generated from the master's write set, and any transactions which write different tuples
+# 					can be parallelized
+#
+# 				) WRITESET_SESSION: Dependency information is generated from the master's write set, but no two updates from the same session can be
+# 					reordered.
+#
+# 			WRITESET and WRITESET_SESSION modes do not deliver any transaction dependencies that are newer than those that would have been
+# 			returned in COMMIT_ORDER mode.
+#
+# 			The value of this variable cannot be set to anything other than COMMIT_ORDER if transaction_write_set_extraction is OFF. You should
+# 			also note that the value of transaction_write_set_extraction cannot be changed if the current value of binlog_transaction_dependency_tracking
+# 			is WRITESET or WRITESET_SESSION
+#
+# 			The number of row hashes to be kept and checked for the latest transaction to have changed a given row is determined by the value of
+# 			binlog_transaction_dependency_history_size
+#
+# 		) binlog_transaction_dependency_history_size
 #
 # 			https://dev.mysql.com/doc/refman/8.0/en/replication-options-binary-log.html
 #
