@@ -69353,6 +69353,721 @@
 #
 # 		) binlog_transaction_dependency_history_size
 #
-# 			https://dev.mysql.com/doc/refman/8.0/en/replication-options-binary-log.html
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-transaction-dependency-history-size=#
+# 			Introduced 		8.0.1
+# 			Sys var 			binlog_transaction_dependency_history_size
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			25000
+# 			Min 				1
+# 			Max 				1000000
+#
+# 			Sets an upper limit on the number of row hashes which are kept in memory and used for looking up the transaction
+# 			that last modified a given row.
+#
+# 			Once this number of hashes has been reached, the history is purged.
+#
+# 		) expire_logs_days
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--expire-logs-days=#
+# 			Deprecated 		8.0.3
+# 			Sys var 			expire_logs_days
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default (>= 8.0.11) 0
+# 			Default (>= 8.0.2, <= 8.0.4) 30
+# 			Default (<= 8.0.1) 0
+# 			Min 				0
+# 			Max 				99
+#
+# 			Specifies the number of days before automatic removal of binary log files. expire_logs_days is deprecated,
+# 			and will be removed in a future release. Instead, use binlog_expire_logs_seconds, which sets the binary
+# 			log expiration period in seconds.
+#
+# 			If you do not set a value for either system variable, the default expiration period is 30 days.
+#
+# 			Possible removals happen at startup and when the binary log is flushed. Log flushing occurs as indicated
+# 			in SECTION 5.4, "MYSQL SERVER LOGS"
+#
+# 			Any non-zero value that you specify for expire_logs_days is ignored if binlog_expire_logs_seconds is also
+# 			specified, and the value of binlog_expire_logs_seconds is used instead as the binary log expiration period.
+#
+# 			A warning message is issued in this situation. A non-zero value for expire_logs_days is only applied as the binary
+# 			log expiration period if binlog_expire_logs_seconds is not specified or is specified as 0.
+#
+# 			To disable automatic purging of the binary log, specify a value of 0 explicitly for binlog_expire_logs_seconds,
+# 			and do not specify a value for expire_logs_days.
+#
+# 			For compatibility with earlier releases, automatic purging is also disabled if you specify a value of 0
+# 			explicitly for expire_logs_days and do not specify a value for binlog_expire_logs_seconds.
+#
+# 			In that case, the default for binlog_expire_logs_seconds is not applied.
+#
+# 			To remove binary log files manually, use the PURGE_BINARY_LOGS statement. See SECTION 13.4.1.1, "PURGE BINARY LOGS SYNTAX"
+#
+# 		) log_bin
+#
+# 			Property 		Value
+#
+# 			Sys var 			log_bin
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+#
+# 			Shows the status of binary logging on the server, either enabled (ON) or disabled (OFF).
+#
+# 			With binary logging enabled, the server logs all statements that change data to the binary log, which is used
+# 			for backup and replication.
+#
+# 			ON means that the binary log is available, OFF means that it is not in use. The --log-bin option can be used
+# 			to specify a base name and location for the binary log.
+#
+# 			In earlier MySQL versions, binary logging was disabled by default, and was enabled if you specified the
+# 			--log-bin option. From MySQL 8.0, binary logging is enabled by default, with the log_bin system variable
+# 			set to ON, whether or not you specify the --log-bin option.
+#
+# 			The exception is if you use mysqld to initialize the data directory manually by invoking it with the --initialize
+# 			or --initialize-insecure option, when binary logging is disabled by default.
+#
+# 			It is possible to enable binary logging in this case by specifying the --log-bin option.
+#
+# 			If the --skip-log-bin or --disable-log-bin option is specified at startup, binary logging is disabled, with the
+# 			log_bin system variable set to OFF.
+#
+# 			If either of these options is specified and --log-bin is also specified, the option specified later takes precedence.
+#
+# 			For information on the format and management of the binary log, see SECTION 5.4.4, "THE BINARY LOG"
+#
+# 		) log_bin_basename
+#
+# 			Property 		Value
+#
+# 			Sys var 			log_bin_basename
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				File name
+#
+# 			Holds the base name and path for the binary log files, which can be set with the --log-bin server option. In MySQL
+# 			8.0, if the --log-bin option is not supplied, the default base name is binlog.
+#
+# 			For compatibility with MySQL 5.7, if the --log-bin option is supplied with no string or with an empty string,
+# 			the default base name is host_name-bin, using the name of the host machine. The default location is the data directory.
+#
+# 		) log_bin_index
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--log-bin-index=file_name
+# 			Sys var 			log_bin_index
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				File name
+#
+# 			Holds the base name nad path for the binary log index file, which can be set with the --log-bin-index server option.
+#
+# 		) log_bin_trust_function_creators
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--log-bin-trust-function-creators[={OFF|ON}]
+# 			Sys var 			log_bin_trust_function_creators
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			This variable applies when binary logging is enabled. It controls whether stored function creators can be trusted
+# 			not to create stored functions that will cause unsafe events to be written to the binary log.
+#
+# 			If set to 0 (the default), users are not permitted to create or alter stored functions unless they have the SUPER
+# 			pirivlege in addition to the CREATE_ROUTINE or ALTER_ROUTINE privilege.
+#
+# 			A setting of 0 also enforces the restriction that a function must be declared with the DETERMINISTIC characteristic,
+# 			or with the READS SQL DATA or NO SQL characteristic.
+#
+# 			If the variable is set to 1, MySQL does not enforce these restrictions on stored function creation.
+#
+# 			This variable also applies to trigger creation. See SECTION 24.7, "STORED PROGRAM BINARY LOGGING"
+#
+# 		) log_bin_use_v1_row_events
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--log-bin-use-v1-row-events[={OFF|ON}]
+# 			Deprecated 		8.0.18
+# 			Sys var 			log_bin_use_v1_row_events
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			This read-only sys var is deprecated. Setting the system variable to ON (using the --log-bin-use-v1-row-events option)
+# 			enabled row-based replication with slaves running MySQL Server 5.5 and earlier by writing the binary log using
+# 			Version 1 binary log row events, instead of version 2 binary log row events which are the default from MySQL 5.6
+#
+# 		) log_builtin_as_identified_by_password
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--log-builtin-as-identified-by-password[={OFF|ON}]
+# 			Removed 			8.0.11
+# 			Sys var 			log_builtin_as_identified_by_password
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			This system variable was removed in MySQL 8.0.11
+#
+# 		) log_slave_updates
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--log-slave-updates[={OFF|ON}]
+# 			Sys var 			log_slave_updates
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default (>= 8.0.3) ON
+# 			Default (<= 8.0.2) OFF
+#
+# 			Whether updates received by a slave server from a master server should be logged to the slave's own binary log.
+#
+# 			Binary logging must be enabled on the slave for this variable to have any effect. See SECTION 17.1.6, "REPLICATION AND BINARY LOGGING OPTIONS AND VARIABLES"
+#
+# 			This system variable is set on by default, and is read-only. If you need to prevent the slave server from logging updates,
+# 			specify --skip-log-slave-updates when you start the slave or specify log_slave_updates=OFF in teh configuration file for the slave.
+#
+# 		) log_statements_unsafe_for_binlog
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--log-statements-unsafe-for-binlog[={OFF|ON}]
+# 			Sys var 			log_statements_unsafe_for_binlog
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR HInt 	No
+# 			Type 				Boolean
+# 			Default 			ON
+#
+# 			If error 1592 is encountered, controls whether the generated warnings are added to the error log or not.
+#
+# 		) master_verify_checksum
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--master-verify-checksum[={OFF|ON}]
+# 			Sys var 			master_verify_checksum
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			OFF
+#
+# 			Enabling this variable causes the master to examine checksums when reading from the binary log.
+#
+# 			master_verify_checksum is disabled by default; in this case, the master uses the event length
+# 			from the binary log to verify events, so that only complete events are read from the binary log.
+#
+# 		) max_binlog_cache_size
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--max-binlog-cache-size=#
+# 			Sys var 			max_binlog_cache_size
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			//etc//
+# 			Min 				4096
+# 			max 				//a lot//
+#
+# 			If a transaction requires more than this many bytes of memory, the server generates a 
+#
+# 				Multi-statement transaction required more than 'max_binlog_cache_size' bytes of storage error.
+#
+# 			The minimum value is 4096. The maximum possible value is 16EiB (exibytes). The maximum recommended
+# 			value is 4GB; this is due to the fact that MySQL currently cannot work with binary log positions
+# 			greater than 4GB.
+#
+# 			max_binlog_cache_size sets the size for transaction cache only; the upper limit for the statement
+# 			cache is governed by the max_binlog_stmt_cache_size system variable.
+#
+# 			The visibility to sessions of max_binlog_cache_size matches that of the binlog_cache_size system variable;
+# 			iN other words, changing its value affects only new sessions that are started after the value is changed.
+#
+# 		) max_binlog_size
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--max-binlog-size=#
+# 			Sys var 			max_binlog_size
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			1073741824
+# 			Min 				4096
+# 			Max 				1073741824
+#
+# 			If a write ot the binary log causes the current log file size to exceed the value of this variable, the server
+# 			rotates the binary logs (closes the current file and opens the next one)
+#
+# 			The minimum value is 4096 bytes. The maximum and default value is 1GB. Encrypted binary log files have
+# 			an additional 512-byte header, which is included in max_binlog_size
+#
+# 			A transaction is written in one chunk to the binary log, so it is never split between several binary logs.
+#
+# 			Therefore, if you have big transactions, you might see binary log files larger than max_binlog_size.
+#
+# 			If max_relay_log_size is 0, the value of max_binlog_size applies to relay logs as well.
+#
+# 			With GTIDs in use on the server, when max_binlog_size is reached, if the system table mysql.gtid_executed
+# 			cannot be accessed to write the GTIDs form the current binary log file, the binary log cannot be rotated.
+#
+# 			IN this situation, the server responds according to its binlog_error_action setting. 
+#
+# 			If IGNORE_ERROR is set, an error is logged on the server and binary logging is halted, or if ABORT_SERVER
+# 			is set, the server shuts down.
+#
+# 		) max_binlog_stmt_cache_size
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--max-binlog-stmt-cache-size=#
+# 			Sys var 			max_binlog_stmt_cache_size
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			//a lot//
+# 			Min 				4096
+# 			Max 				//a lot//
+#
+# 			If nontransactional statements within a transaction require more than this many bytes of memory, the server
+# 			generates an error.
+#
+# 			The minimum value is 4096. The maximum and default values are 4GB on 32-bit platforms and 16EB (exabytes) on 64-bit platforms.
+#
+# 			max_binlog_stmt_cache_size sets the size for the statement cache only; the upper limit for the transaction cache
+# 			is governed exclusively by the max_binlog_cache_size system variable.
+#
+# 		) original_commit_timestamp
+#
+# 			Property 		Value
+#
+# 			Introdued 		8.0.1
+# 			Sys var 			original_commit_timestamp
+# 			Scope 			Session
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Numeric
+#
+# 			For internal use by replication. When re-executing a transaction on a slave, this is set to the time when the transaction
+# 			was committed on the original master, measured in ms since the epoch.
+#
+# 			This allows hte original commit timestamp to be propagated throughout a replication topology.
+#
+# 			Setting the session value of this system variable is a restricted operation. The session user must have privileges
+# 			sufficient to set restricted session variables.
+#
+# 			See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 		) sql_log_bin
+#
+# 			property 		Value
+#
+# 		 	Sys var 			sql_log_bin
+# 			Scope 			Session
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			ON
+#
+# 			This variable controls whether logging to the binary log is enabled for the current session (assuming that the
+# 			binary log itself is enabled)
+#
+# 			The default value is ON. To disable or enable binary logging for the current session, set the session sql_log_bin
+# 			variable to OFF or ON.
+#
+# 			Set this variable to OFF for a session to temporarily disable binary logging while making changes to the master
+# 			you do not want replicated to the slave.
+#
+# 			Setting the session value of this system variable is a restricted operation. The session user must have a privileges
+# 			sufficient to set restricted session variables.
+#
+# 			See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 			It is not possible to set the session value of sql_log_bin within a transaction or subquery.
+#
+# 			Setting this variable to OFF prevents GTIDs from being assigned to transactions in the binary log.
+#
+# 			If you are using GTIDs for replication, this means that even when binary logging is later enabled again,
+# 			the GTIDs written into the log from this point do not account for any transactions that occurred in the
+# 			meantime, so in effect those transactions are lost.
+#
+# 		) sync_binlog
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--sync-binlog=#
+# 			Sys var 			sync_binlog
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Integer
+# 			Default 			1
+# 			Min 				0
+# 			Max 				4294967295
+#
+# 			Controls how often the MySQL server synchronizes the binary log to disk.
+#
+# 				) sync_binlog=0: Disables synchronization of the binary log to disk by the MySQL server. Instead, the MYSQL server relies
+# 					on the OS to flush the binary log to disk from time to time as it does for any other file.
+#
+# 					This setting provides the best performance, but in the event of a power failure or OS system crash, it is possible
+# 					that the server has committed transactions that have not been synchronized to the binary log.
+#
+# 				) sync_binlog=1: Enables synchronization of the binary log to disk before transactions are committed. This is the safest setting
+# 					but can ahve a negative impact on performance due to the increased number of disk writes.
+#
+# 					In the event of a power failure or OS crash, transactions that are missing from the binary log are only in a prepared state.
+#
+# 					This permits the automatic recovery routine to roll back the transactions, which guarantees that no transaction
+# 					is lost from the binary log.
+#
+# 				) sync_binlog=N, where N is a value other than 0 or 1: The binary log is synchronized to disk after N binary log commit groups
+# 					have been collected. In the event of a power failure or operating system crash, it is possible that the server has committed
+# 					transactions that have not been flushed to the binary log.
+#
+# 					This setting can have a negative impact on performance due to the increased number of disk writes. A higher value
+# 					improves performance, but with an increased risk of data loss.
+#
+# 			For the greatest possible durability and consistency in a replication setup that uses InnoDB with transactions, use these settings:
+#
+# 				) sync_binlog=1
+#
+# 				) innodb_flush_log_at_trx_commit=1
+#
+# 				CAUTION:
+#
+# 					Many operating systems and some disk hardware fool the flush-to-disk operation. They may tell mysqld that the flush has taken place,
+# 					even though it has not..
+#
+# 					In this case, the durability of transactions is not guarnateed even with the recommended setings, and in the worst case,
+# 					a power outage can corrupt InnoDB data.
+#
+# 					Using a battery-backed disk cache in the SCSI disk controller or in teh disk itself speeds up file flushes,
+# 					and makes the operation safer. You can also try to disable the caching of disk writes in hardware caches.
+#
+# 		) transaction_write_set_extraction
+#
+# 			Property 		Value
+#
+# 			Cmd 				--transaction-write-set-extraction[=value]
+# 			Sys var 			transaction_write_set_extraction
+# 			Scope 			Global, Session
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Enumeration
+# 			Default (>= 8.0.2) XXHASH64
+# 			Default 			OFF
+# 			Valid 			OFF
+# 								MURMUR32
+# 								XXHASH64
+#
+# 			Defines hte algorithm used ot hash the writes extracted during a transaction. If you are using Group Replication, this variable
+# 			must be set to XXHASH64 because the process of extracting the writes from a transaction is required for conflict detection on
+# 			all group members.
+#
+# 			See SECTION 18.9.1, "GROUP REPLICATION REQUIREMENTS"
+#
+# 			As of MySQL 8.0.14, setting the session value of this system variable is a restricted operation. The session user must have
+# 			privileges sufficient to set restricted session variables.
+#
+# 			See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 			NOTE:
+#
+# 				The value of this variable cannot be changed when binlog_transaction_dependency_tracking is set to either of WRITESET
+# 				or WRITESET_SESSION.
+#
+# 17.1.6.5 GLOBAL TRANSACTION ID OPTIONS AND VARIABLEs
+#
+# 	) STARTUP OPTIONS USED WITH GTID REPLICATION
+# 	
+# 	) SYSTEM VARIABLES USED WITH GTID REPLICATION
+#
+# The MySQL Server options and system variables described in this section are used to monitor and control Global Transaction
+# Identifiers (GTIDs)
+#
+# For additional information, see SECTION 17.1.3, "REPLICATION WITH GLOBAL TRANSACTION IDENTIFIERS"
+#
+# STARTUP OPTIONS USED WITH GTID REPLICATION
+#
+# The following server startup options are used with GTID-based replication:
+#
+# 		) --enforce-gtid-consistency
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--enforce-gtid-consistency[=value]
+# 			Sys var 			enforce_gtid_consistency
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Enumeration
+# 			Default 			OFF
+# 			Valid 			OFF
+# 								ON
+# 								WARN
+#
+# 			When enabled, teh server enforces GTID consistency by allowing execution of only statements that can be
+# 			safely logged using a GTID. You MUST set this opton to ON before enabling GTID based replication.
+#
+# 			The values that --enforce-gtid-consistency can be configured to are:
+#
+# 				) OFF: All transactions are allowed to violate GTID consistency
+#
+# 				) ON: no transaction is allowed to violate GTID consistency
+#
+# 				) WARN: all transactions are allowed to violate GTID consistency, but a warning is generated in this case.
+#
+# 			Setting --enforce-gtid-consistency without a value is an alias for --enforce-gtid-consistency=ON. This impacts
+# 			on the behavior of the variable, see enforce_gtid_consistency.
+#
+# 			Only statements that can be logged using GTID safe statements can be logged when enforce-gtid-consistency
+# 			is set to ON, so the operations listed here cannot be used with this option:
+#
+# 				) CREATE_TABLE_/ETC/_SELECT statements
+#
+# 				) CREATE_TEMPORARY_TABLE or DROP_TEMPORARY_TABLE statements inside transactions
+#
+# 				) Transactions or statements that update both transactional and nontransactional tables.
+#
+# 				There is an exception that nontransactional DML is allowed in the same transaction or in the
+# 				same statement as transactional DML, if all nontransactional tables are temporary.
+#
+# 			--enforce-gtid-consistency only takes effect if binary logging takes place for a statement.
+#
+# 			If binary logging is disabled on the server, or if statements are not written to the binary log
+# 			because they are removed by a filter, GTID consistency is not checked or enforced for the
+# 			statements that are not logged.
+#
+# 			For more information, see SECTION 17.1.3.6, "RESTRICTIONS ON REPLICATION WITH GTIDS"
+#
+# 		) --gtid-mode
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--gtid-mode=MODE
+# 			Sys var 			gtid_mode
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Enumeration
+# 			Default 			OFF
+# 			Valid 			OFF
+# 								OFF_PERMISSIVE
+# 								ON_PERMISSIVE
+# 								ON
+#
+# 			This option specifies whether global transaction identifiers (GTIDS) are used to identify transactions.
+#
+# 			Setting this option to --gtid-mode=ON requires that enforce-gtid-consistency be set to ON.
+#
+# 			The gtid_mode variable is dynamic and enables GTID based replication to be configured online.
+# 			Before using this feature, see SECTION 17.1.5, "CHANGING REPLICATION MODES ON ONLINE SERVERS"
+#
+# 		) --gtid-executed-compression-period
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--gtid-executed-compression-period=#
+# 			Type 				Integer
+# 			Default 			1000
+# 			Min 				0
+# 			Max 				4294967295
+#
+# 			Compress the mysql.gtid_executed table each time this many transactions have taken place. A setting
+# 			of 0 means that this table is not compressed.
+#
+# 			No compression of the table occurs when binary logging is enabled, therefore the option has no
+# 			effect unless log_bin is OFF.
+#
+# 			See mysql.gtid_executed Table Compression, for more information.
+#
+# SYSTEM VARIABLES USED WITH GTID REPLICATION
+#
+# The following system variables are used with GTID-based replication:
+#
+# 		) binlog_gtid_simple_recovery
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--binlog-gtid-simple-recovery[={OFF|ON}]
+# 			Sys var 			binlog_gtid_simple_recovery
+# 			Scope 			Global
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				Boolean
+# 			Default 			ON
+#
+# 			This variable controls how binary log files are iterated during the search for GTIDs when MySQL starts or restarts.
+#
+# 			When binlog_gtid_simple_recovery=TRUE, which is the default in MySQL 8.0, the values of gtid_executed and gtid_purged
+# 			are computed at startup based on the values of Previous_gtids_log_event in the most recent and oldest binary log files.
+#
+# 			For a description of the computation, see THE gtid_purged SYSTEM VARIABLE. This setting accesses only two binary log
+# 			files during server restart. If all binary logs on the server were generated using MySQL 5.7.8 or later,
+# 			binlog_gtid_simple_recovery=TRUE can always safely be used.
+#
+# 			if any binary logs from MySQL 5.7.7 or older are present on the server (for example, following an upgrade of an
+# 			older server to MySQL 8.0), with binlog_gtid_simple_recovery=TRUE, gtid_executed and gtid_purged might be 
+# 			initialized incorrectly in the following two situations:
+#
+# 				) The newest binary log was generated by MySQL 5.7.5 or earlier, and gtid_mode was ON for some binary logs but OFF
+# 					for the newest binary log.
+#
+# 				) A SET @@GLOBAL.gtid_purged statement was issued on MySQL 5.7.7 or earlier, and the binary log that was active
+# 				at the time of the SET @@GLOBAL.gtid_purged statement has not yet been purged.
+#
+# 			If an incorrect GTID set is computed in either situation, it will remain incorrect even if the server is later restarted
+# 			with binlog_gtid_simple_recovery=FALSE.
+#
+# 			If either of these situations apply or might apply on the server, set binlog_gtid_simple_recovery=FALSE before
+# 			starting or restarting the server.
+#
+# 			When binlog_gtid_simple_recovery=FALSE is set, the method of computing gtid_executed and gtid_purged as described
+# 			in THE GTID_PURGED SYSTEM VARIABLE is changed to iterate the binary log files as follows:
+#
+# 				) Instead of using the value of Previous_gtids_log_event and GTID log events from the newest binary log file,
+# 					the computation for gtid_executed iterates from the newest binary log file, and uses the value of 
+# 					Previous_gtids_log_event and any GTID log events from the first binary log file where it finds a Previous_gtids_log_event
+# 					value.
+#
+# 					If the server's most recent binary log files do not have GTID log events, for example if gtid_mode=ON was
+# 					used but the server was later changed to gtid_mode=OFF, this process can take a long time.
+#
+# 				) Instead of using the value of Previous_gtids_log_event from the oldest binary log file, the computation for gtid_purged
+# 					iterates from the oldest binary log file, and uses the value of Previous_gtids_log_event from the first binary
+# 					log file where it finds either a nonempty Previous_gtids_log_event value, or at least one GTID log event
+# 					(indicating that hte use of GTIDs starts at that point)
+#
+# 					If the server's older binary log files do not have GTID log events, for example if gtid_mode=ON was only set
+# 					recently on the server, this process can take a long time.
+#
+# 		) enforce_gtid_consistency
+#
+# 			Property 		Value
+#
+# 			Cmd line 		--enforce-gtid-consistency[=value]
+# 			Sys var 			enforce_gtid_consistency
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Enumeration
+# 			Default 			OFF
+# 			Valid 			OFF
+# 								ON
+# 								WARN
+#
+# 			Depending on the value of this variable, the server enforces GTID consistency by allowing execution of only statements
+# 			that can be safely logged using a GTID.
+#
+# 			You must set this variable to ON before enabling GTID based replication.
+#
+# 			The values that enforce_gtid_consistency can be configured to are:
+#
+# 				) OFF: all transactions are allowed to violate GTID consistency
+#
+# 				) ON: No transaction is allowed to violate GTID consistency
+#
+# 				) WARN: All transactions are allowed to violate GTID consistency, but a warning is generated in this case.
+#
+# 			enforce_gtid_consistency only takes effect if binary logging takes place for a statement. If binary logging is disabled
+# 			on the server, or if statements are not written to the binary log because they are removed by a filter, GTID consistency
+# 			is not checked or enforced for the statements that are not logged.
+#
+# 			For more information on statements that can be logged using GTID based replication, see --enforce-gtid-consistency
+#
+# 			Prior to MySQL 5.7 and in early releases in that release series, the boolean enforce_gtid_consistency defaulted to OFF.
+#
+# 			To maintain compatibility with these earlier releases, the enumeration defaults to OFF, and setting --enforce-gtid-consistency
+# 			without a value is interpreted as setting the value to ON.
+#
+# 			The variable also has multiple textual aliases for the values: 0=OFF=FALSE, 1=ON=TRUE, 2=WARN
+#
+# 			This differs from other enumeration types but maintains comaptibility with the boolean type used in previous releases.
+# 			These changes impact on what is returned by the variable.
+#
+# 			Using SELECT @@ENFORCE_GTID_CONSISTENCY, SHOW VARIABLES LIKE 'ENFORCE_GTID_CONSISTENCY', and SELECT * FROM INFORMATION_SCHEMA.VARIABLES
+# 			WHERE 'VARIABLE_NAME' = 'ENFORCE_GTID_CONSISTENCY', all return the textual form, not the numeric form.
+#
+# 			This is an incompatible change, since @@ENFORCE_GTID_CONSISTENCY returns the numeric form for booleans but returns the textual form
+# 			for SHOW and the Information Schema.
+#
+# 		) gtid_executed
+#
+# 			Property 			Value
+#
+# 			Sys var 				gtid_executed
+# 			Sys var 				gtid_executed
+# 			Scope 				Global
+# 			Scope 				Global, Session
+# 			Dynamic 				No
+# 			Dynamic 				No
+# 			SET_VAR Hint 		No
+# 			SET_VAR Hint 		No
+# 			Type 					String
+#
+# 			When used with global scope, this variable contains a representation of hte set of all transactions executed on the
+# 			server and GTIDs that have been set by a SET gtid_purged statement.
+#
+# 			This is the same as the value of the Executed_Gtid_Set column in the output of SHOW_MASTER_STATUS and SHOW_SLAVE_STATUS
+#
+# 			The value of this variable is a GTID set, see GTID Sets for more information.
+#
+# 			When the server starts, @@GLOBAL.gtid_executed is initialized. See binlog_gtid_simple_recovery for more information
+# 			on how binary logs are iterated to populate gtid_executed.
+#
+# 			GTIDs are then added to the set as transactions are executed, or if any SET GTID_PURGED statement is executed.
+#
+# 			The set of transactions that can be found in the binary logs at any given time is equal to GTID_SUBTRACT(@@GLOBAL.gtid_executed,
+# 			@@GLOBAL.gtid_purged); that is, to all transactions in the binary log that have not yet been purged.
+#
+# 			issuing RESET_MASTER causes the global value (but not the session value) of this variable to be reset to an empty string.
+#
+# 			GTIDs are not otherwise removed from this set other than when the set is cleared due to RESET MASTER.
+#
+# 			In some older releases, this variable could also be used with session scope, where it contained a representation of the
+# 			set of transactions that are written to the cache in the current session.
+#
+# 			The session scope is now deprecated.
+#
+# 		) gtid_executed_compression_period
+#
+# 			
+# 			
+#
+# https://dev.mysql.com/doc/refman/8.0/en/replication-options-gtids.html	
+# 
+#
 #
 #
