@@ -70063,11 +70063,1092 @@
 #
 # 		) gtid_executed_compression_period
 #
-# 			
-# 			
+# 			Property 		Value
 #
-# https://dev.mysql.com/doc/refman/8.0/en/replication-options-gtids.html	
+# 			Sys var 			gtid_executed_compression_period
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR HInt 	No
+# 			Type 				Integer
+# 			Default 			1000
+# 			Min 				0
+# 			Max 				4294967295
+#
+# 			Compress the mysql.gtid_executed table each time this many transactions have been processed.
+# 			A setting of 0 means that this table is not compressed.
+#
+# 			Since no compression of the table occurs when using the binary log, setting the value of the 
+# 			variable has no effect unless binary logging is disabled.
+#
+# 			See mysql.gtid_executed Table Compression, for more information
+#
+# 		) gtid_mode
+#
+# 			Property 		Value
+#
+# 			Sys var 			gtid_mode
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Enumeration
+# 			Default 			OFF
+# 			Valid 			OFF
+# 								OFF_PERMISSIVE
+# 								ON_PERMISSIVE
+# 								ON
+#
+# 			Controls whether GTID based logging is enabled and what type of transactions the logs can contain.
+# 			You must have privileges sufficient to set global system variables.
+#
+# 			See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES". Enforce_gtid_consistency must be true before you
+# 			can set gtid_mode=ON
+#
+# 			Before modifying this variable, see SECTION 17.1.5, "CHANGING REPLICATION MODES ON ONLINE SERVERS"
+#
+# 			Logged transactions can be either anonymous or use GTIDs. Anonymous transactions rely on binary log
+# 			file and position to identify specific transactions.
+#
+# 			GTID transactions have a unique identifier that is used to refer to transactions. The different
+# 			modes are:
+#
+# 				) OFF: Both new and replicated transactions must be anonymous
+#
+# 				) OFF_PERMISSIVE: New transactions are anonymous. Replicated transactions can be either anonymous or GTID transactions
+#
+# 				) ON_PERMISSIVE: New transactions are GTID transactions. Replicated transactions can be either anonymous or GTID transactions.
+#
+# 				) ON: Both new and replicated transactions must be GTID transactions.
+#
+# 			Changes from one value to another can only be one step at a time. For example, if gtid_mode is currently set to
+# 			OFF_PERMISSIVE, it is possible to change to OFF or ON_PERMISSIVE but not to ON.
+#
+# 			The values of gtid_purged and gtid_executed are persistent regardless of the value of gtid_mode.
+#
+# 			Therefore even after changing the value of gtid_mode, these variables contain the correct values.
+#
+# 		) gtid_next
+#
+# 			Property 		Value
+#
+# 			Sys var 			gtid_next
+# 			Scope 			Session
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				Enumeration
+# 			Default 			AUTOMATIC
+# 			Valid 			AUTOMATIC
+# 								ANONYMOUS
+# 								UUID:NUMBER
+#
+# 			This variable is used to specify whether and how the next GTID is obtained.
+#
+# 			Setting the session value of this system variable is a restricted operation.
+# 			The session user must have privileges sufficient to set restricted session variables.
+#
+# 			See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# 			gtid_next can take any of the following values:
+#
+# 				) AUTOMATIC: Use the next automatically-generated global transaction ID
+#
+# 				) ANONYMOUS: Transactions do not have global identifiers, and are identified by file and position only
+#
+# 				) A global transaction ID in UUID:NUMBER format
+#
+# 			Exactly which of the above options are valid depends on the setting of gtid_mode, see 
+# 			SECTION 17.1.5.1, "REPLICATION MODE CONCEPTS" for more information.
+#
+# 			Setting this variable has no effect if gtid_mode is OFF.
+#
+# 			After this variable has been set to UUID:NUMBER, and a transaction has been committed or rolled back,
+# 			an explicit SET GTID_NEXT statement must again be issued before any other statement.
+#
+# 			DROP_TABLE or DROP_TEMPORARY_TABLE fails with an explicit error when used on a combination of
+# 			nontemporary tables with temporary tables, or of temporary tables using transactional storage engines
+# 			with temporary tables using nontransactional storage engines.
+#
+# 		) gtid_owned
+#
+# 			Property 		Value
+#
+# 			Sys var 			gtid_owned
+# 			Scope 			Global, Session
+# 			Dynamic 			No
+# 			SET_VAR Hint 	No
+# 			Type 				String
+#
+# 			THis read-only variable is primarily for internal use. Its contents depend on its scope.
+#
+# 				) When used with global scope, gtid_owned holds a list of all the GTIDs that are currently
+# 					in use on the server, with the IDs of the threads that own them.
+#
+# 					This variable is mainly useful for a multi-threaded replication slave to check whether
+# 					a transaction is already being applied on another thread.
+#
+# 					An applier thread takes ownership of a transaction's GTID all the time it is processing
+# 					the transaction, so @@global.gtid_owned shows the GTID and owner for the duration of
+# 					processing.
+#
+# 					When a transaction has been committed (or rolled back), the applier thread releases
+# 					ownership of the GTID.
+#
+# 				) When used with session scope, gtid_owned holds a single GTID that is currently in use by
+# 					and owned by this session. This variable is mainly useful for testing and debugging 
+# 					the use of GTIDs when the client has explicitly assigned a GTID for the transaction
+# 					by setting gtid_next.
+#
+# 					IN this case, @@session.gtid_owned displays the GTID all the time the client is processing
+# 					the transaction, until the transaction has been committed (or rolled back).
+#
+# 					When the client has finished processing the transaction, the variable is cleared.
+#
+# 					If gtid_next=AUTOMATIC is used for the session, gtid_owned is only populated briefly
+# 					during the execution of the commit statement for the transaction, so it cannot be
+# 					observed from the session concerned, although it will be listed if @@global.gtid_owned
+# 					is read at the right point.
+#
+# 					If you have a requirement to track the GTIDs that are handled by a client in a session,
+# 					you can enable the session state tracker controlled by the session_track_gtids
+# 					system variable.
+#
+# 		) gtid_purged
+#
+# 			Property 		Value
+#
+# 			Sys var 			gtid_purged
+# 			Scope 			Global
+# 			Dynamic 			Yes
+# 			SET_VAR Hint 	No
+# 			Type 				String
+#
+# 			The global value of the gtid_purged system variable (@@GLOBAL.gtid_purged) is a GTID set
+# 			consisting of the GTIDs of all the transactions that have been committed on the server,
+# 			but do not exist in any binary log file on the server.
+#
+# 			gtid_purged is a subset of gtid_executed. THe following categories of GTIDs are in
+# 			gtid_purged:
+#
+# 				) GTIDs of replicated transactions that were committed with binary logging disabled on the slave
+#
+# 				) GTIDs of transactions that were written to a binary log file that has now been purged
+#
+# 				) GTIDs that were added explicitly to the set by the statement SET @@GLOBAL.gtid_purged
+#
+# 			When the server starts, the global value of gtid_purged is initialized to a set of GTIDs.
+#
+# 			For information on how this GTID set is computed, see THE GTID_PURGED SYSTEM VARIABLE.
+#
+# 			If binary logs from MySQL 5.7.7 or older are present on the server, you mnight need
+# 			to set binlog_gtid_simple_recovery=FALSE in the server's configuration file to produce
+# 			the correct computation.
+#
+# 			See the description for binlog_gtid_simple_recovery for details of the situations in which
+# 			this setting is needed.
+#
+# 			Issuing RESET_MASTER causes the value of gtid_purged to be reset to an empty string.
+#
+# 			You can set the value of gtid_purged in order to record on the server that the transactions
+# 			in a certain GTID set have been applied, although they do not exist in any binary log on the server.
+#
+# 			An example use case for this action is when you are restoring a backup of one or more databases
+# 			on a server, but you do not have the relevant binary logs containing the transactions on the server.
+#
+# 			From MySQL 8.0, there are two ways to set the value of gtid_purged. You can either replace the value
+# 			of gtid_purged with your specified GTID set, or you can append your specified GTID set to the 
+# 			GTID set that is already held by gtid_purged.
+#
+# 			If the server has no existing GTIDs, for example an empty server that you are provisioning
+# 			with a backup of an existing database, both methods have the same result.
+#
+# 			If you are restoring a backup that overlaps the transactions that are already on teh server,
+# 			for example replacing a corrupted table with a partial dump from the master made using
+# 			mysqldump (which includes the GTIDs of all the transactions on the server, even though
+# 			the dump is partial), use the first method of replacing the value of gtid_purged.
+#
+# 			If you are restoring a backup that is disjoint from the transacitons that are already
+# 			on teh server, for example provisioning a multi-source replication slave using 
+# 			dumps from two different servers, use the second method of adding to the value
+# 			of gtid_purged.
+#
+# 				) To replace the value of gtid_purged with your specified GTID set, use the following statement:
+#
+# 					SET @@GLOBAL.gtid_purged = 'gtid_set'
+#
+# 				gtid_set must be a superset of the current value of gtid_purged, and must not intersect with
+# 				gtid_subtract (gtid_executed, gtid_purged)
+#
+# 				IN otehr words, the new GTID set must include any GTIDs that were already in gtid_purged,
+# 				and must not include any GTIDs in gtid_executed that have not yet been purged.
+#
+# 				gtid_set also cannot include any GTIDs that are in @@global.gtid_owned, that is, the
+# 				GTIDs for transactions that are currently being processed on the server.
+#
+# 				The result is that the global value of gtid_purged is set equal to gtid_set,
+# 				and the value of gtid_executed becomes the union of gtid_set and the previous
+# 				value of gtid_executed.
+#
+# 				) To append your specified GTID set to gtid_purged, use the following statement
+# 				with a plus sign (+) before the GTID set:
+#
+# 					SET @@GLOBAL.gtid_purged = '+gtid_set'
+#
+# 				gtid_set MUST NOT intersect with the current value of gtid_executed. In other words,
+# 				the new GTID set must not include any GTIDs in gtid_executed, including transactions
+# 				that are already also in gtid_purged.
+#
+# 				gtid_set also cannot include any GTIDs that are in @@global.gtid_owned, that is,
+# 				the GTIDs for transactions that are currently being processed on the server.
+#
+# 				The result is that gtid_set is added to both gtid_executed and gtid_purged
+#
+# 			NOTE:
+#
+# 				If any binary logs from MySQL 5.7.7 or older are present on the server (for example,
+# 				following an upgrade of an older server to MySQL 8.0), after issuing a SET @@GLOBAL.gtid_purged
+# 				statement, you might need to set binlog_gtid_simple_recovery=FALSE in teh server's configuration
+# 				file before restarting the server, otherwise gtid_purged can be computed incorrectly.
+#
+# 				See the description for binlog_gtid_simple_recovery for details of the situations in which
+# 				this setting is needed.
+#
+# 17.1.7 COMMON REPLICATION ADMINISTRATION TASKS
+#
+# 17.1.7.1 CHECKING REPLICATION STATUS
+# 17.1.7.2 PAUSING REPLICATION ON THE SLAVE
+#
+# Once replication has been started it executes without requriing much regular administration.
+#
+# This section describes how to check the status of replication and how to pause a slave.
+#
+# 17.1.7.1 CHECKING REPLICATION STATUS
+#
+# The most common task when managing a replication process is to ensure that replication is taking place
+# and that there have been no errors between the slave and the master.
+#
+# the SHOW_SLAVE_STATUS statement, which you must execute on each slave, provides information about the
+# configuration and status of the connection between the slave server and the master server.
+#
+# From MySQL 5.7, the Performance Schema has replication tables that provide this information
+# in a more accessible form. See SECTION 26.12.11, "PERFORMANCE SCHEMA REPLICATION TABLES"
+#
+# The SHOW_STATUS statement also provided some information relating specifically to replication
+# slaves.
+#
+# From MySQL 5.7, the following status variables previously monitored using SHOW_STATUS were
+# deprecated and moved to the Performance Schema replication tables:
+#
+# 		) SLAVE_RETRIED_TRANSACTIONS
+#
+# 		) SLAVE_LAST_HEARTBEAT
+#
+# 		) SLAVE_RECEIVED_HEARTBEATS
+#
+# 		) SLAVE_HEARTBEAT_PERIOD
+#
+# 		) SLAVE_RUNNING
+#
+# The replication hearbeat information shown in the Performance Schema replication tables lets you check
+# that the replication connection is active even if the master has not sent events to the slave recently.
+#
+# The master sends a heartbeat signal to a slave if htere are no updates to, and no unsent events in,
+# the binary log for a longer period than the heartbeat interval.
+#
+# The MASTER_HEARTBEAT_PERIOD setting on the master (set by the CHANGE_MASTER_TO statement) specifies
+# the frequency of the heartbeat, which defaults to half of the connection timeout interval for the
+# slave (slave_net_timeout).
+#
+# The replication_connection_status Performance schema table shows when the most recent heartbeat signal
+# was received by a replication slave, and how many heartbeat signals it has received.
+#
+# If you are using the SHOW_SLAVE_STATUS statement ot check on the status of an individual slave, the
+# statement provides the following information:
+#
+# 			mysql> SHOW SLAVE STATUS\G
+# 			****************** 1. row *****************
+# 					Slave_IO_State: Waiting for master to send event
+# 					Master_Host   : master1
+# 					Master_User   : root
+# 					Master_Port   : 3306
+# 					Connect_Retry : 60
+# 				 Master_Log_File : mysql-bin.000004
+# 			 Read_Master_log_Pos: 931
+# 			Relay_Log_File 	  : slave1-relay-bin.000056
+# 			Relay_Log_Pos 		  : 950
+# 		  Relay_Master_Log_File: mysql-bin.000004
+# 			Slave_IO_Running    : Yes
+# 			Slave_SQL_Running   : Yes
+# 			Replicate_Do_DB 	  : 
+# 			Replicate_Ignore_DB : 
+# 		Replicate_Do_Table 	  : 
+# 		Replicate_Ignore_Table : 
+# 		Replicate_Wild_Do_Table:
+# Replicate_Wild_Ignore_Table: 
+# 				Last_Errno 		  : 0
+# 						Last_Error : 
+# 					Skip_Counter  : 0
+# 			Exec_Master_Log_Pos : 931
+# 			Relay_Log_Space 	  : 1365
+# 			Until_Condition 	  : None
+# 			Until_Log_File 	  : 
+# 			Until_Log_Pos 		  : 0
+# 			Master_SSL_Allowed  : No
+# 			Master_SSL_CA_File  : 
+# 			Master_SSL_CA_Path  :
+# 			Master_SSL_Cert 	  :
+# 			Master_SSL_Cipher   :
+# 			Master_SSL_Key 	  :
+# 		  Seconds_Behind_Master: 0
+# 	Master_SSL_Verify_Server_Cert: No
+# 			Last_IO_Errno 		  : 0
+# 			Last_IO_Error 		  : 
+# 			Last_SQL_Errno 	  : 0
+# 			Last_SQL_Error 	  : 
+# Replicate_Ignore_Server_Ids: 0
+#
+# The key fields form the status report to examine are:
+#
+# 		) Slave_IO_State: The current status of the slave. See SECTION 8.14.4, "REPLICATION SLAVE I/O THREAD STATES", and 
+# 			SECTION 8.14.5, "REPLICATION SLAVE SQL THREAD STATES", for more information.
+#
+# 		) Slave_IO_Running: Whether the I/O thread for reading the master's binary log is running. Normally, you want this
+# 			to be Yes unless you ahve not yet started replication or have explicitly stopped it with STOP_SLAVE
+#
+# 		) Slave_SQL_Running: Whether the SQL thread for executing events in the relay log is running. As with the I/O
+# 			thread, this should normally be Yes.
+#
+# 		) Last_IO_Error, Last_SQL_Error: THe last errors registered by the I/O and SQL threads when processing the relay log.
+#
+# 			Ideally these should be blank, indicating no errors.
+#
+# 		) Seconds_Behind_Master: The number of seconds that the slave SQL thread is behind processing the master binary log.
+#
+# 			A high number (or an increasing one) can indicate that the slave is unable to handle events from the master in
+# 			a timely fashion.
+#
+# 			A value of 0 for Seconds_Behind_Master can usually be interpreted as meaning that the slave has caught up with
+# 			the master, but there are some cases where this is not strictly true. For example,this can occur if the network
+# 			connection between master and slave is broken but the slave I/O thread has not yet noticed this - that is,
+# 			slave_net_timeout has not yet elapsed.
+#
+# 			It is also possible that transient values for Seconds_Behind_Master may not reflect the situation accurately.
+# 			When the slave SQL thread has caught up on I/O, Seconds_Behind_Master displays 0; but when the slave I/O thread
+# 			is still queuing up a new event, Seconds_Behind_Master may show a large value until the SQL thread finishes
+# 			executing the new event.
+#
+# 			This is especially likely when the events have old timestamps; in such cases, if you execute SHOW_SLAVE_STATUS
+# 			several times in a relatively short period, you may see this value change back and forth repeatedly between 0
+# 			and a relatively large value.
+#
+# 	Several pairs of fields provide information about the progress of the slave in reading events from the master binary log
+# and processing them in the relay log:
+#
+# 		) (Master_Log_file, Read_Master_Log_Pos): Coordinates in the master binary log indicating how far the slave I/O
+# 			thread has read events from that log.
+#
+# 		) (Relay_Master_Log_File, Exec_Master_Log_Pos): Coordinates in the master binary log indicating how far the slave
+# 			SQL thread has executed events received from that log.
+#
+# 		) (Relay_Log_File, Relay_Log_Pos): Coordinates in the slave relay log indicating how far the slave SQL thread has
+# 			executed the relay log.
+#
+# 			These correspond to the preceding coordinates, but are expressed in salve relay log coordinates rather than
+# 			master binary log coordinates.
+#
+# On the master, you can check the status of connected slaves using SHOW_PROCESSLIST to examine hte list of running
+# processes.
+#
+# Slave connections have Binlog Dump in the Command field:
+#
+# 		mysql> SHOW PROCESSLIST \G;
+# 		**************** 4. row ******************
+# 				Id: 10
+# 			User : root
+# 			Host : slave1:58371
+# 			db   : NULL
+# 		Command : Binlog Dump
+# 			Time : 777
+# 			State: Has sent all binlog to slave; waiting for binlog to be updated
+# 			Info : NULL
+#
+# Because it is the slave that drives the replication process, very little information is available in this report.
+#
+# For slaves that were started with the --report-host option and are connected to the master, the SHOW_SLAVE_HOSTS
+# statement on the master shows basic information about the slaves. The output includes the ID of the slave server,
+# the value of the --report-host option, the connecting port, and master ID:
+#
+# 		mysql> SHOW SLAVE HOSTS;
+# 		+------------+--------------+------------+--------------------------+-------------+
+# 		| Server_Id  | Host 			 | Port 		  | Rpl_recovery_rank 		  | Master_id 	 |
+# 		+------------+--------------+------------+--------------------------+-------------+
+# 		| 10 		 	 | slave1 		 | 3306 		  | 0 							  | 1 			 |
+# 		+------------+--------------+------------+--------------------------+-------------+
+# 		1 row in set (0.00 sec)
+#
+# 17.1.7.2 PAUSING REPLICATION oN THE SLAVE
+#
+# You can stop and start replication on the slave using the STOP_SLAVE and START_SLAVE statements.
+#
+# To stop processing of the binary log from the master, use STOP_SLAVE:
+#
+# 		mysql> STOP SLAVE;
+#
+# When replication is stopped, the slave I/O thread stops reading events from the master binary log and writing them
+# to the relay log, and the SQL thread stops reading events from the relay log and executing them.
+#
+# You can pause the I/O or SQL thread individually by specifying the thread type:
+#
+# 		mysql> STOP SLAVE IO_THREAD;
+# 		mysql> STOP SLAVE SQL_THREAD;
+#
+# To start execution again, use the START_SLAVE statement:
+#
+# 		mysql> START SLAVE;
+#
+# To start a particular thread, specify the thread type:
+#
+# 		mysql> START SLAVE IO_THREAD;
+# 		mysql> START SLAVE SQL_THREAD;
+#
+# For a slave that performs updates only by processing events from the master, stopping only the SQL thread can be
+# useful if you want to perform a backup or other task.
+#
+# The I/O thread will continue to read events from the master but thye are not executed. This makes it easier for
+# the slave to catch up when you restart the SQL thread.
+#
+# Stopping only the I/O thread enables the events in the relay log to be executed by the SQL thread up to the point
+# where the relay log ends.
+#
+# This can be useful when you want to pause execution to catch up with events already received from the master,
+# when you want to perform administration on thte slave but also ensure that it has processed all updates to
+# a specific point.
+#
+# This method can also be used to pause event receipt on the slave while you conduct administration on the master.
+# Stopping the I/O thread but permitting the SQL thread to run helps ensure that there is not a massive backlog
+# of events to be executed when replication is started again.
+#
+# 17.2 REPLICATION IMPLEMENTATION
+#
+# 17.2.1 REPLICATION FORMATS
+# 17.2.2 REPLICATION IMPLEMENTATION DETAILS
+# 17.2.3 REPLICATION CHANNELS
+# 17.2.4 REPLICATION RELAY AND STATUS LOGS
+# 17.2.5 HOW SERVERS EVALUATE REPLICATION FILTERING RULES
+#
+# Rpelication is based on the master server keeping track of all changes to its databases (updates, deletes,
+# and so on) in its binary log.
+#
+# The binary log servers as a written record of all events that modify database structure or content (data)
+# from the moment the server was started.
+#
+# Typically, SELECT statements are not recorded because they modify neither database structure nor content.
+#
+# Each slave that connects to the master requests a copy of the binary log. That is, it pulls the data from
+# the master, rather than the master pushing the data to the slave. The slave also executes the events from
+# the binary log that it receives.
+#
+# This has the effect of repeating the original changes just as they were made on the master.
+#
+# tables are created or their structure modified, and data is inserted, deleted and updated according to
+# the changes that were originally made on the master.
+#
+# Because each slave is independent, the replaying of the changes from the master's binary log occurs
+# independently on each slave that is connected to the master. In addition, because each slave receives
+# a copy of the binary log only by requesting it from the master, the slave is able to read and update
+# the copy of the database at its own pace and can start and stop the replication process at will
+# without affecting the ability to update to the latest database status on either the master or slave side.
+#
+# For more information on the specifics of the replication implementation, see SECTION 17.2.2, "REPLICATION IMPLEMENTATION DETAILS"
+#
+# Masters and slaves report their status in respect of the replication process regularly so that you can monitor
+# them.
+#
+# See SECTION 8.14, "EXAMINING THREAD INFORMATION", for descriptions of all replicated-related states.
+#
+# The master binary log is written to a local relay log on teh slave before it is processed. The slave also records
+# information about the current position with hte master's binary log and the local relay log.
+#
+# See SECTION 17.2.4, "REPLICATION RELAY AND STATUS LOGS"
+#
+# Database changes are filtered on the slave according to a set of rules that are applied according to the various
+# configuration options and variables that control event evaluation. For details on how these rules are applied,
+# see SECTION 17.2.5, "HOW SERVERS EVALUATE REPLICATION FILTERING RULES"
+#
+# 17.2.1 REPLICATION FORMATS
+#
+# 17.2.1.1 ADAVANTAGES AND DISADVANTAGES OF STATEMENT-BASED AND ROW-BASED REPLICATION
+# 17.2.1.2 USAGE OF ROW-BASED LOGGING AND REPLICATION
+# 17.2.1.3 DETERMINATION OF SAFE AND UNSAFE STATEMENTS IN BINARY lOGGING
+#
+# Replication works because events written to the binary log are read from the master and then processed
+# on the slave. The events are recorded within the binary log in different formats according to the
+# type of event.
+#
+# The different replication formats used correspond to the binary logging formats used when the events were
+# recorded in teh master's binary log.
+#
+# The correlation between binary logging formats and the terms used during replication are:
+#
+# 		) When using statement-based binary logging, the master writes SQL statements to the binary log.
+#
+# 			Replication of hte master to the salve works by executing the SQL statements on teh slave.
+# 			This is called statement-based replication (which can be abbreivated as SBR), which corresponds
+# 			to the MySQL statement-based binary logging format.
+#
+# 		) When using row-based logging, the master writes events to the binary log that indicates how individual
+# 			table rows are changed.
+#
+# 			Replication of the master to the slave works by copying the events representing the changes to the
+# 			table rows to the slave.
+#
+# 			This is called row-based replication (which can be abbreviated as RBR)
+#
+# 			Row-based logging is the default method.
+#
+# 		) You can also configure MySQL to use a mix of both statement-based and row-based logging, depending on which
+# 			is most appropriate for the change to be logged.
+#
+# 			This is called mixed-format logging. WHen using mixed-format logging, a statement-based log is used by
+# 			default. Depending on certain statements, and also the storage engine being used, the log is automatically
+# 			switched to row-based in particular cases.
+#
+# 			Replication using the mixed format is referred to as mixed-based replication or mixed-format replication.
+#
+# 			For more information, see SECTION 5.4.4.3, "MIXED BINARY LOGGING FORMAT"
+#
+# NDB CLUSTER
+#
+# The default binary logging format in MySQL NDB Cluster 8.0 is MIXED. You should note that NDB Cluster Replication
+# always uses row-based replication, and that the NDB storage engine is incompatible with statement-based replication.
+#
+# See SECTION 22.6.2, "GENERAL REQUIREMENTS FOR NDB CLUSTER REPLICATION", for more information.
+#
+# When using MIXED format, the binary logging format is determined in part by the storage engine being used and the
+# statement being executed. For more information on mixed-format logging and the rules governing the support of
+# different logging formats, see SECTION 5.4.4.3, "MIXED BINARY LOGGING FORMAT"
+#
+# The logging format in a running MySQL server is controlled by setting the binlog_format server system variable.
+# This variable can be set with session or global scope.
+#
+# The rules governing when and how the new setting takes effect are the same as for other MySQL server
+# system variables.
+#
+# Setting hte variable for hte current session lasts only until the end of that session, and the change is not
+# visible to other sessions.
+#
+# Setting the variable globally takes effect for clients that connect after the change, but not for any
+# current client sessions, including the session where the variable setting was changed.
+#
+# To make the global system variable setting permanent so that it applies across server restarts,
+# you must set it in an option file. For more information, see SECTION 13.7.5.1, "SET SYNTAX FOR VARIABLE
+# ASSIGNMENT"
+#
+# There are conditions under which you cannot change the binary logging format at runtime or doing so
+# causes replication to fail.
+#
+# See SECTION 5.4.4.2, "SETTING THE BINARY LOG FORMAT"
+#
+# Changing the global binlog_format value requires privileges sufficient to set global system variables.
+# Changing the session binlog_format value requires privileges sufficient to set restricted session 
+# system variables.
+#
+# See SECTION 5.1.9.1, "SYSTEM VARIABLE PRIVILEGES"
+#
+# The statement-based and row-based replication formats have different issues and limitations.
+# For a comparison of their relative advantages and disadvantages, see SECTION 17.2.1.1, "ADVANTAGES AND DISADVANTAGES OF STATEMENT-BASED AND ROW-BASED REPLICATION"
+#
+# With statement-based replication, you may encounter issues with replicating stored routines or triggers.
+#
+# YOu can avoid these issues by using row-based replication instead. For more information, see SECTION 24.7, "STORED PROGRAM BINARY LOGGING"
+#
+# 17.2.1.1 ADVANTAGES AND DISADVANTAGES OF STATEMENT-BASED AND ROW-BASED REPLICATION
+#
+# Each binary logging format has advantages and disadvantages. For most users, the mixed replication format should provide
+# the best combination of data integrity and performance.
+#
+# If, however, you want to take advantage of the features specific to the statement-based or row-based replication format when
+# performing certain tasks, you can use the information in this section, which provides a summary of their relative
+# advantages and disadvantages, to determine which is best for your needs.
+#
+# 		) ADVANTAGES OF STATEMENT-BASED REPLICATION
+#
+# 		) DISADVANTAGES OF STATEMENT-BASED REPLICATION
+#
+# 		) ADVANTAGES OF ROW-BASED REPLICATION
+#
+# 		) DISADVANTAGES OF ROW-BASED REPLICATION
+#
+# ADVANTAGES OF STATEMENT-BASED REPLICATION
+#
+# 		) Proven tech
+#
+# 		) Less data written to log files. WHen updates or deletes affect many rows, this results in much less storage space required
+# 			for log files.
+#
+# 			THis also means that taking and restoring from backups can be accomplished more quickly.
+#
+# 		) Log files contain all statements that made any changes, so they can be used to audit the database.
+#
+# DISADVANTAGES OF STATEMENT-BASED REPLICATION
+#
+# 		) Statements that are unsafe for SBR. 
+#
+# 			Not all statements which modify data (usch as INSERT, DELETE, UPDATE and REPLACE statements)
+# 			can be replicated using statement-based replication. Any nondeterministic behavior is difficult
+# 			to replicate when using statement-based replication.
+#
+# 			Examples of such Data Modification Language (DML) statements include the following:
+#
+# 				) A statement that depends on a UDF or stored program that is nondeterminsitic, since the value returned
+# 					by usch a UDF or stored program or depends on factors other than the parameters supplied to it.
+#
+# 					(Row-based replication, however, simply replicates the value returned by the UDF or stored 
+# 					program, so its effect on table rows and data is the same on both the master and slave.)
+#
+# 					See SECTION 17.4.1.16, "REPLICATION OF INVOKED FEATURES", for more information.
+#
+# 				) DELETE and UPDATE statements that use a LIMIT clause without an ORDER BY are nondeterminsitic.
+#
+# 					See SECTION 17.4.1.18, "REPLICATION AND LIMIT"
+#
+# 				) Locking read statements (SELECT_/ETC/_FOR_UPDATE) and SELECT_/ETC/_FOR_SHARE) that use NOWAIT or
+# 					SKIP LOCKED options.
+#
+# 					See LOCKING READ CONCURRENCY WITH NOWAIT AND SKIP LOCKED
+#
+# 				) Deterministic UDFs must be applied on the slaves
+#
+# 				) Statements using any of hte following functions cannot be replicated properly using statement-based
+# 					replication:
+#
+# 					) LOAD_FILE()
+#
+# 					) UUID(), UUID_SHORT()
+#
+# 					) USER()
+#
+# 					) FOUND_ROWS()
+#
+# 					) SYSDATE() (unless both the master and the slave are started with the --sysdate-is-now option)
+#
+# 					) GET_LOCK()
+#
+# 					) IS_FREE_lOCK()
+#
+# 					) IS_USED_LOCK()
+#
+# 					) MASTER_POS_WAIT()
+#
+# 					) RAND()
+#
+# 					) RELEASE_LOCK()
+#
+# 					) SLEEP()
+#
+# 					) VERSION()
+#
+# 					However, all other functions are replicated correctly using statement-based replication, including NOW() and so forth.
+#
+# 					For more information, see SECTION 17.4.1.14, "REPLICATION AND SYSTEM FUNCTIONS"
+#
+# 				Statements that cannot be replicated correctly using statement-based replication are logged with a warning like
+# 				the one shown here:
+#
+# 					[Warning] Statement is not safe to log in statement format.
+#
+# 				A similar warning is also issued ot the client in such cases. The client can display it using SHOW_WARNINGS
+#
+# 		) INSERT_/ETC/_SELECT requires a greater number of row-level locks than with row-based replication
+#
+# 		) UPDATE statements that require a table scan (because no index is used in the WHERE clause) must lock a greater
+# 			number of rows than with row-based replication.
+#
+# 		) For InnoDB: An INSERT statement that uses AUTO_INCREMENT blocks other nonconflicting INSERT statements.
+#
+# 		) For complex statements, the statement must be evaluated and executed on teh slave before hte rows are
+# 			updated or inserted.
+#
+# 			With row-based replication, the slave only has to modify the affected rows, not execute hte full statement.
+#
+# 		) If there is an error in evaluation on the slave, particularly when executing complex statements, staement-based
+# 			replication may slowly increase hte margin of error across the affected rows over time.
+#
+# 			See SECTION 17.4.1.28, "SLAVE ERRORS DURING REPLICATION"
+#
+# 		) Stored functions execute with the same NOW() value as the calling statement. However, this is not true of stored procedures.
+#
+# 		) Deterministic UDFs must be applied on the slaves
+#
+# 		) table definitions must be (nearly) identical on the master and slave. See SECTION 17.4.1.9, "REPLICATION WITH DIFFERING TABLE
+# 			DEFINITIONS ON MASTER AND SLAVE", for more information.
+#
+# ADVANTAGES OF ROW-BASED REPLICATION
+#
+# 		) All changes can be replicated. This is the safest form of replication.
+#
+# 			NOTE:
+#
+# 				Statements that update the information in the mysql system schema - such as GRANT, REVOKE and the
+# 				manipulation of triggers, stored routines (including stored procedures), and views - are all
+# 				replicated to slaves using statement-based replication.
+#
+# 				For statements such as CREATE_TABLE_/ETC/_SELECT, a CREATE statement is generated from the table
+# 				definition and replicated using statement-based format, while the row insertions are replicated
+# 				using row-based format.
+#
+# 		) Fewer row locks are required on the master, which thus achieves higher concurrency, for the following types of statements:
+#
+# 			) INSERT_/ETC_SELECT
+#
+# 			) INSERT statements with AUTO_INCREMENT
+#
+# 			) UPDATE or DELETE statements with WHERE clauses that do not use keys or do not change most of the examined rows.
+#
+# 		) Fewer row locks are required on the slave for any INSERT, UPDATE, or DELETE statement.
+#
+# DISADVANTAGES OF ROW-BASED REPLICATION
+#
+# 		) RBR can generate more data that must be logged. To replicate a DML statement (such as an UPDATE or DELETE statement),
+# 			statement-based replication writes only the statement to the binary log.
+#
+# 			BY contrast, row-based replication writes each changed row to the binary log. If the statement changes many rows,
+# 			row-based replication may write significantly more data to the binary log; this is true even for statements
+# 			that are rolled back.
+#
+# 			This also means that making and restoring a backup can require more time. In addition, the binary
+# 			log is locked for a longer time to write hte data, which may cause concurrency problems.
+#
+# 			Use binlog_row_image=minimal to reduce the disadvantage considerably.
+#
+# 		) Determinsitic UDFs that generate large BLOB values take longer to replicate with row-based replication than with
+# 			statement-based replication.
+#
+# 			THis is because the BLOB column value is logged, rather than the statement generating the data.
+#
+# 		) You cannot see on the slave what statements were received from the master and executed. However, you can
+# 			see what data was changed using mysqlbinlog with the options --base64-output=DECODE-ROWS and --verbose.
+#
+# 			Alternatively, use the binlog_rows_query_log_events variable, which if enabled adds a Rows_query event
+# 			with the statement to mysqlbinlog ouput when the -vv option is used.
+#
+# 		) For tables using the MyISAM storage enigne, a stronger lock is required on the slave for INSERT statements
+# 			when applying them as row-based events to the binary log than when applying them as statements.
+#
+# 			THis means that concurrent inserts on MyISAM tables are not supported when using row-based replication.
+#
+# 17.2.1.2 USAGE OF ROW-BASED LOGGING AND REPLICATION
+#
+# MySQL uses statement-based logging (SBL), row-based logging (RBL) or mixed-format logging. The type of binary log
+# used impacts the size and efficiency of logging. Therefore the choice between row-based replication (RBR) or
+# statement-based replication (SBR) depends on your application and environment.
+#
+# This section describes known issues when using a row-based format log, and describes some best practices
+# using it in replication.
+#
+# For additional information, see SECTION 17.2.1, "REPLICATION FORMATS", and SECTION 17.2.1.1, "ADVANTAGES AND
+# DISADVANTAGES OF STATEMENT-BASED AND ROW-BASED REPLICATION"
+#
+# For information about issues specified to NDB Cluster Replication (which depends on row-based replication)
+# , see SECTION 22.6.3, "KNOWN ISSUES IN NDB CLUSTER REPLICATION"
+#
+# 		) ROW-BASED LOGGING OF TEMPORARY TABLES
+#
+# 			As noted in SECTION 17.4.1.30, "REPLICATION AND TEMPORARY TABLES", temporary tables are not replicated
+# 			when using row-based format or (From MySQL 8.0.4) mixed format. For more information, see SECTION
+# 			17.2.1.1, "ADVANTAGES AND DISADVANTAGES OF STATEMENT-BASED AND ROW-BASED REPLICATION"
+#
+# 			Temporary tables are not replicated when using row-based or mixed format because there is no need.
+#
+# 			In addition, because temporary tables can be read only from the thread which created them, there is
+# 			seldom if every any benefit obtained from replicating them, even when using statement-based format.
+#
+# 			You can switch form statement-based to row-based binary logging format at runtime even when temporary
+# 			tables have been created. 
+#
+# 			However, in MySQL 8.0, you cannot switch from row-based or mixed format for binary logging to
+# 			statement-based format at runtime, because any CREATE TEMPORARY TABLES statements will have
+# 			been omitted from the binary log in the previous mode.
+#
+# 			The MySQL server tracks the logging mode that was in effect when each temporary table was created.
+# 			When a given client session ends, the server logs a DROP TEMPORARY TABLE IF EXISTS statement for
+# 			each temporary table that still exists and was created when statement-based binary logging was in use.
+#
+# 			If row-based or mixed format binary logging was in use when the table was created, the DROP TEMPORARY TABLE
+# 			IF EXISTS statement is not logged.
+#
+# 			In releases before MySQL 8.0.4 and 5.7.25, the DROP TEMPORARY TABLE IF EXISTS statement was logged
+# 			regardless of the logging mode that was in effect.
+#
+# 			Nontransactional DML statements involving temporary tables are allowed when using binlog_format=ROW,
+# 			as long as any nontransactional tables affected by the statements are temporary tables (Bug #14272672)
+#
+# 		) RBL AND SYNCHRONIZATION OF NONTRANSACTIONAL TABLES.
+#
+# 			When many rows are affected, the set of changes is split into several events; when the statement
+# 			commits, all of tehse events are written to the binary log.
+#
+# 			When executing on the slave, a table lock is taken on all tables involved, and then the rows are
+# 			applied in batch mode.
+#
+# 			Depending on the engine used for the slave's copy of the table, this may or may not be effective.
+#
+# 		) LATENCY AND BINARY LOG SIZE.
+#
+# 			RBL writes changes for each row to the binary log and so its size can increase quite rapidly.
+# 			This can significantly increase the time required to make changes on the slave that match
+# 			those on the master.
+#
+# 			You should be aware of the potential for this delay in your applications.
+#
+# 		) READING THE BINARY LOG
+#
+# 			mysqlbinlog displays row-based events in the binary log using the BINLOGS statement
+# 			(see SECTION 13.7.7.1, "BINLOG SYNTAX")
+#
+# 			This statement displays an event as a base 64-encoded string, the meaning of which is not
+# 			evident.
+#
+# 			When invoked with the --base64-output=DECODE-ROWS and --verbose options, mysqlbinlog
+# 			formats the contents of the binary log to be human readable.
+#
+# 			When binary log events were written in row-based format and you want to read or recover
+# 			from a replication or database failure you can use this command to read contents of
+# 			the bianry log.
+#
+# 			For more information, see SECTION 4.6.8.2, "MYSQLBINLOG ROW EVENT DISPLAY"
+#
+# 		) BINARY LOG EXECUTION ERRORS AND SLAVE_EXEC_MODE
+#
+#  		Using slave_exec_mode=IDEMPOTENT is generally only useful with MySQL NDB Cluster replication,
+# 			for which IDEMPOTENT is the default value. (See SECTION 22.6.10, "NDB CLUSTER REPLICATION: MULTI-MASTER
+# 			AND CIRCULAR REPLICATION")
+#
+# 			When slave_exec_mode is IDEMPOTENT, a failure to apply changes from RBL because the original row cannot
+# 			be found does not trigger an error or cause replication to fail. This means that it is possible that
+# 			updates are not applied on the slave, so that the master and slave are no longer synchronized.
+#
+# 			Latency issues and use of nontransactional tables with RBR when slave_exec_mode is IDEMPOTENT can
+# 			cause the master and slave to diverge event further. For morei nformation about slave_exec_mode
+# 			, see SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# 			For other scenarios, setting slave_exec_mode to STRICT is normally sufficient: this is the default
+# 			value for storage engines other than NDB.
+#
+# 		) FILTERING BASED ON SERVER ID NOT SUPPORTED
+#
+# 			You can filter based on server ID by using the IGNORE_SERVER_IDS option for the CHANGE_MASTER_TO
+# 			statement. This option works with statement-based and row-based logging formats, but is deprecated
+# 			for use when GTID_MODE=ON is set.
+#
+# 			Another method to filter out changes on some slaves is to use a WHERE clause that includes the relation
+# 			@@server_id <> id_value clause with UPDATE and DELETE statements. FOr example, WHERE @@server_id <>  1
+#
+# 			However, this does not work correctly with row-based logging. To use the server_id system variable
+# 			for statement filtering, use statement-based logging.
+#
+# 		) DATABASE-LEVEL REPLICATION OPTIONS
+#
+# 			The effects of the --replicate-do-db, --replicate-ignore-db and --replicate-rewrite-db options
+# 			differ considerably depending on wether row-based or statement-based logging is used.
+#
+# 			Therefore, it is recommended to avoid database-level options and instead use table-level 
+# 			ptions such as --replicate-do-table and --replicate-ignore-table
+#
+# 			For more information about these options and the impact replication format has on how they operate,
+# 			see SECTION 17.1.6, "REPLICATION AND BINARY LOGGING OPTIONS AND VARIABLES"
+#
+# 		) RBL, NONTRANSACTIONAL TABLES, AND STOPPED SLAVES
+#
+# 			When using row-based logging, if the slave server is stopped while a slave thread is updating a 
+# 			nontransactional table, the slave database can reach an inconsistent state.
+#
+# 			For this reason, it is recommended that oyu use a transactional storage enigne such as InnoDB
+# 			for all tables replicated using the row-based format. Use of STOP_SLAVE or STOP_SLAVE_SQL_THREAD
+# 			prior to shutting down the slave MySQL server helps prevent issues from occurring, and is always
+# 			recommended regardless of the logging format or storage engine you use.
 # 
+# 
+# 17.2.1.3 DETERMINATION OF SAFE AND UNSAFE STATEMENTS IN BINARY LOGGING
+# 
+# The "safeness" of a statement in MySQL replication refers to whether the statement and its effect
+# can be replicated correctly using statement-based format.
 #
+# If this is true of the statement, we refer to the statement as safe; otherwise, we refer to it
+# as unsafe.
 #
+# In general, a statement is safe if it is deterministic, and unsafe if it is not. However, certain
+# nondeterministic functions are not considered unsafe (see NONDETERMINISTIC FUNCTIONS NOT CONSIDERED UNSAFE,
+# later in this section)
 #
+# In addition, statements using results from floating-point math functions - which are hardware dependent,
+# are always considered unsafe (SEE SECTION 17.4.1.12, "REPLICATION AND FLOATING-POINT VALUES")
+#
+# HANDLING OF SAFE AND UNSAFE STATEMENTS.
+#
+# A statement is treated differently depending on whether the statement is considered safe,
+# and with respect to the binary logging format (that is, the current value of binlog_format)
+#
+# 		) When using row-based logging, no distinction is made in the treatment of safe and unsafe statements.
+#
+# 		) When using mixed-format logging, statements flagged as unsafe are logged using the row-based format;
+# 			statements regarded as safe are logged using the statement-based format.
+#
+# 		) When using statement-based logging, statements flagged as being unsafe generate a warning to this
+# 			effect.
+#
+# 			Safe statements are logged normally.
+#
+# Each statement flagged as unsafe generates a warning. If a large number of such statements were executed
+# on the master, this could lead ot excessively large error log files.
+#
+# TO prevent this, MySQL has a warning suppression mechanism. Whenever the 50 most recent ER_BINLOG_UNSAFE_STATEMENT
+# warnings have been generated more than 50 times in any 50-second period, warning suppression is enabled.
+#
+# When activated, this causes such warnings not to be written to the error log instead; instead, for each 50
+# warnings of this type, a note:
+#
+# 		The last warning was repeated N times in last S seconds
+#
+# is written to hte error log. This continues as long as the 50 most recent such warnings were issued in
+# 50 seconds or less; once the rate has decreased below this threshold, the warnings are once again
+# logged normally.
+#
+# Warning suppression has no effect on how the safety of statements for statement-based logging is determined,
+# nor on how warnings are sent to the client. MySQL clients will receive one warning for each such
+# statement.
+#
+# For more information, see SECTION 17.2.1, "REPLICATION FORMATS"
+#
+# STATEMENTS CONSIDERED UNSAFE
+#
+# Statements with the following characteristics are considered unsafe:
+#
+# 		) STATEMENTS CONTAINING SYSTEM FUNCTIONS THAT MAY RETURN A DIFFERENT VALUE ON THE SLAVE.
+#
+# 			These functions include
+#
+# 				FOUND_ROWS(), GET_LOCK(), IS_FREE_LOCK(), IS_USED_LOCK(), LOAD_FILE(), MASTER_POS_WAIT(),
+# 				RAND(), RELEASE_LOCK(), ROW_COUNT(), SESSION_USER(), SLEEP(), SYSDATE(), SYSTEM_USER(),
+# 				USER(), UUID() and UUID_SHORT()
+#
+# 			NONDETERMINISTIC FUNCTIONS NOT CONSIDERED UNSAFE
+#
+# 				Although these functions are not deterministic, they are treated as safe for purposes
+# 				of logging and replication:
+#
+# 					CONNECTION_ID(), CURDATE(), CURRENT_DATE(), CURRENT_TIME(), CURRENT_TIMESTAMP(),
+# 					CURTIME(), LAST_INSERT_ID(), LOCALTIME(), LOCALTIMESTAMP(), NOW(), UNIX_TIMESTAMP(),
+# 					UTC_DATE(), UTC_TIME() and UTC_TIMESTAMP()
+#
+# 				For more information, see SECTION 17.4.1.14, "REPLICATION AND SYSTEM FUNCTIONS"
+#
+# 		) REFERENCES TO SYSTEM VARIABLES
+#
+# 			Most system variables are not replicated correctly using the statement-based format.
+# 			See SECTION 17.4.1.38, "REPLICATION AND VARIABLES"
+#
+# 			For exceptions, see SECTION 5.4.4.3, "MIXED BINARY LOGGING FORMAT"
+#
+# 		) UDFS
+#
+# 			Since we have no control over what a UDF does, we must assume that it is executing
+# 			unsafe statements.
+#
+# 		) FULLTEXT PLUGIN
+#
+# 			This plugin may behave differently on different MySQL servers; therefore, statements
+# 			depending on it could have different results.
+#
+# 			For this reason, all statements relying on teh fulltext plugin are treated as
+# 			unsafe in MySQL.
+#
+# 		) TRIGGER OR STORED PROGRAM UPDATES A TABLE HAVING AN AUTO_INCREMENT COLUMN
+#
+# 			This is unsafe because the order in which the rows are updated may differ
+# 			on the master and the slave
+#
+# 			In addition, an INSERT into a table that has a composite primary key containing
+# 			an AUTO_INCREMENT column that is not the first column of this composite key 
+# 			is unsafe.
+#
+# 			For more information, see SECTION 17.4.1.1, "REPLICATION AND AUTO_INCREMENT"
+#
+# 		) INSERT /ETC/ ON DUPLICATE KEY UPDATE STATEMENTS ON TABLES WITH MULTIPLE PRIMARY OR UNIQUE KEYS
+#
+# 			When executed against a table that contains more thtan one primary or unique key,
+# 			this statement is considered unsafe, being sensitive to the order in which the storage
+# 			engine checks the keys, which is not deterministic, and on which the choice of rows
+# 			updated by the MySQL Server depends.
+#
+# 			An INSERT_/ETC/_ON_DUPLICATE_KEY_UPDATE statement against a table having more than
+# 			one unique or pimary key is marked as unsafe for statement-based replication.
+#
+# 			(Bug #11765650, Bug #58637)
+#
+# 		) UPDATES USING LIMIT
+#
+# 			THe order in which rows are retrieved is not specified, and is therefore considered
+# 			unsafe. See SECTION 17.4.1.18, "REPLICATION AND LIMIT"
+#
+# 		) ACCESSES OR REFERENCES LOG TABLES
+#
+# 			The contents of the system log table may differ between master and slave
+#
+# 		) NONTRANSACTIONAL OPERATIONS AFTER TRANSACTIONAL OPERATIONS
+#
+# 			Within a transaction, allowing any nontransactional reads or writes to execute
+# 			after any transactional reads or writes is considered unsafe.
+#
+# 			For more information, see SECTION 17.4.1.34, "REPLICATION AND TRANSACTIONS"
+#
+# 		) ACCESSES OR REFERENCES SELF-LOGGING TABLES
+#
+# 			ALl reads and writes to self-logging tables are considered unsafe.
+#
+# 			Within a transaction, any statement following a read or write to self-logging
+# 			tables is also considered unsafe.
+#
+# 		) LOAD DATA STATEMENTS
+#
+# 			LOAD_DATA is treated as unsafe and when binlog_format=MIXED the statement is logged
+# 			in row-based format.
+#
+# 			When binlog_format=STATEMENT LOAD_DATA does not generate a warning, unlike other
+# 			unsafe statements.
+#
+# 		) XA TRANSACTIONS
+#
+# 			If two XA transactions committed in parallel on the master are being prepared on the
+# 			slave in the inverse order, locking dependencies can occur with statement-based
+# 			replication that cannot be safely resolved, and it is possible for replication to
+# 			fail with deadlock on the slave.
+#
+# 			When binlog_format=STATEMENT is set, DML Statements inside XA transactions are flagged
+# 			as being unsafe and generate a warning. When binlog_format=MIXED or binlog_format=ROW
+# 			is set, DML statements inside XA transactions are logged using row-based replication,
+# 			and the potential issue is not present.
+#
+# 		) DEFAULT CLAUSE THAT REFERS TO A NONDETERMINISTIC FUNCTION
+#
+# 			If an expression default value refers to a nondeterminsitic function, any statement
+# 			that causes the expression to be evaluated in unsafe for statement-based replication.
+#
+# 			This includes statements such as INSERT, UPDATE and ALTER_TABLE. Unlike most other
+# 			unsafe statements, this category of statement cannot be replicated safely in row-based format.
+#
+# 			When binlog_format is set to STATEMENT, the statement is logged and executed but a warning
+# 			message is written to the error log. When binlog_format is set to MIXED or ROW, the statement
+# 			is not executed and an error message is written to the error log.
+#
+# 			For more information on the handling of explicit defaults, see HANDLING OF EXPLICIT DEFAULTS
+# 			AS OF MYSQL 8.0.13
+#
+# For additional information, see SECTION 17.4.1, "REPLICATION FEATURES AND ISSUES"
+#
+# 17.2.2 REPLICATION IMPLEMENTATION DETAILS
+#
+# 
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/replication-implementation-details.html
+# 		
+#
+# 
