@@ -71146,9 +71146,746 @@
 #
 # 17.2.2 REPLICATION IMPLEMENTATION DETAILS
 #
-# 
-# 
-# https://dev.mysql.com/doc/refman/8.0/en/replication-implementation-details.html
-# 		
+# MySQL replication capabilities are implemented using three threads, one on the master server
+# and two on the slave:
 #
+# 		) Binlog dump thread. THe master creates a thread to send the binary log contents to a slave
+# 			when the slave connects.
+#
+# 			THis thread can be identified in the output of SHOW_PROCESSLIST on the master as the
+# 			Binlog Dump thread.
+#
+# 			THe binary log dump thread acquires a lock on the master's binary log for reading each
+# 			event that is to be sent to teh slave. As soon as the event has been read, the lock is
+# 			released, even before the event is sent to teh slave.
+#
+# 		) SLAVE I/O THREAD
+#
+# 			When a START_SLAVE statement is issued on a slave server, the slave creates an I/O
+# 			thread, which connects to the master and asks it to send the updates recorded in its
+# 			binary logs.
+#
+# 			THe slave I/O thread reads the updates that the master's Binlog Dump thread sends
+# 			(see previous item) and copies them to local files that comprise the slave's relay log.
+#
+# 			The state of this thread is shown as Slave_IO_running in the output of SHOW_SLAVE_STATUS
+# 			or as Slave_running in the output of SHOW_STATUS
+#
+# 		) SLAVE SQL THREAD
+#
+# 			The slave creates an SQL thread to read the relay log that is written by the slave I/O
+# 			thread and execute the events contained therein.
+#
+# In the preceding description, there are three threads per master/slave connection. A master that has multiple
+# slaves creates one binary log dump thread for each currently connected slave, and each slave has its own
+# I/O and SQL threads.
+#
+# A slave uses two threads to separate reading updates from the master and executing them into independent tasks.
+#
+# Thus, the task of reading statements is not slowed down if statement execution is slow. For example, if the slave
+# server has not been running for a while, its I/O thread can quickly fetch all the binary log contents from
+# the master when the slave starts, even if the SQL thread lags far behind.
+#
+# If the slave stops before the SQL thread has executed all the fetched statements, the I/O thread has at least
+# fetched everything so that a safe copy of the statements is stored locally in the slave's relay logs,
+# ready for execution the next time that the slave starts.
+#
+# The SHOW_PROCESSLIST statement provides information that tells you what is happening on the master and on the slave
+# regarding replication.
+#
+# For information on master states, see SECTION 8.14.3, "REPLICATION MASTER THREAD STATES". For slave states,
+# see SECTION 8.14.4, "REPLICATION SLAVE I/O THREAD STATES", and SECTION 8.14.5, "REPLICATION SLAVE SQL THREAD STATES"
+#
+# The following example illustrates how the three threads show up in the output from SHOW_PROCESSLIST.
+#
+# On the master server, the output from SHOW_PROCESSLIST looks like this:
+#
+# 		mysql> SHOW PROCESSLIST\G
+# 		************************** 1. row ***********************
+# 					Id: 2
+# 				User : root
+# 				Host : localhost:32931
+# 				db   : NULL
+# 			Command : Binlog Dump
+# 				Time : 94
+# 				State: Has sent all binlog to slave; waiting for binlog to be updated
+# 			Info    : NULL
+#
+# Here, thread 2 is a Binlog Dump replication thread that services a connected slave. The State information indicates
+# that all outstanding updates have been sent ot the slave and that the master is waiting for more updates to occur.
+#
+# if you see no Binlog Dump threads on a master server, this means that replication is not running: that is, no
+# slaves are currently connected.
+#
+# On a slave server, the output from SHOW_PROCESSLIST looks like this:
+#
+# 		mysql> SHOW PROCESSLIST\G
+# 		*************************** 1. row **********************
+# 				Id: 10
+# 			User : system user
+# 			Host :
+# 			  db : NULL
+# 		Command : Connect
+# 			Time : 11
+# 		State   : Waiting for master to send event
+# 			Info : NULL
+# 		************************** 2. row ************************
+# 				Id: 11
+# 			User : system user
+# 			Host :
+# 			db   : NULL
+# 		Command : Connect
+# 			Time : 11
+# 			State: Has read all relay log; waiting for the slave I/O thread to update it
+# 			Info : NULL
+#
+# THe State information indicates that thread 10 is the I/O thread that is communicating with the master server, and thread
+# 11 is the SQL thread that is processing the updates stored in the relay logs.
+#
+# At the time that SHOW_PROCESSLIST was run, both threads were idle, waiting for further updates.
+#
+# The value in the Time column can show how late the slave is compared to the master. See SECTION A. 13, "MYSQL 8.0 FAQ: REPLICATION".
+#
+# If sufficient time elapses on the master side without activity on the Binlog Dump thread, the master determines that the slave is
+# no longer connected.
+#
+# As for any other client connection, the timeouts for this depend on the values of net_write_timeout and net_retry_count;
+# for more information about these, see SECTION 5.1.8, "SERVER SYSTEM VARIABLES"
+#
+# The SHOW_SLAVE_STATUS statement provides additional information about replication processing on a slave server.
+# See SECTION 17.1.7.1, "CHECKING REPLICATION STATUS"
+#
+# 17.2.3 REPLICATION CHANNELS
+#
+# 17.2.3.1 COMMANDS FOR OPERATIONS ON A SINGLE CHANNEL
+# 17.2.3.2 COMPATIBILITY WITH PREVIOUS REPLICATION STATEMENTS
+# 17.2.3.3 STARTUP OPTIONS AND REPLICATION CHANNELS
+# 17.2.3.4 REPLICATION CHANNEL NAMING CONVENTIONS
+#
+# Replication channels represents the path of transactions flowing from a master to a slave. This section describes
+# how channels can be used in a replication topology, and the impact they have on single-source replication.
+#
+# To provide compatibility with previous versions, the MySQL Server automatically creats on startup a default channel
+# whose name is the empty string ("")
+#
+# This channel is always present, it cannot be created or destroyed by teh user.
+#
+# If no other channels (having nonempty names) have been created, replication statements act on the default channel only,
+# so that all replication statements from older slaves function as exppected.
+#
+# (see SECTION 17.2.3.2, "COMPATIBILITY WITH PREVIOUS REPLICATION STATEMENTS"). Statements applying to replication
+# channels as described in this section can be used only when there is at least one named channel.
 # 
+# A replication channel encompasses the path of transactions transmitted from a master to a slave. In multi-source
+# replication a slave opens multiple channels, one per master, and each channel has its own relay log and applier
+# (SQL) threads.
+#
+# Once transactions are received by a replication channel's receiver (I/O) thread, they are added to the channel's
+# relay log file and passed through to an applier thread.
+#
+# This enables channels to function independently.
+#
+# A replication channel is also associated with a host name and port. You can assign multiple channels to the same
+# combination of host name and port.
+#
+# In MySQL 8.0, the maximum number of channels that can be added to one slave in a multi-source replication
+# topology is 256.
+#
+# Each replication channel must have a unique (nonempty) name (see SECTION 17.2.3.4, "REPLICATION CHANNEL NAMING
+# CONVENTIONS")
+#
+# Channels can be configured independently.
+#
+# 17.2.3.1 COMMANDS FOR OPERATIONS ON A SINGLE CHANNEL
+#
+# To enable MySQL replication operations to act on individual replication channels, use the FOR CHANNEL channel
+# clause with the following replication statements:
+#
+# 		) CHANGE_MASTER_TO
+#
+# 		) START_SLAVE
+#
+# 		) STOP_SLAVE
+#
+# 		) SHOW_RELAYLOG_EVENTS
+#
+# 		) FLUSH_RELAY_LOGS
+#
+# 		) SHOW_SLAVE_STATUS
+#
+# 		) RESET_SLAVE
+#
+# An additional channel parameter is introduced for the following function:
+#
+# 		) MASTER_POS_WAIT()
+#
+# The following statements are disallowed for the group_replication_recovery channel:
+#
+# 		) START_SLAVE
+#
+# 		) STOP_SLAVE
+#
+# The following statements are disallowed for the group_replication_applier channel:
+#
+# 		) START_SLAVE
+#
+# 		) STOP_SLAVE
+#
+# 		) SHOW_SLAVE_STATUS
+#
+# FLUSH_RELAY_LOGS is now permitted for the group_replication_applier channel, but if the request is received
+# while a transaction is being applied, the request is performed after the transaction ends.
+#
+# The requester must wait while the transaction is completed and the rotation takes place. This behavior
+# prevents transactions from being split, which is not permitted for Group Replication.
+#
+# 17.2.3.2 COMPATIBILITY WITH PREVIOUS REPLICATION STATEMENTS
+#
+# When a replication slave has multiple channels and a FOR CHANNEL channel option is not specified, a valid statement
+# generally acts on all available channels, with some specific exceptions.
+#
+# For example, the following statements behave as expected for all except certain Group Replication channels:
+#
+# 		) START_SLAVE starts replication threads for all channels, except the group_replication_recovery and
+# 			group_replication_applier channels
+#
+# 		) STOP_SLAVE stops replication threads for all channels, except the group_replication_recovery and group_replication_applier
+# 			channels.
+#
+# 		) SHOW_SLAVE_STATUS reports the status for all channels, except the group_replication_applier channel
+#
+# 		) RESET_SLAVE resets all channels
+#
+# 			WARNING:
+#
+# 				use RESET SLAVE with caution as this statement deletes all existing channels, purges their relay log files,
+# 				and recreates only the default channel.
+#
+# Some replication statements cannot operate on all channels. In this case:
+#
+# 		error 1964 Multiple channels exist on the slave.
+# 		Please provide channel name as an argument.
+#
+# Is generated. The following statements and functions generate this error when used in a multi-source
+# replication topology and a FOR CHANNEL channel option is not used to specify which channel to act on:
+#
+# 		) SHOW_RELAYLOG_EVENTS
+#
+# 		) CHANGE_MASTER_TO
+#
+# 		) MASTER_POS_WAIT()
+#
+# Note that a default channel always exists in a single source replication topology, where statements
+# and functions behave as in previous versions of MySQL.
+#
+# 17.2.3.3 STARTUP OPTIONS AND REPLICATION CHANNELS
+#
+# This section describes startup options which are impacted by the addition of replication channels.
+#
+# The following startup options must be configured correctly to use multi-source replication.
+#
+# 		) --relay-log-info-repository
+#
+# 			This must be set to TABLE. if this option is set to FILE, attempting to add more sources to
+# 			a slave fails with ER_SLAVE_NEW_CHANNEL_WRONG_REPOSITORY.
+#
+# 			The FILE setting is now deprecated, and TABLE is the default.
+#
+# 		) --master-info-repository
+#
+# 			This must be set to TABLE. If this option is set to FILE, attempting to add more sources
+# 			to a slave fails with ER_SLAVE_NEW_CHANNEL_WRONG_REPOSITORY. The FILE setting is now deprecated,
+# 			and TABLE is the default.
+#
+# The following startup options now affect all channels in a replication topology.
+#
+# 		) --log-slave-updates
+#
+# 			All transactions received by the slave (even from multiple sources) are written in the binary log
+#
+# 		) --relay-log-purge
+#
+# 			When set, each channel purges its own relay log automatically
+#
+# 		) --slave_transaction_retries
+#
+# 			The specified number of transaction retries can take place on all applier threads of all channels
+#
+# 		) --skip-slave-start
+#
+# 			No replication threads start on any channels
+#
+# 		) --slave-skip-errors
+#
+# 			Execution continues and errors are skipped for all channels
+#
+# The values set for the following startup options apply on each channel; since these are mysqld startup options,
+# they are applied on every channel.
+#
+# 		) --max-relay-log-size=size
+#
+# 			Maximum size of the individual relay log file for each channel; after reaching this limit, the file is rotated.
+#
+# 		) --relay-log-space-limit=size
+#
+# 			Upper limit for the total size of all relay logs combined, for eachh individual channel. For N channels,
+# 			the combined size of these logs is limited to relay_log_space_limit_*_N
+#
+# 		) --slave-parallel-workers=value
+#
+# 			Number of slave parallel workers per channel
+#
+# 		) --slave-checkpoint-group
+#
+# 			Waiting time by an I/O thread for each source
+#
+# 		) --relay-log-index=filename
+#
+# 			Base name for each channel's relay log index file. See SECTION 17.2.3.4, "REPLICATION CHANNEL NAMING CONVENTIONS"
+#
+# 		) --relay-log=filename
+#
+# 			Denotes the base name of each channel's relay log file. See SECTION 17.2.3.4, "REPLICATION CHANNEL NAMING CONVENTIONS"
+#
+# 		) --slave_net-timeout=N
+#
+# 			This value is set per channel, so that each channel waits for N seconds to check for a broken connection
+#
+# 		) --slave-skip-counter=N
+#
+# 			This value is set per channel, so that each channel skips N events from its master.
+#
+# 17.2.3.4 REPLICATION CHANNEL NAMING CONVENTIONS
+#
+# This section describes how naming conventions are impacted by replication channels.
+#
+# Each replication channel has a unique name which is a string with a maximum length of 64 characters and is case insensitive.
+#
+# Because channel names are used in slave tables, the character set used for these is always UTF-8. Although you are generally
+# free to use any name for channels, the following names are reserved:
+#
+# 		) group_replication_applier
+#
+# 		) group_replication_recovery
+#
+# The name you choose for a replication channel also influences the file names used by a multi-source replication slave.
+#
+# The relay log files and index files for each channel are named relay_log_basename-channel.xxxx, where relay_log_basename
+# is a base name specified using the --relay-log option, and channel is the name of the channel logged to this file.
+#
+# If you do not specify the --relay-log option, a default file name is used that also includes the name of the channel.
+#
+# 17.2.4 REPLICATION RELAY AND STATUS LOGS
+#
+# 17.2.4.1 THE SLAVE RELAY LOG
+# 17.2.4.2 SLAVE STATUS LOGS
+#
+#
+# During replication, a slave server creates several logs that hold the binary log events relayed from the master to the slave,
+# and record information about the current status and location within the relay log. There are three types of logs used in the process,
+# listed here:
+#
+# 		) The relay log consists of the events read from the binary log of the master and written by the slave I/O thread. Events in
+# 			the relay log are executed on the slave as part of the SQL thread.
+#
+# 		) The master info log contains status and current configuraton information for the slave's connection to the master. This log
+# 			holds information on the master host name, login credentials and coordinates indicating how far the slave has read from the
+# 			master's binary log.
+#
+# 			The master info log is written to the mysql.slave_master_info table
+#
+# 		) The relay log info log holds status information about the execution point within the slave's relay log. The relay log is
+# 			written to the mysql.slave_relay_log_info table.
+#
+# In MySQL 8.0, a warning is given when mysqld is unable to initialize the replication logging tables, but the slave is allowed
+# to continue starting. This situation is most likely to occur when upgrading from a version of MySQL that does not support
+# slave logging tables to one in which they are supported.
+#
+# In MySQL 8.0, execution of any statement requiring a write lock on either or both of the slave_master_info and slave_relay_log_info
+# tables is disallowed while replication is ongoing, while statements that perform only reads are permitted at any time.
+#
+# 		IMPORTANT
+#
+# 			Do not attempt to update or insert rows in the slave_master_info or slave_relay_log_info tables manually.
+# 			Doing so can cause undefined behavior, and is not supported.
+#
+# Making replication resilient to unexpected halts.
+#
+# The mysql.slave_master_info and mysql.slave_relay_log_info tables are created using the transactional storage engine InnoDB.
+# Updates to the relay log info log table are committed together with the transactions, meaning that the slave's progress
+# information recorded in that log is always consistent with what has been applied to the database, even in the event of an
+# unexpected server halt.
+#
+# The --relay-log-recovery option must be enabled on the slave to guarantee resilience.
+#
+# For more details, see SECTION 17.3.2, "HANDLING AN UNEXPECTED HALT OF A REPLICATION SLAVE"
+#
+# 17.2.4.1 THE SLAVE RELAY LOG
+#
+# The relay log, like the binary log, consists of a set of numbered files containing events that describe database changes,
+# and an index file that  contains the names of all used relay log files. The default location for relay log files is the
+# data directory.
+#
+# The term "relay log file" generally denotes an individual numbered file containing database events. The term "relay log"
+# collectively denotes the set of numbered relay log files plus the index file.
+#
+# Relay log files have the same format as binary log files and can be read using mysqlbinlog (see SECTION 4.6.8, "MYSQLBINLOG
+# -- UTILITY FOR PROCESSING BINARY LOG FILES")
+#
+# For the default replication channel, relay log file names have the default form host_name-relay.bin.nnnnnn, where host_name
+# is the name of the slave server host and nnnnnn is a sequence number. Successive relay log files are created using successive
+# sequence numbers, beginning with 000001. For non-default replication channels, the default base name is host_name-relay-bin-channel,
+# where channel is the name of the replication channel recorded in the relay log.
+#
+# The slave uses an index file to track the relay log files currently in use. The default relay log index file name is
+# host_name-relay-bin.index for the default channel, and host_name-relay-bin-channel.index for non-default replication channels.
+#
+# The default relay log file and relay log index file names and locations can be overridden with, respectively, the --relay-log
+# and --relay-log-index server options (see SECTION 17.1.6, "REPLICATION AND BINARY LOGGING OPTIONS AND VARIABLES")
+#
+# If a slave uses the default host-based relay log file names, changing a slave's host name after replication has been
+# set up can cause replication to fail with the errors Failed to open the relay log and Could not find target log during relay log initialization
+#
+# This is a known issue (see Bug#2122). If you anticipate that a slave's host name might change in the future (for example, if networking
+# is set up on the slave such that its host name can be modified using DHCP), you can avoid this issue entirely by using the
+# --relay-log and --relay-log-index options to specify relay log file names explicitly when you initially set up the slave.
+#
+# This will make the names independent of server host name changes.
+#
+# If you encounter the issue after replication has already begun, one way to work around it is to stop the slave server, prepend the
+# contents of the old relay log index file to the new one, and then restart the slave.
+#
+# On a Unix system, this can be done as shown here:
+#
+# 		shell> cat new_relay_log_name.index >> old_relay_log_name.index
+# 		shell> mv old_relay_log_name.index new_relay_log_name.index
+#
+# A slave server creates a new relay log file under the following conditions:
+#
+# 		) Each time the I/O thread starts
+#
+# 		) When the logs are flushed (for example, with FLUSH_LOGS or mysqladmin flush-logs)
+#
+# 		) When the size of the current relay log file becomes too large, which is determined as follows:
+#
+# 			) If the value of max_relay_log_size is greater than 0, that is the maximum relay log file size
+#
+# 			) If the value of max_relay_log_size is 0, max_binlog_size determines the maximum relay log file size.
+#
+# THe SQL thread automatically deletes each relay log file after it has executed all events in the file and no longer needs it.
+# There is no explicit mechanism for deleting relay logs because the SQL thread takes care of doing so.
+#
+# However, FLUSH_LOGS rotates relay logs, which influences when the SQL thread deletes them.
+#
+# 17.2.4.2 SLAVE STATUS LOGS
+#
+# A replication slave server creates two slave status logs in the form of InnoDB tables in the mysql system schema:
+# The master info log slave_master_info, and the relay log info log slave_relay_log_info
+#
+# The two slave status logs contain information similar to that shown in the output of the SHOW_SLAVE_STATUS statement,
+# which is discussed in SECTION 13.4.2, "SQL STATEMENTS FOR CONTROLLING SLAVE SERVERS"
+#
+# The slave status logs survive a slave server's shutdown. The next time the slave starts, it reads the two logs to determine
+# how far it previously proceeded in reading binary logs from the master and in processing its own relay logs.
+#
+# Access privileges for the master info log table should be restricted because it contains the password for connecting to
+# the master.
+#
+# See SECTION 6.1.2.3, "PASSWORDS AND LOGGING"
+#
+# Before MySQL 8.0, to create the slave status logs as tables, it was necessary to specify the --master-info-repository=TABLE
+# and --relay-log-info-repository=TABLE options at server startup.
+#
+# Otherwise, the logs were created as files in the data directory named master.info and relay-log.info, or with alternative names
+# and locations specified by the --master-info-file and --relay-log-info-file options.
+#
+# From MySQL 8.0, creating the slave status logs as tables is the default, and creating the slave status logs as files is
+# deprecated.
+#
+# For more information, see SECTION 17.1.6, "REPLICATION AND BINARY LOGGING OPTIONS AND VARIABLES"
+#
+# The mysql.slave_master_info and mysql.slave_relay_log_info tables are created using the InnoDBB transactional storage engine.
+# Updates to the relay log info log table are committed together with the transactions, meaning that the slave's progress information
+# recorded in that log is always consistent with what has been applied to the database, even in the event of an unexpected server halt.
+#
+# The --relay-log-recovery option must be enabled on the slave to guarantee resilience. For more details, see SECTION 17.3.2,
+# "HANDLING AN UNEXPECTED HALT OF A REPLICATION SLAVE"
+#
+# One additional slave status log is created primarily for internal use, and holds status information about worker threads on a 
+# multithreaded replication slave. This slave worker log includes the names and positions for the relay log file and master binary
+# log file for each worker thread.
+#
+# IF the relay log info log for the slave is created as a table, which is the default, the slave worker log is written to the
+# mysql.slave_worker_info table. If the relay log info log is written to a file, the slave worker log is written to the
+# worker-relay-log.info file.
+#
+# For external use, status information for worker threads is presented in the Performance SChema replication_applier_status_by_worker
+# table.
+#
+# The slave i/O thread updates the master info log. The following table shows the correspondence between the columns in the
+# mysql.slave_master_info table, the columns displayed by SHOW_SLAVE_STATUS, and the lines in the deprecated master.info file.
+#
+# slave_master_info TABLE COLUMN 			SHOW SLAVE STATUS COLUMN 			master.info FILE LINE 		DESCRIPTION
+# 
+# Number_of_lines 								[None] 									1 									Number of columns in the table (or lines in the file)
+#
+# Master_log_name 								Master_Log_File 						2									The name of the master binary log currently being read from the master
+#
+# Master_log_pos 									Read_Master_Log_Pos 					3 									The current position within the master binary log that has been read from the master
+#
+# Host 												Master_Host 							4 									The host name of the master
+#
+# User_name 										Master_User 							5 									THe user name used to connect to the master
+#
+# User_password 									Password (not shown by SHOW_SLAVE_STATUS) 		6 				The password used to connect to the master
+#
+# Port 												Master_Port 							7 									The network port used to connect to the master
+#
+# Connect_retry 									Connect_Retry 							8 									The period (in seconds) that the slave will wait before trying to reconnect to the master
+#
+# Enabled_ssl 										Master_SSL_Allowed 					9 									Indicates whether the server supports SSL connections
+#
+# Ssl_ca 											Master_SSL_CA_File 					10 								The file used for hte Certificate Authority (CA) Cert
+#
+# Ssl_capath 										Master_SSL_CA_Path 					11 								The path to the Certificate Authority (CA) Certs
+#
+# Ssl_cert 											Master_SSL_Cert 						12 								The name of the SSL cert file
+#
+# Ssl_cipher 										Master_SSL_Cipher 					13 								The list of possible ciphers used in the handshake for the SSL connection
+#
+# Ssl_key 											Master_SSL_Key 						14 								The name of the SSL key file
+#
+# Ssl_verify_server_cert 						Master_SSL_Verify_Server_Cert 	15 								Whether to verify the server cert
+#
+# Heartbeat 										[None] 									16 								Interval between replication heartbeats, in seconds
+#
+# Bind 												Master_Bind 							17 								Which of the slave's network interfaces should be used for connecting to the master
+#
+# Ignored_server_ids 							Replicate_Ignore_Server_Ids 		18 								The list of server IDs to be ignored. Note that for Ignored_server_ids the list of server
+# 																																		IDs is preceded by the total number of server IDs to ignore.
+#
+# Uuid 												Master_UUID 							19 								The master's unique ID
+#
+# Retry_count 										Master_Retry_Count 					20 								Maximum number of reconnection attempts permitted
+#
+# Ssl_crl 											[None] 									21 								Path to an SSL cert revocation-list file
+#
+# Ssl_crl_path 									[None] 									22 								Path to a directory containing SSL cert revocation-list files
+#
+# Enabled_auto_position 						Auto_position 							23 								If autopositioning is in use or not
+#
+# Channel_name 									Channel_name 							24 								The name of the replication channel
+#
+# Tls_Version 										Master_TLS_Version 					25 								TLS version on master
+#
+# Master_public_key_path 						Master_public_key_path 				26 								Name of RSA public key file
+#
+# Get_master_public_key 						Get_master_public_key 				27 								Whether ot request RSA Public key from master
+#
+# Master_compression_algorithm 				[None] 									28 								Permitted Compression algorithms
+#
+# Master_zstd_compression_level 				[None] 									29 								zstd compression level
+#
+# The slave SQL thread updates the relay log info log. THe following table shows the correspondence between the columns in the
+# mysql.slave_relay_log_info table, the columns displayed by SHOW_SLAVE_STATUS, and the lines in the deprecated relay-log.info
+# file.
+#
+# slave_relay_log_info TABLE COLUMN 			SHOW SLAVE STATUS COLUMN 			LINE IN relay-log.info FILE 		DESC
+#
+# Number_of_lines 									[None] 									1 											Number of columns in the table or lines in the file
+#
+# Relay_log_name 										Relay_Log_File 						2 											The name of the current relay log file
+#
+# Relay_log_pos 										Relay_Log_Pos 							3 											The current position within the relay log file;
+# 																																					events up to this position have been executed on
+# 																																					the slave database
+#
+# Master_log_name 									Relay_Master_Log_File 				4 											The name of the master binary log file from which the
+# 																																					events in the relay log file were read
+#
+# Master_log_pos 										Exec_Master_Log_Pos 					5 											The equivalent position within the master's binary log
+# 																																					file of events that have already been executed
+#
+# Sql_delay 											SQL_Delay 								6 											THe number of seconds that the slave must lag the master
+#
+# Number_of_workers 									[None] 									7 											The number of slave applier threads for executing replication events
+# 																																					(transactions) in parallel
+#
+# Id 														[None] 									8 											ID used for internal purposes, currently this is always 1
+#
+# Channel_name 										Channel_name 							9 											The name of the replication channel
+#
+# When you back up the replication slave's data, ensure that you back up the mysql.slave_master_info and mysql.slave_relay_log_info tables containing 
+# the slave status logs, because they are needed to resume replication after you restore the data from the slave.
+#
+# IF you lose the relay log files, but still have the relay log info log, you can check it to determine how far the SQL thread has executed
+# in the master binary logs. Then you can use CHANGE_MASTER_TO with the MASTER_LOG_FILE and MASTER_LOG_POS options to tell the slave
+# to re-read the binary logs from that point.
+#
+# Of course, this requires that the binary logs still exist on the master.
+#
+# 17.2.5 HOW SERVERS EVALUATE REPLICATION FILTERING RULES
+#
+# 17.2.5.1 EVALUATION OF DATABASE-LEVEL REPLICATION AND BINARY LOGGING OPTIONS
+# 17.2.5.2 EVALUATION OF TABLE-LEVEL REPLICATION OPTIONS
+# 17.2.5.3 REPLICATION RULE APPLICATION
+# 17.2.5.4 REPLICATION CHANNEL BASED FILTERS
+#
+# If a master server does not write a statement to its binary log, the statement is not replicated. If the server does log the statement,
+# the statement is sent to all slaves and each slave determines whether to execute it or ignore it.
+#
+# On the master, you can control which databases to log changes for by using the --binlog-do-db and --binlog-ignore-db options to
+# control binary logging.
+#
+# For a description of the rules that servers use in evaluating these options, see SECTION 17.2.5.1, "EVALUATION OF DATABASE-LEVEL
+# REPLICATION AND BINARY LOGGING OPTIONS"
+#
+# You should not use these options to control which databases and tables are replicated.
+#
+# Instead, use filtering on the slave to control the events that are executed on the slave.
+#
+# On the slave side, decisions about whether ot execute or ignore statements received from the master are made according 
+# to the --replicate-* options that the slave was started with (see SECTION 17.1.6, "REPLICATION AND BINARY lOGGING OPTIONS AND VARIABLES")
+#
+# The filters governed by these options can also be set dynamically using the CHANGE REPLICATION FILTER statement. The rules governing
+# such filters are the same whether they are created on startup using --replicate-* options or while the slave server is running by CHANGE 
+# REPLICATION FILTER.
+#
+# Note that replication filters cannot be used on Group Replication-specific channels on a MySQL server instance that is configured
+# for Group Replication, because filtering transactions on some servers would make the group unable to reach agreement on a 
+# consistent state.
+#
+# iN the simplest case, when there are no --replicate-* options, the slave executes all statements that it receives from the master.
+# Otherwise, the result depends on the particular options given.
+#
+# Database-level options (--replicate-do-db, --replicate-ignore-db) are checked first; see SECTION 17.2.5.1, "EVALUATION OF DATABASE-LEVEL
+# REPLICATION AND BIANRY LOGGING OPTIONS", for a description of htis process.
+#
+# If no database-level options are used, option checking proceeds to any table-level options that may be in use (see SECTION 17.2.5.2,
+# "EVALUATION OF TABLE-LEVEL REPLICATION OPTIONS", for a discussion of these)
+#
+# If one or more database-level options are used but none are matched, the statement is not replicated.
+#
+# For statements affecting databases only (that is, CREATE_DATABASE, DROP_DATABASE and ALTER_DATABASE), database-level options always
+# take precedence over any --replicate-wild-do-table options.
+#
+# In otehr words, for such statements, --replicate-wild-do-table options are checked if and only if there are no database-level
+# options that apply.
+#
+# To make it easier to determine what effect an option set will have, it is recommended that you avoid mixing "do" and "ignore" options,
+# or wildcard and nonwildcard options.
+#
+# If any --replicate-rewrite-db options were specified, they are applied before the --replicate-* filtering rules are tested.
+#
+# NOTE:
+#
+# 		All replication filtering options follow the same rules for case sensitivity that apply to names of databases and tables
+# 		elsewhere in the MySQL server, including the effects of the lower_case_table_names system variable.
+#
+# 17.2.5.1 EVALUATION OF DATABASE-LEVEL REPLICATION AND BINARY LOGGING OPTIONS
+#
+# When evaluating replication options, the slave begins by checking to see whether there are any --replicate-do-db or --replicate-ignore-db
+# options that apply.
+#
+# WHen using --binlog-do-db or --binlog-ignore-db, the process is similar, but the options are checked on the master.
+#
+# The database that is checked for a match depends on the binary log format of the statement that is being handled. If the statement
+# has been logged using the row format, the database where data is to be changed is the database that is checked.
+#
+# IF the statement has been logged using the statement format, the default database (specified with a USE statement) is the database
+# that is checked.
+#
+# NOTE:
+#
+# 		Only DML statements can be logged using the row format. DDL statements are always logged as statements, even
+# 		when binlog_format=ROW.
+#
+# 		All DDL statements are therefore always filtered according to the rules for statement-based replication.
+# 		This means that oyu must select the default database explicitly with a USE statement in order for a 
+# 		DDL statement to be applied.
+#
+# For replication, the steps involved are listed here:
+#
+# 		1. WHich logging format is used?
+#
+# 			) STATEMENT. Test the default database
+#
+# 			) ROW: Test the database affected by the changes
+#
+# 		2. Are there any --replicate-do-db options?
+#
+# 			) YES. Does the database match any of them?
+#
+# 				) Yes. Continue to step 4.
+#
+# 				) No. Ignore the update and exit.
+#
+# 			) NO. Continue to step 3.
+#
+# 		3. Are there any --replicate-ignore-db options?
+#
+# 			) YES. Does the database match any of them?
+#
+# 				) YES. Ignore hte updates and exit.
+#
+# 				) NO. Continue to step 4.
+#
+# 			) NO. Continue to step 4.
+#
+# 		4. Proceed to checking the table-level replication options, if there are any. For a description of how these
+# 			options are checked, see SECTION 17.2.5.2, "EVALUATION OF TABLE-LEVEL REPLICATION OPTIONS"
+#
+# 		IMPORTANT:
+#
+# 			A statement that is still permitted at this stage is not yet actually executed. The statement is not executed
+# 			until all table-level options (if any) have also been checked, and the outcome of that process permits execution
+# 			of hte statement.
+#
+# For binary logging, the steps involved are listed here:
+#
+# 		1. Are there any --binlog-do-db or --binlog-ignore-db options?
+#
+# 			) YES. COntinue to step 2.
+#
+# 			) NO. Log the statement and exit
+#
+# 		2. Is there a default database (has any database been selected by USE)?
+#
+# 			) YES. Continue to step 3
+#
+# 			) NO. Ignore the statement and exit
+#
+# 		3. There is a default database. Are there any --binlog-do-db options?
+#
+# 			) YES. Do any of them match the database?
+#
+# 				) YES. Log the statement and exit.
+#
+# 				) NO. Ignore the statement and exit
+#
+# 			) NO. Continue to step 4
+#
+# 		4. Do any of the --binlog-ignore-db options match the database?
+#
+# 			) YES. Ignore hte statement and exit
+#
+# 			) NO. Log the statement and exit
+#
+# 			IMPORTANT:
+#
+# 				For statement-based logging, an exception is made in the rules just given for the CREATE_DATABASE,
+# 				ALTER_DATABASE and DROP_DATABASE statements.
+#
+# 				In those cases, the database being created, altered or dropped replaces the default database
+# 				when determining whether ot log or ignore updates.
+#
+# --binlog-do-db can sometimes mean "ignore other databases". For example, when using statement-based logging, a server
+# running with only --binlog-do-db=sales does not write to the binary log statements for which the default database
+# differs from sales.
+#
+# When using row-based logging with the same option, the server logs only those updates that change data in sales.
+#
+# 17.2.5.2 EVALUATION OF TABLE-LEVEL REPLICATION OPTIONS
+#
+# https://dev.mysql.com/doc/refman/8.0/en/replication-rules-table-options.html		
+#
