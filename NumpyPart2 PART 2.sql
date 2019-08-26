@@ -71887,5 +71887,700 @@
 #
 # 17.2.5.2 EVALUATION OF TABLE-LEVEL REPLICATION OPTIONS
 #
-# https://dev.mysql.com/doc/refman/8.0/en/replication-rules-table-options.html		
+# The slave checks for and evaluates table options only if either of the following two conditions is true:
+#
+# 		) No matching database options were found
+#
+# 		) One or more database options were found, and were evaluated to arrive at an "execute" condition according to the
+# 		rules described in the previous section (see SECTION 17.2.5.1, "EVALUATION OF DATABASE-LEVEL REPLICATION AND BINARY LOGGING OPTIONS")
+#
+# First, as a preliminary condition, the slave checks whether statement-based replication is enabled. If so, and the statement occurs
+# within a stored function, the slave executes the statement and exits.
+#
+# If row-based replication is enabled, the slave does not know whether a statement occurred within a stored function on the master,
+# so this condition does not apply.
+#
+# NOTE:
+#
+# 		For statement-based replication, replication events represent statements (all changes making up a given event are associated
+# 		with a single SQL statement); for row-based replication, each event represents a change in a single table row (thus a single
+# 		statement such as UPDATE mytable SET mycol = 1 may yield many row-based events).
+#
+# 		When viewed in terms of events, the process of checking table options is the same for both row-based and statement-based
+# 		replication.
+#
+# Having reached this point, if there are no table options, the slave simply executes all events. If there are any 
+# --replicate-do-table or --replicate-wild-do-table options, the event must match one of these if it is to be executed;
+# otherwise, it is ignored.
+#
+# If there are any --replicate-ignore-table or --replicate-wild-ignore-table options, all events are executed except those
+# that match any of these options.
+#
+# The following steps describe this evaluation in more detail. The starting point is the end of the evaluation of the database-level
+# options, as described in SECTION 17.2.5.1, "EVALUATION OF DATABASE-LEVEL REPLICATION AND BINARY LOGGING OPTIONS"
+#
+# 		1. Are there any table replication options?
+#
+# 			) Yes. Continue to step 2.
+#
+# 			) No. Execute the update and exit
+#
+# 		2. Which logging format is used?
+#
+# 			) STATEMENT. Carry out the remaining steps for each statement that performs an update
+#
+# 			) ROW. Carry out the remaining steps for each update of a table row
+#
+# 		3. Are there any --replicate-do-table options?
+#
+# 			) YES. Does the table match any of them?
+#
+# 				) Yes. Execute the update and exit
+#
+# 				) No. Continue to step 4
+#
+# 			) NO. Continue to step 4
+#
+# 		4. Are there any --replicate-ignore-table options?
+#
+# 			) Yes. Does the table match any of them?
+#
+# 				) Yes. Ignore the update and exit.
+#
+# 				) No. Continue to step 5.
+#
+# 			) No. Continue to step 5.
+#
+# 		5. Are there any --replicate-wild-do-table options?
+#
+# 			) Yes. Does the table match any of them?
+#
+# 				) Yes. Execute the update and exit
+#
+# 				) No. Continue to step 6
+#
+# 			) No. Continue to step 6.
+#
+# 		6. Are there any --replicate-wild-ignore-table options?
+#
+# 			) Yes. Does the table match any of them?
+#
+# 				) Yes. Ignore the update and exit.
+#
+# 				) No. Continue to step 6.
+#
+# 			) No.. Continue to step 7.
+#
+# 		7. Is there another table to be tested?
+#
+# 			) Yes. Go back to step 3.
+#
+# 			) No. Continue to step 8.
+#
+# 		8. Are there any --replicate-do-table or --replicate-wild-do-table options?
+#
+# 			) Yes. Ignore the update and exit.
+#
+# 			) No. Execute the update and exit.
+#
+# NOTE:
+#
+# 		Statement-based replication stops if a single SQL statement operates on both a table that is included by a 
+# 		--replicate-do-table or --replicate-wild-do-table option, and another table that is ignored by a 
+# 		--replicate-ignore-table or --replicate-wild-ignore-table option.
+#
+# 		The slave must either execute or ignore the complete statement (which forms a replication event), and it cannot
+# 		logically do this.
+#
+# 		This also applies to row-based replication for DDL statements, because DDL statements are always logged as statements,
+# 		without regard to the logging format in effect.
+#
+# 		The only type of statement that can update both an included and an ignored table and still be replicated successfully
+# 		is a DML statement that has been logged with binlog_format=ROW.
+#
+# 17.2.5.3 REPLICATION RULE APPLICATION
+#
+# This section provides additional explanation and examples of usage for different combinations of replication filtering options.
+#
+# Some typical combinations of replication filter rule types are given in the following table:
+#
+# 		+---------------------------------------------------+----------------------------------------------------------------+
+# 		| Condition (Types of Options)   						 | Outcome 																	      |
+# 		+---------------------------------------------------+----------------------------------------------------------------+
+# 	   | No --replicate-* options at all: 					    | The slave executes all events that it receives from the master |
+# 		+---------------------------------------------------+----------------------------------------------------------------+
+# 		| --replicate-*-db options, but no table options:   | The slave accepts or ignores events using the database options.|
+# 		| 																	 | It executes all events permitted by those options because there|
+# 		| 																	 | are no table restrictions. 											   |
+# 		+---------------------------------------------------+----------------------------------------------------------------+
+# 		| --replicate-*-table options, but no database  	 | All events are accepted at the database-checking stage because |
+# 		| options: 														 | there are no database conditions. The slave executes or ignores|
+# 		| 																	 | events based solely on the table options. 						   |
+# 		+---------------------------------------------------+----------------------------------------------------------------+
+# 		| A combination of database and table options: 		 | The slave accepts or ignores events using the database options.|
+# 		| 																	 | Then it evaluates all events permitted by those options 			|
+# 		| 																	 | according to the table options. This can sometimes lead to 		|
+# 		| 																	 | results that seem counterintuitive, and that may be different  |
+# 		| 																	 | depending on whether you are using statement-based or row-based|
+# 		| 																	 | replication; see the text for an example.  						   |
+# 		+---------------------------------------------------+----------------------------------------------------------------+
+#
+# a more complex example follows, in which we examine the outcomes for both statement-based and row-based setings.
+#
+# Suppose that we have two tables mytbl1 in database db1 and mytbl2 in database db2 on the master, and the slave is running
+# with the following options (and no other replication filtering options):
+#
+# 		replicate-ignore-db = db1
+# 		replicate-do-table = db2.tbl2
+#
+# Now we execute the following statements on the master:
+#
+# 		USE db1;
+# 		INSERT INTO db2.tbl2 VALUES (1);
+#
+# The results on the slave vary considerably depending on the binary log format, and may not match initial expectations in either case.
+# 
+# STATEMENT-BASED REPLICATION.
+#
+# The USE statement causes db1 to be the default database. Thus the --replicate-ignore-db option matches, and the INSERT statement
+# is ignored.
+#
+# The table options are not checked.
+#
+# ROW-BASED REPLICATION
+#
+# The default database has no effect on how the slave reads database options when using row-based replication.
+# Thus, the USE statement makes no difference in how the --replicate-ignore-db option is handled: the database
+# specified by this option does not match the database where the INSERT statement changes data, so the slave
+# proceeds to check the table options.
+#
+# The table specified by --replicate-do-table matches the table to be updated, and the row is inserted.
+#
+# 17.2.5.4 REPLICATION CHANNEL BASED FILTERS
+#
+# This section explains how to work with replication filters when multiple replication channels exist, for
+# example in a multi-source replication topology.
+#
+# Before MySQL 8.0, replication filters were global - filters were applied to all replication channels.
+#
+# From MySQL 8.0, replication filters can be global or channel specific, enabling you to configure multi-source
+# replication slaves with replication filters on specific replication channels. Channel specific replication filters
+# are particularly useful in a multi-source replication topology when the same database or table is present on multiple
+# masters, and the slave is only required to replicate it from one master.
+#
+# For more background information, see SECTION 17.1.4, "MYSQL MULTI-SOURCE REPLICATION" and SECTION 17.2.3, "REPLICATION CHANNELS"
+#
+# IMPORTANT:
+#
+# 		On a MySQL server instance that is configured for Group Replication, channel specific replication filters can be used
+# 		on replication channels that are not directly involved with Group Replication, such as where a group member also
+# 		acts as a replication slave to a master that is outside the group.
+#
+# 		They cannot be used on the group_replication_applier or group_replication_recovery channels. Filtering on these
+# 		channels would make the group unable to reach agreement on a consistent state.
+#
+# OVERVIEW OF REPLICATION FILTERS AND CHANNELS
+#
+# When multiple replication channels exist, for example in a multi-source replication topology, replication filters
+# are applied as follows:
+#
+# 		) Any global replication filter specified is added to the global replication filters of the filter type (do_db, do_ignore_table, and so on)
+#
+# 		) Any channel specific replication filter adds the filter to the specified channel's replication filters for the specified filter type.
+#
+# 		) Each slave replication channel copies global replication filters to its channel specific replication filters if no channel specific
+# 			replication filter of this type is configured.
+#
+# 		) Each channel uses its channel specific replication filters to filter the replication stream.
+#
+# The syntax to create channel specific replication filters extends the existing SQL statements and command options.
+# When a replication channel is not specified the global replication filter is configured to ensure backwards compatibility.
+#
+# The CHANGE_REPLICATION_FILTER statement supports the FOR CHANNEL clause to configure channel specific filters online.
+#
+# The --replicate-* command options to configure filters can specify a replication channel using the form --replicate-filter_type=channel_name:filter_details.
+#
+# For example, suppose channels channel_1 and channel_2 exists before the server starts, starting the slave with the command line options
+# --replicate-do-db=db1 --repplicate-do-db=channel_1:db2 --replicate-do-db=db3 --replicate-ignore-db=db4 --replicate-ignore-db=channel_2:db5
+# would result in:
+#
+# 		) Global replication filters: do_db=db1, db3, ignore_db=db4
+#
+# 		) Channel specific filters on channel_1: do_db=db2 ignore_db=db4
+#
+# 		) Channel specific filters on channel_2: do_db=db1, db3 ignore_db=db5
+#
+#
+# to monitor the replication filters in such a setup use the replication_applier_global_filters and replication_applier_filters
+# tables.
+#
+# CONFIGURING CHANNEL SPECIFIC REPLICATION FILTERS AT STARTUP
+#
+# The replication filter related command options can take an optional channel followed by a colon, followed by teh filter
+# specification.
+#
+# The first colon is interpreted as a separator, subsequent colons are interpreted as literal colons. The following command
+# options support channel specific replication filters using this format:
+#
+# 		) --replicate-do-db=channel:database_id
+#
+# 		) --replicate-ignore-db=channel:database_id
+#
+# 		) --replicate-do-table=channel:table_id
+#
+# 		) --replicate-ignore-table=channel:table_id
+#
+# 		) --replicate-rewrite-db=channel:db1-db2
+#
+# 		) --replicate-wild-do-table=channel:table regexid
+#
+# 		) --replicate-wild-ignore-table=channel:table regexid
+#
+# If you use a colon but do not specify a channel for the filter option, for example --replicate-do-db=:database_id, the option
+# configures the replication filter for the default replication channel.
+#
+# The default replication channel is the replication channel which always exists once replication has been started, and differs from
+# multi-source replication channels which you create manually.
+#
+# When neither the colon nor a channel is specified the option configures the global replication filters, for example --replicate-do-db=database_id
+# configures the global --replicate-do-db filter.
+#
+# If you configure multiple rewrite-db=from_name->to_name options with the same from_name database, all filters are added together
+# (put into the rewrite_do list) and the first one takes effect.
+#
+# CHANGING CHANNEL SPECIFIC REPLICATION FILTERS ONLINE
+#
+# In addition to the --replicate-* options, replication filters can be configured using the CHANGE_REPLICATION_FILTER statement.
+# This removes the need to restart the server, but the slave applier thread must be stopped while making the change.
+#
+# To make this statement apply the filter to a specific channel, use the FOR CHANNEL channel clause. For example:
+#
+# 		CHANGE REPLICATION FILTER REPLICATE_DO_DB=(db1) FOR CHANNEL channel_1;
+#
+# When a FOR CHANNEL clause is provided, the statement acts on the specified channel's replication filters. If multiple types of filters
+# (do_db, do_ignore_table, wild_do_table and so on) are specified, only the specified filter types are replaced by the statement.
+#
+# In a replication topology with multiple channels, for example on a multi-source replication slave, when no FOR CHANNEL clause is provided,
+# the statement acts on the globbal replication filters and all channels replication filters, using a similar logic as the FOR CHANNEL
+# case.
+#
+# For more information see SECTION 13.4.2.2, "CHANGE REPLICATION FILTER SYNTAX"
+#
+# REMOVING CHANNEL SPECIFIC REPLICATION FILTERS
+#
+# When channel specific replication filters have been configured, you can remove the filter by issuing an empty filter type statement.
+# For example to remove all REPLICATE_REWRITE_DB filters from a replication channel named channel_1 issue:
+#
+# 		CHANGE REPLICATION FILTER REPLICATE_REWRITE_DB=() FOR CHANNEL channel_1;
+#
+# Any REPLICATE_REWRITE_DB filters prevviously configured, using either command options or CHANGE_REPLICATION_FILTER; are removed.
+#
+# The RESET_SLAVE_ALL statement removes channel specific replication filters that were set on channels deleted by the statement.
+# When the deleted channel or channels are recreated, any global replication filters specified for the slave are copied to them,
+# and no channel specific replication filters are applied.
+#
+# 17.3 REPLICATION SOLUTIONS
+#
+# 17.3.1 USING REPLICATION FOR BACKUPS
+# 17.3.2 HANDLING AN UNEXPECTED HALT OF A REPLICATION SLAVE
+# 17.3.3 MONITORING ROW-BASED REPLICATION
+# 17.3.4 USING REPLICATION WITH DIFFERENT MASTER AND SLAVE STORAGE ENGINES
+# 17.3.5 USING REPLICATION FOR SCALE-OUT
+# 17.3.6 REPLICATING DIFFERENT DATABASES TO DIFFERENT SLAVES
+# 17.3.7 IMPROVING REPLICATION PERFORMANCE
+# 17.3.8 SWITCHING MASTERS DURING FAILOVER
+# 17.3.9 SETTING UP REPLICATION TO USE ENCRYPTED CONNECTIONS
+# 17.3.10 ENCRYPTING BINARY LOG FILES AND RELAY LOG FILES
+# 17.3.11 SEMISYNCHRONOUS REPLICATION
+# 17.3.12 DELAYED REPLICATION
+#
+# Replication can be used in many different environments for a range of purposes. This section provides general notes
+# and advice on using replication for specific solution types.
+#
+# For information on using replication in a backup environment, including notes on the setup, backup procedure,
+# and files to back up, see SECTION 17.3.1, "USING REPLICATION FOR BACKUPS"
+#
+# For advice and tips on using different storage engines on the master and slaves, see SECTION 17.3.4, "USING REPLICATION
+# WITH DIFFERENT MASTER AND SLAVE STORAGE ENGINES"
+#
+# Using replication as a scale-out solution requires some changes in the logic and operation of applications that use the
+# solution. See SECTION 17.3.5, "USING REPLICATION FOR SCALE-OUT"
+#
+# For performance or data distribution reasons, you may want to replicate different databases to different replication slaves.
+# See SECTION 17.3.6, "REPLICATING DIFFERENT DATABASES TO DIFFERENT SLAVES"
+#
+# As the number of replication slaves increases, the load on the master can increase and lead to reduced performance (because of
+# the need to replicate the binary log to each slave). For tips on improving your replication performance, including using a single
+# secondary server as a replication master, see SECTION 17.3.7, "IMPROVING REPLICATION PERFORMANCE"
+#
+# For guidance on switching masters, or converting slaves into masters as part of an emergency failover solution, see
+# see SECTION 17.3.8, "SWITCHING MASTERS DURING FAILOVER"
+#
+# To secure your replication communication, you can encrypt the communication channel. For step-by-step instructions,
+# see SECTION 17.3.9, "SETTING UP REPLICATION TO USE ENCRYPTED CONNECTIONS"
+#
+# 17.3.1 USING REPLICATION FOR BACKUPS
+#
+# 17.3.1.1 BACKING UP A SLAVE USING MYSQLDUMP
+# 17.3.1.2 BACKING UP RAW DATA FROM A SLAVE
+# 17.3.1.3 BACKING UP A MASTER OR SLAVE BY MAKING IT READ ONLY
+#
+# To use replication as a backup solution, replicate data from the master to a slave, and then back up the data slave.
+# The slave can be paused and shut down without affecting the running operation of the master, so you can produce
+# an effective snapshot of "live" data that would otherwise require the master to be shut down.
+#
+# How you back up a database depends on its size and whether you are backing up only the data, or the data and the replication
+# slave state so that you can rebuild the slave in teh event of failure. There are therefore two choices:
+#
+# 		) If you are using replication as a solution to enable you to back up the data on the master, and teh size of your database
+# 			is not too large, the mysqldump tool may be suitable. See SECTION 17.3.1.1, "BACKING UP A SLAVE USING MYSQLDUMP"
+#
+# 		) For larger databases, where mysqldump would be impractical or inefficient, you can back up the raw data files instead.
+# 			Using the raw data files option also means that you can back up the binary and relay logs that will enable you to
+# 			recreate teh slave in the event of a slave failure.
+#
+# 			For more information, see SECTION 17.3.1.2, "BACKING UP RAW DATA FROM A SLAVE"
+#
+# Another backup strategy, which can be used for either master or slave servers, is to put the server in a read-only state.
+# The backup is performed against the read-only server, which then is changed back to its usual read/write operational status.
+#
+# See SECTION 17.3.1.3, "BACKING UP A MASTER OR SLAVE BY MAKING IT READ ONLY"
+#
+# 17.3.1.1 BACKING UP A SLAVE USING MYSQLDUMP
+#
+# Using mysqldump to create a copy of a database enables you to capture all of the data in the database in a format
+# that enables the information to be imported into another instance of MySQL Server (see SECTION 4.5.4,, "MYSQLDUMP - A DATABASE BACKUP PROGRAM")
+#
+# Because the format of the information is SQL statements, the file can easily be distributed and applied to running servers 
+# in the event that you need access to the data in an emergency. However, if the size of your data set is very large,
+# mysqldump may be impractical.
+#
+# When using mysqldump, you should stop replication on the slave before starting the dump process to ensure that the
+# dump contains a consistent set of data:
+#
+# 		1. Stop the slave from processing requests. You can stop replication completely on the slave using mysqladmin:
+#
+# 			shell> mysqladmin stop-slave
+#
+# 			Alternatively, you can stop only the slave SQL thread to pause event execution:
+#
+# 			shell> mysel -e 'STOP SLAVE SQL_THREAD;'
+#
+# 			This enables the slave to continue to receive data change events from the master's binary log and store them
+# 			in the relay logs using the i/O thread, but prevents the slave from executing these events and changing its data.
+#
+# 			Within busy replication environments, permitting the I/O thread to run during backup may speed up the catch-up
+# 			process when you restart the slave SQL thread.
+#
+# 		2. Run mysqldump to dump your databases. You may either dump all databases or select databases to be dumped.
+# 			For example, to dump all databases:
+#
+# 				shell> mysqldump --all-databases > fulldb.dump
+#
+# 		3. Once the dump has completed, start slave operations again:
+#
+# 				shell> mysqladmin start-slave
+#
+# In the preceding example, you may want to add login credentials (user name, password) to the commands, and bundle the
+# process up into a scrip that you can run automatically each day.
+#
+# If you use this approach, make sure you monitor the slave replication process to ensure that the time taken to run
+# the backup does not affect the slave's ability to keep up with events from the master.
+#
+# See SECTION 17.1.7.1, "CHECKING REPLICATION STATUS". If the slave is unable to keep up, you may want to add another
+# slave and distribute the backup process. For an example of how to configure this scenario, see SECTION 17.3.6,
+# "REPLICATING DIFFERENT DATABASES TO DIFFERENT SLAVES"
+#
+# 17.3.1.2 BACKING UP RAW DATA FROM A SLAVE
+#
+# To guarantee the integrity of the files that are copied, backing up the raw data files on your MySQL replication slave
+# should take place while your slave server is shut down.
+#
+# If the MySQL server is still running, background tasks may still be updating the database files, particularly
+# those involving storage engines with background processes such as InnoDB. With InnoDB, these problems should
+# be resolved during crash recovery, but since the slave server can be shut down during the backup process without
+# affecting the execution of the master it makes sense to take advantage of this capability.
+#
+# To shut down the server and back up the files:
+#
+# 		1. Shut down the slave MySQL server:
+#
+# 			shell> mysqladmin shutdown
+#
+# 		2. Copy the data files. You can use any suitable copying or archive utility, including cp, tar or Winzip.
+#
+# 			For example, assuming that the data directory is located under the current directory, you can archive
+# 			the entire directory as follows:
+#
+# 				shell> tar cf /tmp/dbbackup.tar ./data
+#
+# 		3. Start the MySQL server again. Under Unix:
+#
+# 			shell> mysqld_safe &
+#
+# 			Under Windows:
+#
+# 				C:\> "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqld"
+#
+# Normally you should back up the entire data directory for the slave MySQL server. If you want to be able to restore the
+# data and operate as a slave (for example, in the event of failure of the slave), in addition to the data, you need to have
+# the master info repository and relay log info repository, and the relay log files.
+#
+# These items are needed to resume replication after you restore the slave's data. If tables have been used for the master 
+# info and relay log info repositories (see SECTION 17.2.4, "REPLICATION RELAY AND STATUS LOGS"), which is the default
+# in MySQL 8.0, these tables are backed up along with the data directory.
+#
+# If files have been used for the repositories, you must back these up separately. The relay log files must also be backed
+# up separately if they have been placed in a different location to the data directory.
+#
+# If you lose the relay logs but still have the relay-log.info file, you can check it to determine how far the SQL thread
+# has executed in the master binary logs. Then you can use CHANGE_MASTER_TO with the MASTER_LOG_FILE and MASTER_LOG_POS
+# options to tell the slave to re-read the binary logs from that point.
+#
+# This requires that the binary logs still exist on the master server.
+#
+# If your slave is replicating LOAD_DATA statements, you should also back up any SQL_LOAD-* files that exist in the directory
+# that the slave uses for this purpose. The slave needs these files to resume replication of any interrupted LOAD_DATA operations.
+#
+# The location of this directory is the value of the --slave-load-tmpdir option. If the server was not started with that option,
+# the directory location is the value of the tmpdir system variable.
+#
+# 17.3.1.3 BACKING UP A MASTER OR SLAVE BY MAKING IT READ ONLY
+#
+# It is possible to back up either master or slave servers in a replication setup by acquiring a global read lock and manipulating
+# the read_only system variable to change the read-only state of the server to be backed up:
+#
+# 		1. Make the server read-only, so that it processes only retrievals and blocks updates
+#
+# 		2. Perform the backup
+#
+# 		3. Change the server back to its normal read/write state
+#
+# 		NOTE:
+#
+# 			The instructions in this section place the server to be backed up in a state that is safe for backup
+# 			methods that get the data from the server, such as mysqldump (see SECTION 4.5.4, "MYSQLDUMP - A DATABASE BACKUP PROGRAM")
+#
+# 			You should not attempt to use these instructions to make a binary backup by copying files directly because the server
+# 			may still have modified data cached in memory and not flushed to disk.
+#
+# The following instructions describe how to do this for a master server and for a slave server. For both scenarios discussed here,
+# suppose that you have the following replication setup:
+#
+# 		) A master server M1
+#
+# 		) A slave server S1 that has M1 as its master
+#
+# 		) A client C1 connected to M1
+#
+# 		) A client C2 connected to S1
+#
+# In either scenario, the statements to acquire the global read lock and manipulate the read_only variable are performed
+# on the server to be backed up and do not propagate to any slaves of that server.
+#
+# SCENARIO 1: BACKUP WITH A READ-ONLY MASTER
+#
+# Put the master M1 in a read-only state by executing these statements on it:
+#
+# 		mysql> FLUSH TABLES WITH READ LOCK;
+# 		mysql> SET GLOBAL read_only = ON;
+#
+# While M1 is in a read-only state, the following properties are true:
+#
+# 		) requests for updates sent by C1 to M1 will block because the server is in read-only mode
+#
+# 		) Requests for query results sent by C1 to M1 will succeed
+#
+# 		) Making a backup on M1 is safe
+#
+# 		) Making a backup on S1 is not safe. This server is still running, and might be processing the binary log
+# 			or update requests coming from client C2.
+#
+# While M1 is read only, perform the backup. For example, you can use mysqldump.
+#
+# After the backup operation on M1 completes, restore M1 to its normal operational state by executing these statements:
+#
+# 		mysql> SET GLOBAL read_only = OFF;
+# 		mysql> UNLOCK TABLES;
+#
+# Although performing the backup on M1 is safe (as far as the backup is concerned), it is not optimal for performance
+# because clients of M1 are blocked from executing updates.
+#
+# This strategy applies to backing up a master server in a replication setup, but can also be used for a single server
+# in a nonreplication setting.
+#
+# SCENARIO 2: BACKUP WITH A READ-ONLY SLAVE
+#
+# Put the slave S1 in a read-only state by executing these statements on it:
+#
+# 		mysql> FLUSH TABLES WITH READ LOCK;
+# 		mysql> SET GLOBAL read_only = ON;
+#
+# While S1 is in a read-only state, the following properties are true:
+#
+# 		) The master M1 will continue to operate, so making a backup on the master is not safe
+#
+# 		) The slave S1 is stopped, so making a backup on the slave S1 is safe.
+#
+# These properties provide the basis for a popular backup scenario: Having one slave busy performing a backup
+# for a while is not a problem because it does not affect the entire network, and the system is still running
+# during the backup.
+#
+# In particular, clients can still perform updates on the master server, which remains unaffected by backup
+# activity on the slave.
+#
+# While S1 is read only, perform the backup. For example, you can use mysqldump.
+#
+# After the backup operation on S1 completes, restore S1 to its normal operational state by executing these
+# statements:
+#
+# 		mysql> SET GLOBAL read_only = OFF;
+# 		mysql> UNLOCK TABLES;
+#
+# After the slave is restored to normal operation, it again synchronizes to the master by catching up with
+# any outstanding updates from the binary log of the master.
+#
+# 17.3.2 HANDLING AN UNEXPECTED HALT OF A REPLICATION SLAVE
+#
+# In order for replication to be resilient to unexpected halts of the server (sometimes described as crash-safe)
+# it must be possible for the slave to recover its state before halting.
+#
+# This section describes the impact of an unexpected halt of a slave during replication and how to 
+# configure a slave for the best chance of recovery to continue replication.
+#
+# After an unexpected halt of a slave, upon restart the slave's SQL thread must recover which transactions have
+# been executed already. The information required for recovery is stored in the slave's relay log info log.
+#
+# From MySQL 8.0, this log is created by default as an InnoDB table named mysql.slave_relay_log_info (with the
+# system variable relay_log_info_repository set to the default of TABLE)
+#
+# By using this transactional storage engine the information is always recoverable upon restart.
+#
+# Updates to the relay log info log table are committed together with the transactions, meaning that the slave's
+# progress information recorded in that log is always consistent with what has been applied to the database,
+# even in the event of an unexpected server halt.
+#
+# Previously, this information was stored by default in a file in the data directory that was updated after the
+# transaction had been applied. This held the risk of losing synchrony with the master depending at which stage
+# of processing a transaction the slave halted at, or even corruption of the file itself.
+#
+# The setting relay_log_info_repository_=_FILE is now deprecated, and will be removed in a future release.
+# For further information on the slave logs, see SECTION 17.2.4, "REPLICATION RELAY AND STATUS LOGS"
+#
+# When the relay log info log is stored in the mysql.slave_relay_log_info table, DML transactions and also
+# atomic DDL make the following three updates together, atomically:
+#
+# 		) APply the transaction on the database
+#
+# 		) Update the replication positions in the mysql.slave_relay_log_info table
+#
+# 		) Update the GTID in the mysql.gtid_executed table (when GTIDs are enabled and the binary log is disabled on the server)
+#
+# In all other cases, including DDL statements that are not fully atomic, and exempted storage engines that do not support
+# atomic DDL, the mysql.slave_relay_log_info table might be missing updates associated with replicated data if the server
+# halts unexpectedly.
+#
+# Restoring updates in this case is a manual process. For details on atomic DDL support in MySQL 8.0, and the resulting
+# behavior for the replication of certain statements, see SECTION 13.1.1, "ATOMIC DATA DEFINITION STATEMENT SUPPORT"
+#
+# Exactly how a replication slave recovers from an unexpected halt is influenced by the chosen method of replication,
+# whether the slave is single-threaded or multithreaded, the setting of variables such as relay_log_recovery,
+# and whether features such as MASTER_AUTO_POSITION are being used.
+#
+# The following table shows the impact of these different factors on how a single-threaded slave recovers from an 
+# unexpected halt.
+#
+# TABLE 17.3 FACTORS INFLUENCING SINGLE-THREADED REPLICATION SLAVE RECOVERY
+#
+# 		GTID 		MASTER_AUTO_POSITION 		relay_log_recovery 		relay_log_info_repository 		Crash Type 		Recovery Guaranteed 		Relay Log Impact
+#
+# 		OFF 		Any 								1 								TABLE 								Server 			Yes 							Lost
+#
+# 		OFF 		Any 								1 								Any 									OS 				No 							Lost
+#
+# 		OFF 		Any 								0 								TABLE 								Server 			Yes 							Remains
+#
+# 		OFF 		Any 								0 								TABLE 								OS 				No 							Remains
+#
+# 		ON 		ON 								Any 							Any 									Any 				Yes 							Lost
+#
+# 		On 		OFF 								0 								TABLE 								Server 			Yes 							Remains
+#
+# 		ON 		OFF 								0 								Any 									OS 				No 							Remains
+#
+# As the table shows, when using a single-threaded slave the following configurations are most resilient to unexpected halts:
+#
+# 		) When using GTIDs and MASTER_AUTO_POSITION, set relay_log_recovery=1. With this configuration the setting of
+# 			relay_log_info_repository and other variables does not impact on recovery.
+#
+# 			note that to guarantee recovery, sync_binlog=1 (which is the default) must also be set on the slave, so that
+# 			the slave's binary log is synchronized to disk at each write.
+#
+# 			Otherwise, committed transactions might not be present in the slave's binary log.
+#
+# 		) When using file position based replication, set relay_log_recovery=1 and relay_log_info_repository=TABLE
+#
+# 			NOTE:
+#
+# 				During recovery the relay log is lost.
+#
+# The following table shows the impact of these different factors on how a multithreaded slave recovers from an unexpected halt.
+#
+# TABLE 17.4 FACTORS INFLUENCING MULTITHREADED REPLICATION SLAVE RECOVERY
+#
+# 		GTID 		sync_relay_log 		MASTER_AUTO_POSITION 		relay_log_recovery 		relay_log_info_repository 		Crash Type 		Recovery Guaranteed 		RElay Log IMpact
+#
+# 		OFF 		1 							Any 								1 								TABLE 								Any 				Yes 							Lost
+#
+# 		OFF 		>1 						ANy 								1 								TABLE 								Server 			Yes 							Lost
+#
+# 		OFF 		>1 						Any 								1 								Any 									OS 				No 							Lost
+#
+# 		OFF 		1 							Any 								0 								TABLE  								Server 			Yes 							Remains
+#
+# 		OFF 		1 							Any 								0 								TABLE 								OS 				No 							Remains
+#
+# 		ON 		Any 						ON 								Any 							Any 									Any 				Yes 							Lost
+#
+# 		ON 		1 							OFF 								0 								TABLE 								Server 			Yes 							Remains
+#
+# 		ON 		1 							OFF 								0 								Any 									OS 				No 							Remains
+#
+# As the table shows, when using a multithreaded slave the following configurations are most resilient to unexpected halts:
+#
+# 		) When using GTIDs and MASTER_AUTO_POSITION, set relay_log_recovery=1. With this configuration the setting of relay_log_info_repository
+# 			and other variables does not impact on recovery.
+#
+# 		) When using file position based replication, set relay_log_recovery=1, sync_relay_log=1, and
+# 			relay_log_info_repository=TABLE
+#
+# 		NOTE:
+#
+# 			During recovery the relay log is lost.
+#
+# It is important to note the impact of sync_relay_log=1, which requires a write of to the relay log per transaction.
+# Although this setting is the most resilient to an unexpected halt, with at most one unwritten transaction being lost, it also
+# has the potential to greatly increase the load on storage.
+#
+# Without sync_relay_log=1, the effect of an unexpected halt depends on how the relay log is handled by the operating system.
+#
+# ALso note that when relay_log_recovery=0, the next time the slave is started afer an unexpected halt the relay log is processed
+# as part of recovery. After this process completes, the relay log is deleted.
+#
+# An unexpected halt of a multithreaded replication slave using the recommended file position based replication configuration above
+# may result in a relay log with transaction inconsistencies (gaps in the sequence of transactions) caused by the unexpected halt.
+#
+# See SECTION 17.4.1.33, "REPLICATION AND TRANSACTION INCONSISTENCIES". If the relay log recovery process encounters such transaction
+# inconsistencies they are filled and the recovery process continues automatically.
+#
+# When you are using multi-source replication and relay_log_recovery=1, after restarting due to an unexpected halt all replication
+# channels go through the relay log recovery process. Any inconsistencies found in the relay log due to an unexpected halt of a 
+# multithreaded slave are filled.
+#
+# 17.3.3 MONITORING ROW-BASED REPLICATION
+#
+# 
+#
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/replication-solutions-rbr-monitoring.html	
 #
