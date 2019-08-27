@@ -72579,8 +72579,828 @@
 #
 # 17.3.3 MONITORING ROW-BASED REPLICATION
 #
-# 
+# The current progress of the replication applier (SQL) thread when using row-based replication is monitored through Performance Schema
+# instrument stages, enabling you to track the processing of operations and check the amount of work completed and work estimated.
 #
-# 
-# https://dev.mysql.com/doc/refman/8.0/en/replication-solutions-rbr-monitoring.html	
+# When these Performance Schema instrument stages are enabled the events_stages_current table shows stages for applier threads and
+# their progress. For background information, see SECTION 26.12.5, "PERFORMANCE SCHEMA STAGE EVENT TABLES"
+#
+# To track progress of all three row-based replication event types (write, update, delete):
+#
+# 		) Enable the three Performance Schema stages by issuing:
+#
+# 			mysql> UPDATE performance_schema.setup_instruments SET ENABLED = 'YES'
+# 				-> WHERE NAME LIKE 'stage/sql/Applying batch of row changes%';
+#
+# 		) Wait for some events to be processed byb the replication applier thread and then check progress by looking into
+# 			the events_stages_current table. For example to get progress for update events issue:
+#
+# 			mysql> SELECT WORK_COMPLETED, WORK_ESTIMATED FROM performance_schema.events_stages_current
+# 				-> WHERE EVENT_NAME LIKE 'stage/sql/Applying batch of row changes (update)'
+#
+# 		) If binlog_rows_query_log_events is enabled, information about queries is stored in the binary log and is exposed
+# 			in the processlist_info field. To see the original query that triggered this event:
+#
+# 			mysql> SELECT db, processlist_state, processlist_info FROM performance_schema.threads
+# 				-> WHERE processlist_state LIKE 'stage/sql/Applying batch of row changes%' AND thread_id = N;
+#
+# 17.3.4 USING REPLICATION WITH DIFFERENT MASTER AND SLAVE STORAGE ENGINES
+#
+# It does not matter for the replication process whether the source table on the master and the replicated table on the slave
+# use different engine types. In fact, the default_storage_engine system variable is not replicated.
+#
+# This provides a number of benefits in the replication process in that you can take advantage of different engine types
+# for different replication scenarios. For example, in a typical scale-out scenario (see SECTION 17.3.5, "USING REPLICATION FOR SCALE-OUT"),
+# you want to use InnoDB tables on the master to take advantage of the transactional functionality, but use MyISAM on the slaves
+# where transaction support is not required because the data is only read.
+#
+# When using replication in a data-logging environment you may want to use the Archive storage engine on the slave.
+#
+# Configuring different engines on the master and slave depends on how you set up the initial replication process:
+#
+# 		) If you used mysqldump to create the database snapshot on your master, you could edit the dump file text to change
+# 			the engine type used on each table.
+#
+# 			Another alternative for mysqldump is to disable engine types that you do not want to use on the slave before
+# 			using the dump to build the data on the slave. For example, you can add the --skip-federated option on your
+# 			slave to disable the FEDERATED engine.
+#
+# 			If a specific engine does not exist for a table to be created, MySQL will use the default engine type, usually
+# 			MyISAM. (This requires that the NO_ENGINE_SUBSTITUTION SQL mode is not enabled).
+#
+# 			If you want to disable additional engines in this way, you may want to consider building a special binary to
+# 			be used on the slave that only supports the engines you want.
+#
+# 		) If you are using raw data files (a binary backup) to set up the slave, you will be unable to change the initial
+# 			table format. Instead, use ALTER_TABLE to change the table types after the slave has been started.
+#
+# 		) For a new master/slave replication setups where there are currently no tables on the master, avoid specifying
+# 			the engine type when creating new tables.
+#
+# If you are already running a replication solution and want to convert your existing tables to another engine type,
+# follow these steps:
+#
+# 		1. Stop the slave from running replication updates:
+#
+# 			mysql> STOP SLAVE;
+#
+# 			This will enable you to change engine types without interruptions
+#
+# 		2. Execute an ALTER TABLE /ETC/ ENGINE='engine_type' for each table to be changed.
+#
+# 		3. Start the slave replication process again:
+#
+# 			mysql> START SLAVE;
+#
+# Although the default_storage_engine variable is not replicated, be aware that CREATE_TABLE and ALTER_TABLE statements
+# that include the engine specification will be correctly replicated to the slave.
+#
+# For example, if you have a CSV table and you execute:
+#
+# 		mysql> ALTER TABLE csvtable Engine='MyISAM';
+#
+# Tthe above statement will be replicated to the slave and the engine type on the slave will be converted to MyISAM,
+# even if you have previously changed the table type on the slave to an engine other than CSV. If you want to retain
+# engine differences on the master and slave, you should be careful to use the default_storage_engine variable on the
+# master when creating a new table.
+#
+# For example, instead of:
+#
+# 		mysql> CREATE TABLE tablea (column int) Engine=MyISAM;
+#
+# Use this format:
+#
+# 		mysql> SET default_storage_engine=MyISAM;
+# 		mysql> CREATE TABLE tablea (columna int);
+#
+# When replicated, the default_storage_engine variable will be ignored, and the CREATE TABLE statement will execute on the slavve
+# using the slave's default engine.
+#
+# 17.3.5 USING REPLICATION FOR SCALE-OUT
+#
+# You can use replication as a scale-out solution; that is, when you want to split up the load of database queries across multiple
+# database servers, within some reasonable limitations.
+#
+# Because replication works from the distribution of one master to one or more slaves, using replication for scale-out works best
+# in an environment where you have a high number of reads and low number of writes/updates.
+#
+# Most websites fit into this category, where users are browsing the website, reading articles, posts or viewing products.
+#
+# Updates only occur during session management, or when making a purchase or adding a comment/message to a forum.
+#
+# Replication in this situation enables oyu to distribute the reads over the replication slaves, while still enabling your web servers
+# to communicate with the replication master when a write is required.
+#
+# You can see a sample replicaton layout for this scenario in Figure 17.1, "USING REPLICATION TO IMPROVE PERFORMANCE DURING SCALE-OUT"
+#
+# FIGURE 17.1 USING REPLICATION TO IMPROVE PERFORMANCE DURING SCALE-OUT
+#
+# 		KEY
+# 		+--------+
+# 		| Master |
+#		+--------+
+# 		| Slave  |
+# 		+--------+
+# 		| Client |
+# 		+--------+
+# 		|-> Reads|
+# 		+--------+
+# 		|<-Writes|
+# 		+---------+
+# 		|<->Client|
+# 		+---------+
+# 		|--> Repl |
+# 		+---------+
+#
+# 											--> Repl -->
+# 										v   	 v 		v 			v
+# 							 Mysql Master Slave 1  Slave 2 	Slave 3
+# 									  <-      -> 		-> 		 ->
+# 									  <- 		 -> 		-> 		 ->
+# 								   Writes   Reads   Reads 		Reads
+# 									  ^		  ^ 	   ^ 			 ^
+# 										---- C1 ---- C2 ---- C3 ----
+# 												v 		  v 		v
+# 												 LOAD BALANCER
+# 														^
+# 														
+# 													Clients
+#
+# If the part of your code that is responsible for database access has been properly abstracted/modularized, converting
+# it to run with a replicated setup should be very smooth and easy.
+#
+# Change the implementation of your database access to send all writes to the master, and to send reads to either the master
+# or a slave. If your code does not have this level of abstraction, setting up a replicated system gives you the oppurtounity
+# and motivation to clean it up.
+#
+# Start by creating a wrapper lib or module that implements the following functions:
+#
+# 	 ) safe_writer_connect()
+#
+# 	 ) safe_reader_connect()
+#
+# 	 ) safe_reader_statement()
+#
+# 	 ) safe_writer_statement()
+#
+# safe_ in each function name means that the function takes care of handling all error conditions. You can use different
+# names for the functions. The important thing is to have a unified interface for connecting for reads, connecting for writes,
+# doing a read, and doing a write.
+#
+# Then convert your client code to use he wrapper library. This may be a painful and scary process at first, but it pays off
+# in the long run. All applications that use the approach just described are able to take advantage of a master/slave configuration,
+# even one involving multiple slaves.
+#
+# The code is much easier to maintain, and adding troubleshooting options is trivial. You need modify only one or two functions
+# (for example, to log how long each statement took, or which statement among those issued gave you an error)
+#
+# If you have written a lot of code, you may want to automate the conversion task by writing a conversion script. Ideally,
+# your code uses consistent programming style conventions. If not, then you are probably better of rewriting it anyway,
+# or at least going through and manually regularizing it to use a consistent style.
+#
+# 17.3.6 REPLICATING DIFFERENT DATABASES TO DIFFERENT SLAVES
+#
+# There may be situations where you have a single master and want to replicate different databases to different slaves.
+# For example, you may want to distribute different sales data to different departments to help spread the load during
+# data analysis.
+#
+# A sample of this layout is shown in FIGURE 17.2, "USING REPLICATION TO REPLICATE DATABASES TO SEPARATE REPLICATION SLAVES"
+#
+# FIGURE 17.2, USING REPLICATION TO REPLICATE DATABASES TO SEPARATE REPLICATION SLAVES
+#
+# 								>> Database A >> MySQL SLAVE 1
+# 		//MySQL MASTER// ^
+# 								>> Database B >> MySQL SLAVE 2
+#							  v
+# 								>> Database C >> MySQL SLAVE 3
+#
+# You can achieve this separation by configuring the master and slaves as normal, and then limiting the binary log statements
+# that each slave processes by using the --replicate-wild-do-table configuration option on each slave.
+#
+# IMPORTANT:
+#
+# 		YOu should NOT use --replicate-do-db for this purpose when using statement-based replication, since statement-based
+# 		replication causes this option's affects to vary according to teh database that is currently selected.
+#
+# 		This applies to mixed-format replication as well, since this enables some updates to be replicated using the statement
+# 		-based format.
+#
+# 		However, it should be safe to use --replicate-do-db for this purpose if you are using row-based replication only,
+# 		since in this case teh currently selected database has no effect on the option's operation.
+#
+# For example, to support the separation as shown in FIGURE 17.2, "USING REPLICATION TO REPLICATE DATABASES TO SEPARATE 
+# REPLICATION SLAVES", you should configure each replication slave as follows, before executing START_SLAVE:
+#
+# 		) Replication slave 1 should use --replicate-wild-do-table=databaseA.%
+#
+# 		) Replication slave 2 should use --replicate-wild-do-table=databaseB.%
+#
+# 		) Replication slave 3 should use --replicate-wild-do-table=databaseC.%
+#
+# Each slave in this configuration receives the entire binary log from the master, but executes only those events from the
+# binary log that apply to the databases and tables included by the --replicate-wild-do-table option in effect on that slave.
+#
+# If you have data that must be synchronized to the slaves before replication starts, you have a number of choices:
+#
+# 		) Synchronize all the data to each slave, and delete teh databases, tables, or both that you do not want to keep
+#
+# 		) Use mysqldump to create a separate dump file for each database and load the appropriate dump file on each slave
+#
+# 		) use a raw data file dump and include only the specific files and databases that you need for each slave.
+#
+# NOTE:
+#
+# 		This does not work with InnoDB databases unless you use innodb_file_per_table
+#
+# 17.3.7 IMPROVING REPLICATION PERFORMANCE
+#
+# As the number of slaves connecting to a master increases, the load, although minimal, also increases, as each slave
+# uses a client connection to the master. Also, as each slave must receive a full copy of the master binary log,
+# the network load on the master may also increase and create a bottleneck.
+#
+# If you are using a large number of slaves connected to one master, and that master is also busy processing 
+# requests (for example, as part of a scale-out solution), then you may want to improve the performance of the
+# replication process.
+#
+# One way to improve the performance of the replication process is to create a deeper replication structure that
+# enables the master to replicate to only one slave, and for the remaining slaves to connect to this primary slave
+# for their individual replication requirements.
+#
+# A sample of this structure is shown in Figure 17.3, "USING AN ADDITIONAL REPLICATION HOST TO IMPROVE PERFORMANCE"
+#
+# FIGURE 17.3 USING AN ADDITIONAL REPLICATION HOST TO IMPROVE PERFORMANCE
+#
+# 			
+# 														> MySQL SLAVE 1
+# 		MySQL MASTER 1 ---> MySQL MASTER 2  > MySQL SLAVE 2
+# 														> MySQL SLAVE 3
+#
+# For htis to work, you msut configure the MySQL instances as follows:
+#
+# 		) Master 1 is the primary master where all changes and updates are written to the database. Binary logging
+# 			is enabled on both masters, which is the default.
+#
+# 		) Master 2 is the slave to the Master 1 that provides the replication functionality to the remainder of the
+# 			slaves in the replication structure.
+#
+# 			Master 2 is the only machine permitted to connect to Master 1. Master 2 has the --log-slave-updates option
+# 			enabled (which is the default).
+#
+# 			With this option, replication instructions from Master 1 are also written to Master 2's binary log so that
+# 			they can then be replicated to the true slaves.
+#
+# 		) Slave 1, Slave 2 and Slave 3 act as slaves to Master 2, and replicate the information from Master 2,
+# 			which actually consists of the upgrades logged on Master 1.
+#
+# The above solution reduces the client load and the network interface load on the primary master, which should
+# improve the overall performance of the primary master when used as a direct database solution.
+#
+# If your slaves are having trouble keeping up with the replication process on the master, there are a number
+# of options available:
+#
+# 		) IF possible, put the relay logs and the data files on different physical drives. To do this, use the
+# 			--relay-log option to specify the location of the relay log.
+#
+# 		) If heavvy disk I/O activity for reads of the binary log file and relay log files is an issue, consider
+# 			increasing the value of the rpl_read_size system variable. This system variable controls the minimum
+# 			amount of data read from the log files, and increasing it might reduce file reads and I/O stalls
+# 			when the file data is not currently cached by the OS.
+#
+# 			Note that a buffer the size of this value is allocated for each thread that reads from the binary
+# 			log and relay log files, including dump threads on masters and coordinator threads on slaves.
+#
+# 			Setting a large value might therefore have an impact on memory consumption for servers.
+#
+# 		) If the slaves are significantly slower than the master, you may want to divide up the responsibility
+# 			for replicating different databases to different slaves.
+#
+# 			See SECTION 17.3.6, "REPLICATING DIFFERENT DATABASES TO DIFFERENT SLAVES"
+#
+# 		) If your master makes use of transactions and you are not concerned about transaction support on your slaves,
+# 			use MyISAM or another nontransactional engine on the slaves.
+#
+# 			See SECTION 17.3.4, "USING REPLICATION WITH DIFFERENT MASTER AND SLAVE STORAGE ENGINES"
+#
+# 		) If your slaves are not acting as masters, and you ahve a potential solution in place to ensure that you can
+# 			bring up a master in the event of a failure, then you may switch off --log-slave-updates on the slaves.
+#
+# 			This prevents "dumb" slaves from also logging events they have executed into their own binary log.
+#
+# 17.3.8 SWITCHING MASTERS DURING FAILOVER
+#
+# You can tell a slave to change to a new master using the CHANGE_MASTER_TO statement. The slave does not check
+# whether the databases on the master are compatible with those on teh slave; it simply begins reading and executing
+# events from the specified coordinates in the new master's binary log.
+#
+# In a failover situation, all the servers in the group are typically executing the same events from the same binary
+# log file, so changing the source of the events should not affect the structure or integrity of the database,
+# provided that you exercise care in making the change.
+#
+# Slaves should be run with binary logging enabled (the --log-bin option), which is the default. If you are not
+# using GTIDs for replication, then the slaves should also be run with --skip-log-slave-updates (logging slave
+# updates is the default).
+#
+# In this way, the slave is ready to become a master without restarting the slave mysqld. Assume that you have the
+# structure shown in Figure 17.4, "REDUNDANCY USING REPLICATION, INITIAL STRUCTURE"
+#
+# FIGURE 17.4 REDUNDANCY USING REPLICATION, INITIAL STRUCTURE
+#
+# 		+------+ 					//WEB CLIENT// 								//WEB CLIENT//
+# 		|KEY	 | 							V 													V
+# 		+------+ 							Read/Write 							Read/Write
+# 		|Master| 										V 							V
+# 		|Slave | 										>>>> MySQL MASTER <<<<
+# 		|Client| 										v 			 v 		   v
+# 		+------+ 										v 			 v 			v
+#  														v 			 v 			v
+# 													<<<<<< 			 v 			>>>>>>
+# 											Replication 		Replication 		Replication
+# 													V 					 V 					V
+# 													V 					 V 					V
+# 											MySQL SLAVE 1 		MySQL SLAVE 2 			MySQL SLAVE 3
+#
+# In this diagram, the MySQL Master holds the master database, the MySQL Slave hosts are replication slaves, and the Web Client
+# machines are issuing database reads and writes. Web clients that issue only reads (and would normally be connected to the slaves)
+# are not shown, as they do not need to switch to a new server in the event of failure.
+#
+# For a more detailed example of a read/write scale-out replication structure, see SECTION 17.3.5, "USING REPLICATION FOR SCALE-OUT"
+#
+# Each MySQL Slave (Slave 1, Slave 2, and Slave 3) is a slave-running with binary logging enabled, and with --skip-log-slave-updates.
+#
+# Because updates received by a slave from the master are not logged in the binary log when --skip-log-slave-updates is specified,
+# the binary log on each slave is empty initially. If for some reason MySQL Master becomes unavailable, you can pick one of the slaves
+# to become the new master.
+#
+# For example, if you pick Slave 1, all Web Clients should be redirected to Slave 1, which writes the updates to its binary log.
+# Slave 2 and Slave 3 should then replicate from Slave 1.
+#
+# The reason for running the slave with --skip-log-slave-updates is to prevent slaves from receiving updates twice
+# in case you cause one of the slaves to become the new master. If Slave 1 has --log-slave-updates enabled,
+# which is the default, it writes any updates that it receives from Master in its own binary log.
+#
+# This means that, when Slave 2 changes from Master to Slave 1 as its master, it may receive updates from Slave 1
+# that it has already received from Master.
+#
+# Make sure that all slaves have processed any statements in their relay log. On each slave, issue STOP SLAVE IO_THREAD,
+# then check the output of SHOW_PROCESSLIST until you see Has read all relay log.
+#
+# When this is true for all slaves, they can be reconfigured to the new setup. On the slave Slave 1 being promoted
+# to become the master, issue STOP_SLAVE and RESET_MASTER.
+#
+# On the other slaves Slave 2 and Slave 3, use STOP_SLAVE and CHANGE MASTER TO MASTER_HOST='Slave1' (where 'Slave1'
+# represents the real host name of Slave 1)
+#
+# To use CHANGE MASTER TO, add all information about how to connect to Slave 1 from Slave 2 or Slave 3 (user, password, port)
+#
+# When issuing the CHANGE MASTER TO statement in this, there is no need to specify the name of the Slave 1 binary log file
+# or log position to read from, since the first binary log file and position 4, are the defaults.
+#
+# Finally, execute START_SLAVE on Slave 2 and Slave 3.
+#
+# Once the new replication setup is in place, you need to tell each Web Client to direct its statements to Slave 1.
+# From that point on, all update statements sent by Web Client to Slave 1 are written to the binary log of Slave 1,
+# which then contains every update statement sent to Slave 1 since Master died.
+#
+# The resulting server structure is shown in Figure 17.5, "REDUNDANCY USING REPLICATION, AFTER MASTER FAILURE"
+#
+# FIGURE 17.5 REDUNDANCY USING REPLICATION, AFTER MASTER FAILURE
+#
+# 		+-------+
+# 		|KEY 	  | 						// WEB CLIENT // 					// WEB CLIENT //
+# 		+-------+ 								V 										V
+# 		| Master| 								V 										V
+# 		| Slave | 			 				Read/Write 							Read/Write
+# 		| Client| 										V 							V
+# 		+-------+ 										V 							V
+# 															 	 MySQL Slave 1
+# 																 V 			 V
+# 																 V 			 V
+# 														Replication 		Replication
+# 														V 									 V
+# 														V 									 V
+# 												// MySQL SLAVE 2 // 			// MySQL SLAVE 3 //
+#
+# When Master becomes available again, you should make it a slave of Slave 1. To do this, issue on Master the same
+# CHANGE_MASTER_TO statement as that issued on Slave 2 and Slave 3 previously.
+#
+# Master then becomes a slave of Slave 1 and picks up the Web Client writes that it missed while it was offline.
+#
+# To make Master a master again, use the preceding procedure as if Slave 1 was unavailable and Master was to be the
+# new master. During this procedure, do not forget to run RESET_MASTER on Master before making Slave 1, Slave 2,
+# and Slave 3 slaves of Master.
+#
+# If you fail to do this, the slaves may pick up stale writes from the Web Client applications dating from before
+# the point at which Master became unavailable.
+#
+# You should be aware that there is no synchronization between slaves, even when they share the same master, and thus
+# some slaves might be considerably ahead of others. This means that in some cases the procedure outlined in the
+# previous example might not work as expected.
+#
+# In practice, however, relay logs on all slaves should be relatively close together.
+#
+# One way to keep applications informed about the location of the master is to have a dynamic DNS entry for the
+# master. With bind you can use nsupdate to update the DNS dynamically.
+#
+# 17.3.9 SETTING UP REPLICATION TO USE ENCRYPTED CONNECTIONS
+#
+# To use an encrypted connection for the transfer of the binary log required during replication, both the master
+# and the slave servers must support encrypted network connections. If either server does not suport encrypted
+# connections (because it has not been compiled or configured for them), replication through an encrypted
+# connection is not possible.
+#
+# Setting up encrypted connections for replication is similar to doing so for client/server connections.
+# You must obtain (or create) a suitable security certificate that you can use on the master, and a similar
+# certificate (from the same certificate authority) on each slave.
+#
+# You must also obtain suitable key files.
+#
+# For more information on setting up a server and client for encrypted connections, see SECTION
+# 6.3.1, "CONFIGURING MYSQL TO USE ENCRYPTED CONNECTIONS"
+#
+# To enable encrypted connections on the master, you must create or obtain suitable certificate
+# and key files, and then add the following configuration options to the master's configuration
+# within the [mysqld] section of the master's my.cnf file, changing the file names as necessary:
+#
+# 		[mysqld]
+# 		ssl-ca=cacert.pem
+# 		ssl-cert=server-cert.pem
+# 		ssl-key=server-key.pem
+#
+# The paths to the files may be relative or absolute; we recommend that you always use complete paths for this purpose.
+#
+# The options are as follows:
+#
+# 		) --ssl-ca: The path name of the Certificate Authority (CA) certificate file. (--ssl-capath is similar but specifies
+# 				the path name of a directory of CA certificate files)
+#
+# 		) --ssl-cert: The path name of the server public key certificate file. This certificate can be sent to the client
+# 			and authenticated against the CA certificate that it has.
+#
+# 		) --ssl-key: The path name of the server private key file.
+#
+# To enable encrypted connections on the slave, use the CHANGE_MASTER_TO statement. You can either name the slave
+# certificate and SSL private key files required for the encrypted connection in the [client] section of the slave's
+# my.cnf file, or you can explicitly specify that information using the CHANGE_MASTER_TO statement.
+#
+# For more information on the CHANGE_MASTER_TO statement, see SECTION 13.4.2.1, "CHANGE MASTER TO SYNTAX"
+#
+# 		) To name the slave certificate and key files using an option file, add the following lines to the [client]
+# 			section of the slave's my.cnf file, changing the file names as necessary:
+#
+# 				[client]
+# 				ssl-ca=cacert.pem
+# 				ssl-cert=client-cert.pem
+# 				ssl-key=client-key.pem
+#
+# 		) Restart the slave server, using the --skip-slave-start option to prevent the slave from connecting to the master.
+# 			Use CHANGE_MASTER_TO to specify the master configuration, and add the MASTER_SSL option to connect
+# 			using encryption:
+#
+# 				mysql> CHANGE MASTER TO
+# 					-> MASTER_HOST='master_hostname',
+# 					-> MASTER_USER='repl',
+# 					-> MASTER_PASSWORD='password',
+# 					-> MASTER_SSL=1;
+#
+# 			Setting MASTER_SSL=1 for a replication connection and then setting no further MASTER_SSL_xxx options
+# 			corresponds to setting --ssl-mode=REQUIRED for the client, as described in COMMAND OPTIONS FOR ENCRYPTED CONNECTIONS.
+#
+# 			With MASTER_SSL=1, the connection attempt only succeeds if an encrypted connection can be established. A replication
+# 			connection does not fall back to an unencrypted connection, so there is no setting corresponding to the 
+# 			--ssl-mode=PREFERRED setting for replication.
+#
+# 			If MASTER_SSL=0 is set, this corresponds to --ssl-mode=DISABLED
+#
+# 		) To name the slave certificate and SSL private key files using the CHANGE_MASTER_TO statement, if you did not
+# 			do this in the slave's my.cnf file, add the appropriate MASTER_SSL_xxx options:
+#
+# 				-> MASTER_SSL_CA = 'ca_file_name',
+# 				-> MASTER_SSL_CAPATH = 'ca_directory_name',
+# 				-> MASTER_SSL_CERT = 'cert_file_name',
+# 				-> MASTER_SSL_KEY = 'key_file_name',
+#
+# 			These options corespond to the --ssl-xxx options with the same names, as described in COMMAND OPTIONS FOR ENCRYPTED CONNECTIONS.
+# 			For these options to take effect, MASTER_SSL=1 must also be set. For a replication connection, specifying a value for
+# 			either of MASTER_SSL_CA or MASTER_SSL_CAPATH, or specifying these options in the slave's my.cnf file, corresponds
+# 			to setting --ssl-mode=VERIFY_CA.
+#
+# 			The connection attempt only succeeds if a valid matching Certificate Authority (CA) certificate is found using
+# 			the specified information.
+#
+# 		) To activate host name identitity verification, add the MASTER_SSL_VERIFY_SERVER_CERT option:
+#
+# 				-> MASTER_SSL_VERIFY_SERVER_CERT=1,
+#
+# 			This option corresponds to the --ssl-verify-server-cert option, which was deprecated from MySQl 5.7 and removed
+# 			in MySQL 8.0.
+#
+# 			For a replication connection, specifying MASTER_SSL_VERIFY_SERVER_CERT=1 corresponds to setting --ssl-mode=VERIFY_IDENTITY,
+# 			as described in COMMAND OPTIONS FOR ENCRYPTED CONNECTIONS.
+#
+# 			For this option to take effect, MASTER_SSL=1 must also be set.
+#
+# 			Host name identity verification does not work with self-signed certificates.
+#
+# 		) To activate certificate revocation list (CRL) checks, add the MASTER_SSL_CRL or MASTER_SSL_CRLPATH option:
+#
+# 				-> MASTER_SSL_CRL = 'crl_file_name',
+# 				-> MASTER_SSL_CRLPATH = 'crl_directory_name',
+#
+# 			These options correspond to the --ssl-xxx options with the same names, as described in COMMAND OPTIONS FOR ENCRYPTED
+# 			CONNECTIONS. If they are not specified, no CRL checking takes place.
+#
+# 		) To specify lists of ciphers and encryption protocols permitted by the slave for the replication connection,
+# 			add the MASTER_SSL_CIPHER and MASTER_TLS_VERSION options:
+#
+# 				-> MASTER_SSL_CIPHER = 'cipher_list',
+# 				-> MASTER_TLS_VERSION = 'protocol_list',
+#
+# 			The MASTER_SSL_CIPHER option specifies the list of ciphers permitted by the slave for the replication connection,
+# 			with one or more cipher names separated by colons. The MASTER_TLS_VERSION option specifies the encryption protocols
+# 			permitted by the slave for the replication connection.
+#
+# 			The format is like that for the tls_version system variable, with one or more comma-separated protocol versions.
+# 			The protocols and ciphers that you can use in these lists depend on the SSL library used to compile MySQL.
+#
+# 			For information about the formats and permitted values, see SECTION 6.3.2, "ENCRYPTED CONNECTION PROTOCOLS AND CIPHERS"
+#
+# 		) After the master information has been updated, start the slave replication process:
+#
+# 			mysql> START SLAVE;
+#
+# 			You can use the SHOW_SLAVE_STATUS statement to confirm that an encrypted connection was established successfully.
+#
+# 		) Requiring encrypted connections on the slave does not ensure that the master requires encrypted connections from slaves.
+# 			If you want to ensure that the master only accepts replication slaves that connect using encrypted connections,
+# 			create a replication user account on the master using the REQUIRE SSL option, then grant that user the 
+# 			REPLICATION_SLAVE privilege. For example:
+#
+# 				mysql> CREATE USER 'repl'@'%.example.com' IDENTIFIED BY 'password'
+# 					 -> REQUIRE SSL;
+# 				mysql> GRANT REPLICATION SLAVE ON *.*
+# 					 -> TO 'repl'@'%.example.com';
+#
+# 			If you have an existing replication user account on the master, you can add REQUIRE SSL to it with this statement:
+#
+# 				mysql> ALTER USER 'repl'@'%.example.com' REQUIRE SSL;
+#
+# 17.3.10 ENCRYPTING BINARY LOG FILES AND RELAY LOG FILES
+#
+# From MySQL 8.0.14, binary log files and relay log files can be encrypted, helping to protect these files and the potentially
+# sensitive data contained in them from being misused by outside attackers, and also from unauthorized viewing by users of
+# teh OS where they are stored.
+#
+# The encryption algorithm used for the files, the AES (Advanced Encryption Standard) cipher algorithm, is built in to MySQL
+# Server and cannot be configured.
+#
+# You enable this encryption on a MySQL server by setting the binlog_encryption system variable to ON. OFF is the default.
+#
+# The system variable sets encryption on for binary log files and relay log files. Binary logging does not need to be
+# enabled on the server to enable encryption, so you can encrypt the relay log files on a slave that has no binary log.
+#
+# To use encryption, a keyring plugin must be installed and configured to supply MySQL Server's keyring service. For
+# instructions to do this, see SECTION 6.4.4, "THE MYSQL KEYRING"
+#
+# Any supported keyring plugin can be used to store binary log encryption keys.
+#
+# When you first start the server with encryption enabled, a new binary log encryption key is generated before the
+# binary log and relay logs are initialized. This key is used to encrypt a file password for each binary log file
+# (if hte server has binary logging enabled) and relay log file (if the server has replication channels), and further
+# keys generated from the file passwords are used to encrypt the data in the files.
+#
+# The binary log encryption key that is currently in use on the server is called the binary log master key. The two
+# tier encryption key architechture means that the binary log master key can be rotated (replaced by a new master key)
+# as required,, and only the file password for each file needs to be re-encrypted with the new master key, not the
+# whole file.
+#
+# Relay log files are encrypted for all channels, including new channels that are created after encryption is activated.
+# The binary log index file and relay log index file are never encrypted.
+#
+# If you activate encryption while the server is running, a new binary log encryption key is generated at that time.
+# The exception is if encryption was active previously on the server and was then disabled, in which case the binary
+# log encryption key that was in use before is used again.
+#
+# The binary log file and relay log files are rotated immediately, and file passwords for the new files and all subsequent
+# binary log files and relay log files are encrypted using this binary log encryption key. Existing binary log files
+# and relay log files still present on the server are not encrypted, but you can purge them if they are no longer needed.
+#
+# If you deactivate encryption by changing the binlog_encryption system variable to OFF, the binary log file and
+# relay log files are rotated immediately and all subsequent logging is unencrypted.
+#
+# Previously encrypted files are not automatically decrypted, but the server is still able to read them.
+# The BINLOG_ENCRYPTION_ADMIN privilege is required to activate or deactivate encryption while the server
+# is running.
+#
+# Encrypted and unencrypted binary log files can be distinguished using the magic number at the start of the
+# file header for encrypted log files (0xFD62696E), which differs from that used for unencrypted log files
+# (0xFE62696E).
+#
+# The SHOW_BINARY_LOGS statement shows whether each binary log file is encrypted or unencrypted.
+#
+# When binary log files have been encrypted, mysqlbinlog cannot read them directly, but can read them from
+# the server using the --read-from-remote-server option.
+#
+# From MySQL 8.0.14, mysqlbinlog returns a suitable error if you attempt to read an encrypted binary
+# log file directly, but older versions of mysqlbinlog do not recognise the file as a binary log file at all.
+#
+# If you back up encrypted binary log files using mysqlbinlog, note that the copies of the files that are
+# generated using mysqlbinlog are storedi n an unencrypted format.  
+#
+# SCOPE OF BINARY LOG ENCRYPTION
+#
+# When binary log encryption is active for a MySQL server instance, the encryption coverage is as follows:
+#
+# 		) Data at rest that is written to the binary log files and relay log files is encrypted from the point
+# 			in time where encryption is started, using the two tier encryption architechture described above.
+#
+# 			Existing binary log files and relay log files that were present on the server when you started
+# 			encryption are not encrypted. You can purge these files when htey are no longer needed.
+#
+# 		) Data in motion in the replication event stream, which is sent to MySQL clients including
+# 			mysqlbinlog, is decrypted for transmission, and should therefore be protected in transit by
+# 			the use of connection encryption (see SECTION 6.3, "USING ENCRYPTED CONNECTIONS")
+#
+# 		) Data in use that is held in the binary log transaction and statement caches during a transaction is
+# 			in unencrypted format in the memory buffer that stores the cache. The data is written ot a temporary
+# 			file on disk if it exceeds the space available in the memory buffer.
+#
+# 			From MySQL 8.0.17, when binary log encryption is active on the server, temporary files used to hold
+# 			teh binary log cache are encrypted using AES-CTR (AES Counter mode) for stream encryption.
+#
+# 			because the temporary files are volatile and tied to a single process, they are encrypted
+# 			using single-tier encryption, using a randomly generated file password and initialization
+# 			vector that exist only in memory and are never stored on disk or in the keyring.
+#
+# 			After each transaction is committed, the binary log cache is reset: the memory buffer is
+# 			cleared, any temporary file used to hold the binary log cache is truncated, and a new file
+# 			password and initialization vector are randomly generated for use with the next transaction.
+#
+# 			This reset also takes place when the server is restarted after a normal shutdown
+# 			or an unexpected halt.
+#
+# 			NOTE:
+#
+# 				If you use LOAD_DATA when binlog_format=STATEMENT is set, which is not recommended
+# 				as the statement is considered unsafe for statement-based replication, a temporary file
+# 				containing the data is created on the replication slave where the changes are applied.
+#
+# 				These temporary files are not encrypted when binary log encryption is active on
+# 				the server. Use row-based or mixed binary logging format instead, which do not
+# 				create the temporary files.
+#
+# BINARY LOG ENCRYPTION KEYS
+#
+# The binary log encryption keys used to encrypt the file passwords for the log file are 256-bit keys
+# that are generated specifically for each MySQL server instance using MySQL Server's keyring service
+# (see SECTION 6.4.4, "THE MYSQL KEYRING")
+#
+# The keyring service handles the creation, retrieval, and deletion of the binary log encryption keys.
+# A server instance only creates and removes keys generated for itself, but it can read keys generated
+# for other instances if they are stored in the keyring, as in the case of a server instance that has
+# been cloned by file copying.
+#
+# IMPORTANT:
+#
+# 		The binary log encryption keys for a MySQL server instance must be included in your backup and recovery
+# 		procedures, because if the keys required to decrypt the file passwords for current and retained
+# 		binary log files or relay log files are lost, it might not be possible to start the server.
+#
+# The format of binary log encryption keys in the keyring is as follows:
+#
+# 		MySQLReplicationKey_{UUID}_{SEQ_NO}
+#
+# For example:
+#
+# 		MySQLReplicationKey_00508583-b5ce-11e8-a6a5-0010e0734796_1
+#
+# {UUID} is the true UUID generated by the MySQL server (the value of the server_uuid system variable)
+#
+# {SEQ_NO} is the sequence number for the binary log encryption key, which is incremented by 1 for each new
+# key that is generated on the server.
+#
+# The binary log encryption key that is currently in use on the server is called the binary log master key.
+# The sequence number for the current binary log master key is stored in the keyring. The binary log master key
+# is used to encrypt each new log file's file password, which is a randomly generated 32-byte file password
+# specific to the log file that is used to encrypt the file data.
+#
+# The file password is encrypted using AES-CBC(AES Cipher Block Chaining mode) with the 256-bit binary log
+# encryption key and a random initialization vector (IV), and is stored in the log file's file header.
+#
+# THe file data is encrypted using AES-CTR (AES Counter mode) with a 256-bit key generated from the file
+# password and a nonce also generated from the file password. It is technically posible to decrypt an
+# encrypted file offline, if the binary log encryption key used to encrypt the fiel password is known,
+# by using tools available in the OpenSSL cryptography toolkit.
+#
+# If you use file copying to clone a MySQL server instance that has encryption active so its binary log
+# files and relay log files are encrypted, ensure that the keyring is also copied, so that hte clone
+# server can read the binary log encryption keys from the source server.
+#
+# When encryption is activated on the clone server (either at startup or subsequently), the clone server
+# recognizes that the binary log encryption keys used with the copied files include the generated UUID
+# of the source server.
+#
+# It automatically generates a new binary log encryption key using its own generated UUID, and uses this
+# to encrypt the file passwords for subsequent binary log files and relay log files.
+#
+# The copied files continue to be read using the source server's keys.
+#
+# MASTER KEY ROTATION
+#
+# When binary log encryption is enabled, you can rotate the binary log master key at any time while the server
+# is running by issuing ALTER_INSTANCE_ROTATE_BINLOG_MASTER_KEY.
+#
+# When the binary log master key is rotated manually using this statement, the passwords for the new and subsequent
+# files are encrypted using the new binary log master key, and also the file paswords for existing encrypted binary log
+# files and relay log files are re-encrypted using the new binary log master key, so the encryption is renewed completely.
+#
+# You can rotate the binary log master key on a regular basis to comply with your organization's security policy, and also
+# if you suspect that teh current or any of the previous binary log master keys might have been compromised.
+#
+# When you rotate the binary log master key manually, MySQL Server takes the following actions in sequence:
+#
+# 		1. A new binary log encryption key is generated with the next available sequence number, stored on the keyring,
+# 			and  used as the new binary log master key.
+#
+# 		2. The binary log and relay log files are rotated on all channels.
+#
+# 		3. The new binary log master key is used to encrypt the file passwords for the new binary log and relay log files,
+# 			and subsequent files until the key is changed again.
+#
+# 		4. The file passwords for existing encrypted binary log files and relay log files on the server are re-encrypted
+# 			in turn using the new binary log master key, starting with the most recent files.
+#
+# 			ANy unencrypted files are skipped.
+#
+# 		5. Binary log encryption keys that are no longer in use for any files after the re-encryption process are removed from the keyring.
+#
+# The BINLOG_ENCRYPTION_ADMIN privilege is required to issue ALTER_INSTANCE_ROTATE_BINLOG_MASTER_KEY, and the statement cannot
+# be used if the binlog_encryption system variable is set to OFF.
+#
+# As the final step of the binary log master key rotation process, all binary log encryption keys that no longer apply to any retained
+# binary log files or relay log files are cleaned up from the keyring.
+#
+# If a retained binary log file or relay log file cannot be initialized for re-encryption, the relevant binary log encryption
+# keys are not deleted in case the files can be recovered in the future.
+#
+# For example, this might be the case if a file listed in a binary log index file is currently unreadable, or if a channel
+# fails to initialize. If the server UUID changes, for example because a backup created using MySQL Enterprise Backup is
+# used to set up a new replication slave, issuing ALTER_INSTANCE_ROTATE_BINLOG_MASTER_KEY on the server does not delete
+# any earlier binary log encryption keys that include the original server UUID.
+#
+# If any of the first four steps of the binary log master key rotation process cannot be completed correctly, an error message
+# is issued explaining the situation and the consequences for teh encryption status of the binary log files and relay log files.
+#
+# Files that were previously encrypted are always left in an encrypted state, but their file passwords might still be 
+# encrypted using an old binary log master key.
+#
+# If you see these errors, first retry the process by issuing ALTER_INSTANCE_ROTATE_BINLOG_MASTER_KEY again. Then investigate
+# teh status of individual files to see what is blocking the process, especially if you suspect that the current or any of
+# the previous binary log master keys might have been compromised.
+#
+# If the final step of the binary log master key rotation process cannto be completed correctly, aw arning message is issued
+# explaining the situation.
+#
+# The warning message identifies whether the process could not clean up the auxiliary keys in the keyring for rotating the
+# binary log master key, or could not clean up unused binary log encryption keys. You can choose to ignore the message
+# as the keys are auxilliary keys or no longer in use, or you can issue ALTER_INSTANCE_ROTATE_BINLOG_MASTER_KEY again
+# to retry the process.
+#
+# If the server stops and is restarted with binary log encryption still set to ON during the binary log master key rotation
+# process, new binary log files and relay log files after the restart are encrypted using the new binary log master key.
+#
+# However, the re-encryption of existing files is not continued, so files that did not get re-encrypted before the server
+# stopped are left encrypted using the previous binary log master key.
+#
+# TO complete re-encryption and clean up unused binary log encryption keys, issue ALTER_INSTANCE_ROTATE_BINLOG_MASTER_KEY
+# again after the restart.
+#
+# ALTER_INSTANCE_ROTATE_BINLOG_MASTER_KEY actions are not written ot the binary log and are not executed on replication
+# slaves. Binary log master key rotation can therefore be carried out in replication environments including a mix of MysQL
+# versions.
+#
+# To schedule regular rotation of the binary log master key on all applicable master and slave servers, you can enable
+# the MySQL Event Scheduler on each server and issue the ALTER_INSTANCE_ROTATE_BINLOG_MASTER_KEY statement using a 
+# CREATE_EVENT statement.
+#
+# If you rotate the binary log master key because you suspect that the current or any of the previous binary log master keys
+# might have been compromised, issue the statement on every applicable master and slave server.
+#
+# Issuing the statement on individual servers ensures that you can verify immediate compliance, even in the case of slaves
+# that are lagging, belong to multiple replication topologies, or are not currently active in the replication topology
+# but have binary log and relay log files.
+#
+# The binlog_rotate_encryption_master_key_at_startup system variable controls whether the binary log master key is automatically
+# rotated when the server is restarted. If this system variable is set to ON, a new binary log encryption key is generated
+# and used as the new binary log master key whenever the server is restarted.
+#
+# If it is set to OFF, which is the default, the existing binary log master key is used again after the restart.
+#
+# When the binary log master key is rotated at startup, the file passwords for the new binary og and relay log files are
+# encrypted using the new key. The file passwords for the existing encrypted binary log files and relay log files
+# are not re-encrypted, so they remain encrypted using the old key, which remains available on the keyring.
+#
+# 17.3.11 SEMISYNCHRONOUS REPLICATION
+#
+# https://dev.mysql.com/doc/refman/8.0/en/replication-semisync.html
+#
 #
