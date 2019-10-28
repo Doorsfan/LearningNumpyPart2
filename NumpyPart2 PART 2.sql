@@ -73401,6 +73401,384 @@
 #
 # 17.3.11 SEMISYNCHRONOUS REPLICATION
 #
-# https://dev.mysql.com/doc/refman/8.0/en/replication-semisync.html
+# 17.3.11.1 SEMISYNCHRONOUS REPLICATION ADMINISTRATIVE INTERFACE
+# 17.3.11.2 SEMISYNCHRONOUS REPLICATION INSTALLATION AND CONFIGURATION
+# 17.3.11.3 SEMISYNCHRONOUS REPLICATION MONITORING
 #
+# In addition to the built-in asynchronous replication, MySQL 8.0 supports an interface to semisynchronous replication that is
+# implemented by plugins. This section discusses what semisynchronous replication is and how it works. The following sections
+# cover the administrative interface to semisynchronous replicaton and how to install, configure and monitor it.
 #
+# MySQL replication by default is asynchronous. The master writes events to its binary log but does not know whether or when
+# a slave has retrieved and processed them. With asynchronous replication, if the master crashes, transactions that it has
+# committed might not have been transmitted to any slave.
+#
+# Consequently, failover from master to slave in this case may result in failover to a server that is missing transactions
+# relative to the master.
+#
+# Semisynchronous replication can be used as an alternative to asynchronous replication:
+#
+# 		) A slave indicates whether it is semisynchronous-capable when it connects to the master.
+#
+# 		) If semisynchronous replicaton is enabled on the master side and there is at least one semisynchronous slave, a thread
+# 			that performs a transaction commit on the master blocks and waits until at least one semisynchronous slave acknowledges
+# 			that it has received all events for the transaction, or until a timeout occurs.
+#
+# 		) The slave acknowledges receipt of a transaction's events only after the events have been written to its relay log and flushed to disk.
+#
+# 		) If a timeout occurs without any slave having acknowledged the transaction, the master reverts to asynchronous replication.
+# 			When at least one semisynchronous slave catches up, the master returns to semisynchronous replication.
+#
+# 		) Semisynchronous replication must be enabled on both the master and slave sides. If semisynchronous replication is disabled
+# 			on the master, or enabled on the master but on no slaves, the master uses asynchronous replication.
+#
+# While the master is blocking (waiting for acknowledgement from a slave), it does not return to the session that performed
+# the transaction. When the block ends, the master returns to the session, which then can proceed to execute other statements.
+#
+# At this point, the transaction has committed on the master side, and receipt of its events has been acknowledged by at least
+# one slave.
+#
+# The number of slave acknowledgements the master must receive per transaction before proceeding is configurable using the
+# rpl_semi_sync_master_wait_for_slave_count system variable. The default value is 1.
+#
+# Blocking also occurs after rollbacks that are written to the binary log, which occurs when a transaction that modifies
+# nontransactional tables is rolled back. The rolled-back transaction is logged even though it has no effect for transactional
+# tables because the modifications to the nontransactional tables cannot be rolled back and must be sent to slaves.
+#
+# For statements that do not occur in transactional context (that is, when no transaction has been started with START_TRANSACTION
+# or SET_autocommit_=_0), autocommit is enabled and each statement commits implicitly. With semisynchronous replication, the master
+# blocks for each such statement, just as it does for explicit transaction commits.
+#
+# To understand what hte "semi" in "semisynchronous replication" means, compare it with asynchronous and fully synchronous replication:
+#
+# 		) With asynchronous replication, the master writes events to its binary log and slaves request them when they are ready.
+# 			There is no guarantee that any event will ever reach any slave.
+#
+# 		) With fully synchronous replication, when a master commits a transaction, all slaves also will have committed the transaction before
+# 			the master returns to the session that performed the transaction. The drawback of this is that there might be a lot of delay to
+# 			complete a transaction.
+#
+# 		) Semisynchronous replication falls between asynchronous and fully synchronous replication. The master waits only until at least one
+# 			slave has received and logged the events. It does not wait for all slaves to acknowledge receipt, and it requires only receipt,
+# 			not that the events have been fully executed and committed on the slave side.
+#
+# Compared to asynchronous replication, semisynchronous replication provides improved data integrity because when a commit returns
+# successfully, it is known that hte data exists in at least two palces.
+#
+# Until a semisynchronous master receives acknowledgement from the number of slaves configured by rpl_semi_sync_master_wait_for_slave_count,
+# the transaction is on hold and not committed.
+#
+# Semisynchronous replication also places a rate limit on busy sessions by constraining the speed at which binary log events can be sent
+# from master to slave. When one user is too busy, this will slow it down, which is useful in some deployment situations.
+#
+# Semisynchronous replication does have some performance impact because commits are slower due to the need to wait for slaves. This is
+# the tradeoff for increased data integrity. The amount of slowdown is at least the TCP/IP roundtrip time to send the commit to the slave
+# and wait for the acknowledgement of receipt by the slave. THis means that semisynchronous replication works best for close servers
+# communicating over fast networks, and worst for distant servers communicating over slow networks.
+#
+# The rpl_semi_sync_master_wait_point system variable controls the point at which a semisynchronous replication master waits for
+# slave acknowledgement of transaction receipt before returning a status to the client that committed the transaction.
+#
+# These values are permitted:
+#
+# 		) AFTER_SYNC (the default): The master writes each transaction to its binary log and the slave, and syncs the binary log to disk.
+# 			The master waits for slave acknowledgement of transaction receipt after the sync. Upon receiving acknowledgement, the master
+# 			commits the transaction to the storage engine and returns a result to the client, which then can proceed.
+#
+# 		) AFTER_COMMIT: The master writes each transaction to its binary log and the slave, syncs the binary log, and commits the transaction
+# 			to the storage engine. The master waits for slave acknowledgement of transaction receipt after the commit.
+#
+# 			Upon receiving acknowledgement, the master returns a result to the client, which then can proceed.
+#
+# The replication characteristics of these settings differ as follows:
+#
+# 		) With AFTER_SYNC, all clients see the committed transaction at the same time: After it has been acknowledged by the slave and
+# 			committed to the storage engine on the master. Thus, all clients see the same data on the master.
+#
+# 			In the event of master failure, all transactions committed on the master have been replicated to the slave
+# 			(saved to its relay log). A crash of the master and failover to the slave is lossless because the slave is up to date.
+#
+# 		) With AFTER_COMMIT, the client issuing the transaction gets a return status only after the server commits to the storage engine
+# 			and receives slave acknowledgement.
+#
+# 			After the commit and beore slave acknowledgement, other clients can see the committed transaction before the committing client.
+#
+# 			If something goes wrong such that the slave does not process the transaction, then in the event of a master crash and failover
+# 			to the slave, it is possible that such clients will see a loss of data relative to what they saw on the master.
+#
+# 17.3.11.1 SEMISYNCHRONOUS REPLICATION ADMINISTRATIVE INTERFACE
+#
+# The administrative interface to semisynchronous replication has several components:
+#
+# 		) Two plugins implement semisynchronous capability. There is one plugin for the master side and one for the slave side.
+#
+# 		) System variables control plugin behavior. Some examples:
+#
+# 			) rpl_semi_sync_master_enabled
+#
+# 				Controls whether semisynchronous replication is enabled on the master. To enable or disable the plugin, set this
+# 				variable to 1 or 0, respectively. The default is 0 (off)
+#
+# 			) rpl_semi_sync_master_timeout
+#
+# 				A value in miliseconds that controls how long the master waits on a commit for acknowledgement from a slave before
+# 				timing out and reverting to asynchronous replication. The default value is 10000 (10 seconds)
+#
+# 			) rpl_semi_sync_slave_enabled
+#
+# 				Similar to rpl_semi_sync_master_enabled, but controls the slave plugin.
+#
+# All rpl_semi_sync_xxx system variables are described at SECTION 5.1.8,, "SERVER SYSTEM VARIABLES"
+#
+# 		) Status variables enable semisynchronous replication monitoring. Some examples:
+#
+# 			) Rpl_semi_sync_master_clients
+#
+# 				The number of semisynchronous slaves.
+#
+# 			) Rpl_semi_sync_master_status
+#
+# 				Whether semisynchronous replication currently is operational on the master. The value is 1 if the plugin has been enabled
+# 				and a commit acknowledgement has not occurred. It is 0 if the plugin is not enabled or the master has fallen back to asynch
+# 				replication due to commit acknowledgement timeout.
+#
+# 			) Rpl_semi_sync_master_no_tx
+#
+# 				The number of commits that were not acknowledged successfully by a slave
+#
+# 			) Rpl_semi_sync_master_yes_tx
+#
+# 				The number of commits that were acknowledged successfully by a slave
+#
+# 			) Rpl_semi_sync_slave_status
+#
+# 				Whether semisynchronous replication currently is operational on the slave. This is 1 if the plugin has been enabled and the slave
+# 				I/O thread is running, 0 otherwise.
+#
+# All Rpl_semi_sync_xxx status variables are described at SECTION 5.1.10, "SERVER STATUS VARIABLES"
+#
+# The system and status variables are available only if the appropriate master or slave plugin has been installed with INSTALL_PLUGIN.
+#
+# 17.3.11.2 SEMISYNCHRONOUS REPLICATION INSTALLATION AND CONFIGURATION
+#
+# Semisynchronous replication is implemented using plugins, so the plugins must be installed into the server to make them available.
+# After a plugin has been installed, you control it by means of the system variables associated with it. These system variables
+# are unavailable until the associated plugin has been installed.
+#
+# This section describes how to install the semisynchronous replication plugins. For general information about installing plugins,
+# see SECTION 5.6.1, "INSTALLING AND UNINSTALLING PLUGINS"
+#
+# To use semisynchronous replication, the following requirements must be satisfied:
+#
+# 		) The capability of installing plugins requires a MysQL server that supports dynamic loading. To verify this, check that the
+# 			value of the have_dynamic_loading system variable is YES.
+#
+# 			Binary distributions should support dynamic loading.
+#
+# 		) Replication must already be working, see SECTION 17.1, "CONFIGURING REPLICATION"
+#
+# 		) There must not be multiple replication channels configured. Semisynchronous replication is only compatible with the default
+# 			replication channel. See SECTION 17.2.3, "REPLICATION CHANNELS"
+#
+# To set up semisynchronous replication, use the following instructions. The INSTALL_PLUGIN, SET_GLOBAL, STOP_SLAVE and START_SLAVE
+# statements mentioned here require the REPLICATION_SLAVE_ADMIN or SUPER privilege.
+#
+# MySQL distirbutions include semisynchronous replication plugin files for the master side and the slave side.
+#
+# To be usable by a master or slave server, the appropriate plugin library file must be located in the MySQL plugin directory
+# (the directory named by the plugin_dir system variable). If necessary, configure the plugin directory location by setting
+# the value of plugin_dir at server startup.
+#
+# The plugin library file base names are semisync_master and semisync_slave. The file name suffix differs per platform
+# (for example, .so for Unix and Unix-like systems, .dll for Windows)
+#
+# The master plugin library file must be present in the plugin directory of the master server. The slave plugin library
+# file must be present in the plugin directory of each slave server.
+#
+# To load the plugins, use the INSTALL_PLUGIN statement on the master and on each slave that is to be semisynchronous
+# (adjust the .so suffix for your platform as necessary)
+#
+# On the master:
+#
+# 		INSTALL PLUGIN rpl_semi_sync_master SONAME 'semisync_master.so';
+#
+# On each slave:
+#
+# 		INSTALL PLUGIN rpl_semi_sync_slave SONAME 'semisync_slave.so';
+#
+# If an attempt to isntall a plugin results in an error on Linux similar to that shown here,
+# you must install libimf:
+#
+# 		mysql> INSTALL PLUGIN rpl_semi_sync_master SONAME 'semisync_master.so';
+# 		ERROR 1126 (HY000): Can't open shared library
+# 		'/usr/local/mysql/lib/plugin/semisync_master.so'
+# 		(errno: 22 libimf.so: cannot open shared object file:
+# 		No such file or directory)
+#
+# You can obtain libimf from https://<LINK>
+#
+# To see which plugins are installed, use the SHOW_PLUGINS statement, or query the INFORMATION_SCHEMA.PLUGINS
+# table.
+#
+# To verify plugin installation, examine the INFORMATION_SCHEMA.PLUGINS table or use the SHOW_PLUGINS statement
+# (see SECTION 5.6.2, "OBTAINING SERVER PLUGIN INFORMATION"). For example:
+#
+# 		mysql> SELECT PLUGIN_NAME, PLUGIN_STATUS
+# 				 FROM INFORMATION_SCHEMA.PLUGINS
+# 				 WHERE PLUGIN_NAME LIKE '%semi%';
+# 		+---------------------+--------------+
+# 		| PLUGIN_NAME 			 | PLUGIN_STATUS|
+# 		+---------------------+--------------+
+# 		| rpl_semi_sync_master| ACTIVE 		 |
+# 		+---------------------+--------------+
+#
+# If the plugin failed to initialize, check the server error log for diagnostic messages.
+#
+# After a semisynchronous replication plugin has been installed, it is disabled by default. The plugins
+# must be enabled both on the master side and the slave side to enable semisynchronous replication.
+#
+# If only one side is enabled, replication will be asynch.
+#
+# To control whether an installed plugin is enabled, set the appropriate system variables. You can set
+# these variables at runtime using SET_GLOBAL, or at server startup on the command line or in an option file.
+#
+# At runtime, these master-side system variables are available:
+#
+# 		SET GLOBAL rpl_semi_sync_master_enabled = {0|1};
+# 		SET GLOBAL rpl_semi_sync_master_timeout = N;
+#
+# On the slave side, this system variable is available:
+#
+# 		SET GLOBAL rpl_semi_sync_slave_enabled = {0|1};
+#
+# For rpl_semi_sync_master_enabled or rpl_semi_sync_slave_enabled, the value should be 1 to enable semisynchronous
+# replication or 0 to disable it. By default, these variables are set to 0.
+#
+# For rpl_semi_sync_master_timeout, the value N is given in milliseconds. The default value is 10000 (10 seconds)
+#
+# If oyu enable semisynchronous replication on a slave at runtime, you must also start the slave I/O thread (stopping
+# it first if it is already running) to cause the slave to connect to the master and register as a semisynchronous slave:
+#
+# 		STOP SLAVE IO_THREAD;
+# 		START SLAVE IO_THREAD;
+#
+# If the I/O thread is already running and you do not restart it, the slave continues to use asynch replication.
+#
+# At server startup, the variables that control semisynch replication can be set as command-line options or in
+# an option file. A setting listed in an option file takes effect each time the server starts.
+#
+# For example, you can set the variables in my.cnf files on the master and slave sides as follows.
+#
+# On thhe master:
+#
+# 		[mysqld]
+# 		rpl_semi_sync_master_enabled=1
+# 		rpl_semi_sync_master_timeout=1000 # 1 second
+#
+# On each slave:
+#
+# 		[mysqld]
+# 		rpl_semi_sync_slave_enabled=1
+#
+# 17.3.11.3 SEMISYNCHRONOUS REPLICATION MONITORING
+#
+# The plugins for the semisynchronous replication capability expose several system and status variables that you can examine
+# to determine its configuration and operational state.
+#
+# The system variable reflect how semisynchronous replication is configured. To check their values, use SHOW_VARIABLES:
+#
+# 		mysql> SHOW VARIABLES LIKE 'rpl_semi_sync%';
+#
+# The status variables enable you to monitor the operation of semisynchronous replication. To check their values,
+# use SHOW_STATUS:
+#
+# 		mysql> SHOW STATUS LIKE 'Rpl_semi_sync%';
+#
+# When the master switches between asynchronous or semisynchronous replication due to commit-blocking timeout or a slave
+# catching up, it sets the value of the Rpl_semi_sync_master_status status variable appropriately. Automatic fallback from
+# semisynchronous to asynch replication on the master means that it is possible for the rpl_semi_sync_master_enabled system
+# variable to have a value of 1 on the master side even when semisynchronous replication is in fact not operational at the moment.
+#
+# You can monitor the Rpl_semi_sync_master_status status variable to determine whether the master currently is using asynch
+# or semisynch replication.
+#
+# To see how many semisynch slaves are connected, check Rpl_semi_sync_master_clients
+#
+# The number of commits that have been acknowledged successfully or unsuccessfully by slaves are indicated by the
+# Rpl_semi_sync_master_yes_tx and Rpl_semi_sync_master_no_tx variables.
+#
+# On the slave side, Rpl_semi_sync_slave_status indicates whether semisynchronous replication currently is operational.
+#
+# 17.3.12 DELAYED REPLICATION
+#
+# MySQL supports delayed replication such that a slave server deliberately executes transactions later than the master
+# by at least a specified amount of time. This section describes how to configure a replication delay on a slave, and how
+# to monitor replication delay.
+#
+# In MySQL 8.0, the method of delaying replication depends on two timestamps, immediate_commit_timestamp and
+# original_commit_timestamp (see REPLICATION DELAY TIMESTAMPS). If all servers in the replication topology are running
+# MySQL 8.0.1 or above, delayed replication is measured using these timestamps. If either the immediate master or slave
+# is not using these timestamps, the implementation of delayed replication from MySQL 5.7 is used (see DELAYED REPLICATION)
+#
+# This section describes delayed replication between servers which are all using these timestamps.
+#
+# The default replication delay is 0 seconds. Use the CHANGE MASTER TO MASTER_DELAY=N statement to set the delay to N
+# seconds. A transaction received from the master is not executed until at least N Seconds later than its commit
+# on the immediate master.
+#
+# The delay happens per transaction (not event as in previous MySQL versions) and the actual delay is imposed
+# only on gtid_log_event or anonymous_gtid_log_event. The other events in the transaction always follow these
+# events without any waiting time imposed on them.
+#
+# NOTE:
+#
+# 		START_SLAVE and STOP_SLAVE take effect immediately and ignore any delay. RESET_SLAVE resets the delay to 0.
+#
+# THe replication_applier_configuration Performance Schema table contains the DESIRED_DELAY column which shows the
+# delay configured using the MASTER_DELAY option. The replication_applier_status Performance Schema table contains the
+# REMAINING_DELAY column which shows the number of delay seconds remaining.
+#
+# Delayed replication can be used for several purposes:
+#
+# 		) To protect against user mistakes on the master. With a delay you can roll back a delayed slave to the time just before the mistake.
+#
+# 		) To test how the system behaves when there is a lag. For example, in an application, a lag might be caused by a heavy load on the
+# 			slave. However, it can be difficult to generate this load level. Delayed replication can simulate the lag without having
+# 			to simulate the load.
+#
+# 			It can also be used to debug conditions related to a lagging slave.
+#
+# 		) To inspect what the database looked like in the past, without having to reload a backup. For example, by configuring a slave with a 
+# 			delay of one week, if you then need to see what the database looked like before the last few days worth of development,
+# 			the delayed slave can be inspected.
+#
+# REPLICATION DELAY TIMESTAMPS
+#
+# MySQL 8.0 provides a new method for measuring delay (also referred to as replication lag) in replication topologies that depends
+# on the following timestamps associated with the GTID of each transaction (instead of each event) written to the binary log.
+#
+# 		) original_commit_timestamp: the number of microseconds since epoch when the transaction was written (committed) to the binary
+# 			log of the original master.
+#
+# 		) immediate_commit_timestamp: the number of microseconds since epoch when the transaction was written (committed) to the
+# 			binary log of the immediate master.
+#
+# The output of mysqlbinlog displays these timestamps in two formats, microseconds from epoch and also TIMESTAMP format, which is
+# based on the user defined time zone for better readability. For example:
+#
+# 		#170404 10:48:05 server id 1 end_log_pos 233 CRC32 0x016ce647 		GTID 	last_committed=0
+# 		\ sequence_number=1 		original_committed_timestamp=1491299285661130 		immediate_commit_timestamp=1491299285843771
+# 		# original_commit_timestamp=1491299285661130 (2017-04-04 10:48:05.661130 WEST)
+# 		# immediate_commit_timestamp //etc//
+# 			/*!80001 SET @@SESSION.original_commit_timestamp=1491299285661130*//*!*/;
+# 				SET @@SESSION.GTID_NEXT= 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa:1'/*!*/;
+# 		# at 233
+#
+# As a rule, the original_commit_timestamp is always the same on all replicas where the transaction is applied. In master-slave
+# replication, the original_commit_timestamp of a transaction in the (original) master's binary log is always the same as its
+# immediate_commit_timestamp. In the slave's relay log, the original_commit_timestamp and immediate_commit_timestamp of the 
+# transaction are the same as in the master's binary log; whereas in its own binary log, the transaction's immediate_commit_timestamp
+# corresponds to when the slave committed the transaction.
+#
+# https://dev.mysql.com/doc/refman/8.0/en/replication-delayed.html
+# 
