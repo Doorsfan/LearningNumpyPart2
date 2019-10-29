@@ -73780,5 +73780,389 @@
 # transaction are the same as in the master's binary log; whereas in its own binary log, the transaction's immediate_commit_timestamp
 # corresponds to when the slave committed the transaction.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/replication-delayed.html
+# In a Group Replication setup, where the original master is a member of a group, the original_commit_timestamp is generated
+# when the transaction is ready to be committed. In other words, when it finished Executing on the original master and its
+# write set is ready to be sent to all members of the group for certification.
+#
+# Therefore, the same original_commit_timestamp is replicated to all servers (regardless of wether it is a group member or slave
+# replication from a member) applying the transaction and each stores in its binary log the local commit time using immediate_commit_timestamp.
+#
+# View change events, which are exclusive to Group Replication, are a special case. Transactions containing these events are generated
+# by each server but share the same GTID (so, they are not first executed in a master and then replicated to the group, but all members
+# of the group execute and apply the same transaction).
+#
+# Since there is no original master, these transactions have their original_commit_timestamp set to zero.
+#
+# MONITORING REPLICATION DELAY
+#
+# one of the most common ways to monitor replication delay (lag) in previous MySQL versions was by relying on the Seconds_Behind_Master
+# field in the output of SHOW SLAVE STATUS. However, this metric is not suitable when using replication topologies more complex than
+# the traditional master-slave setup, such as Group Replication.
+#
+# The addition of immediate_commit_timestamp and original_commit_timestamp to MySQL 8 provides a much finer degree of information
+# about replication delay. The recommended method to monitor replication delay in a topology that supports these timestamps is using
+# the following Performance Schema Tables.
+#
+# 		) replication_connection_status: current status of the connection to the master, provides information on the last and current
+# 			transaction the connection thread queued into the relay log
+#
+# 		) replication_applier_status_by_coordinator: current status of the coordinator thread that only displays information when using a multithreaded slave,
+# 			provides information on the last transacction buffered by the coordinator thread to a worker's queue, as well as the transaction
+# 			it is currently buffering.
+#
+# 		) replication_applier_status_by_worker: current status of the thread(s) applying transactions received from the master,
+# 			provides information about the transactions applied by the applier thread, or by each worker when using a multithreaded slave.
+#
+# Using these tables you can monitor information about the last transaction the corresponding thread processed and the transaction
+# that thread is currently processing. This information comprises:
+#
+# 		) a transaction's GTID
+#
+# 		) a transaction's original_commit_timestamp and immediate_commit_timestamp, retrieved from the slave's relay log
+#
+# 		) The time a thread started processing a transaction
+#
+# 		) for the last processed transaction, the time the thread finished processing it
+#
+# In addition, to the performance Schema tables, the output of SHOW_SLAVE_STATUS has three fields that show:
+#
+# 		) SQL_Delay: A nonnegative integer indicating the replication delay configured using CHANGE MASTER TO MASTER_DELAY=N,
+# 			measured in seconds
+#
+# 		) SQL_Remaining_Delay: When Slave_SQL_Running_State is Waiting until MASTER_DELAY seconds after master executed event,
+# 			this field contains an integer indicating the number of sedconds left of the delay. At other times, this field is NULL.
+#
+# 		) Slave_SQL_Running_State: A string indicating the state of the SQL thread (analogous to Slave_IO_State).
+# 			The value is identical to the State value of the SQL thread as displayed by SHOW_PROCESSLIST.
+#
+# When the slave SQL thread is waiting for the delay to elapse before executing an event, SHOW_PROCESSLIST displays
+# its State value as Waiting until MASTER_DELAY seconds after master executed event.
+#
+# 17.5 REPLICATION NTOES AND TIPS
+#
+# 17.5.1 Replication Features and Issues
+# 17.5.2 Replication Compatibility between MySQL versions
+# 17.5.3 Upgrading a Replication Setup
+# 17.5.4 Troubleshooting Replication
+# 17.5.5 How to Report Replication Bugs or Problems
+#
+# 17.5.1 REPLICATION FEATURES AND ISSUES
+# 17.5.1.1 REPLICATION AND AUTO_INCREMENT
+# 17.5.1.2 REPLICATION AND BLACKHOLE TABLES
+# 17.5.1.3 REPLICATION AND CHARACTER SETS
+#
+# 17.5.1.4 REPLICATION AND CHECKSUM TABLE
+# 17.5.1.5 REPLICATION OF CREATE SERVER, ALTER SERVER, and DROP SERVER
+# 17.5.1.6 REPLICATION OF CREATE /ETC/ IF NOT EXISTS STATEMENTS
+# 17.5.1.7 REPLICATION OF CREATE TABLE /etc/ SELECT STATEMENTS
 # 
+# 17.5.1.8 REPLICATION OF CURRENT_USER()
+# 17.5.1.9 REPLICATION WITH DIFFERING TABLE DEFINITIONS ON MASTER AND SLAVE
+# 17.5.1.10 REPLICATION AND DIRECTORY TABLE OPTIONS
+# 17.5.1.11 REPLICATION OF DROP /ETC/ IF EXISTS STATEMENTS
+# 17.5.1.12 REPLICATION AND FLOATING-POINT VALUES
+# 
+# 17.5.1.13 REPLICATION AND FLUSH
+# 17.5.1.14 REPLICATION AND SYSTEM FUNCTIONS
+# 17.5.1.15 REPLICATION AND FRACTIONAL SECONDS SUPPORT
+# 17.5.1.16 REPLICATION OF INVOKED FEATURES
+#
+# 17.5.1.17 REPLICATION OF JSON DOCUMENTS
+# 17.5.1.18 REPLICATION AND LIMIT
+# 17.5.1.19 REPLICATION AND LOAD DATA
+# 17.5.1.20 REPLICATION AND MAX_ALLOWED_PACKET
+#
+# 17.5.1.21 REPLICATION AND MEMORY TABLES
+# 17.5.1.22 REPLICATION OF THE MYSQL SYSTEM SCHEMA
+# 17.5.1.23 REPLICATION AND THE QUERY OPTIMIZER
+# 17.5.1.24 REPLICATION AND PARTITIONING
+#
+# 17.5.1.25 REPLICATION AND REPAIR TABLE
+# 17.5.1.26 REPLICATION AND RESERVED WORDS
+# 17.5.1.27 REPLICATION AND MASTER OR SLAVE SHUTDOWNS
+#
+# 17.5.1.28 SLAVE ERRORS DURING REPLICATION
+# 17.5.1.29 REPLICATION AND SERVER SQL MODE
+# 17.5.1.30 REPLICATION AND TEMPORARY TABLES
+# 17.5.1.31 REPLICATION RETRIES AND TIMEOUTS
+# 17.5.1.32 REPLICATION AND TIME ZONES
+#
+# 17.5.1.33 REPLICATION AND TRANSACTION INCONSISTENCIES
+# 17.5.1.34 REPLICATION AND TRANSACTIONS
+# 17.5.1.35 REPLICATION AND TRIGGERS
+# 17.5.1.36 REPLICATION AND TRUNCATE TABLE
+#
+# 17.5.1.37 REPLICATION AND USER NAME LENGTH
+# 17.5.1.38 REPLICATION AND VARIABLES
+# 17.5.1.39 REPLICATION AND VIEWS
+#
+# The following section provides information about what is supported and what is not in MySQL replication, and
+# about specific issues and situations that may occur when replicating certain statements.
+#
+# Statement-based replication depends on compatibility at the SQL level between the master and slave. In other
+# words, successful statement-based replication requires that any SQL features used be supported by both the
+# master and the slave servers. If you use a feature on the master server that is available only in the current
+# version of MySQL, you cannot replicate to a slave that uses an earlier version of MySQL.
+#
+# Such incompatibilities can also occur within a release series as well as between versions.
+#
+# If you are planning to use statement-based replication between MySQL 8.0 and a previous MySQL release series,
+# it is a good idea to consult the edition of the MySQL Reference Manual corresponding to the earlier release
+# series for information regarding the replication characteristics of that series.
+#
+# With MySQL's statement-based replication, there may be issues with replicating stored routines or triggers.
+# You can avoid these issues by using MySQL's row-based replication instead. For a detailed list of issues,
+# see SECTION 24.7, "STORED PROGRAM BINARY LOGGING".
+#
+# FOr morei nformation about row-based logging and row-based replication, see SECTION 5.4.4.1,"BINARY LOGGING FORMATS"
+# andSECTION 17.2.1, "REPLICATION FORMATS"
+#
+# For additional information specific to replication and InnoDB, see SECTION 15.19, "InnoDB and MySQL Replication".
+# For information relating to replication with NDB Cluster, see SECTION 22.6, "NDB CLUSTER REPLICATION"
+#
+# 17.5.1.1 REPLICATION AND AUTO_INCREMENT
+#
+# Statement-based replication of AUTO_INCREMENT, LAST_INSERT_ID(), and TIMESTAMP values is carried out subjectt
+# to the following exceptions:
+#
+# 		) A statement invoking a trigger or function that causes an update to an AUTO_INCREMENT column is not
+# 				replicated correctly using statement-based replication. These statements are marked as unsafe. (#Bug #45677)
+#
+# 		) An INSERT into a table that has a composite primary key that includes an AUTO_INCREMENT column tthat is not
+# 			the first column of this composite key is not safe for statement-based logging or replication. These statements
+# 			are marked as unsafe. (Bug #11754117, Bug #45670)
+#
+# 			This issue does not affect tables using the InnoDB storage engine, since an InnoDB table with an AUTO_INCREMENT
+# 			column requires at least one key where the auto-increment column is the only or leftmost column.
+#
+# 		) Adding an AUTO_INCREMENT column to a table with ALTER_TABLE might not produce the same ordering of the rows 
+# 			on the slave and the master. This occurs because the order in which the rows are numbered depends on the 
+# 			specific storage engine used for the table and the order in which the rows were inserted.
+#
+# 			If it is important to have the same order on the master and slave, the rows must be ordered before assigning
+# 			an AUTO_INCREMENT number. Assuming that you want to add an AUTO_INCREMENT column to a table t1 that has
+# 			columns col1 and col2, the following statements produce a new table t2 identical to t1 but with an
+# 			AUTO_INCREMENT column:
+#
+# 				CREATE TABLE t2 LIKE t1;
+# 				ALTER TABLE t2 ADD id INT AUTO_INCREMENT PRIMARY KEY;
+# 				INSERT INTO t2 SELECT * FROM t1 ORDER BY col1, col2;
+#
+# 			IMPORTANT:
+#
+# 				To guarantee the same ordering on both master and slave, the ORDER BY clause must name all
+# 				columns of t1.
+#
+# 		THe instructions just given are subject to the limitations of CREATE_TABLE_/ETC/_LIKE: Foreign key definitions
+# 		are ignored, as are the DATA DIRECTORY and INDEX DIRECTORY table options. If a table definition includes any
+# 		of those characteristics, create t2 using a CREATE_TABLE statement that is identical to the one used to create
+# 		t1, but with the addition of the AUTO_INCREMENT column.
+#
+# 		Regardless of the method used to create and populate the copy having the AUTO_INCREMENT column, the final
+# 		step is to drop the original table and then rename the copy:
+#
+# 			DROP t1;
+# 			ALTER TABLE t2 RENAME t1;
+#
+# 		See also SECTION B.4.6.1, "PROBLEMS WITH ALTER TABLE"
+#
+# 17.5.1.2 REPLICATION AND BLACKHOLE TABLES
+#
+# The BLACKHOLE storage engine accepts data but discards it and does not store it. When performing binary logging,
+# all inserts to such tables are always logged, regardless of the logging format in use. Updates and deletes are
+# handled differenty depending on wether statement based or row based logging is in use.
+#
+# With the statement based logging format, all statements affecting BLACKHOLE tables are logged, but their effects
+# ignored. When using row-based logging, updates and deletes to such tables are simply skipped - they are not written
+# to the binary log.
+#
+# A warning is logged whenever this occurs.
+#
+# For this reason we recommend when you replicate to tables using the BLACKHOLE storage engine that you have the
+# binlog_format server variable set to STATEMENT, and not to either ROW or MIXED.
+#
+# 17.5.1.3 REPLICATION AND CHARACTER SETS
+#
+# The following applies to replication between MySQL servers that use different character sets:
+#
+# 		) If the master has databases with a character set different from the global character_set_server value,
+# 			you should design your CREATE_TABLE statements so that they do not implicitly rely on the database
+# 			default character set.
+#
+# 			A good workaround is to state the character set and collation explicitly in CREATE_TABLE statements.
+#
+# 17.5.1.4 REPLICATION AND CHECKSUM TABLE
+#
+# CHECKSUM_TABLE returns a checksum that is calculated row by row, using a method that depends on the table
+# row storage format. The storage format is not guaranteed to remain the same between MySQL versions,
+# so the checksum value might change following an upgrade.
+#
+# 17.3.3 REPLICATION PRIVILEGE CHECKS
+#
+# 17.3.3.1 PRIVILEGES FOR THE REPLICATION PRIVILEGE_CHECKS_USER ACCOUNT
+# 17.3.3.2 RECOVERING FROM FAILED REPLICATION PRIVILEGE CHECKS
+#
+# By default, MySQL replication (including Group Replication) does not carry out privilege checks when transactons
+# that were already accepted by another server are applied on a replication slave or group member. From MySQL
+# 8.0.18, you can can create a user account with the appropriate privileges to apply the transactions 
+# that are normally replicated on a channel, and specify this as the PRIVILEGE_CHECKS_USER account for the replication
+# applier.
+#
+# MySQL then checks each transaction against the user account's privileges to verify that you have authorized
+# the operation for that channel. The account can also be safely used by an admin to apply or reapply transactions
+# from mysqlbinlog output, for example to recover from a replication error on the channel.
+#
+# The use of a PRIVILEGE_CHECKS_USER account helps secure a replication channel against the unauthorized or
+# accidental use of privileged or unwanted operations. The PRIVILEGE_CHECKS_USER account provides an additional
+# layer of security in situations such as these:
+#
+# 		) You are replicating between a server instance on your organization's network, and a server instance
+# 			on another network, such as an instance supplied by a cloud service provider.
+#
+# 		) You want to have multiple on-premise or off-site deployments administered as separate units, without giving
+# 			one administrator account privileges on all the deployments.
+#
+# 		) You want to have an administrator account that enables an administrator to perform only operations that are directly
+# 			relvant to the replication channel and the databases it replicates, rather than having wide privileges
+# 			on the server instance.
+#
+# You grant the REPLICATION_APPLIER privilege to enable a user account to appear as the PRIVILEGE_CHECKS_USER for a replication
+# applier thread, and to execute the internal-use BINLOG statements used by mysqlbinlog. The user name and host name
+# for the PRIVILEGE_CHECKS_USER account must follow the syntax described in SECTION 6.2.4, "SPECIFYING ACCOUNT NAMES",
+# and the user must not be an anonymoius user (with a blank user name) or the CURRENT_USER.
+#
+# To create a new account, use CREATE_USER. To grant this account the REPLICATION_APPLIER privilege, use the GRANT Statement.
+# For example, to create a user account priv_repl, which can be used manually by an administrator from any host in the 
+# example.com domain, and requires an encrypted connection, issue the following statements:
+#
+# 			mysql> SET sql_log_bin = 0;
+# 			mysql> CREATE USER 'priv_repl'@'%.example.com' IDENTIFIED BY 'password' REQUIRE SSL;
+# 			mysql> GRANT REPLICATION_APPLIER ON *.* TO 'priv_repl'@'%.example.com';
+# 			mysql> SET sql_log_bin = 1;
+#
+# The SET sql_log_bin statements are used so that the account management statements are not added to the binary log and sent to the
+# replication channels (see SECTION 13.4.1.3, "SET SQL_LOG_BIN SYNTAX")
+#
+# IMPORTANT:
+#
+# 		The caching_sha2_password authentication plugin is the default for new users created from MySQL 8.0 (for details,
+# 		see SECTION 6.4.1.2, "CACHING SHA-2 PLUGGABLE AUTHENTICATION"). To connect to a server using a user account that
+# 		authenticates with this plugin, you must either set up an encrypted connection as described in SECTION 
+# 		17.3.1 "SETTING UP REPLICATION TO USE ENCRYPTED CONNECTIONS", or enable the unencrypted connection to support
+# 		password exchange using an RSA Key pair.
+#
+# After setting up the user account, use the GRANT statement to grant aditional privileges to enable the user account to make the database
+# changes that you expect the applier thread to carry out, such as updating specific tables held on the server.
+#
+# These same privileges enables an administrator to use the account if they need to execute any of those transactions manually on the
+# replication channel. If an unexpected operation is attempted for which you did not grant the appropriate privileges,
+# the operation is disallowed and the replication applier thread stops with an error.
+#
+# SECTION 17.3.3.1, "PRIVILEGES FOR THE REPLICATION PRIVILEGE_CHECKS_USER ACCOUNT" explains what additional privileges
+# the account needs. For example, to grant the priv_repl user account the INSERT privilege to add rows to the cust table
+# in db1, issue the following statement:
+#
+# 		mysql> GRANT INSERT ON db1.cust TO 'priv_repl'@'%.example.com';
+#
+# You assign the PRIVILEGE_CHECKS_USER account for a replication channel using a CHANGE_MASTER_TO statement.
+# If replication is running, issue STOP_SLAVE before the CHANGE_MASTER_TO statement, and START_SLAVE after it.
+#
+# If you do not specify a channel and no other channel exists, the statement is applied to the default channel.
+# For example, to start privilege checks on the channel channel_1 on a running replication slave, issue the following
+# statements:
+#
+# 		mysql> STOP SLAVE FOR CHANNEL 'channel_1';
+# 		mysql> CHANGE MASTER TO PRIVILEGE_CHECKS_USER = 'priv_repl'@'%.example.com' FOR CHANNEL 'channel_1';
+# 		mysql> START SLAVE FOR CHANNEL 'channel_1';
+#
+# When you restart the replication channel, the privilege checks are applied from that point on. The user name and host
+# name for the PRIVILEGE_CHECKS_USER account for a channel are shown in the Performance Schema replication_applier_configuration
+# table, where they are properly escaped so they can be copied directly into SQL statements to execute individual transactions.
+#
+# By default, when a replication applier thread is started with a user account specified as the PRIVILEGE_CHECKS_USER,
+# the security context is created using default roles, or with all roles if activate_all_roles_on_login is set to ON.
+#
+# You can use roles to supply a general privilege set to acounts that are used as PRIVILEGE_CHECKS_USER accounts,
+# as in trhe following example, which grants the REPLICATION_APPLIER privilege together with the SESSION_VARIABLES_ADMIN privilege:
+#
+# 		mysql> SET sql_log_bin = 0;
+# 		mysql> CREATE USER 'priv_repl'@'%.example.com' IDENTIFIED BY 'password' REQUIRE SSL;
+# 		mysql> CREATE ROLE 'priv_repl_role';
+# 		mysql> GRANT REPLICATION_APPLIER, SESSION_VARIABLES_ADMIN TO 'priv_repl_role';
+# 		mysql> GRANT 'priv_repl_role' TO 'priv_repl'@'%.example.com';
+# 		mysql> SET DEFAULT ROLE 'priv_repl_role' TO 'priv_repl'@'%.example.com';
+# 		mysql> SET sql_log_bin = 1;
+#
+# As well as securing asynch and semi synch replication, you may choose to use a PRIVILEGE_CHECKS_USER account
+# to secure the two replication applier threads used by Group Replication. The group_replication_applier thread
+# on each group member is used for applying the group's transactions, and the group_replication_recovery thread
+# on each group member is used for state transfer from the binary log as part of distributed recovery when
+# the members joins or rejoins the group.
+#
+# To secure one of these threads, issue the CHANGE_MASTER_TO statement in the same way, specifying group_replication_applier
+# or group_replication_recovery as the channel name.
+#
+# If a remote cloning operation is used for distributed recovery in Group Replication (see SECTION 18.4.3.1, "CLONING
+# FOR DISTRIBUTED RECOVERY"), the PRIVILEGE_CHECKS_USER account is not automatically used on the joining member
+# after cloning. You must assign the user account manually to the appropriate channels on the joining member.
+#
+# If Group Replication is restarted after provisioning with a cloning operation, execution of RESET_MASTER, or removal
+# of a partial transaction from the relay log, any PRIVILEGE_CHECKS_USER account and REQUIRE_ROW_FORMAT setting
+# that are specified for a Group Replication channel are removed and must be respecified. This limitation will be
+# removed in an upcoming release.
+#
+# 17.3.3.1 PRIVILEGES FOR THE REPLICATION PRIVILEGE_CHECKS_USER ACCOUNT
+#
+# The user account that is specified as the PRIVILEGE_CHECKS_USER account for a replication channel must have the 
+# REPLICATION_APPLIER privilege, otherwise the replication applier thread does not start. As explained in
+# SECTION 17.3.3, "REPLICATION PRIVILEGE CHECKS", the account requires further privileges that are sufficient
+# to apply all the expected transactions expected on the replication channel.
+#
+# These privileges are checked only when relevant transactions are executed.
+#
+# IMPORTANT:
+#
+# 		The use of row-based binary logging (binlog_format=ROW) is strongly recommended for replication channels
+# 		that are secured using a PRIVILEGE_CHECKS_USER account, and will be required in a future release.
+#
+# 		With statement-based binary logging, some administrator-level privileges are required to execute
+# 		transactions successfully.
+#
+# The REPLICATION_APPLIER privilege explicitly or implicitly allows the PRIVILEGE_CHECKS_USER account to carry
+# out the following operations that a replication thread needs to perform:
+#
+# 		) Setting the value of the system variables gtid_next, original_commit_timestamp, original_server_version,
+# 			immediate_server_version, and pseudo_slave_mode, to apply appropriate metadata and behaviors when
+# 			executing transactions.
+#
+# 		) Executing internal-use BINLOG statements to apply mysqlbinlog output, provided that the account also has
+# 			permission for the tables and operations in those statements.
+#
+# 		) Updating the system tables mysql.gtid_executed, mysql.slave_relay_log_info, mysql.slave_worker_info
+# 			and mysql.slave_master_info, to update replication metadata (if events access these tables explicitly
+# 			for other purposes,, you must grant the appropriate privileges on the tables)
+#
+# 		) Applying a binary log Table_map_log_event, which provides table metadata but does not make any database
+# 			changes.
+#
+# The PRIVILEGE_CHECKS_USER account needs the SESSION_VARIABLES_ADMIN privilege in order to change the value
+# of certain system variables (pseudo_thread_id and sql_require_primary_key) for the duration of a session to
+# carry out replication operations. This privilege also allows the account to apply mysqlbinlog output that was
+# created using the --disable-log-bin option.
+#
+# If table encryption is in use, the table_encryption_privilege_check system variable is set to ON, and the
+# encryption setting for the tablespace involved in any event differs from the applying server's default
+# encryption setting (specified by the default_table_encryption system variable), the PRIVILEGES_CHECKS_USER
+# account needs the TABLE_ENCRYPTION_ADMIN privilege in order to override the default encryption setting.
+#
+# It is strongly recommended that you do not grant this privilege. Instead, ensure that the default
+# encryption setting on a replication slave matches the encryption status of the tablespaces that it replicates,
+# and that replication group members have teh same default encryption setting, so that the privilege is not neeeded.
+#
+# In order to execute specific replicated transactions from the relay log, or transactions from mysqlbinlog,
+# output as required, the PRIVILEGE_CHECKS_USER account must have the following privileges:
+#
+# 		) For a row insertion logged in row format (which are logged as a Write_rows_log_event), the INSERT
+# 			https://dev.mysql.com/doc/refman/8.0/en/replication-privilege-checks-account.html
+#
+#
