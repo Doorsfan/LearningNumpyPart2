@@ -74163,6 +74163,617 @@
 # output as required, the PRIVILEGE_CHECKS_USER account must have the following privileges:
 #
 # 		) For a row insertion logged in row format (which are logged as a Write_rows_log_event), the INSERT
-# 			https://dev.mysql.com/doc/refman/8.0/en/replication-privilege-checks-account.html
+# 			privilege on the relevant table.
+#
+# 		) For a row update logged in row format (which are logged as an Update_rows_log_event), the UPDATE privilege
+# 			on the relevant table.
+#
+# 		) For a row deletion logged in row format (which are logged as a Delete_rows_log_event), the DELETE privilege
+# 			on the relevant table.
+#
+# 		) For a transaction control statement such as BEGIN or COMMIT or DML logged in statement format (which are
+# 			logged as a Query_log_event), privileges to execute the statement contained in the vent.
+#
+# 			NOTE:
+#
+# 				If LOAD_DATA operations need to be carried out on the replication channel, use row-based binary logging
+# 				(binlog_format=ROW).
+#
+# 				LOAD_DATA is considered unsafe for statement-based format, and the PRIVILEGE_CHECKS_USER account should not be
+# 				given the required privilege to execute such a statement (the FILE Privilege). For more information,
+# 				see SECTION 17.5.1.19, "REPLICATION AND LOAD DATA".
+#
+# 				The Format_description_log-event, which deletes any temporary files created by LOAD_DATA events, is processed
+# 				without privilege checks.
+#
+# If the init_slave system variable is set to specify one or more SQL statements to be executed when the sQL thread starts,,
+# the PRIVILEGE_CHECKS_USER account must have the privileges needed to execute these statements.
+#
+# It is recommended that you never give any ACL privileges to the PRIVILEGE_CHECKS_USER account, including CREATE_USER, 
+# CREATE_ROLE, DROP_ROLE and GRANT_OPTION, and do not permit the account  to update the mysql.user table.
+#
+# With these privileges, the account could be used to create or modify user accounts on the server. To avoid ACL statements
+# issued on the master being replicated to the secured channel for execution (where they will fail in the absence of these privileges),
+# you can issue SET sql_log_bin = 0 before all ACL statements and SET sql_log_bin = 1 after them, to omit the statements from the master's binary
+# log.
+#
+# Alternatively, y ou can set a dedicated current database before executing all ACL statements and use replication filter (--binlog-ignore-db)
+# to filter out this DB on teh slave.
+#
+#
+# 	17.3.3.2 RECOVERING FROM FAILED REPLICATION PRIVILEGE CHECKS
+#
+# If a privilege check against the PRIVILEGE_CHECKS_USER account fails, the transaction is not executed and replication stop
+# s for the channel. Details of the error and the last applied transaction are recorded in the PERFORMANCE SCHEMA replication_applier_status_by_worker table.
+#
+# Follow this procedure to recover from the error:
+#
+# 		1. Identify the replicated event that caused the error and verify wether or not the event is expected and from a trusted source.
+# 			You can use mysqlbinlog to retrieve and display the events that were logged around the time of the error. For instructions
+# 			to do this, see SECTION 7.5, "POINT-IN-TIME (INCREMENTAL) RECOVERY USING THE BINARY LOG"
+#
+# 		2. If the replicated event is not expected or is not from a known and trusted source, investigate teh cause. If you
+# 			can identify why the event took place and there are no security considerations, proceed to fix the error as
+# 			described below.
+#
+# 		3. If the PRIVILEGES_CHECKS_USER account should have been permitted ot execute the transaction, but has been
+# 			misconfigured, grant the missing privieges to teh account and restart replication for the channel.
+#
+# 		4. If the transacction needs to be executed and you have verified that it is trusted, but the PRIVILEGE_CHECKS_USER
+# 			account should not have this privilege normally, you can grant the required privilege to the PRIVILEGE_CHECKS_USER
+# 			account temporarily.
+#
+# 			After the replicated event has been applied, remove the privileges from teh account, and take any necessary steps ote nsure
+# 			the eventt does not recur if it is avoidable.
+#
+# 		5. If the transaction is an administrative action that should only have taken place on the master and not on the 
+# 			slavve, or should only have taken place on a single replication group member, skip the transaction on the server
+# 			or servers where it stopped replication, then issuse START_SLAVE to restart replication on the channel.
+#
+# 			To avvoid the situation in the future, you could issue such administrative statements with SET sql_log_bin = 0 before
+# 			them and SET sql_log_bin = 1 after them, so that they are not logged on the master.
+#
+# 		6. If the transaction is a DDL or DML statement that should not havve taken place on either the master or the
+# 				slave, skip the transaction on the server or servers where it stopped replication, undo the transaction
+# 				manually on the sever where it originally took place, then issue START_SLAVE to restart replication.
+#
+# to skip a transaction, if GTIDs are in use, commit an empty transaction that has the GTID of the failing transaction,
+# for example:
+#
+# 		SET GTID_NEXT='aaa-bbb-ccc-ddd:N';
+# 		BEGIN;
+# 		COMMIT;
+# 		SET GTID_NEXT='AUTOMATIC';
+#
+# If GTIDs are not in use, issue a SET GLOBAL sql_slave_skip_counter statement to skip the event,, as described in SECTION
+# 13.4.2.5, "SET GLOBAL sql_slave_skip_counter Syntax"
+#
+# 17.5.1..5 REPLICATION of CREATE SERVER, ALTER SERVER and DROP SERVER
+#
+# The sattements CREATE_SERVER, ALTER_SERVER and DROP_SERVER are not written to the binary log, regardless of
+# the binary logging format that is in use.
+#
+# 17.5.1.6 REPLICATION OF CREATE /ETC/ IF NOT EXISTS STATEMENTS
+#
+# MySQL applies these rules when various CREATE_/ETC/_IF NOT EXISTS statements are replicated:
+#
+# 		) Every CREATE_DATABASE_IF_NOT_EXISTS statement is replicated, whether or not the database already exists
+# 			on the master
+#
+# 		) Similarly, every CREATE_TABLE_IF_NOT_EXISTS stateement without a SELECT is replicated, whether or not the
+# 			table already exists on the master. This includes CREATE_TABLE_IF_NOT_EXISTS_/ETC/_LIKE.
+#
+# 			Replication of CREATE_TABLE_IF_NOT_EXISTS_/ETC/_SELECT follows somewhat different rules; see
+# 			SECTION 17.5.1.7, "REPLICATION OF CREATE TABLE /ETC/ SELECT STATEMENTS", for more information
+#
+# 		) CREATE_EVENT_IF_NOT_EXISTS is always replicated, whether or not the event named in the statement already
+# 			exists on the master.
+#
+# 17.5.1.7 REPLICATION OF CREATE TABLE /ETC/ SELECT STATEMENTS
+#
+# MySQL applies these rules when CREATE_TABLE_/ETC/_SELECT statements are replicated:
+#
+# 		) CREATE_TABLE_/ETC/_SELECT always performs an implicit commit (SECTION 13.3.3, "STATEMENTS THAT CAUSE AN IMPLICIT COMMIT")
+#
+# 		) If the destination table does not exist, logging occurs as follows. It does not matter whether IF NOT EXISTS is present.
+#
+# 			) STATEMENT or MIXED format.: The statemnt is logged as written
+#
+# 			) ROW format: The statement is logged as a CREATE_TABLE statement followed by a series of insert-row events.
+#
+# 		) if the CREATE_TABLE_/ETC/_SELECT statement fails, nothing is logged. This includes the case that the destination
+# 			table exists and IF NOT EXISTS is not given
+#
+# 		) If the destination table exists and IF NOT EXISTS is given, MySQL 8.0 ignores the statement completely,
+# 			nothing is inserted or logged.
+#
+# When statement-based replication is in use, MySQL 8.0 does not allow a CREATE_TABLE_/ETC/_SELECT statement to
+# make any changes in tables other than the table that is created by the statement. This is not an issue when
+# using row-based replication,, because the statement is logged as a CREATE_TABLE statement with any changes to table
+# data logged as row-insert events, rather than as the entire CREATE_TABLE_/ETC/_SELECT
+#
+# 17.5.1.8 REPLICATION OF CURRENT_USER()
+#
+# The following statements support use of the CURRENT_USER() function to take the place of the name of, and
+# possibly the host for, an affected user or a definer:
+#
+# 		) DROP_USER
+#
+# 		) RENAME_USER
+#
+# 		) GRANT
+#
+# 		) REVOKE
+#
+# 		) CREATE_FUNCTION
+#
+# 		) CREATE_PROCEDURE
+#
+# 		) CREATE_TRIGGER
+#
+# 		) CREATE_EVENT
+#
+# 		) CREATE_VIEW
+#
+# 		) ALTER_EVENT
+#
+# 		) ALTER_VIEW
+#
+# 		) SET_PASSWORD
+#
+# When binary logging is enabled and CURRENT_USER() or CURRENT_USER is used as the definer in any of these statements.
+# MySQL Server ensures that the statement is applied to the same user on both the master and the slave when the statement
+# is replicated.
+#
+# In some cases, such as statements that change passwords, the function reference is expanded before it is written to the 
+# binary log,, so that the statement includes the user name.
+#
+# For all other cases, the name of the current user on the master is replicated to the slave as metadata, and the slave
+# applies the statement to teh current user named in the metadata, rather than to the current user on the slave.
+#
+# 17.5.1.9 REPLICATION WITH DIFFERING TABLE DEFINITIONS ON MASTER AND SLAVE
+#
+# Source and target tables for replication do not have to be identical. A table on the master can have more or fewer
+# columns than the slave's copy of the table. In addition, corresponding table columns on the master and the slave
+# can use different data types, subject to certain conditions.
+#
+# NOTE:
+#
+# 		Replication between tables which are partitioned differently from one another is not supported.
+# 		See SECTION 17.5.1.24, "REPLICATION AND PARTITIONING"
+#
+# In all cases where the source and target tables do not have identical definitions, the database and table names
+# must be the same on both the master and the slave. Additional conditions are discussed, with examples,
+# in the following two sections.
+#
+# 17.5.1.9.1 REPLICATION WITH MORE COLUMNS ON MASTER OR SLAVE
+#
+# You can replicate a table from the master to the slave such that the master and slave copies of the table have
+# differing numbers of columns, subject to the following conditions:
+#
+# 		) Columns common to both versions of the table must be defined in the same order on the master and the slave.
+#
+# 		(This is true even if both tables have the same number of columns)
+#
+# 		) Columns common to both versions of the table must be defined before any additional columns.
+#
+# 			This means that executing an ALTER_TABLE statement on the slave where a new column is inserted
+# 			into the table within the range of columns to both tables causes replication to fail,, as shown in
+# 			the following example:
+#
+# 			Suppose that a table t, existing on the master and the slave, is defined by the following
+# 			CREATE_TABLE statement:
+#
+# 				CREATE TABLE t (
+# 					c1 INT,
+# 					c2 INT,
+# 					c3 INT
+# 				);
+#
+# 			Suppose that the ALTER_TABLE statement shown here is executed on the slave:
+#
+# 				ALTER TABLE t ADD COLUMN cnew1 INT AFTER c3;
+#
+# 			The previous ALTER_TABLE is permitted on the slave because the columns c1, c2 and c3 that are
+# 			common to both versions of table t remain grouped together in both versions of the table,
+# 			before any ccolumns that differ.
+#
+# 			However, the following ALTER_TABLE statement cannot be executed on the slave without causing
+# 			replication to break:
+#
+# 				ALTER TABLE t ADD COLUMN cnew2 INT AFTER c2;
+#
+# 			Replication fails after execution on the slave of the ALTER_TABLE statement just shown, because
+# 			the new column cnew2 comes between columns common to both versions of t.
+#
+# 		) Each "extra" column in the version of the table having more columns must have a default value.
+#
+# 			A column's default value is determined by a number of factors, including its type, whether it is
+# 			defined with a DEFAULT option, whether it is declared as NULL, and the server SQL mode in effect
+# 			at the time of its creation; for more information, see SECTION 11.7, "DATA TYPE DEFAULT VALUES").
+#
+# In addition, when the slave's copy of the table has more columns than the master's copy, each column
+# common to the table must use the same data type in both tables.
+#
+# Examples. The following examples illustrate some valid and invalid table definitions:
+#
+# More columns on the master. THe following table definitions are valid and replicate correctly:
+#
+# 		master> CREATE TABLE t1 (c1, INT, c2 INT, c3 INT);
+# 		slave> CREATE TABLE (c1 INT, C2 INT);
+#
+# Tthe following table definitions would raise an error because the definitions of the columns common to both
+# versions of the table are in a different order on the slave than they are on the master:
+#
+# 		master> CREATE TABLE t1 (c1 INT, c2 INT, c3 INT);
+# 		slave> CREATE TABLE t1 (c2 INT, c1 INT);
+#
+# The following table definitions would also raise an error because the definition of the extra column on
+# the master appears before the definitions of the columns common to both versions of the table:
+#
+# 		master> CREATE TABLE t1 (c3 INT, c1 c1 INT, c2 INT);
+# 		slave>  CREATE TABLE t1 (c1 INT, c2 INT);
+#
+# More columns on the slave. The following table definitions are valid and replicate correctly:
+#
+# 		master> CREATE TABLE t1 (c1 INT, c2 INT);
+# 		slave>  CREATE TABLE t1 (c1 INT, c2 INT,c3 INT);
+#
+# The following definitions raise an error because the columns common to both versions of the table are not defined
+# in the same order on both the master and the slave:
+#
+# 		master> CREATE TABLE t1 (c1 INT, c2 INT);
+# 		slave> CREATE TABLE t1 (c2 INT, c1 INT, c3 INT);
+#
+# The following table definitions also raise an error because the definition for the extra column in teh slave's version
+# of the table appears before the definitions for the columnsm which are common to both versions of the table:
+#
+# 		master> CREATE TABLE t1 (c1 INT, c2 INT);
+# 		slave>  CREATE TABLE t1 (c3 INT, c1 INT, c2 INT);
+#
+# The following  table definitions fail because the slave's version of the table has additional columns compared to the
+# master's version, and the two versions of the table use different data types for the common column c2:
+#
+# 		master> CREATE TABLE t1 (c1 INT, c2 BIGINT);
+# 		slave>  CREATE TABLE t1 (c1 INT, c2 INT, c3 INT);
+#
+# 17.5.1.9.2 REPLICATION OF COLUMNS HAVING DIFFERENT DATA TYPES
+#
+# Corresponding columns on the master's ajnd the slave's copies of the same table ideally should have the same data
+# type. However, this is not always strictly enfforced, as long as certain conditions are met.
+#
+# It is usually possible to replicate from a column of a given data type to another column of the same type and same
+# size or width, where applicable, or larger. For example, you can replicate from a CHAR(10) column to another
+# CHAR(10), or from a CHAR810) column toa CHAR(25) column without any problems.
+#
+# In certain cases, it also is possible to replicate from a column having one data type (on the master) to a column
+# having a different data type (on the slave):
+#
+# 		When the data type of the master's version of the column' is promoted to a type that is the same size
+# 		or lager on the slave, this is known as attribute promotion.
+#
+# Attribute promotion can be used with both statement-based and row-based replication, and is not dependent on the storage engine
+# used by either the master or the slave. However, the choice of logging format does have an effect on the type conversions
+# that are permitted; the particulars are discussed later in this section.
+#
+# IMPORTANT:
+#
+# 			Whether you use statement-based or row-based replication, the slave's copy of the ttable
+# 			cannot contain more columns than the master's copy if you wish to employ attribute promotion.
+#
+# Statement-based replication. When using statement-based replication, a simple rule of thumb to follow is, "If the
+# statement run on the master would also execute successfully on the slave, it should also replicate successfully".
+#
+# In other words, if the statement uses a value that is compatible with the type of a given column on the slave,
+# the statement can be replicated. For example, you can insert any value that fits in a TINYINT column into a 
+# BIGINT column as well; it follows that, even if you change the type of a TINYINT column in the slave's copy of
+# a table to BIGINT, any insert into that column on the master that succeeds should also succeed on the slave,
+# since it is impossible to have a legal TINYINT value that is large enough to exceed a BIGINT column.
+#
+# ROW-BASED REPLICATION: ATTRIBUTE PROMOTION AND DEMOTION. Row-based replication supports attribute promotion
+# and demotion between smaller data types and larger types. It is also possible to specify whether or not
+# to permit lossy (truncated) or non-lossy conversions of  demoted column values, as explained later in this section.
+#
+# LOSSY AND NON-LOSSY CONVERSIONS. In the event that the target type cannot represent the value being inserted,
+# a decision must be made on how to handle the conversion. If we permit the conversion but truncate (or otherwise
+# modify) the source value to achieve a "fit" in the target column, we make what is known as a lossy conversion.
+#
+# A conversion which does not require truncation or similar modifications to fit the source column value in the target
+# column is a non-lossy conversion.
+#
+# TYPE CONVERSION MODES (slave_type_conversions variable). The setting of the slave_type_conversions global
+# server variable controls the type conversion mode used on the slave. This variable takes a set of values from
+# the following list, which describes the effects of each mode on the slave's type-conversion behavior:
+#
+# ALL_LOSSY
+#
+# 		In this mode, type conversions that would mean loss of information are permitted.
+#
+# 		This does not imply that non-lossy conversions are permitted, merely that only cases requiring either lossy
+# 		conversions or no conversion at all are permitted; for example, enabling only this mode permits an INT column
+# 		to be converted to TINYINT (a lossy conversion), but not a TINYINT column to an INT column (non-lossy)
+#
+# 		Attempting the latter conversion in tthis case would cause replication to stop with an error on the slave.
+#
+# ALL_NON_LOSSY
+#
+# 		This mode permits conversions that do not require truncation or other special handling of the source value;
+# 		that is, it permits conversions where the target type has a wider range than the source type.
+#
+# 		Setting this mode has no bearing on whether lossy conversions are permitted; this is controlled with the
+# 		ALL_LOSSY mode. If only ALL_NON_LOSSY is set, but not ALL_LOSSY, then attempting a conversion that would
+# 		result in the loss of data (such as INT to TINYINT, or CHAR(25) to VARCHAR(20) causes the slave to stop with
+# 		an error.
+#
+# ALL_LOSSY, ALL_NON_LOSSY
+#
+# 		When this mode is set, all supported type conversions are permitted, wether or not they are lossy
+# 		conversions.
+#
+# ALL_SIGNED
+#
+# 		Treat promoted integer types as signed values (the default behavior)
+#
+# ALL_UNSIGNED
+#
+# 		Treat promoted integer types as unsigned values
+#
+# ALL_SIGNED, ALL_UNSIGNED
+#
+# 		Treat promoted integer types as signed if possible, otherwise as unsigned.
+#
+# [empty]
+#
+# 		When slave_type_conversions is not set, no attribute promotion or demotion is permitted;
+# 		this means that all columns in the source and target tables must be of the same types.
+#
+# 		This mode is the default.
+#
+# When an integer type is promoted, its signedness is not preserved. By default, the slave treats all
+# such values as signed. You can control this behavior using ALL_SIGNED, ALL_UNSIGNED, or both.
+# ALL_SIGNED tells the slave to treat all promoted integer types as signed; ALL_UNSIGNED instructs it to
+# treat these as unsigned.
+#
+# Specifying both causes the slave to treat the value as signed if possible, otherwise to treat it as unsigned;
+# the order in which they are listed is not significant. Neither ALL_SIGNED nor ALL_UNSIGNED has any effect
+# if at least one of ALL_LOSSY or ALL_NONLOSSY is not also used.
+#
+# Changing the type conversion mode requires restarting the slave with the new slave_type_conversions setting.
+#
+# SUPPORTED CONVERSIONS. Supported conversions between different but similar data types are shown in the following list:
+#
+# 		) Between any of the integer types TINYINT, SMALLINT, MEDIUMINT, INT, and BIGINT.
+#
+# 			This includes conversions between the signed and unsigned versions of these types.
+#
+# 			Lossy conversions are made by truncating the source value to the maximum (or minimum) permitted by the
+# 			target column. For ensuring non-lossy conversions when going from unsigned to signed types,
+# 			the target column must be large enough to accommodate the range of values in the source column.
+#
+# 			For example, you can demote TINYINT UNSIGNED non-lossily to SMALLINT, but not to TINYINT.
+#
+# 		) Between any of the decimal types DECIMAL, FLOAT, DOUBLE, and NUMERIC.
+#
+# 			FLOAT to DOUBLE is a non-lossy conversion; DOUBLE to FLOAT can only be handled lossily. A conversion
+# 			from DECIMAL(M,D) to DECIMAL(M',D') where D' >= D and (M'-D') >= (M-D) is non-lossy; for any case where
+# 			M' < M,D' < D, or both, only a lossy conversion can be made.
+#
+# 			For any of the decimal types, if a value to be stored cannot be fit in the target type, the value is
+# 			rounded down according to the rounding rules defined for the server elsewhere in the documentation.
+#
+# 			See SECTION 12.25.4, "ROUNDING BEHAVIOR", for information about how this is done for decimal types.
+#
+# 		) Between any of the string types CHAR, VARCHAR and TEXT, including conversions between different widths.
+#
+# 			Conversion of a CHAR, VARCHAR or TEXT to a CHAR, VARCHAR, or TEXT column the same size or larger is never
+# 			lossy. Lossy conversion is handled by inserting only the first N characters of the string on the slave,
+# 			where N is the width of the target column.
+#
+# 			IMPORTANT:
+#
+# 				Replication between columns using different character sets is not supported.
+#
+# 		) Between any of the binary data types BINARY, VARBINARY, and BLOB, including conversions between different
+# 			widths.
+#
+# 			Conversions of a BINARY, VARBINARY, or BLOB to a BINARY, VARBINARY, or BLOB column the same size or larger
+# 			is never lossy. Lossy conversion is handled by inserting only the first N bytes of the string on the slave,
+# 			where N is the width of the target column.
+#
+# 		) Between any 2 BIT columns of any 2 sizes.
+#
+# 			When inserting a value from a BIT(M) column into a BIT(M') column, where M' > M, the most significant bits
+# 			of the BIT(M') columns are cleared (set to zero) and the M bits of the BIT(M) value are set as teh least
+# 			significant bits of the BIT(M') column.
+#
+# 			When inserting a value from a source BIT (M) column into a target BIT(M') column, where M' < M, the
+# 			maximum possible value for the BIT(M') column is assigned; in other words, an "all-set" value is assigned to
+# 			the target column.
+#
+# Conversions between types not in the previous list are not permitted.
+#
+# 17.5.1.10 REPLICATION AND DIRECTORY TABLE OPTIONS
+#
+# If a DATA DIRECTORY or INDEX DIRECTORY table option is used in a CREATE_TABLE statement on the master server,
+# the table option is also used on the slave. This can cause problems if no corresponding directory exists
+# in the slave host file system or if it exists but is not accessible to the slave server.
+#
+# This can be overridden by using the NO_DIR_IN_CREATE server SQL mode on the slave, which causes the slave to ignore
+# the DATA DIRECTORY and INDEX DIRECTORY table options when replicating CREATE_TABLE statements. The result is that
+# MyISAM data and index files are created in the table's database directory.
+#
+# For more information, see SECTION 5.1.11, "SERVER SQL MODES"
+#
+# 17.5.1.11 REPLICATION OF DROP /ETC/ IF EXISTS STATEMENTS
+#
+# The DROP_DATABASE_IF_EXISTS, DROP_TABLE_IF_EXISTS, and DROP_VIEW_IF_EXISTS statements are always
+# replicated, even if the database, table or view to be dropped does not exist on the master. THis is to ensure that
+# the object to be dropped no longer exists on either the master or the slave, once the slave has caught up with the
+# master.
+#
+# DROP /ETC/ IF EXISTS statements for stored programs (stored procedures and functions, triggers, and events) are also
+# replicated, even if the stored program to be dropped does not exist on the master.
+#
+# 17.5.1.12 REPLICATION AND FLOATING-POINT VALUES
+#
+# With statement-based replication, values are converted from decimal to binary. Because conversions between decimal
+# and binary representations of them may be approximate, comparisons involving floating-point values are inexact.
+#
+# This is true for operations that use floating-point values explicitly, or that use values that are converted to
+# floating-point implicitly. Comparisons of floating-point values might yield different results on master and slave
+# servers due to differences in computer architechture, the compiler used to build MySQL, and so forth.
+#
+# See SECTION 12.2, "TYPE CONVERSION IN EXPRESSION EVALUATION", and SECTION B.4.4.8, "PROBLEMS WITH FLOATING-POINT VALUES"
+#
+# 17.5.1.13 REPLICATION AND FLUSH
+#
+# Some forms of the FLUSH statement are not logged because they could cause problems if replicated to a slave:
+# FLUSH_LOGS and FLUSH_TABLES_WITH_READ_LOCK. For a syntax example, see SECTION 13.7.8.3, "FLUSH SYNTAX".
+#
+# The FLUSH_TABLES, ANALYZE_TABLE, OPTIMIZE_TABLE and REPAIR_TABLE statements are written to the binary log and
+# thus replicated to slaves. THis is not normally a problem because these statements do not modify table data.
+#
+# However, this behavior can cause difficulties under certain circumstances.. If you replicate the privilege tables
+# in teh mysql database and update those tables directly without using GRANT, you must issue a FLUSH_PRIVILEGES
+# on the slaves to put the new privileges into effect.
+#
+# In addition, if you use FLUSH_TABLES when renaming a MyISAM table that is part of a MERGE table, you must issue
+# FLUSH_TABLES manually on the slaves. These statements are written to the binary log unless ytou specify
+# NO_WRITE_TO_BINLOG or its alias LOCAL.
+#
+# 17.5.1.14 REPLICATION AND SYSTEM FUNCTIONS
+#
+# Certain functions do not replicate well under some conditions:
+#
+# 		) The USER(), CURRENT_USER() (or CURRENT_USER), UUID(), VERSION() and LOAD_FILE() functions are replicated without 
+# 			change and thus do not work reliably on the slave unless row-based replication is enabled.
+# 			(See SECTION 17.2.1, "REPLICATION FORMATS")
+#
+# 			USER() and CURRENT_USER() are automatically replicated using row-based replication when using MIXED
+# 			mode, and generate a warning in STATEMENT mode. (See also SECTION 17.5.1.8, "REPLICATION OF CURRENT_USER()")
+#
+# 			This is also true for VERSION() and RAND()
+#
+# 		) For NOW(), the binary log includes the timestamp. This means that the value as returned by the call to this
+# 			function on the master is replicated to the slave. To avoid unexpected results when replicating between MySQL
+# 			servers in different time zones, set the time zone on both master and slave. See also SECTION 17.5.1.32,
+# 			"REPLICATION AND TIME ZONES"
+#
+# 			To explain the potential problems when replicating between servers which are in different time zones, suppose
+# 			that the master is located in New York, the slave is located in Stockholm, and both servers are using local time.
+#
+# 			Suppose further that, on the master, you create a table mytable, perform an INSERT statement on this table,
+# 			and then select from the table, as shown here:
+#
+# 				mysql> CREATE TABLE mytable (mycol TEXT);
+# 				Query OK, 0 rows affected (0.06 sec)
+#
+# 				mysql> INSERT INTO mytable VALUES ( NOW() );
+# 				Query OK, 1 row affected (0.00 sec)
+#
+# 				mysql> SELECT * FROM mytable;
+# 				+-----------------------------+
+# 				| mycol 								|
+# 				+-----------------------------+
+# 				| 2009-09-01 12:00:00 			|
+# 				+-----------------------------+
+# 				1 row in set (0.00 sec)
+#
+# 			Local time in Stockholm is 6 hours later than in New York, so if you issue SELECT NOW() on the slave at that
+# 			exact same instant, the value 2009-09-01 18:00:00 is returned.
+#
+# 			For this reason, if you select from the slave's copy of mytable after the CREATE_TABLE and INSERT statements
+# 			just shown have been replicated, you might expect mycol to contain the value of 2009-09-01 18:00:00
+#
+# 			However, this is not the case: when you select from the slave's copy of mytable, you obtain exactly the same result
+# 			as on the master:
+#
+# 				mysql> SELECT * FROM mytable;
+# 				+----------------------------+
+# 				| mycol 							  |
+# 				+----------------------------+
+# 				| 2009-09-01 12:00:00 		  |
+# 				+----------------------------+
+# 				1 row in set (0.00 sec)
+#
+# 			Unlike NOW(), the SYSDATE() function is not replication-safe because it is not affected by SET TIMESTAMP 
+# 			statements in the binary log and is nondeterministic if statement-based logging is used. Thisi s not a problem
+# 			if row-based logging is used.
+#
+# 			An alternative is to use the --sysdate-is-now option to cause SYSDATE() to be an alias for NOW(). This must
+# 			be done on the master and the slave to work correctly. In such cases, a warning is still issued by this function,
+# 			but can safely be ignored as long as --sysdate-is-now is used on both the master and the slave.
+#
+# 			SYSDATE() is automatically replicated using row-based replication when using MIXED mode, and generates a 
+# 			warning in STATEMENT mode.
+#
+# 			See also SECTION 17.5.1.32, "REPLICATION AND TIME ZONES"
+#
+# 		) The following restrictions applies to statement-based replication only, not to row-based replication.
+#
+# 			The GET_LOCK(), RELEASE_LOCK(), IS_FREE_LOCK(), and IS_USED_LOCK() functions that handle user-level
+# 			locks are replicated without the slave knowing the concurrency context on the master. Therefore, these
+# 			functions should not be used to insert int oa master table because the content on the slave would differ.
+#
+# 			For example, do not issue a staetment such as INSERT INTO mytable VALUES(GET_LOCK(/etc/))
+#
+# 			These functions are automatically replicated using row-based replication when using MIXED mode, and
+# 			generate a warning in STATEMENT mode.
+#
+# As a workaround for the preceding limitations, when statement-based replication is in effect, you can use the
+# strategy of saving the problematic funciton result in a user variable and referring to the variable in a later
+# statement. FOr example, the following single-row INSERT is problematic due to the reference to the UUID()
+# function:
+#
+# 		INSERT INTO t VALUES(UUID());
+#
+# To work around the problem, do this isntead:
+#
+# 		SET @my_uuid = UUID();
+# 		INSERT INTO t VALUES(@my_uuid);
+#
+# That sequence of statements replicates because the values of @my_uuid is stored in the binary log as a user-variable
+# event prior to the INSERT statement and is available for use in the INSERT.
+#
+# THe same idea applies to multiple-row inserts, but is more cumbersome to use. For a two-row insert, you can do
+# this:
+#
+# 		SET @my_uuid1 = UUID(); @my_uuid2 = UUID();
+# 		INSERT INTO t VALUES(@my_uuid1),(@my_uuid2);
+#
+# However, if the number of rows is large or unknown, the workaround is difficult or impracticable. For example,
+# you cannot convert the following statements to one in which a given individual user variable is assocaited 
+# with each row:
+#
+# 		INSERT INTO t2 SELECT UUID(), * FROM t1;
+#
+# Within a stored function, RAND() replicates correctly as long as it is invoked only once during the execution of
+# the function. (YOu can consider the function execution timestamp and random number seed as implicit inputs that are
+# identical on the master and slave)
+#
+# The FOUND_ROWS() and ROW_COUNT() functions are not replicated reliably using statement-basedreplication.
+# A workaround is to store the result of the function call in a user variable, and then use that in the INSERT
+# statement.
+#
+# For example, if you wish to store the result in a table named mytable, you might normally do so like this:
+#
+# 		SELECT SQL_CALC_FOUND_ROWS FROM mytable LIMIT 1;
+# 		INSERT INTO mytable VALUES( FOUND_ROWS() );
+#
+# However, if you are replicating mytable, you should use SELECT_/ETC/_INTO, and then store the variable in the table,
+# like this:
+#
+# 		SELECT SQL_CALC_FOUND_ROWS INTO @found_rows FROM mytable LIMIT 1;
+# 		INSERT INTO mytable VALUES(@found_rows);
+#
+# In this way, the user variable is replicated as part of the context, and applied on the slave correctly.
+#
+# THese functions are automatically replicated using row-based replication when using MIXED Mode, and generate a
+# warning in STATEMENT mode. (Bug #12092, Bug #30244)
+#
+# 17.5.1.15 REPLICATION AND FRACTIONAL SECONDS SUPPORT
+#
+# https://dev.mysql.com/doc/refman/8.0/en/replication-features-fractional-seconds.html
+#
 #
 #
