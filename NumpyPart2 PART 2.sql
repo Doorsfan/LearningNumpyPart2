@@ -74773,7 +74773,706 @@
 #
 # 17.5.1.15 REPLICATION AND FRACTIONAL SECONDS SUPPORT
 #
-# https://dev.mysql.com/doc/refman/8.0/en/replication-features-fractional-seconds.html
+# MySQL 8.0 permits fractional seconds for TIME, DATETIME, and TIMESTAMP values, with up to microseconds (6 digits)
+# precision. See SECTION 11.3.5, "FRACTIONAL SECONDS IN TIME VALUES"
 #
+# 17.5.1.16 REPLICATION OF INVOKED FEATURES
 #
+# Replication of invoked features such as user-defined functions (UDFs) and stored programs (stored procedures and
+# functions, triggers, and events) provides the following characteristics:
 #
+# 		) The effects of the feature are always replicated
+#
+# 		) The following statements are replicated using statement-based replication:
+#
+# 			) CREATE_EVENT
+#
+# 			) ALTER_EVENT
+#
+# 			) DROP_EVENT
+#
+# 			) CREATE_PROCEDURE
+#
+# 			) DROP_PROCEDURE
+#
+# 			) CREATE_FUNCTION
+#
+# 			) DROP_FUNCTION
+#
+# 			) CREATE_TRIGGER
+#
+# 			) DROP_TRIGGER
+#
+# However, the effects of features created, modified or dropped using these statements are replicated using row-based replication.
+#
+# NOTE:
+#
+# 		Attempting to replicate invoked features using statement-based replication produces the warning:
+#
+# 			Statement is not safe to log in statement format.
+#
+# 		For example, trying to replicate a UDF with statement-based replication generates this warning because
+# 		it currently cannot be determined by the MySQL server whether the UDF is deterministic.
+#
+# 		If you are absolutely certain that the invoked feature's effects are determinsitic, you can safely
+# 		disregard such warnings.
+#
+# ) In the case of CREATE_EVENT and ALTER_EVENT:
+#
+# 		) The status of the event is set to SLAVESIDE_DISABLED on the slave regardless of the state specified
+# 			(this does not apply to DROP_EVENT)
+#
+# 		) The master on which the event was created is identified on the slave by its server ID. The ORIGINATOR
+# 			column in INFORMATION_SCHEMA.EVENTS stores this information. See SECTION 25.13, "THE INFORMATION_SCHEMA
+# 			EVENTS TABLE", and SECTION 13.7.7.18, "SHOW EVENTS SYNTAX", for more information.
+#
+# ) The feature implementation resides on the slave in a renewable state so that if the master fails, the slave can
+# 		be used as the master without loss of event processing.
+#
+# To determine whether there are any scheduled events on a MySQL server that were created on a different server
+# (that was acting as a replication master), query the INFORMATION_SCHEMA.EVENTS table in a manner similar to what
+# is shown here:
+#
+# 		SELECT EVENT_SCHEMA, EVENT_NAME
+# 			FROM INFORMATION_SCHEMA.EVENTS
+# 			WHERE STATUS = 'SLAVESIDE_DISABLED';
+#
+# Alternatively, you can use the SHOW_EVENTS statement, like this:
+#
+# 		SHOW EVENTS
+# 			WHERE STATUS = 'SLAVESIDE_DISABLED';
+#
+# When promoting a replication slave having such events to a replication master, you must enable each event
+# using ALTER_EVENT_event_name_ENABLE, where event_name is the name of the event.
+#
+# If more than one master was involved in creating events on this slave, and you wish to identify events that
+# were created only on a given master having the server ID master_id, modify the previous query on the EVENTS
+# table to include the ORIGINATOR column, as shown here:
+#
+# 		SELECT EVENT_SCHEMA, EVENT_NAME, ORIGINATOR
+# 			FROM INFORMATION_SCHEMA.EVENTS
+# 			WHERE STATUS = 'SLAVESIDE_DISABLED'
+# 			AND ORIGINATOR = 'master_id'
+#
+# You can employ ORIGINATOR with the SHOW_EVENTS statement in a similar fashion:
+#
+# 		SHOW EVENTS
+# 			WHERE STATUS = 'SLAVESIDE_DISABLED'
+# 			AND ORIGINATOR = 'master_id'
+#
+# Before enabling events that werer replicated from the master, you should disable the MySQL Event Scheduler on the
+# slave (using a statement such as SET GLOBAL event_scheduler = OFF;) run any necessary ALTER_EVENT statements,
+# restart teh server, then re-enable the Event Scheduler on the slave afterward (using a statement such as
+# SET GLOBAL event_scheduler = ON;)
+#
+# If you later demote the new master back to being a replication slave, you must disable manually all events enabled
+# by the ALTER_EVENT statements. You can do this by storing in a separate table the event names from teh SELECT
+# statement shown previously, or using ALTER_EVENT statements to rename the events with a common prefix such as
+# replicated_ to identify them.
+#
+# If you rename the events, then when demoting this server back to being a replication slave, you can identify the
+# events by querying the EVENTS table, as shown here:
+#
+# 		SELECT CONCAT(EVENT_SCHEMA, '.', EVENT_NAME) AS 'Db.Event'
+# 			FROM INFORMATION_SCHEMA.EVENTS
+# 			WHERE INSTR(EVENT_NAME, 'replicated_') = 1;
+#
+# 17.5.1.17 REPLICATION OF JSON DOCUMENTS
+#
+# Before MySQL 8.0, an update to a JSON column was always written to the binary log as the complete document.
+# In MySQL 8.0, it is possible to log partial updates to JSON documents (see PARTIAL UPDATES OF JSON VALUES), which is
+# more efficient.
+#
+# The logging behavior depends on the format used, as described here:
+#
+# 		Statement-based replication. JSON partial updates are always logged as partial updates. This cannot be disabled
+# 		when using statement-based logging.
+#
+# 		Row-based replication. JSON partial updates are not logged as such by default, but instead are logged as
+# 		complete documents. To enable logging of partial updates, set binlog_row_value_options=PARTIAL_JSON
+#
+# 		If a replication master has this variable set, partial updates received from that master are handled and
+# 		applied by a replication slave regardless of the slave's own setting for the variable.
+#
+# 		Servers running MySQL 8.0.2 or earlier do not recognize the log events used for JSON partial updates.
+# 		For this reason, when replicating to such a server from a server running MySQL 8.0.3 or later,
+# 		binlog_row_value_options must be disabled on the master by setting this variable to '' ( empty )
+# 
+# 		See the description of this variable ofr more information.
+#
+# 17.5.1.18 REPLICATION AND LIMIT
+#
+# Statement-based replication of LIMIT clauses in DELETE, UPDATE and INSERT_/ETC/_SELECT statements is unsafe
+# since the order of the rows affected is not defined. (Such statements can be replicated correctly with
+# statement-based replication only if they also contain an ORDER BY clause). When such a statement is encountered:
+#
+# 		) WHen using STATEMENT mode, a warning that the statement is not safe for statement-based replication is now issued.
+#
+# 		When using STATEMENT mode, warnings are issued for DML statements containing LIMIT even when they also
+# 		have an ORDER BY clause (and so are made deterministic). This is a known issue. (Bug #42851)
+#
+# 		) When using MIXED mode, the statement is now automatically replicated using row-based mode.
+#
+# 17.5.1.19 REPLICATION AND LOAD DATA
+#
+# LOAD_DATA is considered unsafe for statement-based logging (see SECTION 17.2.1.3, "DETERMINATION OF SAFE AND
+# UNSAFE STATEMENTS IN BINARY LOGGING"). When binlog_format=MIXED is set, the statement is logged in row-based
+# format.
+#
+# When binlog_format=STATEMENT is set, note that LOAD_DATA does not generate a warning, unlike other
+# unsafe statements.
+#
+# If you do use LOAD_DATA when binlog_format=STATEMENT is set, a temporary file containing the data is created on
+# the replication slave where the changes are applied. The slave then uses a LOAD DATA INFILE statement to apply
+# the changes.
+#
+# If Binary log encryption is active on the server, note that this temporary file is not encrypted. When
+# encryption is required, be sure to use row-based or mixed binary logging format instead, which do not
+# create the temporar yfiles.
+#
+# If a PRIVILEGE_CHECKS_USER account has been used to help secure the replication channel (see SECTION 17.3.3, "REPLICATION PRIVILEGE CHECKS"),
+# for a LOAD DATA INFILE operaiton logged in statement format, the account would require the INSERT privilege on the
+# relevant table and also the FILE privilege.
+#
+# However, it is strongly recommended that you do not give the FILE privilege to the account, and instead ensure that
+# the event is logged in row-based format, so that this privilege is not needed.
+#
+# If you do need to recover from a replication error involving a LOAD DATA INFILE statement, and the replicated
+# event is trusted, you could grant the FILE privilege to the PRIVILEGE_CHECKS_USER account temporarily, removing
+# it after the replicated event has been applied.
+#
+# WHen mysqlbinlog reads log events for LOAD_DATA statements logged in statement-based format, a generated local file
+# is created in a temporary directory. These temporary files are not automatically removed by mysqlbinlog or any other
+# MySQL program.
+#
+# If you do use LOAD_DATA statements with statement-based binary logging, you should delete the temporary files yourself
+# after you no longer need the statement log.
+#
+# For more information, see SECTION 4.6.8, "MYSQLBINLOG -- UTILITY FOR PROCESSING BINARY LOG FILES"
+#
+# 17.5.1.20 REPLICATION AND MAX_ALLOWED_PACKET
+#
+# max_allowed_packet sets an upper limit on the size of any single message between the MySQL server and clients,
+# including replication slaves. If you are replicating large column values (such as might be found in TEXT or BLOB
+# columns) and max_allowed_packet is too small on the master, the master fails with an error, and the slave shuts
+# down the I/O thread.
+#
+# If max_allowed_packet is too small on the slave, this also causes the slave to stop the I/O thread.
+#
+# Row-based replication currently sends all columns and column values for updated rows from the master to the
+# slave, including values of columns that were not actually changed by the update. This meanst that, when you are
+# replicating large column values using row-based replication, you must take care to set max_allowed_packet large
+# enough to acommodate the largest row in any table to be replicated, even if you are replicating updates only,
+# or you are inserting only relatively small values.
+#
+# On a multi-threaded slave (with slave_parallel_workers > 0), ensures that the slave_pending_jobs_size_max
+# system variable is set to a value equal to or greater than the setting for the max_allowed_packet system variable
+# on the master.
+#
+# The default setting for slave_pending_jobs_size_max, 128M, is twice the default setting for the max_allowed_packet,
+# which is 64M.
+#
+# max_allowed_packet limits the packet size that the master will send, but the addition of an event header can produce
+# a binary log event exceeding this size. Also, in row-based replication, a single event can be significantly larger than
+# the max_allowed_packet size, because the value of max_allowed_packet only limits each column of the table.
+#
+# The replication slave actually accepts packets up to the limit set by its slave_max_allowed_packet setting, which
+# defaulst t oteh maximum setting of 1gb, to prevent a replication failure due to a large packet. However,
+# the value of slave_pending_jobs_size_max controls the memory that is made available on the slave to hold incoming
+# packets. The specified memory is shared among all the slave worker queues.
+#
+# The value of slave_pending_jobs_size_max is a soft limit, and if an unusually large event (consisting of one or
+# multiple packets) exceeds this size, the transaction is held until all the slave workers have empty queues, and then
+# processed.
+#
+# All subsequent transactions are held until the large transaction has been completed. So although unusual events larger
+# than slave_pending_jobs_size_max can be processed, the delay to clear the queues of all the slave workers and the wait
+# to queue subsequent transactions can cause lag on the replication slave and decreased concurrency of the slave workers.
+#
+# slave_pending_jobs_size_max should therefore be set high enough to accomodate most expected event sizes.
+#
+# 17.5.1.21 REPLICATION AND MEMORY TABLES
+#
+# WHen a master server shuts down and restarts, its MEMORY tables become empty. To replicate this effect to slaves,
+# the first time that the master uses a given MEMORY table after startup, it logs an event that notifies slaves that
+# the table must be emptied by writing a DELETE statement for that table to the binary log.
+#
+# THis generated event is identifiable by a comment in the binary log, and if GTIDs are in use on the server,
+# it has a GTID assigned.
+#
+# When a slave server shuts down and restarts, its MEMORY table becomes empty. This causes the slave to be out of
+# synchrony with the master and may lead to other failures or cause the slave to stop:
+#
+# 		) Row-format updates and deletes received from the master may fail with Can't find record in 'memory_table'
+#
+# 		) Statements such as INSERT_INTO_/ETC/_SELECT_FROM_memory_table may insert a different set of rows on the master
+# 			and slave.
+#
+# The safe way to restart a slave that is replicating MEMORY tables is to first drop or delete all rows from the MEMORY
+# tables on the master and wait until those changes have replicated to the slave. Then it is safe to restart the slave.
+#
+# An alternative restart method may apply in some cases. When binlog_format=ROW, you can prevent the slave from
+# stopping if you set slave_Exec_mode=IDEMPOTENT before you start the slave again. This allows the slave to
+# continue to replicate, but its MEMORY tables will still be different from those on the master.
+#
+# This can be okay if the applciation logic is such that the contents of MEMORY tables can be safely lost (for example,
+# if the MEMORY tables are used for caching).
+#
+# slave_exec_mode=IDEMPOTENT applies globally to all tables, so it may hide other replication errors in non-MEMORY tables.
+#
+# (The method just described is not applicable in NDB Cluster, where slave_exec_mode is always IDEMPOTENT, and
+# cannot be changed)
+#
+# The size of MEMORY tables is limited by the value of the max_heap_table_size system variable, which is not
+# replicated (see SECTION 17.5.1.38, "REPLICATION AND VARIABLES"). A change in max_heap_table_size takes effect
+# for MEMORY tables that are created or updated using ALTER_TABLE_/ETC/_ENGINE_=_MEMORY or TRUNCATE_TABLE
+# following the change, or for all MEMORY tables following a server restart.
+#
+# If you increase the value of this variable on the master without doing so on the slave, it becomes possible for a table
+# on the master to grow larger than its counterpart on the slave, leading to inserts that succeed on the master
+# but fail on the slave with Table is full errors.
+#
+# This is a known issue (Bug #48666). IN such cases, you must set the global value of max_heap_table_size on the slave
+# as well as on the master, then restart replication. It is also recommended that you restart both the master and slavve
+# MySQL servers, to insure that the new value takes complete (global) effect on each of them.
+#
+# See SECTION 16.3, "THE MEMORY STORAGE ENGINE", for more information about MEMORY tables.
+#
+# 17.5.1.22 REPLICATION OF THE MYSQL SYSTEM SCHEMA
+#
+# Data modification statements made to tables in the mysql schema are replicated according to the value of binlog_format;
+# if this value is MIXED, these statements are replicated using row-based format. However, statements that would
+# normally update this information indirectly - such as GRANT, REVOKE and statements manipulating triggers, stored
+# routines and views - are replicated to slaves using statement based replication.
+#
+# 17.5.1.23 REPLICATION AND THE QUERY OPTIMIZER
+#
+# It is possible for the data on the master and the slave to become different if a statement is written in such a way that
+# the data modification is nondeterministic; that is, left up the query optimizer. (In general, this is not a good practice,
+# even outside of replication). Examples of nondeterministic statements include DELETE or UPDATE statements that
+# use LIMIT with no ORDER BY clause; see SECTION 17.5.1.18, "REPLICATION AND LIMIT", for a detailed discussion of these.
+#
+# 17.5.1.24 REPLICATION AND PARTITIONING
+#
+# Replication is supported between partitioned tables as long as they use the same partitioning scheme and otherwise have
+# teh same structure except where an exception is specifically allowed (see SECTION 17.5.1.9, "REPLICATION WITH DIFFERING
+# TABLE DEFINITIONS ON MASTER AND SLAVE")
+#
+# Replication between tables having different partitioning is generally not supported. THis is because staetments (such
+# as ALTER_TABLE_/ETC/_DROP_PARTITION) acting directly on partitions in such cases may produce different results on 
+# master and slave.
+#
+# In the case where a table is partitioned on the master but not on the slave, any statements operating on partitions
+# on the master's copy of the slave fail on the slave. When the slave's copy of the table is partitioned but the master's copy
+# is not, statements acting on partitions cannot be run on the master without causing errors there.
+#
+# Due to these dangers of causing replication to fail entirely (on account of failed statements) and of inconsistencies
+# (when the result of a partition-level SQL statement produces different results on master and slave), we recommend
+# that insure that the partitioning of any tables to be replicated from the master is matched by the slave's versions
+# of these tables.
+#
+# 17.5.1.25 REPLICATION AND REPAIR TABLE
+#
+# When used on a corrupted or otherwise damaged table, it is possible for the REPAIR_TABLE statement to delete
+# rows that cannot be recovered. However, any such modifications of table data performed by this statement are not
+# replicated, which can cause master and slave to lose synch. For this reason, in the event that a table on
+# the master becomes damaged and you use REPAIR_TABLE to repair it, you should first stop replication (if it is still
+# running) before using REPAIR_TABLE, then afterward compare the master's and slave's copies of the table and be
+# prepared to correct any discrepancies manually, before restarting replication.
+#
+# 17.5.1.26 REPLICATION AND RESERVED WORDS
+#
+# You can encounter problems when you attempt to replicate from an older master to a newer slave and you make
+# use of identifiers on the master that are reserved words in the newer MySQL version running on the slave.
+# For example, a table column named rank on a MySQL 5.7 master that is replicating to a MysQL 8.0 slave could
+# cause a problem because RANK is a reserved word beginning in MySQL 8.0
+#
+# Replication can fail in such cases with Error 1064:
+#
+# 		You have an error in your SQL syntax /ETC/, even if a database or table named using the reserved word
+# 		is excluded from replication.
+#
+# This is due to the fact that each SQL event must be parsed by the slave prior to execution, so that
+# the slave knows which database object or objects would be affected. Only after the event is parsed
+# can the slave apply any filtering rules defined by --replicate-do-db, --replicate-do-table,
+# --replicate-ignore-db and --replicate-ignore-table
+#
+# To work around the problem of database, table or column names  on the master which would be regarded
+# as reserved words by the slave, do one of the following:
+#
+# 		) Use one or more ALTER_TABLE statements on the master to change the names of any database objects where
+# 			these names would be considered reserved words on the slave, and change any SQL statements that use the
+# 			old names to use the new names instead.
+#
+# 		) In any SQL statements using these database object names, write the names as quoted identifiers using
+# 			backtick chars (`)
+#
+# For listings of reserved words by MySQL version, see RESERVED WORDS, in the MySQL Server Version Reference.
+# For identifier quoting rules, see SECTION 9.2, "SCHEMA OBJECT NAMES"
+#
+# 17.5.1.27 REPLICATION AND MASTER OR SLAVE SHUTDOWNS
+#
+# It is safe to shut down a master server and restart it later. When a slave loses its connection to the master,
+# the slave tries to reconnect immediately and retries periodically if that fails. The default is to retry
+# every 60 seconds.
+#
+# This may be changed with the CHANGE_MASTER_TO statement. A slave also is able to deal with network connectivity outages.
+# However, the slave notices the network outage only after receiving no data from the master for slave_net_timeout seconds.
+#
+# If your outages are short, you may want to decrease slave_net_timeout. See SECTION 17.4.2, "HANDLING AN UNEXPECTED
+# HALT OF A REPLICATION SLAVE"
+#
+# AN unclean shutdown (for example, a crash) on the master side can result in the master binary log having a final
+# position less than the most recent position read by the slave, due to the master binary log file not being flushed.
+# This can cause the slave not to be able to replicate when the master comes back up.
+#
+# Setting sync_binlog=1 in the master my.cnf file helps to minimize this problem because it causes the master to flush
+# its binary log more frequently. For the greatest possibility off durability and consistency in a replication setup 
+# using InnoDB with transactions, you should also set innodb_flush_log_at_trx_commit=1. With this setting, the contents
+# of the InnoDB redo log buffer are written out to the log file at each transaction commit and the log file is flushed to disk.
+#
+# Note that the durability of transactions is still not guaranteed with this setting, because OS systems or disk hardware
+# may tell mysqld that the flush-to-disk operation has taken place, even though it has not.
+#
+# Shutting down a slave cleanly is safe because it keeps track of where it left off. However, be careful that the slave
+# does not have temporary tables open; see SECTION 17.5.1.30, "REPLICATION AND TEMPORARY TABLES".
+#
+# Unclean shutdowns might produce problems, especially if the disk cache was not flushed to disk before the problem
+# occurred:
+#
+# 		) For transactions, the slave commits and then updates relay-log.info. If a crash occurs between these two
+# 			operations, relay log processing will have proceeded further than the information file indicates and the slave
+# 			will re-execute the events from the last transaction in the relay log after it has been restarted.
+#
+# 		) A similar problem can occur if the slave updates relay-log.info but the server host crashes before the write
+# 			has been flushed to disk. To minimize the chance of this occurring, set sync_relay_log_info=1 in the slave
+# 			my.cnf file. Setting sync_relay_log_info to 0 causes no writes to be forced to disk and the server relies
+# 			on the OS to flush the file from time to time.
+#
+# The fault tolerance of your system for these types of problems is greatly increased if you have a good
+# uninterruptable power supply.
+#
+# 17.5.1.28 SLAVE ERRORS DURING REPLICATION
+#
+# If a statement produces the same error (identical error code) on both the master and the slave, the error is logged,
+# but replication continues.
+#
+# If a statement produces different errors on the master and the slave, the slave SQL thread terminates, and the
+# slave writes a message to its error log and waits for the database administrator to decide what to do about the
+# error.
+#
+# This includes the case that a statement produces an error on the master or the slave, but not both. To
+# address the isssue, connect to the slave manually and determine the cause of the problem. SHOW_SLAVE_STATUS
+# is useful for this.
+#
+# Then fix the problem and run START_SLAVE. For example, you might need to create a nonexistent table before
+# you can start the slave again.
+#
+# NOTE:
+#
+# 		If a temporary error is recorded in the slave's error log, you do not necessarily have to take any action
+# 		suggested in the quoted error message. Temporary errors should be handled by the client retrying the transaction.
+#
+# 		For example, if the slave SQL thread records a temporary error relating to a deadlock, you do not need to restart
+# 		the transaction manually on the slave, unless the slave SQL thread subsequently terminates with a nontemporary error message.
+#
+# If this error code validation behavior is not desirable, some or all errors can be masked out (ignored) with the 
+# --slave-skip-errors option.
+#
+# For nontransactional storage engines such as MyISAM, it is possible to have a statement that only partially updates a 
+# table and returns an error code. This can happen, for example, on a multiple-row insert that has one row violating a
+# key constraint, or if a long update statement is killed after updating some of the rows.
+#
+# If that happens on the master, the slave expects execution of the statement to result in the same error code. If it does
+# not, the slave SQL thread stops as described previously.
+#
+# If you are replicating between tables that use different storage engines on the master and slave, keep in mind that
+# the same statement might produce a different error when run against one version of the table, but not the other,
+# or might cause an error for one version of the table, but not the other.
+#
+# For example, since MyISAM ignores foreign key constraints, an INSERT or UPDATE statement accessing an InnoDB table 
+# on the master might cause a foreign key violation but the same statement performed on a MyISAM version of the same
+# table on the slave would produce no such error, causing replication to stop.
+#
+# 17.5.1.29 REPLICATION AND SERVER SQL MODE
+#
+# Using different server SQL mode settings on the master and the slave may cause the same INSERT statements to be handled
+# differently on the master and the slave, leading the master and slave to diverge. For best results, you should always
+# use the same server SQL mode on the master and on the slave. This advice applies whether you are using statement-based
+# or row-based replication.
+#
+# If you are replicating partitioned tables, using different SQL modes on the master and the slave is likely to cause
+# issues. At a minimum, this is likely to cause the distribution of data among partitions to be different in the master's
+# and slave's copies of a given table.
+#
+# IT may also cause inserts into partitioned tables that succeed on the master to fail on the slave.
+#
+# For morei nformation, see SECTION 5.1.11, "SERVER SQL MODES"
+#
+# 17.5.1.30 REPLICATION AND TEMPORARY TABLES
+#
+# In MySQL 8.0, when binlog_format is set to ROW or MIXED, statements that exclusively use temporary tables are
+# not logged on the master, and therefore the temporary tables are not replicated. Statements that involve a mix
+# of temporary and nontemporary tables are logged on the master only for the operations on nontemporary tables,
+# and the operations on temporary tables are not logged.
+#
+# This means that there are never any temporary tables on the slave to be lost in the event of an unplanned shutdown
+# by the slave. For more information about row-based replication and temporary tables, see ROW-BASED LOGGING 
+# OF TEMPORARY TABLES.
+#
+# When binlog_format is set to STATEMENT, operations on temporary tables are logged on the master and replicated
+# on the slave, provided that the statements involving a temporary table can be logged safely using statement-based format.
+#
+# In this situation, loss of replicated temporary tables on the slave can be an issue. In statement-based replication
+# mode, CREATE_TEMPORARY_TABLE and DROP_TEMPORARY_TABLE statements cannot be used inside a transaction, procedure,
+# function or trigger when GTIDs are in use on the server (that is, when the enforce_gtid_consistency system variable
+# is set to ON)
+#
+# They can be used outside these contexts when GTIDs are in use, provided that autocommit=1 is set.
+#
+# Because of the differences in behavior between row-based or mixed replication mode and statement-based
+# replication mode regarding temporary tables, you cannot switch the replication format at runtime, if the
+# change applies to a contextt (global or session) that contains any open temporary tables.
+#
+# For more details, see the description of the binlog_format option.
+#
+# SAFE SLAVE SHUTDOWN WHEN USING TEMPORARY TABLES
+#
+# IN statement-based replication mode, temporary tables are replicated except in the case where you stop
+# the slave server (not just the slave threads) and you ahve replicated temporary tables that are open
+# for usei n updates that have not yet been executed on the slave.
+#
+# If you stop the slave server, the temporary tables needed by those updates are no longer available 
+# when the slave is restarted. To avoid this problem, do not shut down the slave while it has temporary 
+# tables open. Instead, use the following procedure:
+#
+# 		1. Issue a STOP SLAVE SQL_THREAD statement
+#
+# 		2. Use SHOW_STATUS to check the value of the Slave_open_temp_tables variable
+#
+# 		3. If the value is not 0, restart the slave SQL thread with START SLAVE SQL_THREAD and repeat
+# 			the procedure later
+#
+# 		4. When the value is 0, issue a mysqladmin shutdown command to stop the slave
+#
+# Temporary tables and replication options. By default, with statement-based replication, all temporary tbles are
+# replicated; this happens whether or not there are any amtching --replicate-do-db, --replicate-do-table or
+# --replicate-wild-do-table options in effect.
+#
+# However, the --replicate-ignore-table and --replicate-wild-ignore-table options are honored for temporary tables.
+# The exception is that to enable correct removal of temporary tables at the end of a session, a replication
+# slave always replicates a DROP TEMPORARY TABLE IF EXISTS statement, regardless of any exclusion rules that
+# would normally apply for the specified table.
+#
+# A recommended practice when using staetment-based replication is to designate a prefix for exclusive use in
+# naming temporary tables that you do not want replicated, then employ a --replicate-wild-ignore-table
+# option to match that prefix.
+#
+# For example, you might give all such tables names beginning with norep (such as norepmytable,norepyourtable
+# and so on), then use --replicate-wild-ignore-table=norep% to prevent them from being replicated.
+#
+# 17.5.1.31 REPLICATION RETRIES AND TIMEOUTS
+#
+# The global system variable slave_transaction_retries sets the maximum number of times for applier threads
+# on a single-threaded or multithreaded replication slave to automatically retry failed transactions before stopping.
+#
+# Transactions are automatically retried when the SQL thread fails to execute them because of an InnoDB deadlock,
+# or when the transaction's execution time exceeds the InnoDB innodb_lock_wait_timeout value.
+#
+# If a transaction has a non-temporary error that will prevent it from ever succeeding, it is not retried.
+#
+# The default setting for slave_transaction_retries is 10, meaning that a failing transaction with an apparently
+# temporary error is retried 10 times before the applier thread stops. Setting the variable to 0 disables automatic
+# retrying of transactions.
+#
+# On a multithreaded salve, the specified number of transaction retries can take place on all applier threads
+# of all channels. The Performance Schema table replication_applier_status shows the total number of transaction
+# retries that took place on each replication channel, in the COUNT_TRANSACTION_RETRIES column.
+#
+# The process of retrying transactions can cause lag on a replication slave or on a GROUP REPLICATION group member,
+# which can be configured as a single-threaded or multithreaded slave. The Performance Schema table
+# replication_applier_status_by_worker shows detailed information on transaction retries by the applier
+# threads on a single-threaded or multithreaded slave. This data includes timestamps showing how long it took the
+# applier thread to apply the last transaction from start to finish (and when the transaction currently in progress
+# was started), and how long this was after the commit on the original master and the immediate master.
+#
+# The data also shows the number of retries for the last transaction and the transaction currentlyt in progress,
+# and enables you to identify the transient errors that caused the transactions to be retried. You can use this
+# information to see whether transaction retries are the cause of replication lag, and investigate the root cause
+# of the failures that led to the retries.
+#
+# 17.5.1.32 REPLICATION AND TIME ZONES
+#
+# By default, master and slave servers assume that they are in the same time zone. If yo uare replcating between
+# servers in different time zones,the time zone must be set on both master and slave. Otherwise, statements
+# depending on the local time on the master are not replicated properly, such as statements that use the NOW()
+# or FROM_UNIXTIME() functions.
+#
+# Set the time zone in which MySQL servers run by using the --timezone=timezone_name option of the mysqld_safe
+# script or by setting the TZ environment variable. See also SECTION 17.5.1.14, "REPLICATION AND SYSTEM FUNCTIONS"
+#
+# 17.5.1.33 REPLICATION AND TRANSACTION INCONSISTENCIES
+#
+# Inconsistencies in the sequence of transactions that have been executed from the relay log can occur depending on
+# your replication configuration. This section explains how to avoid inconsistencies and solve any problems they
+# cause.
+#
+# The following types of inconsistencies can exist:
+#
+# 	) Half-applied transactions. A transaction which updates non-transactional tables has applied some but not all of
+# 		its changes.
+#
+# 	) Gaps. A gap is a transaction that has not been fully applied, even though some transaction later in the
+# 		sequence has been applied. Gaps can only appear when using a multithreaded slave. To avoid gaps occurring,
+# 		set slave_preserve_commit_order=1, which requires slave_parallel_type=LOGICAL_CLOCK, and that
+# 		binary logging (the log_bin system variable) and slave update logging (the --log-slave-updates option)
+# 		are also enabled.
+#
+# 		Note that slave_preserve_commit_order=1 does not preserve the order of non-transactional DML updates,
+# 		so these might commit before transactions that precede them in the relay log, which might result in gaps.
+#
+# 	) Master log position lag. Even in teh absence of gaps, it is possible that transactions after Exec_master_log_pos
+# 		have been applied. That is, all transactions up to point N have been applied, and no transactions after N have
+# 		been applied, but Exec_master_log_pos has a value smaller than N.
+#
+# 		In this situation, Exec_master_log_pos is a "Low-water mark" of the transactions applied, and lags behind
+# 		the position of the most recently applied transaction.
+#
+# 		This can only happen on multithreaded slaves. Enabling slave_preserve_commit_order does not prevent
+# 		master log position lag.
+#
+# The following scenarios are relevant to the existence of half-applied transactions, gaps and master log position lag:
+#
+# 		1. While slave threads are running, there may be gaps and half-applied transactions.
+#
+# 		2. mysqld shuts down. Both clean and unclean shutdown abort ongoing transactions and may leave gaps and half-applied transactions.
+#
+# 		3. KILL of replication threads (the SQL thread when using a single-threaded slave, the coordinator thread when using a multithreaded
+# 			slave). This aborts ongoing transactions and may leave gaps and half-applied transactions.
+#
+# 		4. Error in applier threads. This may leave gaps. If the error is in a mixed transaction, that transaction is half-applied.
+# 			When using a multithreaded slave, workers which have not received an error complete their queues, so it may take time to stop
+# 			all threads.
+#
+# 		5. STOP_SLAVE when using a multithreaded slave. After issuing STOP_SLAVE, the slave waits for any gaps to be filled and then updates
+# 			Exec_master_log_pos. This ensures it never leaves gaps or master log position lag, unless any of the cases above applies,
+# 			in other words, before STOP_SLAVE completes, either an error happens, or another thread issues KILL, or the server restarts.
+#
+# 			IN these cases, STOP_SLAVE returns successfully.
+#
+# 		6. If the last transaction in the relay log is only half-received and the multithreaded slave coordinator has started to schedule the
+# 			transaction to a worker, then STOP_SLAVE waits up to 60 seconds for the transaction to be received.
+#
+# 			After this timeout, the coordinator gives up and aborts the transaction. If the transaction is mixed, it may be left half-completed.
+#
+# 		7. STOP_SLAVE when using a single-threaded slave. If the ongoing transaction only updates transactional tables, it is rolled abck
+# 			and STOP_SLAVE stops immediately. If the ongoing transaction is mixed, STOP_SLAVE waits up to 60 seconds for the transaction to complete.
+#
+# 			After this timeout, it aborts the transaction, so it may be left half-completed.
+#
+# The global variable rpl_stop_slave_timeout is unrelated to the process of stopping the replication threads. It only makes the client
+# that issues STOP_SLAVE return to the client, but the replicatiton threads continue to try to stop.
+#
+# If a replication channel has gaps, it has the following consequences:
+#
+# 		1. The slave database is in a state that may never have existed on the master.
+#
+# 		2. The field Exec_master_log_pos in SHOW_SLAVE_STATUS is only a "low-water mark". In other words,
+# 			transactions appearing before the position are guaranteed to have committed, but transactions
+# 			after the position may have committed or not.
+#
+# 		3. CHANGE_MASTER_TO statements for that channel fail with an error, unless the applier threads are running and
+# 			the CANGE_MASTER_TO statement only sets receiver options.
+#
+# 		4. If mysqld is started with --relay-log-recovery, no recovery is done for that channel, and a warning is printed.
+#
+# 		5. If mysqldump is used with --dump-slave, it does not record that existence of gaps; thus it prints CHANGE_MASTER_TO
+# 			with RELAY_LOG_POS set to the "low-water mark" position in Exec_master_log_pos.
+#
+# 			After applying the dump on another server, and starting the replication threads, transactions appearing after
+# 			the position are replicated again. Note that this is harmless if GTIDs are enabled (however, in that case it is not
+# 			recommended to use --dump-slave)
+#
+# If a replication channel has master log position lag but no gaps, cases 2 to 5 above apply, but case 1 does not.
+#
+# The master log position information is persisted in binary format in the internal table mysql.slave_worker_info.
+#
+# START_SLAVE_[SQL__THREAD] always consults this information so that it applies only the correct transactions.
+# This remains true even if slave_parallel_workers has been changed to 0 before START_SLAVE, and even if START_SLAVE
+# is used with UNTIL clauses.
+#
+# START_SLAVE_UNTIL_SQL_AFTER_MTS_GAPS only applies as many transactions as needed in order to fill in the gaps.
+# If START_SLAVE is used with UNTIL CLAUSE that tell it to stop before it has consumed all the gaps, then it leaves
+# remaining gaps.
+#
+# Warning:
+#
+# 		RESET_SLAVE removes teh relay logs and resets the replication position. Thus issuing RESET_SLAVE on a slave
+# 		with gaps means the slave loses any information about the gaps, without correcting the gaps.
+#
+# 17.5.1.34 REPLICATION AND TRANSACTIONS
+# 
+# Mixing transactional and nontransactional statements within the same transaction. 
+#
+# In general, you should avoid transactions that update both transactional and nontransactional tables in a replication
+# environment. You should also avoid using any statement that accesses both transactional (or temporary) and nontransactional
+# tables and writes to any of them.
+#
+# The server uses these rules for binary logging:
+#
+# 		) If the initial statements in a transaction are nontransactional, they are written to the binary log immediately.
+# 			The remaining statements in the transaction are cached and not written to the binary log until the transaction
+# 			is committed. (If the transaction is rolled back, the cached statements are written to the binary log only if
+# 			they make nontransactional changes that cannot be rolled back. Otherwise, they are discarded.)
+#
+# 		) For statement-based logging, logging of nontransactional statements is affected by the binlog_direct_non_transactional_updates
+# 			system variable. When this variable is OFF (the default), logging is as just described. When this variable is ON,
+# 			logging occurs immediately for nontransactional statements occurring anywhere in the transaction (not just
+# 			initial nontransactional statements)
+#
+# 			Other statements are kept in the transaction cache and logged when the transaction commits.
+#
+# 			binlog_direct_non_transactional_updates has no effect for row-format or mixed-format binary logging.
+#
+# Transactional, nontransactional, and mixed statements.
+#
+# To apply those rules, server considers a statement nontransactional if it changes only nontransactional tables,
+# and transactional if it changes only transactional tables.
+#
+# A statement that references both nontransactional and transactional tables and updates any of the tables involved
+# is considered a "mixed" statement. Mixed statements, like transactional statements, are cached and logged when
+# the transaction commits.
+#
+# A mixed statement that updates a transactional table is considered unsafe if the statement also performs either of
+# the following actions:
+#
+# 		) Updates or reads a temporary table
+#
+# 		) reads a nontransactional table and the transaction isolation level is less than REPEATABLE_READ
+#
+# A mixed statement following the update of a transactional table within a transaaction is considered unsafe
+# if it performs either of the following actions:
+#
+# 		) Updates any table and reads from any temporary table
+#
+# 		) Updates a nontransactional table and binlog_direct_non_transactional_updates is OFF
+#
+# For more information, see SECTION 17.2.1.3, "DETERMINATION OF SAFE AND UNSAFE STATEMENTS IN BINARY LOGGING"
+#
+# NOTE:
+#
+# 		A mixed statement is unrelated to mixed binary logging format.
+#
+# In situations where transactions mix updates to transaactional and nontransaactional tables, the order of statements
+# in the binary log is correct, and all needed statements are written to the binary log even in case of a ROLLBACK.
+#
+# However, when a second connection updates the nontransactional table before the first connection transaaction is
+# complete, statements can be logged out of order because the second connection update is written immediately
+# after it is performed, regardless of the state of the transaction being performed by the first connection.
+#
+# USING DIFFERENT STORAGE ENGINES ON MASTER AND SLAVE.
+#
+# 
+#
+## https://dev.mysql.com/doc/refman/8.0/en/replication-features-transactions.html
+# 
