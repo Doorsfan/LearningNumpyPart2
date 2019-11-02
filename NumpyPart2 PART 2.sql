@@ -75472,7 +75472,703 @@
 #
 # USING DIFFERENT STORAGE ENGINES ON MASTER AND SLAVE.
 #
-# 
+# It is possible to replicate transactional tables on the master using nontransactional tables on the slave.
+# For example, you can replicate an InnoDB master table as a MyISAM slave table. However, if you do this,
+# there are problems if the slave is stopped in the middle of a BEGIN /ETC/ COMMIT block because the slave
+# restarts at the beginning of the BEGIN block.
 #
-## https://dev.mysql.com/doc/refman/8.0/en/replication-features-transactions.html
+# It is also safe to replicate transactions from MyISAM tables on the master to transaacitonal tables - such as
+# tables that use the InnoDB storage engine - on the slave. In such cases, an AUTOCOMMIT=1 statement issued
+# on the master is replicated, thus enforcing AUTOCOMMIT mode on the slave.
+#
+# When the storage engine type of the slave is nontransactional, transactions on the master that mix updates of
+# transaactional and nontransaactional tables should be avoided because they can cause inconsistencies of the data
+# between the master transaactional table and the slave nontransactional table.
+#
+# That is, such transaactions can lead to master storage engine-specific behavior with the possible effect of
+# replication going out of synchrony. MySQL does not issue a warning about this, so extra care should be taken
+# when replicating transactional tables from the master to nontransactional tables on teh slaves.
+#
+# CHANGING THE BINARY LOGGING FORMAT WITHIN TRANSACTIONS. The binlog_format and binlog_checksum system
+# variable are read-only as long as a transaaction is in progress.
+#
+# Every transaction (including autocommit transactions) is recorded in the binary log as though it starts
+# with a BEGIN statement, and ends with either a COMMIT or a ROLLBACK statement. This is even true for
+# statements affecting tables that use a nontransactional storage engine (such as MyISAM)
+#
+# NOTE:
+#
+# 		For restrictions that apply specifically to XA transactions, see SECTION 13.3.8.3, 
+# 		"RESTRICTIONS ON XA TRANSACTIONS"
+#
+# 17.5.1.35 REPLICATION AND TRIGGERS
+#
+# With statement-based replication, triggers executed on the master also execute on the slave. With row-based
+# replication, triggers executed on the master do not execute on teh slave. Instead, the row changes on the master
+# resulting from trigger execution are replicated and applied on the slave.
+#
+# This behavior is by design. if under row-based replication the slave applied the triggers as well as the row changes
+# caused by them,the changes would in effect be applied twice on the slave, leading to different data on the master
+# and the slave..
+#
+# If you want triggers to execute on both the master and the slave - perhaps because you have different triggers on
+# the master and the slave - you must use staement-based replication. However, to enable slave-side triggers, it is not
+# necessary to use statement-based replication exclusively. It is sufficient to switch to statement-based replication
+# only for those statements where yo uwant this effect, and to use row-based replication the rest of the time.
+#
+# A statement invoking a trigger (or function) that causes an update to an AUTO_INCREMENT column is not replicated
+# correclty using statement-based replication. MySQL 8.0 marks such statements as unsafe. (bug #45677)
+#
+# A trigger can have triggers for different combinations of trigger event (INSERT, UPDATE, DELETE) and action time
+# (BEFORE, AFTER) and multiple triggers are permitted.
+#
+# For brevity, "Multiple triggers" here is shorthand for "Multiple triggers that have the same trigger event and action
+# time"
+#
+# UPGRADES
+#
+# Multiple triggers are not supported in versions earlier than MySQL 5.7. If you upgrade servers in a replication
+# topology that use a version earlier than MySQL 5.7, upgrade the replication slaves first and then upgrade the master.
+#
+# If an upgraded replication master still has old slaves using MySQL versions that do not support multiple triggers,
+# an error occurs on those slaves if a trigger is created on the master for a table that already has a trigger
+# with the same trigger event and action time.
+#
+# DOWNGRADES.
+#
+# If you downgrade a server that supports multiple triggers to an older version that does not, the downgrade has these effects:
+#
+# 		) For each table that has triggers, all trigger definitions are in the .TRG file for the table. However, if there are
+# 			multiple triggers with the same trigger event and action time,, the server executes only one of them when the
+# 			trigger event occurs. For information about .TRG files, see the Table Trigger Storage section of the MySQL
+# 			Server Doxygen doc, at <link>
+#
+# 		) If triggers for the table are added or dropped subsequent to the downgrade, teh server rewrites the table's
+# 			.TRG file. The rewritten file retains only one trigger per combination of trigger event and action time;
+# 			the others are lost.
+#
+# To avoid these problems, modify your triggers before downgrading. For each table that has multiple triggers per
+# combination of trigger event and action time, convert each such set of triggers to a single trigger as follows:
+#
+# 		1. For each trigger, create a stored routine that contains all the code in teh trigger. Values accessed
+# 			using NEW and OLD can be passed to the routine using parameters.
+#
+# 			If the trigger needs a single result value from the code, you can put the code in a stored function
+# 			and have the function return the value. If the trigger needs multiple result values from the code,
+# 			you can put the code in a stored procedure and return the values using OUT parameters.
+#
+# 		2. Drop all triggers for the table
+#
+# 		3. Create one new trigger for the table that invokes the stored routines just created. The effect for this
+# 			trigger is thus the same as the multiple triggers it replaces.
+#
+# 17.5.1.36 REPLICATION AND TRUNCATE TABLE
+#
+# TRUNCATE_TABLE is normally regarded as a DML statement, and so would be expected to be logged and replicated
+# using row-based format when the binary logging mode is ROW or MIXED. However, this caused issues when logging
+# or replicating, in STATEMENT or MIXED mode, tables that used transactional storage engines such as InnoDB
+# when the transaction isolation level was READ COMMITTED or READ UNCOMMITTED, which precludes statement-based
+# logging.
+#
+# TRUNCATE_TABLE is treated for purposes of logging and replication as DDL rather than DML so that it can be logged
+# and replicated as a statement. However, the effects of the statement as applicable to InnoDB and other
+# transactional tables on replication slaves still follow the rules described in SECTION 13.1.37, "TRUNCATE TABLE
+# SYNTAX" governing such tables. (Bug #36763)
+#
+# 17.5.1.37 REPLICATION AND USER NAME LENGTH
+#
+# The maximum length of the MySQL user name is 32 chars. Replication of user names longer than 16 chars
+# to a slave earlier than MySQL 5.7 that supports only shorter user names will fail. HOwever, this should 
+# occur only when replicating from a newer master to an older slave, which is not a recommended configuration.
+#
+# 17.5.1.38 REPLICATION AND VARIABLES
+#
+# System variables are not replicated correctly when using STATEMENT mode, except for the following variables
+# when they are used with session scope:
+#
+# 		) auto_increment_increment
+#
+# 		) auto_increment_offset
+#
+# 		) character_set_client
+#
+# 		) character_Set_connection
+#
+# 		) character_set_database
+#
+# 		) character_set_server
+#
+# 		) collation_connection
+#
+# 		) collation_database
+#
+# 		) collation_server
+#
+# 		) foreign_key_checks
+#
+# 		) identity
+#
+# 		) last_insert_id
+#
+# 		) lc_time_names
+#
+# 		) pseudo_thread_id
+#
+# 		) sql_auto_is_null
+#
+# 		) time_zone
+#
+# 		) timestamp
+#
+# 		) unique_checks
+#
+# When MIXED mode is used, the variables in the preceding list, when used with session scope, cause a switch
+# from statement-based to row-based lgging. See SECTION 5.4.4.3, "MIXED BINARY LOGGING FORMAT"
+#
+# sql_mode is also replicated except for the NO_DIR_IN_CREATE mode; the slave always preserves its own value
+# for NO_DIR_IN_CREATE, regardless of changes to it on the master. This is true for all replication formats.
+#
+# However, when mysqlbinlog parses a SET @@sql_mode = mode statement, the full mode value, including
+# NO_DIR_IN_CREATE, is passed to the receiving server. For this reason, replication of such a statement
+# may not be safe when STATEMENT mode is in use.
+#
+# The default_storage_engine system variable is not replicated, regardless of the logging mode; this is intended
+# to facilitate replication between different storage engines.
+#
+# The read_only system variable is not replicated. In addition, the enabling this variable has different 
+# effects with regard to temporary tables, table locking, and the SET_PASSWORD statement in different
+# MySQL versions.
+#
+# The max_heap_table_size system variable is not replicated. Increasing teh value of this variable on the master
+# without doing so on the slave can lead eventually to Table is full errors on the slave when trying to execute
+# INSERT statements on a MEMORY table on the master that is thus permitted to grow larger than its counterpart
+# on the slave.
+#
+# For more information, see SECTION 17.5.1.21, "REPLICATION AND MEMORY TABLES"
+#
+# In statement-based replication, session variables are not replicated properly when used in statements that update
+# tables. FOr example, the following sequence of statements will not insert the same data on the master and the slave:
+#
+# 		SET max_join_size=1000;
+# 		INSERT INTO mytable VALUES(@@max_join_size);
+#
+# This does not apply to the common sequence:
+#
+# 		SET time_zone=...;
+# 		INSERT INTO mytable VALUES(CONVERT_TZ(...,..., @@time_zone));
+#
+# Replication of session variables is not a problem when row-based replication is being used, in which case, session
+# variables are always replicated safely. See SECTION 17.2.1,, "REPLICATION FORMATS"
+#
+# The following session variables are written to the binary log and honored by the replication slave when parsing the
+# binary log ,regardless of the logging format:
+#
+# 		) sql_mode
+#
+# 		) foreign_key_checks
+#
+# 		) unique_checks
+#
+# 		) character_set_client
+#
+# 		) collation_connection
+#
+# 		) collation_database	
+#
+# 		) collation_server
+#
+# 		) sql_auto_is_null
+#
+# IMPORTANT:
+#
+# 		Even though session variables relating to character sets and collations are written to the
+# 		binary log, replication between different character sets is not supported.
+#
+# To help reduce possible confusion, we recommend that you always use the same setting for the lower_case_table_names
+# system variable on both master and slave, especially when you are running MySQL on platforms with case-sensitive
+# file systems. 
+#
+# The lower_case_table_names setting can only be configured when initializing the server.
+#
+# 17.5.1.39 REPLICATION AND VIEWS
+#
+# Views are always replicated to slaves. Views are filtered by their own name, not by the tables they refer to.
+# This means that a view can be replicated to the slave even if the view contains a table that would normally
+# be filtered out by replication-ignore-table rules.
+#
+# Care should therefore be taken to ensure that views do not replicate table data that would normally
+# be filtered for security reasons.
+#
+# Replication from a table to a same-named view is supported using staetment-based logging, but not when using
+# row-based logging. Trying to do so when row-based logging is in effect causes an error.
+#
+# 17.5.2 REPLICATION COMPATIBILITY BETWEEN MYSQL VERSIONS
+#
+# MySQL supports replication from one release series to the next higher release series. For example, you can
+# replicate from a master running MySQL 5.6 to a salve running MySQL 5.7, from a master running MySQL 5.7
+# to a  slave running MySQL 8.0, and so on.
+#
+# However, you might encounter difficulties when replicating from an older master to a newer slave if the master
+# uses statements or relies on behavior no longer supported in the version of MySQL used on the slave.
+#
+# For example, foreign key names longer than 64 characters are no longer supported from MySQL 8.0
+#
+# The use of more than two MySQL Server versions is not supported in replication setups involving multiple masters,
+# regardless of the number of master or slave MySQL servers. This restriction applies not only to release
+# series, but to version numbers within the same release series as well.
+#
+# For example, if you are using a chained or circular replication setup, you cannot use MySQL 8.0.1,
+# MySQL 8.0.2, and MySQL 8.0.4 concurrently, although you could use any two of these releases together.
+#
+# IMPORTANT:
+#
+# 	It is strongly recommended to use the most recent release available within a given MySQL
+# 	release series because replication (and other) capabilities are continually being improved.
+# 	It is also recommended to ugprade masters and slaves that use early releases of a release series
+# 	of MySQL to GA (production) releases when the latter become available for that release series.
+#
+# From MySQL 8.0.14, the server version is recorded in the binary log for each transaction for the server
+# that originally committed the transaction (original_server_version), and for the server that is the
+# immediate master of the current server in the replication topology (immediate_server_version)
+#
+# Replication from newer masters to older slaves might be possible, but is generally not supported.
+# This is due to a number of factors:
+#
+# 		) BINARY LOG FORMAT CHANGES.
+#
+# 			The binary log format can change between major releases. While we attempt to maintain backward
+# 			compatibility, this is not always possible.
+#
+# 			This also has significant implications for upgrading replication servers; see SECTION
+# 			17.5.3, "UPGRADING A REPLICATION SETUP", for more information.
+#
+# 		) For more information about row-based replication, see SECTION 17.2.1, "REPLICATION FORMATS"
+#
+# 		) SQL incompatibilities.
+#
+# 			You cannot replicate from a newer master to an older slave using statement-based replicaiton
+# 			if the statements to be replicated use SQL features available on the master but not on the slave.
+#
+# 			However, if both the master and the slave support row-based replication, and there are no data definition
+# 			statements to be replicated that depend on SQL features found on the master but not on the slave,
+# 			you can use row-based replication to replicate the effects of data modificaiton statements even if
+# 			the DDL run on the master is not supported on the slave.
+#
+# For more information on potential replication issues, see SECTION 17.5.1, "REPLICATION FEATURES AND ISSUES"
+#
+# 17.5.3 UPGRADING A REPLICATION SETUP
+#
+# When you upgrade servers that participate in a replication setup, the procedure for upgrading depends on the
+# current server versions and the version to which you are upgrading. This section provides information about how
+# upgrading affects replication.
+#
+# For general information about upgrading MySQL, see SECTION 2.11, "UPGRADING MySQL"
+#
+# When you upgrade a master to 8.0 from an earlier MySQL release series, you should first ensure that all the 
+# slaves of this master are using the same 8.0.x release. If this is not the case, you should first upgrade
+# the slaves.
+#
+# To uppgrade each slave, shut it down, upgrade it to the appropriate 8.0.x version, restart it, and restart application.
+# Relay logs created by the slave after the upgrade are in 8.0 format.
+#
+# Changes affecting operations in strict SQL mode (STRICT_TRANS_TABLES or STRICT_ALL_TABLES) may result in
+# replication failure on an upgraded slave. If you use statement-based logging (binlog_format=STATEMENT),
+# if a slave is upgraded before the master, the nonupgraded master will execute statements without error
+# that may fail on the slave and replication will stop.
+#
+# To deal with this, stop all new statements on the master and wait until the slaves catch up.
+# Then upgrade the slaves. Alternatively, if you cannot stop new statements, temporarily change to
+# row-based logging on the master (binlog_format=ROW) and wait until all slaves have processed all binary
+# logs produced up to the point of this change. Then upgrade teh slaves.
+#
+# The default character set has changed from latin1 to utf8mb4 in MySQL 8.0. In a replicated setting, when
+# upgrading from MySQL 5.7 to 8.0, it is advisable to change the default character set back to the character
+# set used in MySQL 5.7 before upgrading. After the upgrade is completed, the default character set
+# can be changed to utf8mb4. Assuming that the previous defaults were used, one way to preserve them is to
+# start the server with these lines in the my.cnf file:
+#
+# 		[mysqld]
+# 		character_set_server=latin1
+# 		collation_server=latin1_swedish_ci
+#
+# After the slaves have been upgraded, shut down the master, upgrade it to the same 8.0.x releases as the slaves,
+# and restart it.
+#
+# If you had temporarrily changed the master to row-based logging,chang eit back to statement-based logging.
+# The 8.0 master is able to read the old binary logs written prior to the upgrade and to send them to the 8.0
+# slaves.
+#
+# The slaves recognize the old format and handle it properly. Binary logs created by the master subsequent to
+# the upgrade are in 8.0 format. These too are recognized by the 8.0 slaves.
+#
+# In other words, when upgrading to MySQL 8.0, the slaves must be MySQL 8.0 before you can upgrade the master to
+# 8.0. Note that downgrading from 8.0 to older versions does not work so simply: You must ensure that any 8.0
+# binary log or relay log has been fully processed, so that you can remove it before proceeding with the downgrade.
+#
+# Some upgrades may require that you drop and re-create database objects when you move from one MySQL series
+# to the next. For example, collation changes might require that table indexes be rebuilt. Such operations, if
+# necessary, are detailed at SECTION 2.11.4, "CHANGES IN MYSQL 8.0."
+#
+# IT is safest to perform these operations separately on the slaves and the master, and to disable replication
+# of these operations from the master to the slave.
+#
+# To achieve this, use the following procedure:
+#
+# 		1. Stop all the slaves and upgrade them. Restart them with the --skip-slave-start option so that they do not
+# 			connect to the master. Perform any table repair or rebuilding operations needed to re-create database objects,
+# 			such as use of REPAIR TABLE or ALTER TABLE, or dumping and reloading tables or triggers.
+#
+# 		2. Disable the binary log on the master. To do this without restarting the master, execute a SET sql_log_bin = OFF
+# 			statement. Alternatively, stop the master and restart it with the --skip-log-bin option.
+#
+# 			If you restart the master, you might also want to disallow client connections. For example, if all clients
+# 			connect using TCP/IP, enable the skip_networking system variable when you restart the master.
+#
+# 		3. With the binary log disabled, perform any table repair or rebuilding operations needed to re-create database
+# 			objects. The binary log must be disabled during this step to prevent these operations from being logged
+# 			and sent to the slaves later.
+#
+# 		4. Re-enable the binary log on the master. If you set sql_log_bin to OFF earlier, execute a SET sql_log_bin = ON
+# 			statement. If you restarted the master to disable the binary log, restart it without --skip-log-bin, and
+# 			without enabling the skip_networking system variable so that clientts and salves can connect.
+#
+# 		5. Restart the slaves, this time without the --skip-slave-start option.
+#
+# If you are upgrading an existing replication setup from a version of MySQL that does not support global transaction
+# identifiers to a version that does, you should not enable GTIDs on either the master or the slave before making
+# sure that the setup meets all the requirements for GTID-based replication.
+#
+# See SECTION 17.1.3.4, "SETTING UP REPLICATION USING GTIDS", which contains information about converting existing
+# replication setups to use GTID-based replication.
+#
+# Prior to MySQL 8.0.16, when the server is running with global transacton identifiers (GTIDs) enabled (gtid_mode=ON),
+# do not enable binary logging by mysql_upgrade (the --write-binlog option). As of MySQL 8.0.16, the server
+# performs the entire MySQL upgrade procedure, but disables binary logging during the upgrade, so there is no issue.
+#
+# IT is not recommended to load a dump file when GTIDs are enabled on the server (gtid_mode=ON), if your dump file
+# includes system tables. Mysqldump issues DML instructions for the system tables which use the non-transactional
+# MyISAM storage engine, and this combination is not permitted when GTIDs are enabled.
+#
+# Also be aware that loading a dump file from a server with GTIDs enabled, into another server with GTIDs enabled,
+# causes different transaction identifiers to be generated.
+#
+# 17.5.4 TROUBLESHOOTING REPLICATION
+#
+# If you have followed the instructions but your replication setup is not working, the first thing to do is check
+# the error log for messages. Many users have lost time by not doing this soon enough after encountering a prolem.
+#
+# If you cannot tell from the error log what the problem was, try the following techniques:
+#
+# 		) Verify that the master has binary logging enabled by issuing a SHOW_MASTER_STATUS statement. Binary logging
+# 			is enabled by default. If binary logging is enabled, Position is nonzero. If binary logging is not enabled,
+# 			verify that you are not running the master with any settings that disable binary logging, such as the
+# 			--skip-log-bin option.
+#
+# 		) Verify that the server_id system variable was set at startup on both the master and slave and that the ID
+# 			value is unique on each server.
+#
+# 		) Verify that the slave is running. Use SHOW_SLAVE_STATUS to check whether the Slave_IO_Running and 
+# 			Slave_SQL_Running values are both Yes. If not, verify the options that were used when starting the slave
+# 			server.
+#
+# 			For example, --skip-slave-start prevents the slave threads from starting until you issue a 
+# 			START_SLAVE statement.
+#
+# 		) If the slave is running, check whether it established a connection to the master. Use SHOW_PROCESSLIST,
+# 			find the I/O and SQL threads and check their State column to see what they display.
+#
+# 			See SECTION 17.2.2, "REPLICATION IMPLEMENTATION DETAILS". If the I/O thread state says COnnecting
+# 			to master, check the following:
+#
+# 				) Verify the privileges for the user being used for replication on the master.
+#
+# 				) Check that the host name of the master is correct and that you are using the correct port to connect
+# 					to the master.
+#
+# 					The port used for replication is the same as used for client network communication (the default is
+# 					3306). For the host name, ensure that the name resolves to tthe correct IP address.
+#
+# 				) Check the configuration file to see whether the skip_networking system variable has been enabled on
+# 					the master or slave to disable networking. If so,comment the setting or remove it.
+#
+# 				) If the master has a firewall or IP Filtering configuration, ensure that the network port being used
+# 					for MySQL is nott being filtered.
+#
+# 				) Check that you can reach the master by using ping or traceroute/tracert to reach the host
+#
+# 	 ) If the slave was running previously but has stopped, the reason usually is that some statement that succeeded
+# 		on the master failed on the slave. This should never happen if you have taken a proper snapshot of the master,
+# 		and never modified the data on the slave outside of the slave thread.
+#
+# 		If the slave stops unexpectedly, it is a bug or you have encountered one of the known replication limitations
+# 		described in SECTION 17.5.1, "REPLICATION FEATURES AND ISSUES"
+#
+# 		If it is a bug, see SECTION 17.5.5, "HOW TO REPORT REPLICATION BUGS OR PROBLEMS", for
+# 		instructions on how to report it
+#
+# 	) If a statement that succeeded on the master refuses to run on the slave, try the following procedure if it is not
+# 		feasible to do a full database resynchronization by deleting the slave's database and copying a new snapshot
+# 		from the master:
+#
+# 			a. Determine whether the affected table on the slave is different from the master table. Try to understand
+# 			how this happened. Then make the slave's table identical to the master's and run START_SLAVE.
+#
+# 			b. If the preceding step does not work or does not apply, try to understand whether it would be safe to make
+# 			the update manually (if needed) and then ignore the next statement from the master.
+#
+# 			c. If you deicded that the slave can skip the next statement from the master, issue the following statements:
+#
+# 				mysql> SET GLOBAL sql_slave_skip_counter = N;
+# 				mysql> START SLAVE;
+#
+# 	  The value of N should be 1 if the next statement from the master does not use AUTO_INCREMENT or LAST_INSERT_ID().
+# 		Otherwise, the value should be 2. The reason for using a value of 2 for statements that use AUTO_INCREMENT or
+# 		LAST_INSERT_ID() is that they take two events in teh binary log of the master.
+#
+# 		See also SECTION 13.4.2.5, "SET GLOBAL sql_slave_skip_counter SYNTAX"
+#
+# 		d. If you are sure that the slave started out perfectly synched with the master, and that no one has
+# 			updated the tables involved outside of the slave thread, then presumably the discrepancy is the result
+# 			of a bug.
+#
+# 			If you are running the most recent version of MySQL, please report the prolem.
+# 			If you are running an older version, try upgrading to the latest produciton release to determine
+# 			whether the problem persists.
+#
+# 17.5.5 HOW TO REPORT REPLICATION BUGS OR PROBLEMS
+#
+# When you have determined that there is no user error involved, and replication still either does not work at all or is
+# unstable, it is time to send us a bug report.
+#
+# WE need to obtain as much information asp ossible from you to be able to track down the bug.
 # 
+# If you have a repeatable test case that demonstrates teh bug, please enter it into our bug DB using the instructions
+# given in SECTION 1.7, "HOW TO REPORT BUGS OR PROBLEMS". If you have a "Phantom" problem (one that you
+# cannot  duplciate at will), use the following procedure:
+#
+# 		1. Verify that no user error is involved. For example, if you update the slave outside of the slave thread,
+# 			the data goes out of synchrony, and you can have unique key violations on updates.
+#
+# 			IN this case, the slave thread stops and waits for you to clean up the tables manually to bring them into synch.
+# 			This is not a replication problem.
+#
+# 			It is a problem of outside interference causing replication to fail.
+#
+# 		2. Ensure that the slave is running with binary logging enabled (the log_bin system variable), and with the
+# 			--log-slave-updates option enabled, which causes the slave to log the updates that it receives from teh 
+# 			master into its own binary logs. These settings are the defaults.
+#
+# 		3. Save all evidence before resetting the replication state. If we have no information or only info, it becomes
+# 			difficult or impossible to track down the problem. The evidence yo ushould collect is:
+#
+# 				) All binary log files from the master
+#
+# 				) ALl binary log files from the slave
+#
+# 				) The output of SHOW_MASTER_STATUS from the master at the time you discovered the problem
+#
+# 				) The output of SHOW_SLAVE_STATUS from the slave at the time you discovered the problem
+#
+# 				) Error logs from the master and the slave
+#
+# 		4. Use mysqlbinlog to examine the binary logs. The following should be helpful to find the problem statement.
+# 			log_file and log_pos are the Master_Log_File and Read_Master_Log_Pos values from SHOW_SLAVE_STATUS.
+#
+# 			shell> mysqlbinlog --start-position=log_pos log_file | head
+#
+# After you have collected the evidence for the problem, try to isolate it as a separate test case first.
+# Then enter the problem with as much information as possible into our bugs database using the instructions
+# at SECTION 1.7, "HOW TO REPORT BUGS OR PROBLEMS"
+#
+# CHAPTER 18 GROUP REPLICATION
+#
+# Table of Contents
+#
+# 18.1 GROUP REPLICATION BACKGROUND
+# 18.2 GETTING STARTED
+# 18.3 MONITORING GROUP REPLICATION
+# 18.4 GROUP REPLICATION OPERATIONS
+# 18.5 GROUP REPLICATION SECURITY
+# 18.6 GROUP REPLICATION PERFORMANCE
+# 18.7 UPGRADING GROUP REPLICATION
+# 18.8 GROUP REPLICATION SYSTEM VARIABLES
+# 18.9 REQUIREMENTS AND LIMITATIONS
+# 18.10 FAQ
+#
+# This chapter explains MySQL Group replication and how to install, configure and monitor groups. MySQL Group
+# Replication is a MySQL Server plugin that enables you to create elastic, highly-available, fault-tolerant
+# replication topologies.
+#
+# Groups can operate in a single-primary mode with automatic primary election, where only one server accepts
+# updates at a time. Alternatively, for more advanced users, groups can be deployed in multi-primary mode,
+# where all servers can accept updates, even if they are issued concurrently.
+#
+# There is a built-in group membership service that keeps the view of the group consistent and available for all
+# servers at any given point in time. Servers can leave and join the group and the view is updated accordingly.
+#
+# Sometimes servers can leave the group unexpectedly, in which case the failure detection mechanism detects this
+# and notifies the group that the view has changed. This is all automatic.
+#
+# The chapter is structured as follows:
+#
+# 		) SECTION 18.1, "GROUP REPLICATION BACKGROUND" provides an introduction to groups and how Group Replication
+# 			works.
+#
+# 		) SECTION 18.2, "GETTING STARTED" explains how to configure multiple MySQL Server instances to create a group
+#
+# 		) SECTION 18.3, "MONITORING GROUP REPLICATION" explains how to monitor a group.
+#
+# 		) SECTION 18.4, "GROUP REPLICATION OPERATIONS" explains how to work with a group
+#
+# 		) SECTION 18.5, "GROUP REPLICATION SECURITY" explains how to secure a group
+#
+# 		) SECTION 18.6, "GROUP REPLICATION PERFORMANCE" explains how to fine tune performance for a group
+#
+# 		) SECTION 18.7, "UPGRADING GROUP REPLICATION" explains how to upgrade a group
+#
+# 		) SECTION 18.8, "GROUP REPLICATION SYSTEM VARIABLES" is a reference for the system variables specific
+# 			to Group Replication
+#
+# 		) SECTION 18.9, "REQUIREMENTS AND LIMITATIONS" explains technical requirements and limitations for Group
+# 			Replication
+#
+# 		) SECTION 18.10, "FAQ" provides answers to some technical questions about deploying and operating
+# 			Group Replication
+#
+# 18.1 GROUP REPLICATION BACKGROUND
+#
+# 18.1.1 REPLICATION TECHNOLOGIES
+# 18.1.2 GROUP REPLICATION USE CASES
+# 18.1.3 MULTI-PRIMARY AND SINGLE-PRIMARY MODES
+# 18.1.4 GROUP REPLICATION SERVICES
+# 18.1.5 GROUP REPLICATION PLUGIN ARCHITECHTURE
+#
+# This section provides background information on MySQL Group Replication.
+#
+# The most common way to create a fault-tolerant system is to resort to making components redundant, in other
+# words the component can be removed and the system should continue to operate as expected.
+#
+# This creates a set of challenges that raise complexity of such systems to a whole different level. Specifically,
+# replicated datbases have to deal with the fact that they require maintenance and administration of several servers
+# instead of just one.
+#
+# Moreover, as servers are cooperating together to create the group several other classic distributed systems
+# problems have to be dealt with, such as network partitioning or split brain scenarios.
+#
+# Therefore, the ultimate challenge is to fuse the logic of the database and data replication with the logic of having
+# several servers coordinated in a consistent and simple way. In other words, to have multiple servers agreeing on
+# the state of the system and the data on each and every change that the system goes through.
+#
+# This can be summarized as having servers reaching agreement on each database state transition, so that they all progress
+# as one single database or alternatively that they eventually converge to the same state. Meaning that they need to
+# operate as a (distributed) state machine.
+#
+# MySQL group Replication provides distributed state machine replication with strong coordination between servers.
+# Servers coordinate themselves automatically when they are part of the same group. The group can operate in a 
+# single-primary mode with automatic primary election, where only one server accepts updates at a time.
+#
+# Alternatively, for more advanced users the group can be deployed in multi-primary mode, where all servers
+# can accept updates, even if they are issued concurrently. This power comes at the expense of applications
+# having to work around the limitations imposed by such deployments.
+#
+# There is a built-in group membership service that keeps the view of teh group consistent and available for all
+# servers at any given point in time. Servers can leave and join the group and the view is updated accordingly.
+# Sometimes servers can elave the group unexpectedly, in which case the failure detection mechanism detects this
+# and notifies the group that the view has changed. This is all automatic.
+#
+# For a transaaction to commit, the majority of the group have to agree on the order of a given transaction in the
+# global sequence of transaactions. Deciding to commit or abort a transaaction is done by each server individually,
+# but all servers make the same decision. If there is a network partition, resulting in a split where members
+# are unable to reach agreement, then the system does not progress until this issue is resolved.
+#
+# Hence there is also a built-in, automatic, split-brain protection mechanism.
+#
+# All of this is powered by the provided Group Communication System (GCS) protocols. These provide a failure
+# detection mechanism, a group membership service, and safe and completely ordered message delivery.
+# 
+# All these properties are key to creating a system which ensures that data is consistently replicated across
+# the group of servers.
+#
+# At the very core of this technology lies an implementation of the Paxos algorithm. It acts as the group
+# communication engine.
+#
+# 18.1.1 REPLICATION TECHNOLOGIES
+#
+# 18.1.1.1 PRIMARY-SECONDARY REPLICATION
+# 18.1.1.2 GROUP REPLICATION
+# 
+# before getting into the details of the MySQL Group Replication, this section introduces some background concepts
+# and an overview of how things work. This provides some context to help understand what is required for Group
+# Replication and what the differences are between classic asynch MySQL Replication and Group Replication.
+#
+# 18.1.1.1 PRIMARY-SECONDARY REPLICATION
+#
+# Traditional MySQL replication provides a simple Primary-Secondary approach to replication. There is a primary
+# (master) and there is one or more secondaries (slaves). The primary executes transactions, commits them and
+# then they are later (thus asynch) sent to the secondaries to be either re-executed (in statement-based
+# replication) or applied (in row-based replication). It is a shared-nothing system, where all servers
+# have a full copy of the data by default.
+#
+# > [EXECUTE] [BINLOG]V > [COMMIT] ^
+# 							 >
+# 							 V [RELAY lOG] [APPLY]  [BINLOG] [COMMIT]
+# 							 > [RELAY LOG] [ APPLY ] [BINLOG] [COMMIT]
+#
+# There is also semisynch replication, which adds one synchronization step to the protocol. This means that
+# the Primary waits, at commit time, for the secondary to acknowledge that it has received the transaction.
+#
+# Only then does the primary resume the commit operation.
+#
+# FIGURE 18.2 MySQL SEMISYNCH REPLICATION
+#
+# 		V
+# 		>> [EXECUTE] [BINLOG] V >>>>>>>>>>>>> [Commit]^
+# 								    V 				^
+# 									 > [RELAY LOG] ^ [Apply][Binlog][Commit]
+# 									 V 				^
+# 									 > [RELAY LOG] ^ [Apply][Binlog][Commit]
+#
+#
+# In the two figures above, you can see a Diagram of the classic asynch MySQL Replication protocol
+# (and its semisynch variant as well). Diagonal arrows represent messages exchanged between servers
+# or messages exchanged between servers and the client application.
+#
+# 18.1.1.2 GROUP REPLICATION
+#
+# Group Replication is a technique that can be used to implement fault-tolerant systems. The replication group is a 
+# set of servers that each have their own entire copy of the data (a shared-nothing replication scheme), and interact
+# with each other through message passing. 
+#
+# The communication layer provides a set of guarantees such as atomic message and total order message delivery.
+#
+# These are very powerful properties that translates into very useful abstractions that one can resort to build mroe
+# advanced database replication solutions.
+#
+# MySQL group Replication builds on top of such properties and abstractions and implements a multi-master update
+# everywhere replication protocol. A replication group is formed by multiple servers and each server in the group
+# may execute transactions independently at any time. 
+#
+# However, all read-write transactions commit only after they have been approved by teh group. In otehr words,
+# for any read-write transaction the group needs to decide whether it commits or not, so the commit operation
+# is not a unilateral decision from the originating server.
+#
+# Read-only transactions need no coordination within the group and commit immediately.
+#
+# When a read-write transaction is ready to commit at the originating server, the server atomically broadcasts
+# the write values (the rows that were changed) and the corresponding write set (the unique identifiers of the rows
+# that were updated).
+#
+# because the transaction is sent through an atomic broadcast, either all servers in the group receive the transaction
+# or none do.
+#
+# If they receive it, then they all receive it in teh same order with respect to other transaactions that were 
+# sent before. All servers therefore receive the same set of transactions in the same order, and a global total
+# order is established for the transaactions.
+#
+# However, there may be conflicts between transactions that execute concurrently on different servers.
+# Such conflicts are detected by inspecting and comparing the write sets of two different and concurrent
+# transaactions, in a process called certification.
+#
+# https://dev.mysql.com/doc/refman/8.0/en/group-replication-summary.html
+#
+#
