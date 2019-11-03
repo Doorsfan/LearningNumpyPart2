@@ -76169,6 +76169,508 @@
 # Such conflicts are detected by inspecting and comparing the write sets of two different and concurrent
 # transaactions, in a process called certification.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/group-replication-summary.html
+# During certification, conflict detection is carried out at row level: if two concurrent transactions,
+# that executed on different servers, update the same row, then there is a conflict. The conflict
+# resolution procedure states that the transaction that was ordered first commits on all servers,
+# and the transaction ordered second aboarts, and is therefore rolled back on the originating server
+# and dropped by the other servers in the group.
 #
+# For example, if t1 and t2 exeute concurrently at different sites, both changing the same row, and t2
+# is ordered before t1, then t2 wins the conflict and t1 is rolled back.
+#
+# This is in fact a distributed first commit wins rule. Note that if two transactions are bound to
+# conflict more often than not, then it is a good practice to start them on the same server,
+# where they have a chance to synchronize on the local lock manager instead of being rolled back
+# as a result of certification.
+#
+# For applying and externalizing the certified transactions, Group REplication permits servers to deviate
+# from the agreed order of the transactions if this does not break consistency and validity. Group Replication
+# is an eventual consistency system, meaning that as soon as the incoming traffic slows down or stops,
+# all group members have the same data content.
+#
+# While traffic is flowing, transactions can be externalized in a slightly different order, or
+# externalized on some members before the others. For example, in multi-primary mode, a local 
+# transaction might be externalized immediately following certification, although a remote transaction
+# that is earlier in the global order has not yet been applied.
+#
+# This is permitted when the certification process has established that there is no conflict
+# between the transactions. In single-primary mode, on the primary server, there is a small chanse
+# that concurrent, non-conflicting local transactions might becommitted and externalized in a different
+# order from the global order agreed by Group Replication.
+#
+# On the secondaries, which do not accept writes from clients, transactions are always committed
+# and externalized in teh agreed order.
+#
+# The following figure depicts the MySQL Group Replication protocol and by comparing it to MySQL
+# Replication (or even MySQL semisynch replication) you can see some differences. Some underlying
+# consensus and Paxos related messages are missing from this picture for clarity.
+#
+# FIGURE 18.3 MySQL GROUP REPLICATION PROTOCOL
+#
+#  					^>>
+# 		> [execute]    V [Certify][binlog][commit]>^
+# 					  V
+# 						> [Certify][relay log][apply][binlog][commit]
+#  				   // etc //
+#
+# 18.1.2 GROUP REPLICATION USE CASES
+#
+# 18.1.2.1 EXAMPLES OF USE CASE SCENARIOS
+#
+# Group replication enables you to create fault-tolerant systems with redundancy by replicating the system state to a 
+# set of servers. Even if some of the servers subsequently fail, as long as it is not all or majority, the system is still
+# available.
+#
+# Depending on the number of servers which fail the group might have degraded performance or scalability, but it is still
+# available.
+#
+# Server failures are isolated and independent. They are tracked by a group membership service which relies on a distributed
+# failure detector that is able to signal when any servers leave the group, either voluntarily or due to an unexpected halt.
+#
+# There is a distributed recovery procedure to ensure that when servers join the group they are brought up to date automatically.
+# There is no need for server failover, and the multi-master update everywhere nature ensures that even updates are not blocked
+# in teh event of a single server failure.
+#
+# To summarize, MySQL Group Replication guarantees that the database service is continously available.
+#
+# It is important ot understand that although the database service is available, in the event of a server crash, those
+# clients connected to it must be redirected, or failed over, to a different server. This is not something Group
+# Replication attempts to resolve.
+#
+# A connector, load balance, router or some form of middleware are more suitable to deal with this issue.
+# For example, see MySQL Router 8.0
+#
+# TO summarize, MySQL Group Replication provides a highly available, highly elastic, dependable MySQL Service.
+#
+# 18.1.2.1 EXAMPLES OF USE CASE SCENARIOS
+#
+# The following examples are typical use cases for Group Replication.
+#
+# 		) Elastic Replication - Environment that require a very fluid replication infrastructure, where the number of
+# 			servers has to grow or shrink dynamically and with as few side-effects as possible.
+#
+# 			For instance, database services for the cloud.
+#
+# 		) Highly available Shards - Sharding is a popular approach to achieve write scale-out. use MySQL GRoup
+# 			Replication to implement highly available shards, where each shard maps to a replication group
+#
+# 		) Alternative to Master-Slave Replication - In certain situations, using a single master server makes it a single
+# 			point of contention. Writing to an entire group may prove more scalable under certain circumstances.
+#
+# 		) Autonomic Systems - Additionally, you can deploy MySQL Group Replication purely  for the automation that is
+# 			built into the replication protocol (described already in this and previous chapters)
+#
+# 18.1.3 MULTI-PRIMARY AND SINGLE-PRIMARY MODES
+#
+# 18.1.3.1 SINGLE-PRIMARY MODE
+# 18.1.3.2 MULTI-PRIMARY MODE
+#
+# Group Replication operates either in single-primary mode or in multi-primary mode. The group's mode is a group-wide
+# configuration setting, specified by the group_replication_single_primary_mode system variable, which must be
+# the same on all members. ON means single-primary mode, which is the default mode, and OFF means multi-primary mode.
+#
+# IT is not possible to have members of the group deployed in different modes, for example one member configured
+# in multi-primary mode while another member is in single-primary mode.
+#
+# You cannot change the  value of group_replication_single_primary_mode manually while Group Replication is running.
+# From MySQL 8.0.13, you can use the group_replication_switch_to_single_primary_mode() and group_replication_switch_to_multi_primary_mode()
+# UDFs to move a group from one mode to another while Group Replication is still running.
+#
+# These UDFs manage the process of changing the group's mode and ensure the safety and consistency of your data.
+# In earleir releases, to change the group's mode you must stop Group Replication and change the value of group_replication_single_primary_mode
+# on all emembers.
+#
+# Then carry out a full reboot of the group (a bootstrap by a server with group_replication_bootstrap_group=ON) to implement
+# the change to the new operating configuration. You do not need to restart the servers.
+#
+# Regardless of the deployed mode, Group Replication does not handle client-side failover. That must be handled by
+# a middleware framework such as MySQL Router 8.0, a proxy, a connector, or the application itself.
+#
+# 18.1.3.1 SINGLE-PRIMARY MODE
+#
+# In single-primary mode (group_replication_single_primary_mode=ON) the group has a single primary server
+# that is set to read-write mode.
+#
+# All the other members in the group are set to read-only mode (with super-read-only=ON). The primary is typically
+# the first server to bootstrap the group. ALl other servers that join the group learn about the primary server
+# and are automatically set to read-only mode.
+#
+# In single-primary mode, Group Replication enforces that only a single server writes to the group, so compared
+# to multi-primary mode, consistency checking can be less strict and DDL statements do not need to be handled
+# with any extra care.
+#
+# The option group_replication_enforce_update_everywhere_checks enables or disables strict consistency checks
+# for a group. When deploying in single-primary mode, or changing the group to single-primary mode, this
+# system variable must be set to OFF.
+#
+# The member that is designated as the primary server can change in the following ways:
+#
+# 		) If the existing primary leaves the group, whether voluntarily or unexpectedly, a new primary is elected
+# 			automatically.
+#
+# 		) You can apoint a specific member as the new primary using the group_replication_set_as_primary()
+# 			UDF
+#
+# 		) If you use the group_replication_switch_to_single_primary_mode() UDF to change a group that was
+# 			running in multi-primary mode to run in single-primary mode, a new primary is elected automatically,
+# 			or you can appoint the new primary by specifying it with the UDF.
+#
+# The UDFs can only be used when all group members are running MySQL 8.0.13 or higher. When a new primary
+# server is elected automatically or appointed manually. It is automatically set to read-write, and the
+# other group members remain as secondaries, and such, read-only.
+#
+# Figure 18.4, "NEW PRIMARY ELECTION" shows this process.
+#
+# FIGURE 18.4 NEW PRIMARY ELECTION
+#
+# 		[S! S!][S2]
+# 		V  V    >>>>>V 
+# 		S1, S2, S3, S4, S5
+#
+# 		[S1 S1][S2]
+# 		V  V    >>>>>V
+# 		  , S2, S3, S4, S5
+#
+# S1 maps to S2, etc.
+#
+# When a new primary is elected or appointed,, it might have a backlog of changes that had been applied on the old
+# primary but have not yet been applied on this server. In this situation, until the new primary catches up with the old
+# primary, read-write transactions might result in conflicts and be rolled back, and read-only transactions might result
+# in stale reads.
+#
+# Group replication's flow control mechanism, which minimizes the difference between fast and slow members, reduces
+# the chances of this happening if it is activated and properly tuned. For more information on flow control,
+# see SECTION 18.6.2, "FLOW CONTROL". From MySQL 8.0.14, you can also use the group_replication_consistency system variable
+# to configure the group's level of transaction consistency to prevent this issue.
+#
+# The setting BEFORE_ON_PRIMARY_FAILOVER (or any higher consistency level) holds new transactions on a newly
+# elected primary until the backlog has been applied. For more information on transaction consistency,
+# see SECTION 18.4.2, "TRANSACTION CONSISTENCY GUARANTEES". IF flow control and transaction consistency
+# guarantees are not used for a group, it is a good practice to wait for the new primary to apply its replication-related
+# relay log before re-routing client applications to it.
+#
+# 18.1.3.1.1 PRIMARY ELECTION ALGORITHM
+#
+# The automatic primary member election process involves each member looking at the new view of the group, ordering
+# the potential new primary members, and choosing the member that qualifies as the most suitable. Each
+# member makes its own decision locally, following the primary election algorithm in its MySQL Server release.
+#
+# Because all members must reach the same decision, members adapt their primary election algorithm if other
+# group members are running lower MySQL Server versions, so that they have the same behavior as the member
+# with the lowest MySQL Server version in the group.
+#
+# The factors considered by members when electing a primary, in order, are as follows:
+#
+# 		1. The first factor considered is which member or members are running the lowest MySQL Server version.
+# 			If all group members are running MySQL 8.0.17 or higher, members are first ordered by teh patch
+# 			version of their release.
+#
+# 			If any members are running MySQL Server 5.7 or MySQL 8.0.16 or lower, members are first ordered
+# 			by the major version of their release, and the patch version is ignored.
+#
+# 		2. If more than one member is running the lowest MySQL Server Version, the second factor considered
+# 			is the member weight of each of those members, as specified by the group_replication_member_weight
+# 			system variable on the member.
+#
+# 			If any member of the group is running MySQL Server 5.7, where this system variable was not available,
+# 			this factor is ignored.
+#
+# 			The group_replication_member_weight system variable specifies a number in the range 0-100. All members
+# 			default to a weight of 50, so set a weight below this to lower their ordering, and a weight above it to
+# 			increasae their ordering.
+#
+# 			You can use this weighting function to prioritize the use of better hardware or to ensure failover
+# 			to a specific member during scheduled maintenance of the primary.
+#
+# 		3. If more than one member is running the lowest MySQL Server version, and more than one of those members
+# 			has the highest member weight (or member weighting is being ignored), the third factor considered is the
+# 			lexographical order of the generated server UUIDs of each member, as specified by the server_uuid
+# 			system variable.
+#
+# 			The member with the lowest server UUID is chosen as the primary. This factor acts as a guaranteed
+# 			and predictable tie-breaker so that all group members reach the same decision if it cannot be 
+# 			determined by any important factors.
+#
+# 18.1.3.1.2 FINDING THE PRIMARY
+#
+# To find out which server is currently the primary when deployed in single-primary mode, use the MEMBER_ROLE
+# column in the performance_schema.replication_group_members table. For example:
+#
+# 		mysql> SELECT MEMBER_HOST, MEMBER_ROLE FROM performance_schema.replication_group_members;
+# 		+-----------------------------+---------------+
+# 		| MEMBER_HOST 					   | MEMBER_ROLE   |
+# 		+-----------------------------+---------------+
+# 		| remote1.example.com 		   | PRIMARY 		 |
+# 		| remote2.example.com 			| SECONDARY 	 |
+# 		| remote3.example.com 			| SECONDARY 	 |
+# 		+-----------------------------+---------------+
+#
+# Warning:
+#
+# 		The group_replication_primary_member status variable has been deprecated and is scheduled
+# 		to be removed in a future version.
+#
+# Alternatively, use the group_replication_primary_member status variable. //Deprecated
+#
+# mysql> SHOW STATUS LIKE 'group_replication_primary_member'
+#
+# 18.1.3.2 MULTI-PRIMARY MODE
+#
+# IN multi-primary mode (group_replication_single_primary_mode=OFF) no member has a special role.
+# Any membenr that is compatible with the other group members is set to read-write mode when joining
+# the group, and can process write transactions, even if they are issued concurrently.
+#
+# If a member stops accepting write transactions, for example in the event of a server crash, clients
+# connected to it can be redirected, or failed over, to any other member that is in read-write mode.
+#
+# Group Replication does not handle client-side failover itself, so you need to arrange this using a
+# middleware framework such as MySQL Router 8.0, a proxy, a connector, or the application itself.
+#
+# If a member leaves the group, the client can connect to an alternative group member.
+#
+# Group Replication is an eventual consistency system. This means that as soon as the incoming traffic
+# slows down or stops, all group members have the same data content. While traffic is flowing, transactions
+# can be externalized on some members before the others, especially if some members have less write throughput
+# than others, creating the possibility of stale reads.
+#
+# In multi-primary mode, slower members can also build up an excessive backlog of transactions to certify
+# and apply, leading to a greater risk of conflicts and certification failure. To limit these issues,
+# you can activate and tune Group Replication's flow control mechanism to minimize the difference
+# between fast and slow members. For more informaton on flow control, see SECTION 18.6.2, "FLOW CONTROL"
+#
+# From MySQL 8.0.14, if you want to have a transaction consistency guarantee for every transaction in the group,
+# you can do this using the group_replication_consistency system variable. YOu can choose a setting that
+# suits the workload of your group and your priorities for data reads and writes, taking into account
+# the performance impact of the synchronization required to increase consistency.
+#
+# You can also set the system variable for individual sessions to protect particularly concurrency-sensitive
+# transactions. For more information on transaction consistency, see SECTION 18.4.2, "TRANSACTION CONSISTENCY GUARANTEES"
+#
+# 18.1.3.2.1 TRANSACTION CHECKS
+#
+# When a group is deployed in multi-primary mode, transactions are checked to ensure they are compatible with the 
+# mode. The following strict consistency checks are made when Group Replication is deployed in multi-primary
+# mode:
+#
+# 		) If a transaction is executed under the SERIALIZABLE isolation level, then its commit fails when synchronizing
+# 			itself with the group.
+#
+# 		) If a transaction executes against a table that has foreign keys with cascading constraints, then its commit
+# 			fails when synchronizing itself with the group.
+#
+# The checks are controlled by the group_replication_enforce_update_everywhere_checks system variable.
+# In multi-primary mode, the system variable should normally be set to ON, but the checks can optionally
+# be deactivated by setting the system variable to OFF.
+#
+# When deploying in single-primary mode, the system variable must be set to OFF.
+#
+# 18.1.3.2.2 DATA DEFINITION STATEMENTS
+#
+# In a Group Replication topology in multi-primary mode, care needs to be taken when executing data definition
+# statements, also commonly known as data definition language (DDL)
+#
+# MySQL 8.0 introduces support for atomic Data Definition Language (DDL) statements, where the complete DDL
+# statement is either committed or rolled back as a single atomic transaction. However, DDL statements, atomic
+# or otherwise - implicitly end any transaction thati s active in teh current session, as if you had done a
+# COMMIT before executing the statement.
+#
+# This means that DDL statements cannot be performed within another transaction, within transaction control
+# statements such as START_TRANSACTION_/ETC/_COMMIT, or combined with other statements within the same 
+# transaction.
+#
+# Group Replication is based on an optimistic replication paradigm, where statements are optimistically
+# executed and rolled back later if necessary. Each server executes without securing group agreement first.
+#
+# THerefore, more care needs to be taken when replicating DDL Statements in multi-primary mode. If you
+# make schema changes (using DDL) and changes to the data that an object contains (using DML) for the
+#" same object, the changes need to be handled through the same server while the schema operation
+# has not yet completed and replicated everywhere.
+#
+# Failure to do so can result in data inconsistency when operations are interrupted or only partially
+# completed. If the group is deployed in single-primary mode this issue does not occur, because all
+# changes are performed through the same server, the primary.
+#
+# For details on atomic DDL support in MySQL 8.0, and the resulting changes in behavior for the
+# replication of certain statements, see SECTION 13.1.1, "ATOMIC DATA DEFINITION STATEMENT SUPPORT"
+#
+# 18.1.3.2.3 VERSION COMPATIBILITY
+#
+# For optimal compatibility and performance, all members of a group should run the same version
+# of MySQL Server and therefore of Group Replication.
+#
+# In multi-primary mode, this is more significant because all members would normally join the
+# group in read-write mode. If a group includes members running more than one MySQL Server
+# version, there is a potential for some members to be incompatible with others, because they
+# support functions others do not, or lack functions others have.
+#
+# To guard against this, when a new member joins (including a former member thath as been
+# upgraded and restarted), the member carries out compatibility checks against the rest
+# of the group.
+#
+# One result of these compatibility checks is particularly important in multi-primary mode.
+# If a joining member is running a higher MySQL Server version than the lowest version
+# that the existing group members are running.
+#
+# It joins the group but remains in read-only mode. (In a group that is running in single-primary
+# mode, newly added members default to being read-only in any case). Members running
+# MySQL 8.0.17 or higher take into account the patch version of the release when checking
+# their compatibility.
+#
+# Members running MySQL 8.0.16 or lower, or MySQL 5.7, only take into account the major
+# version.
+#
+# In a group running in multi-primary mode with members that use different MySQL
+# Server versions, Group Replication automatically manages the read-write and read-only
+# status of members running MySQL 8.0.17 or higher.
+#
+# If a member leaves the group, the members running the version that is now the lowest
+# are automatically set to read-write mode. When you change a group that was running
+# in single-primary mode to run in multi-primary mode, using the group_replicaiton_switch_to_multi_primary_mode()
+# UDF, Group Replication automatically sets members to the correct mode.
+#
+# Members are automatically placed in read-only mode if they are running a higher MySQL
+# server version than the lowest version present in the group, and members running
+# the lowest version are placed in read-write mode.
+#
+# For full information on version compatibility in a group and how this influences the behavior
+# of a group during an upgrade process, see SECTION 18.7.1, "COMBINING DIFFERENT MEMBER
+# VERSIONS IN A GROUP"
+#
+# 18.1.4 GROUP REPLICATION SERVICES
+#
+# 18.1.4.1 GROUP MEMBERSHIP
+# 18.1.4.2 FAILURE DETECTION
+# 18.1.4.3 FAULT-TOLERANCE
+# 18.1.4.4 OBSERVABILITY
+#
+# This section introduces some of the services that Group Replication builds on.
+#
+# 18.1.4.1 GROUP MEMBERSHIP
+#
+# In MySQL Group Replication, a set of servers forms a replication group. A group has a name,
+# which takes the form of a UUID. The group is dynamic and servers can leave (either voluntarily
+# or involuntarily) and join it at any time.
+#
+# The group adjusts itself whenever servers join or leave.
+#
+# If a server joins the group, it automatically brings itself up to date by fetching the missing
+# state from an existing server. If a server leaves teh group, for instance it was taken down
+# for maintenance, the remaining servers notice that it has left and reconfigure the group
+# automatically.
+#
+# Group Replication has a group membership service that defines which servers are online and
+# participating in the group. The list of online servers is referred to as a view. Every server
+# in the group has a consistent view of which servers are the members participating actively
+# in the group at a given moment in time.
+#
+# Group members must agree not only on transaction commits, but also on which is the current view.
+# If existing members agree that a new server should become part of the group, the group is reconfigured
+# to integrate that server in it, which triggers a view change.
+#
+# If a server leaves the group, either voluntarily or not, the group dynamically rearranges its configuration
+# and a view change is triggered.
+#
+# In the case where a member leaves the group voluntarily, it first initiates a dynamic group reconfiguration
+# , during which all members have to agree on a new view without the leaving server. However, if a member
+# leaves the group involuntarily, for example because it has stopped unexpectedly or the network connection is down,
+# it cannot initiate the reconfiguration.
+#
+# In this situation, Group Replications failrue detection mechanism recognizes after a short period of time
+# that the member has left, and a reconfiguration of the group without the failed member is proposed.
+#
+# As with a member that laves voluntarily, the reconfiguration requires agreement from the majority
+# of servers in teh group. However, if the group is not able to reach agreement, for example because it
+# partitioned in such a way that there is no majority of servers online, the system is not able
+# to dynamically change the configuration and blocks to prevent a split-brain situation.
+#
+# This situation requires intervention from an admin.
+#
+# It is possible for a member to offline for a short time, then attempt to rejoin the group again
+# before hte failure deteciton mechanism has detected its failure and before the group has been
+# reconfigured to remove the member.
+#
+# IN this situation, the rejoining member forgets its previous state, but if other members send it
+# messages that are intended for its pre-crash state, this can cause issues including posible data inconsistencies.
+#
+# If a member in this situation participates in XCom's consensus protocol, it could potentially cause XCom
+# to deliver different values for the same consensus round, by making a different decision before
+# and after failure.
+#
+# To counter this possibility, from MySQL 5.7.22 and in MYSQL 8.0, servers are given a unique identifier
+# when they join a group. This enables Group Replication to be aware of the situation where a new incarnation
+# of the same server (with the same address but a new identifier) is trying to join the group while its old
+# incarnation is still listed as a memmber.
+#
+# The new incarnation is blocked from joining the group until the old incarnation can be removed by a reconfiguration.
+# If the group_replication_member_expel_timeout system variable has been set to allow additional time for members
+# to return to the group before they are expelled, a member under suspicion can rejoin as long as it has not
+# actually failed.
+#
+# If Group replication is stopped and restarted on the server, the member becomes a new incarnation and cannot
+# rejoin until the suspicion times out.
+#
+# 18.1.4.2 FAILURE DETECTION
+#
+# Group replication includes a failure detection mechanism that is able to find and report which servers
+# are silent and as such assumed to be dead. At a high level, the failure detector is a distributed service
+# that provides information about which servers may be dead (suspiciious). Suspicions are triggered when servers
+# go mute.
+#
+# When server A does not receive message sfrom server B during a given period, a timeout occurs, and a suspicion
+# is raised.
+#
+# Later if the group agrees that the suspicions are probably true, then the group decides that a given server
+# has indeed failed. This means that the remaining members in teh group take a coordinated decision to exclude
+# a given member.
+#
+# If a server gets isolated from the rest of the group, then it suspects that all others have failed.
+# Being unable to secure agreement with the group (as it cannot secure a quorum), its suspicion does
+# not have consequences. When a server is isolated from the group in this way, it is unable to execute
+# any local transactions.
+#
+# For information on the Group Replication system variables that you can configure to specify
+# the response of working group members, and group members that are suspected of having failed,
+# to these situations, see SECTION 18.6.6, "RESPONSES TO FAILURE DETECTION AND NETWORK PARTITIONING"
+#
+# 18.1.4.3 FAULT-TOLERANCE
+#
+# MySQL Group Replication builds on an implementation of the Paxos distributed algorithm to provide
+# distributed coordination between servers. As such, it requires a majority of servers to be active
+# to reach quorum and thus make a decision.
+#
+# This has direct impact on the number of failures the system can tolerate without compromising
+# itself and its overall functionality. The number of servers (n) needed to tolerate f failures
+# is then n = 2 x f + 1
+#
+# IN practice this means that t otolerate one failure the group must have three servers in it.
+#
+# As such if one server fails, there are still two servers to form a majority (two of three)
+# and allow the system to continue to make decisions automatically and progress.
+#
+# However, if a second server fails involuntarily, then the group (with one server left)
+# blocks, because there is no majority to reach a decision.
+#
+# The following is a small table illustrating the formula above.
+#
+# 		GROUP SIZE 		MAJORITY 		INSTANT FAILURES TOLERATED
+#
+# 			1 					1 								0
+#
+# 			2 					2  							0
+#
+# 			3 					2  							1
+# 
+# 			4 					3 								1
+#
+# 			5 					3 								2
+#
+# 			6,4,2
+# 			
+# 			7,4,3
+#
+# 18.1.4.4 OBSERVABILITY
+#
+# 
+#
+# https://dev.mysql.com/doc/refman/8.0/en/group-replication-details.html
 #
