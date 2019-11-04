@@ -76664,13 +76664,510 @@
 #
 # 			5 					3 								2
 #
-# 			6,4,2
+# 			6 				   4 								2
 # 			
-# 			7,4,3
+# 			7 					4 								3
 #
 # 18.1.4.4 OBSERVABILITY
 #
-# 
+# There is a lot of automation built into the Group Replication plugin. Nonetheless, you might sometimes need
+# to understand what is happening behind the scenes. This is where the instrumentation of Group Replicatiton and
+# Performance Schema becomes important..
 #
-# https://dev.mysql.com/doc/refman/8.0/en/group-replication-details.html
+# The entire state of the system (including the view, conflict statistics and service states) can be queried through
+# Performance SChema tables. The distributed nature of the replication protocol and the fact that server instances
+# agree and thus synchronize on transactions and metadata makes it simpler to inspect the state of the group.
+#
+# For example, you can connect to a single server in the group and obttain both local and global information
+# by issuing select statements on the Group Replication related Performance Schema tables. For more information,
+# see SECTION 18.3, "MONITORING GROUP REPLICATION"
+#
+# 18.1.5 GROUP REPLICATION PLUGIN ARCHITECHTURE
+#
+# MySQL Group Replication is a MySQL plugin and it builds on the existing MySQL replication infrastructure,
+# taking advantage of features such as the binary log, row-based logging and global transaction identifiers.
+#
+# It integrates with current MySQL frameworks, such as the performance schema or plugin and service infrastructures.
+# The following figure presents a block diagram depicting the overall architechture of MySQL Group Replication.
+#
+# FIGURE 18.6 GROUP REPLICATION PLUGIN BLOCK DIAGRAM
+#
+# 		[ 				MySQL Server   			]
+# 		-------------------------------------
+# 		[ APIs: Capture / Apply / Lifecycle ]
+#		[  Capture  ] [  Applier  ][Recovery]
+# 		[ Replication Protocol Logics 		]
+# 		[ Group Communication System API 	]
+# 		[ Group Communication Engine (Paxos)]
+# 							^
+# 							V
+# 						[ Group ]
+#
+# The MySQL Group Replication plugin includes a set of APIs for capture, apply, and lifecycle, which control
+# how the plugin interacts with MySQL Server. There are interfaces to make information flow from the server
+# to the plugin and vice versa.
+#
+# These interfaces isolate teh MySQL Server core from the Group Replication plugin, and are mostly hooks
+# placed in the transaction execution pipeline. In one direction, from server to the plugin, there are
+# notifications for events such as the server starting, the server recovering, the server being ready
+# to accept connections, and the server being about to commit a transaction. In the other direction,
+# the plugin instructs the server to perform actions such as committing or aborting ongoing transactions,
+# or queuing transactions in teh relay log.
+#
+# The next layer of the Group Replication plugin architechture is a set of components that react when a 
+# notification is routed to them. THe capture component is responsible for keeping track of context
+# related to transactions that are executing.
+#
+# The applier component is responsible for executing remote transacctions on the database. The recovery
+# component manages distributed recovery, and is responsible for getting a server that is joining the group
+# up to date by selecting the donor, managing the catch up procedure and reacting to donor failures.
+#
+# COntinuing down the stack, the replication protocol module contains the specific logic of the replication
+# protocol. It handles conflict detection, and receives and proapgates transactions to the group.
+#
+# The final two layers of the Group Replication plugin rachitechture are the Group COmmunication System
+# (GCS) API, and an implementation of a Paxos-based group communication engine (XCom).
+#
+# The GCS API is a high level API that abstracts the properties required to build a replicated state machine
+# (see SECTION 18.1, "GROUP REPLICATION BACKGROUND")
+#
+# It therefore decouples the implementation of hte messaging layer from the remaining upper layers
+# of the plugin. The group communication engine handles communications with the members of the
+# replication group.
+#
+# 18.2 GETTING STARTED
+# 
+# 18.2.1 DEPLOYING GROUP REPLICATION IN SINGLE-PRIMARY MODE
+# 18.2.2 DEPLOYING GROUP REPLICATION LOCALLY
+#
+# MySQL Group Replication is provided as a plugin to MySQL Server, and each server in a group requires
+# configuration and installation of the plugin. This section provides a detailed tutorial with the steps
+# required to create a replication group with at least three members.
+#
+# TIP:
+#
+# 		An alternative way to deploy multiple instances of MySQL is by using InnoDB cluster, which
+# 		uses Group Replication and wraps it in a programmatic environment that enables you to easily
+# 		work with groups of MySQL server instances in the MySQL Shell 8.0 (part of MySQL 8.0)
+#
+# 		In addition, InnoDB cluster interfaces seamlessly with MySQL Router and simplifies deploying
+# 		MySQL with high availability. See CHAPTER 21, INNODB CLUSTER.
+#
+# 18.2.1 DEPLOYING GROUP REPLICATION IN SINGLE-PRIMARY MODE
+#
+# 18.2.1.1 DEPLOYING INSTANCES FOR GROUP REPLICATION
+# 18.2.1.2 CONFIGURING AN INSTANCE FOR GROUP REPLICATION
+# 18.2.1.3 USER CREDENTIALS
+# 18.2.1.4 LAUNCHING GROUP REPLICATION
+# 18.2.1.5 BOOTSTRAPPING THE GROUP
+# 18.2.1.6 ADDING INSTANCES TO THE GROUP
+#
+# Each of the MySQL server instances in a group can run on an independent physical host machine, which is the
+# recommended way to deploy Group Replication. This section explains how to create a replication group
+# with three MySQL Server instances, each running on a different host machine.
+#
+# See SECTION 18.2.2, "DEPLOYING GROUP REPLICATION LOCALLY" fori nformation about deploying multiple 
+# MySQL server instances running Group Replication on the same host machine, for example for
+# testing purposes.
+#
+# FIGURE 18.7 GROUP ARCHITECHTURE
+#
+# 		[ X X X ]
+# 		V 	 V   V
+# 		V   V   V
+#  [ S1  S2   S3 ]
+# 	   >>>   <<<
+#
+# This tutorial explains how to get and deploy MySQL Server with the Group Replication plugin, how to configure
+# each server instance before creating a group, and how to use Performance Schema monitoring to verify that
+# everything is working correctly.
+#
+# 18.2.1.1 DEPLOYING INSTANCES FOR GROUP REPLICATION
+#
+# The first step is to deploy at least three instances of MySQL server, this procedure demonstrates using multiple
+# hosts for the instances, named s1, s2 and s3. It is assumed that MySQL Server was installed on each of the hosts,
+# see CHAPTER 2. INSTALLING AND UPGRADING MySQL.
+#
+# Group Replication is a built-in MySQL Plugin provided with MySQL Server 8.0, therefore no additional installation
+# is required. For more background information on MySQL plugins, see SECTION 5.6, "MySQL SERVER PLUGINS"
+#
+# In this example, three instances are used for the group, which is the minimum number of instances to create
+# a group. Adding more instances increases the fault tolerance of the g roup. For example, if the group consists
+# of three members, in event of failure.. /Etc/ //Same info as in Failure Detection, 2/3 majority to continue
+#
+# Max number of instances in a group is 9.
+#
+# 18.2.1.2 CONFIGURING AN INSTANCE FOR GROUP REPLICATION
+#
+# This section explains the configuration settings required for MySQL Server instances that you want to use for
+# Group Replication. For background information, see SECTION 18.9, "REQUIREMENTS AND LIMITATIONS"
+#
+# 		) SToRAGE ENGINES
+#
+# 		) REPLICATION FRAMEWORK
+#
+# 		) GROUP REPLICATION SETTINGS
+#
+# STORAGE ENGINES
+#
+# For Group Replication, data must be stored in the InnoDB transactional storage engine (for details of why,
+# see SECTION 18.9.1, "GROUP REPLICATION REQUIREMENTS")
+#
+# The use of other storage engines, including the temporary MEMORY storage engine, might cause errors
+# in GROUP REPLICATION. Set the disabled_storage_engines system variable as follows to prevent their use:
+#
+# disabled_storage_engines="MyISAM,BLACKHOLE,FEDERATED,ARCHIVE,MEMORY"
+#
+# Note that with the MyISAM storage engine disabled, when you are upgrading a MySQL instance to a release
+# where mysql_upgrade is still used (before MySQL 8.0.16), mysql_upgrade might fail with an error.
+# To handle this, you can re-enable that storage engine while you run mysql_upgrade, then disable
+# it again when you restart the server.
+#
+# For more information, see SECTION 4.4.5, "mysql_upgrade -- Check and Upgrade MySQL Tables"
+#
+# REPLICATION FRAMEWORK
+#
+# The following settings configure replication according to the MySQL Group Replication requirements.
+#
+# 		server_id=1
+# 		gtid_mode=ON
+# 		enforce_gtid_consistency=ON
+# 		binlog_checksum=NONE
+#
+# These settings configure the server to use the unique identifier number 1, to enable SECTION 17.1.3,
+# "REPLICATION WITH GLOBAL TRANSACTION IDENTIFIERS", to allow execution of only statements that can be
+# safely logged using a GTID, and to disable writing checksums for events written to the binary log.
+#
+# If you are using a version of MySQL earlier than 8.0.3, where the defaults were improved for replication,
+# you need to add these lines to the member's option file.
+#
+# 		log_bin=binlog
+# 		log_slave_updates=ON
+# 		binlog_format=ROW
+# 		master_info_repository=TABLE
+# 		relay_log_info_repository=TABLE
+#
+# These settings instruct the server to turn on binary logging, use row-based format, to store replication metadata
+# in system tables instead of files, and disable binary logevent checksums.
+#
+# For more details, see SECTION 18.9.1, "GROUP REPLICATION REQUIREMENTS"
+#
+# GROUP REPLICATION SETTINGS
+#
+# At this point the option file ensures that the server is configured and is instructed to instantiate the replication
+# infrastructure under a given configuration. The following section configures the Group Replication settings for the
+# server.
+#
+# 		plugin_load_add='group_replication.so'
+# 		group_replication_group_name="aaaaaaa-a/etc/"
+# 		group_replication_start_on_boot=off
+# 		group_replication_local_address="s1:33061"
+# 		group_replication_group_seeds= "s1:33061, s2:33061, s3:33061"
+# 		group_replication_bootstrap_group=off
+#
+# 	) plugin-load-add adds the Group Replicaiton plugin to the list of plugins which the server loads at startup.
+# 		This is preferable in a production deployment to installing the plugin manually.
+#
+# 	) Configuring group_replication_group_name tells the plugin that the group that it is joining, or creating,
+# 		is named "aaaaaa-a/etc/"
+#
+# 		The value of group_replication_group_name must be a valid UUID. This UUID is used internally when setting
+# 		GTIDs for Group Replication events in the binary log. You can use SELECT UUID() to generate a UUID.
+#
+# 	) Configuring the group_replication_start_on_boot variable to off instructs the plugin to not start
+# 		operations automatically when the server starts. This is important when setting up Group Replication
+# 		as it ensures you can configure the server before manually starting the plugin.
+#
+# 		Once the member is configured you can set group_replication_start_on_boot to on so that Group Replication
+# 		starts automatically upon server boot.
+#
+# 	) Configuring group_replication_local_address sets the network address and port which the member uses
+# 		for internal communication with other members in the group. Group Replicaiton uses this address
+# 		for internal member-to-member connections involving remote instances of the group communication
+# 		engine (XCom, a Paxos variant)
+#
+# 		IMPORTANT:
+#
+# 			The group replication local address must be different to the hostname and port used for
+# 			SQL and it must not be used for client applications. It must be only be used for internal
+# 			communication between the members of the group while running Group Replication.
+#
+# 		The network address configured by group_replication_local_address must be resolvable
+# 		by all group members. For example, if each server instance is on a different machine with
+# 		a fixed network address, you could use the IP address of the machine, such as 10.0.0.1.
+#
+# 		If you use a host name, you must use a fully qualified name, and ensures it is resolvable
+# 		through DNS, correctly configured /etc/hosts files, or other name resolution processes.
+#
+# 		From MySQL 8.0.14, IPv6 addresses (or host names that resolve to them) can be used as
+# 		well as IPv4 addresses. A group can contain a mix of members using IPv6 and members
+# 		using IPv4. For more information on Group Replication support for IPv6 networks and
+# 		on mixed IPv4 and IPv6 groups, see SECTION 18.4.5, "SUPPORT FOR IPV6 AND FOR MIXED IPV6 AND IPV4 GROUPS"
+#
+# 		The recommended port for group_replication_local_address is 33061.
+# 		group_replication_local_address is used by Group Replication as the unique identifier for a group
+# 		member within the replication group. You can use the same port for all members of a replication
+# 		group as long as the host names or IP addresses are all different, as demonstrated in this tutorial.
+#
+# 		Alternatively you can use the same host name or IP address for all members as long as the ports
+# 		are all different, for example as shown in SECTION 18.2.2,, "DEPLOYING GROUP REPLICATION LOCALLY"
+#
+# 		IMPORTANT:
+#
+# 			Although the group replication local address is different to the hostname and port used
+# 			for SQL, Group REplication's distributed recovery process for joining members can fail
+# 			if the server cannot correctly identify the other members using the server's SQL hostname.
+#
+# 			It is recommended that operating systems running MySQL have a properly configured
+# 			unique hostname, either using DNS or local settings. The hostname can be verified in the
+# 			Member_host column of the performance_schema.replication_group_members table.
+#
+# 			If multiple group members externalize a default hostname set by the operating system,
+# 			there is a chance of the member not resolving to the correct member address and not
+# 			being able to join the group.
+#
+# 			IN such a situation use report_host to configure a unique hostname to be externalized
+# 			by each of the servers.
+#
+# 	) Configuring group_replication_group_seeds sets the hostname and port of the group members which
+# 		are used by the new member to establish its connection to the group. These members are called
+# 		the seed members.
+#
+# 		Once the connection is established, the group membership information is listed at performance_schema.replication_group_members.
+#
+# 		Usually the group_replication_group_seeds list contains the hostname:port of each of the group member's
+# 		group_replication_local_address, but this is not obligatory and a subset of the group members can
+# 		bechosen as seeds.
+#
+# 		IMPORTANT:
+#
+# 			The hostname:port listed in group_replication_group_seeds is the seed member's
+# 			internal network address, configured by group_replication_local_address and not
+# 			the SQL hostname:port used for client connections, and shown for example in
+# 			performance_schema.replication_group_members table.
+#
+# 		The server that starts teh group does not make use of this option, since it is the initial
+# 		server and as such, it is in charge of bootstrapping the group. In other words, any existing
+# 		data which is on the server bootstrapping the group is what is used as the data for the next
+# 		joining member.
+#
+# 		The second server joining asks the one and only member in the group to join, any missing
+# 		data on the second server is replicated from the donor data on the bootstrapping member,
+# 		and then the group expands.
+#
+# 		The third server joining can ask any of these two to join, data is synchronized to the new member,
+# 		and then the group expands again. Subsequent servers repeat this procedure when joining.
+#
+# 		WARNING:
+#
+# 			When joining multiple servers at the same time, make sure that they point to seed
+# 			members that are  already in the group. DO not use members that are also joining the
+# 			group as seeds, because they might not yet be in the group when contacted.
+#
+# 			It is good practice to start the bootstrap member first, and let it create the group.
+# 			Then make it the seed member for the restt of the members that are joining.
+# 			This ensures that there is a group formed when joining the rest of the members.
+#
+# 			Creating a group and joining multiple members at the same time is not supported.
+# 			It might work, but chanses are that the operations race and then the act of joining
+# 			the grop ends up in an error or a time out.
+#
+# 		A joining member must communicate with a seed member using the same protocol
+# 		(IPv4 or IPv6) that the seed member advertises in the group_replication_group_Seeds
+# 		option.
+#
+# 		For the purposes of IP address whitelisting for Group Replication, the whitelist on the
+# 		seed member must include an IP address for the joining member for the protocol offered
+# 		by the seed member, or a host name that resolves to an address for that protocol.
+#
+# 		This address or host name must be set up and whitelisted in addition to the joinin member's
+# 		group_replication_local_address if the protocol for that address does not match the seed
+# 		member's advertised protocol.
+#
+# 		If a joining member does not have a whitelisted address for the appropriate protocol,
+# 		its connection attempt is refused. For more information, see SECTION 18.5.1,
+# 		"GROUP REPLICATION IP ADDRESS WHITELISTING"
+#
+# 	) Configuring group_replication_bootstrap_group instructs the plugin whether to bootstrap
+# 		the group or not.
+#
+# 		In this case, even though s1 is the first member of the group we set this variable to off
+# 		in the option file. Instead we configure group_replication_bootstrap_group when the instance
+# 		is running, to ensure that only one member actually bootstraps the group.
+#
+# 		IMPORTANT:
+#
+# 			The group_replication_bootstrap_group variable must only be enabled on one server
+# 			instance belonging to a group at any time, usually the first time you bootstrap the group
+# 			(or in case the entire group is brought down and back up again).
+#
+# 			If you bootstrap the group multiple times, for example when multiple server instances
+# 			have this option set, then they could create an artificial split brain scenario,
+# 			in which two distinct groups with the same name exist.
+#
+# 			Always set group_replication_bootstrap_group=off after the first server instance comes online.
+#
+# If you are using an instance running a version of MySQL earlier than 8.0.2, you need to also configure
+# the transaction_write_set_extraction variable to XXHASH64.
+#
+# This variable instructs the server that for each transaction it has to collect the write set and encode
+# it as a hash using the XXHASH64 hashing algorithm.
+#
+# From MySQL 8.0.2, this setting is the default, otherwise add the following to the option file:
+#
+# 		transaction_write_set_extraction=XXHASH64
+#
+# Configuration for all servers in the group is quite similar. You need to change the specifics
+# about each server ( for example, server_id, datadir, group_replication_local_address). This is illustrated
+# later in this tutorial.
+#
+# 18.2.1.3 USER CREDENTIALS
+#
+# Group Replication uses a distributed recovery process to synchronize group members when joining them to the
+# group. Distributed recovery involves transferring transactions from a donor's binary log to a joining member
+# using a replication channel named group_replication_recovery.
+#
+# You must therefore set up a replication user with the correct permissions so that Group Replication can establish
+# direct member-to-member replication channels. If group members have been set up to support the use of a remote
+# cloning operation as part of distributed recovery, which is available from MySQL 8.0.17, this replication user is
+# also used as the clone user on teh donor, and requires the correct permissions for this role too.
+#
+# For a complete description of distributed recovery, see SECTION 18.4.3, "DISTRIBUTED RECOVERY"
+#
+# The process of setting up the replication user for distributed recovery can be captured in the binary log,
+# and then you can rely on distributed recovery to replicate the statements used to create the user.
+#
+# Alternatively, you can disable binary logging before creating the replication user, and then create the user
+# manually on each member, for example if you want to avoid the changes being propagated to other server instances.
+#
+# If you do this, ensure you re-enable binary logging once you have configured the user.
+#
+# If you have set up cloning for your replication group, the replication user and password used by the donor
+# for the group_replication_recovery replication channel are transferred to the joining member after cloning,
+# and used by the joining member afterwards, so they must be valid there.
+#
+# All group members that received state transfer by a remote cloning operation therefore use the same
+# replication user and password for distributed recovery.
+#
+# IMPORTANT:
+#
+# 		If distributed recovery connections for your group use SSL, the replication user must be
+# 		created on each server before the joining member connects to the donor. For instructions
+# 		to set up SSL for distributed recovery connections, see SECTION 18.5.2, "GROUP REPLICATION
+# 		SECURE SOCKET LAYER (SSL) SUPPORT"
+#
+# To create the replication user for distributed recovery, follow these steps:
+#
+# 		1. Start the MySQL server instance, then connect a client to it.
+#
+# 		2. If you want to disable binary logging in order to create the replication user separately
+# 			on each instance, do so by issuing the following statement:
+#
+# 				mysql> SET SQL_LOG_BIN=0;
+#
+# 		3. Create a MySQL user with the REPLICATION_SLAVE privilege to use for distributed recovery,
+# 			and if the server is set up to support cloning, the BACKUP_ADMIN privilege to use as the
+# 			donor in a cloning operation.
+#
+# 			In this example the user rpl_user with the password password is shown. When configuring your
+# 			servers use a suitable user name and password:
+#
+# 				mysql> CREATE USER rpl_user@'%' IDENTIFIED BY 'password';
+# 				mysql> GRANT REPLICATION SLAVE ON *.* TO rpl_user@'%';
+# 				mysql> GRANT BACKUP_ADMIN ON *.* TO rpl_user@'%';
+# 				mysql> FLUSH PRIVILEGES;
+#
+# 		4. If you disabled binary logging, enable it again as soon as you have created the user,
+# 			by issuing the following statement:
+#
+# 				mysql> SET SQL_LOG_BIN=1;
+#
+# 		5. When the user has been configured, use a CHANGE_MASTER_TO statement to configure the server
+# 			to use the given credentials for state transfer by distributed recovery or a remote cloning
+# 			operation.
+#
+# 			Issue the following statement, replacing rpl_user and password with the values used when
+# 			creating the user:
+#
+# 				mysql> CHANGE MASTER TO MASTER_USER='rpl_user', MASTER_PASSWORD='password' \\
+# 									FOR CHANNEL 'group_replication_recovery';
+#
+# 			If these credentials are not set correctly for the group_replication_recovery replication
+# 			channel and the rpl_user as shown, the server cannot connect to a donor to carry out state
+# 			transfer and therefore cannot join the group.
+#
+# USING GROUP REPLICATION AND THE CACHING SHA-2 USER CREDENTIALS PLUGIN
+#
+# By default, users created in MySQL 8 use SECTION 6.4.1.2, "CACHING SHA-2 PLUGGABLE AUTHENTICATION".
+# If the rpl_user you configure for distributed recovery uses the caching SHA-2 authentication plugin
+# and you are not using SECTION 18.5.2, "GROUP REPLICATION SECURE SOCKET LAYER (SSL) SUPPORT" for the
+# group_replication_recovery replication channel, RSA key-pairs are used for password exchange,
+# see SECTION 6.3.3, "CREATING SSL AND RSA CERTIFICATES AND KEYS".
+#
+# You can either copy the public key of the rpl_user to the joining member, or configure the
+# donors to provide the public key when requested.
+#
+# The more secure approach is to copy the public key of the rpl_user to the joining member. Then
+# you need to configure the group_replication_recovery_public_key_path system variable on the joining
+# member with the path to the public key for the rpl_user.
+#
+# Optionally, a less secure paproach is to set group_replication_recovery_get_public_key=ON on donors
+# so that they provide the public key of the rpl_user to joining members. There is no way to verify the
+# identity of a server, therefore only set group_replication_recovery_get_public_key=ON when you are sure
+# there is no risk of server identity being comrpomised, for example by a MITM attack (man in the middle)
+#
+# 18.2.1.4 LAUNCHING GROUP REPLICATION
+#
+# Once server s1 has been configured and started, install teh group replication plugin. If you used
+# plugin_load_add='group_replication.so' in the option file then the Group Replication plugin is installed
+# and you can proceed t oteh next step.
+#
+# IN the event that you decide to install the plugin manually, connect to the server and issue
+# the following:
+#
+# 		INSTALL PLUGIN group_replication SONAME 'group_replication.so';
+#
+# IMPORTANT:
+#
+# 		The mysql.session user must exist before you can load Group Replication. mysql.session
+# 		was added in mySQL version 8.0.2. If your data dictionary was initialized using an earlier
+# 		version you must perform the MySQL upgrade procedure (see SECTION 2.11, "UPGRADING
+# 		MySQL").
+#
+# 		If the upgrade is not run, Group Replication fails to start with the error message
+# 		
+# 			There was an error when trying to access teh server with user:
+# 			mysql.session@localhost
+#
+# 			Make sure the user is present in the server and that mysql_upgrade was ran
+# 			after a server update.
+#
+# To check that the plugin was installed successfully, issue SHOW PLUGINS; and check the output.
+# It should show something like this:
+#
+# 		mysql> SHOW PLUGINS;
+# 		+---------------------+-----------+--------------- +----------------+------------------+
+# 		| Name 					 | Status 	 | Type 			   | Library   	  | License 			|
+# 		+---------------------+-----------+----------------+----------------+------------------+
+# 		| binlog 				 | ACTIVE 	 | STORAGE ENGINE | NULL 			  | PROPRIETARY 		|
+# 		/ETC/
+# 		| group_replication   | ACTIVE 	 | GROUP REPLICATION | group_replication.so | /etc/
+#
+# 18.2.1.5 BOOTSTRAPPING THE GROUP
+#
+# The process of starting a group for the first time is called bootstrapping. You use the
+# group_replication_bootstrap_group system variable to bootstrap a group. The bootstrap should only be done
+# by a single server, the one that starts teh group and only once.
+#
+# This is why the value of the group_replication_bootstrap_group option was not stored in the instance's
+# option file.
+#
+# If it is saved in the option file, upon restart the server automatically bootstraps a second group
+# with the same name.
+#
+# THis would result in two distinct groups with the same name. The same reasoning applies to stopping
+# and restarting the plugin with this option set to ON. Therefore to safely bootstrap the group,
+# connect to s1 and issue:
+#
+# 		https://dev.mysql.com/doc/refman/8.0/en/group-replication-bootstrap.html
 #
