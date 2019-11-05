@@ -77169,5 +77169,504 @@
 # and restarting the plugin with this option set to ON. Therefore to safely bootstrap the group,
 # connect to s1 and issue:
 #
-# 		https://dev.mysql.com/doc/refman/8.0/en/group-replication-bootstrap.html
+#
+# 		mysql> SET GLOBAL group_replication_bootstrap_group=ON;
+# 		mysql> START GROUP_REPLICATION;
+# 		mysql> SET GLOBAL group_replication_bootstrap_group=OFF;
+#
+# Once the START_GROUND_REPLICATION statement returns, the group has been started. You can check
+# that the group is now created and that there is one member in it:
+#
+# 		mysql> SELECT * FROM performance_schema.replication_group_members;
+# 		+-----------------------------+-------------------------------+--------------+--------------+--------------+
+# 		| CHANNEL_NAME 					| MEMBER_ID 						  | MEMBER_HOST  | MEMBER_PORT  | MEMBER_STATE |
+# 		+----------------------------+--------------------------------+--------------+--------------+--------------+
+# 		| group_replication_applier  | <id> 								  | s1 			  | 3306 		  | ONLINE 	     |
+# 		+----------------------------+--------------------------------+--------------+--------------+--------------+
+#
+# The information in this table confirms that there is a member in the group with the unique identifier of <id>
+# , that it is ONLINE and is at s1 listening for client connections on port 3306.
+#
+# For the purposes of demonstrating that the server is indeed in a group and that it is able to handle load,
+# create a table and add some content to it.
+#
+# 		mysql> CREATE DATABASE test;
+# 		mysql> USE test;
+# 		mysql> CREATE TABLE t1 (c1 INT PRIMARY KEY, c2 TEXT NOT NULL);
+# 		mysql> INSERT INTO t1 VALUES (1, 'Luis');
+#
+# Check the content of table t1 and the binary log.
+#
+# 		mysql> SELECT * FROM t1;
+# 		+-------+----------+
+# 		| c1 	  | c2 		 |
+# 		+-------+----------+
+# 		| 1 	  | Luis 	 |
+# 		+-------+----------+
+#
+# 		mysql> SHOW BINLOG EVENTS;
+# 		+-----------------+--------+----------------------+-----------+-------------+----------------------------+
+# 		| LOG_NAME 		   | Pos    | Event_type 			  | Server_id | End_log_pos | Info 								|
+# 		+-----------------+--------+----------------------+-------------------------+----------------------------+
+# 		| binlog.001 		| 4 		| Format_desc 			  | 1 		  | 123 			 | Server Ver: 8.0.20 /etc/   |
+# 		| /etc/ 			   | 123 	| previous_gtids 		  | 1 		  | 150 			 | 									|
+# 		| /etc/ 				| 150 	| Gtid 					  | 1 		  | 211 			 | SET @@SESSION.GTID_NEXT='<id>'
+# 		| /etc/
+#
+# As seen above, the database and the table objects were created and their corresponding DDL statements were written
+# to the binary log. Also, the data was inserted into the table and written to the binary log, so it can be used
+# for distributed recovery by state transfer from a donor's binary log.
+#
+# 18.2.1.6 ADDING INSTANCES TO THE GROUP
+#
+# At this point, the group has one member in it, server s1, which has some data in it. It is now time to expand the
+# group by adding the other two servers configured previously.
+#
+# 18.2.1.6.1 ADDING A SECOND INSTANCE
+#
+# In order to add a second instance, server s2, first create the configuration file for it. The configuration
+# is similar to the one used for server s1, except for things such as the server_id. These different lines are highlighted
+# in the listing below.
+#
+# 		[mysqld]
+#
+# 		# 
+# 		# Disable other storage engines
+# 		#
+# 		disabled_storage_engines="MyISAM, BLACKHOLE, FEDERATED,ARCHIVE,MEMORY"
+#
+# 		#
+# 		# Replication configuraiton parameters
+# 		#
+# 		server_id=2
+# 		gtid_mode=ON
+# 		enforce_gtid_consistency=ON
+# 		binlog_checksum=NONE
+#
+# 		#
+# 		# Group Replication configuration
+# 		#
+# 		transaction_write_set_extraction=XXHASH64
+# 		group_replication_group_name="<id>"
+# 		group_replication_start_on_boot=off
+# 		group_replication_local_address="s2:33061"
+# 		group_replication_group_seeds= "s1:33061,s2:33061,s3:33061"
+# 		group_replication_bootstrap_group= off
+#
+# Similar to the procedure or server s1, with the option file in place  you launch the server.
+# Then configure the distributed recovery credentials as follows. The commands are the same as used
+# when setting up server s1 as the user is shared within the group.
+#
+# This member needs to have the same replication user configured in SECTION 18.2.1.3, "USER CREDENTIALS".
+#
+# If you are relying on distributed recovery to configure the user on all members, when s2 connects
+# to the seed s1 the replication user is replicated or cloned to s1. If you did not have binary logging
+# enabled when you configured the user credentials on s1, and a remote cloning operation is not used
+# for state transfer, you must create the replicaiton user on s2.
+#
+# In this case,connect to s2 and issue:
+#
+# 		SET SQL_LOG_BIN=0;
+# 		CREATE USER rpl_user@'%' IDENTIFIED BY 'password';
+# 		GRANT REPLICATION SLAVE ON *.* TO rpl_user@'%';
+# 		GRANT BACKUP_ADMIN ON *.* TO rpl_user@'%';
+# 		SET SQL_LOG_BIN=1;
+# 		CHANGE MASTER TO MASTER_USER='rpl_user', MASTER_PASSWORD='password' \\
+# 				FOR CHANNEL 'group_replication_recovery';
+#
+# TIP:
+#
+# 		If you are using the caching SHA-2 authentication plugin, the default in mySQL 8, see USING
+# 		GROUP REPLICATION AND  THE CACHING SHA-2 USER CREDENTIALS PLUGIN.
+#
+# If necessary, install the Group Replication plugin, see SECTION 18.2.1.4, "LAUNCHING GROUP REPLICATION"
+#
+# Start Group Replication and s2 starts the process of joining the group.
+#
+# 		mysql> START GROUP_REPLICATION;
+#
+# Unlike the previous steps taht were the same as those executed on s1, here there is a difference in that
+# you do not need to bootstrap the group because the group already exists. In other words on s2
+# group_replication_bootstrap_group is set to off, and you do not issue SET GLOBAL group_replicaiton_bootstrap_group=ON;
+# before starting Group Replication, because the group has already been created and bootstrapped by server s1.
+#
+# At this point server s2 only needs to be added to the already existing group.
+#
+# TIP:
+#
+# 		When Group Replication starts successfully and the server joins the group it checks the super_read_only
+# 		variable. By setting super_read_only to ON in the members configuration file, you can ensure that servers
+# 		which fail when starting Group Replication for any reason do not accept transactions.
+#
+# 		If the server should join the group as read-write instance, for example, as the primary in a single-primary
+# 		group or as a member of a multi-primary group, when the super_read_only variable is set to ON then it is
+# 		set to OFF upon joining the group.
+#
+# Checking the performance_schema.replication_group_members table again shows that there are now two ONLINE servers
+# in the group.
+#
+# 		mysql> SELECT * FROM performance_schema.replication_group_members;
+# 		+------------------------------------+-------------------------------------+-----------+----------------+ /ETC/
+# 		| /ETC/ but with 2 instances
+#
+# When s2 attempted to join the group, SECTION 18.4.3, "DISTRIBUTED RECOVERY" ensures that s2 applied the same
+# transactions which s1 has applied. Once this process completed, S2 could join the group as a member, and at this
+# point it is marked as ONLINE. In otehr words it must have already caught up with server s1 automatically.
+#
+# ONce s2 is ONLINE, it then begins to process transactions with the group. Verify that s2 has indeed synchronized
+# with server s1 as follows:
+#
+# 		mysql> SHOW DATABASES LIKE 'test';
+# 		/ETC/
+#
+# 		The db's are identical, due to replication, theo nly difference being that GTIDS has been replicated from server id 2
+#
+# As sseen above, the second server has been added to the group and it has replicated the changes from server s1
+# automatically. In other words, the transactions applied on s1 up to the point in time that s2 joined the group have
+# been replicated to s2.
+#
+# 18.2.1.6.2 ADDING ADDITIONAL INSTANCES
+#
+# Adding additional instances to teh group is essentially the same sequence off steps as adding the second server,
+# except that the configuration has to be changed as it had to be for server s2. To summarise the required
+# commands:
+#
+# 		1. Create the configuration file
+#
+# 			[mysqld]
+# 	
+# 			#
+# 			# Disable other storage engines
+# 			#
+# 			disabled_storage_engines="MyISAM,BLACKHOLE,FEDERATED,ARCHIVE,MEMORY"
+#
+# 			#
+# 			# Replication configuration parameters
+# 			#
+# 			server_id=3
+# 			gtid_mode=ON
+# 			enforce_gtid_consistency=ON
+# 			binlog_checksum=NONE
+#
+# 			#
+# 			# Group replication configuration
+# 			# 
+# 			group_replication_group_name="<name>"
+# 			group_replication_start_on_boot=off
+# 			group_replication_local_address="s3:33061"
+# 			group_replication_group_seeds= "s1:33061,s2:33061,s3:33061"
+# 			group_replication_bootstrap_group= off
+#
+# 		2. Start the server and connect to it. Configure the distributed recovery credentials for the group_replication_recovery
+# 			channel.
+#
+# 				SET SQL_LOG_BIN=0;
+# 				CREATE USER rpl_user@'%' IDENTIFIED BY 'password';
+# 				GRANT REPLICATION SLAVE ON *.* TO rpl_user@'%';
+# 				GRANT BACKUP_ADMIN ON *.* TO rpl_user@'%';
+# 				FLUSH PRIVILEGES;
+# 				SET SQL_LOG_BIN=1;
+# 				CHANGE MASTER TO MASTER_USER='rpl_user', MASTER_PASSWORD='password' \\
+# 				FOR CHANNEL 'group_replication_recovery';
+#
+# 		4. INSTALL THE GROUP REPLICATION PLUGIN AND START IT
+#
+# 				INSTALL PLUGIN group_replication SONAME 'group_replication.so';
+# 				START GROUP_REPLICATION;
+#
+# 			At this point server s3 is booted and running, has joined the group and caught up with the other servers
+# 			in the group. Consulting the performance_schema.replicatioin_group_members table again confirms this is
+# 			the case.
+#
+# 				mysql> SELECT * FROM performance_schema.replication_group_members;
+# 				START GROUP_REPLICATION;
+#
+# 			At this point server s3 is boosted and running, has joined the group and caught up with the other servers
+# 			in the group. Consulting the performance_schema.replication_group_members table again confirms this is the case.
+#
+# 				mysql> SELECT * FROM performance_schema.replication_group_members;
+# 				+----------------------------+----------------------------+---------------------+------------------+--------------+
+# 				| CHANNEL_NAME 				  | MEMBER_ID 						 | MEMBER_HOST 		  | MEMBER_PORT 	   | MEMBER_STATE |
+# 				+----------------------------+----------------------------+---------------------+------------------+--------------+
+# 				| group_replication_applier  | <id> 							 | s1 					  | 3306 				| ONLINE 		|
+# 				/ETC/
+#
+# 			Issuing this same query on server s2 or server s1 yields the same result. Also, you can verify that server s3 has
+# 			caught up:
+#
+# 				mysql> SHOW DATABASES LIKE 'test';
+# 				+---------------------------------+
+# 				| Database (test) 					 |
+# 				+---------------------------------+
+# 				| test
+#
+# 			mysql> SELECT * FROM test.t1;
+# 			+-----+------------+
+# 			| c1  | c2 			 |
+# 			+-----+------------+
+# 			| 1 	| luis 		 |
+# 			+-----+------------+
+#
+# 			mysql> SHOW BINLOG EVENTS;
+# 			+-----------------+----------+---------------------+----------------+----------------------+-----------------+
+# 			| log_name 		   | Pos 	  | Event_type 		   | Server_id 	  | End_log_pos 		    | Info 				 |
+# 			+-----------------+----------+---------------------+----------------+----------------------+-----------------+
+# 			| /etc/ 				| 4 		  | Format_desc 			| 3 				  | 123 						 | //Statements 	 |
+# 
+# 18.2.2 DEPLOYING GROUP REPLICATION LOCALLY
+#
+# The most common way to deploy Group Replication is using multiple server instances, to provide high availability.
+# It is also possible to deploy Group Replication locally, for example for testing purposes.
+#
+# This section explains how you can deploy Group Replication locally.
+#
+# IMPORTANT:
+#
+# 		Group Replication is usually deployed on multiple hosts because this ensures that high-availability
+# 		is provided. The instructions in this section are not suitable for production deployments because
+# 		all MySQL server instances are running on the same single host.
+#
+# 		In the event of failure of this host, the whole group fails. Therefore this information should be used
+# 		for testing purposes and it hsould not be used in a prodution environments.
+#
+# This section explains how to create a replication group with three MySQL Server instances on one physical machine.
+# This means that three data directories are needed, one per server instance, and that you need to configure
+# each instance independently.
+#
+# This - procedure assumes that MySQL Server was downloaded and unpacked - into the directory named
+# mysql-8.0. Each mySQL server instance requires a specific data directory. Create a directory
+# named data, then in that directory create a subdirectory for each server instance, for example s1,
+# s2 and s3 and initialize each one.
+#
+# 		mysql-8.0/bin/mysqld --initialize-insecre --basedir=$PWD/mysql-8.0 --datadir=$PWD/data/s1
+# 		/etc/
+#
+# Inside data/s1, data/s2, data/s3 is an initialized data directory, containing the mysql system database
+# and related tables and much more. To learn more about the initialization procedure, see 
+# SECTION 2.10.1, "INITIALIZING THE DATA DIRECTORY"
+#
+# 	WARNING:
+#
+# 		Do not use -initialize-insecure in production environments, it is only used here to
+# 		simplify the tutorial. For morei nformation on security settings, see SECTION
+# 		18.5, "GROUP REPLICATION SECURITY"
+#
+# CONFIGURATION OF LOCAL GROUP REPLICATION MEMBERS
+#
+# When you are following SECTION 18.2.1.2, "CONFIGURING AN INSTANCE FOR GROUP REPLICATION",
+# you need to add configuration for the data directories added in the previous section.
+#
+# For example:
+#
+# 		[mysqld]
+#
+# 		# Server configuration
+# 		datadir=<full_path_to_data>/data/s1
+# 		basedir=<full_path_to_bin>/mysql-8.0/
+#
+# 		port=24801
+# 		socket=<full_path_to_sock_dir>/s1.sock
+#
+# These settings configure MySQL server to use the data directory created earlier and which port
+# teh server should open and start listening for incoming connections.
+#
+# NOTE:
+#
+# 		The non-default port of 24801 is used because in this tutorial the three server instances are
+# 		using the same hostname. In a setup with three different machines this would not be required.
+#
+# Group Replication requires a network connection between the members, which means that each member
+# must be able to resolve the network address of all of the other members. For example in this tutorial
+# all three instances run on one machine, so to nesure that the members can contact each other you could
+# add a line to the option file such as report_host=127.0.0.1
+#
+# Then each member needs to be able to connect to the other members on their group_replication_local_address.
+# For example inthe option file of member s1 add:
+#
+# 		group_replication_local_address= "127.0.0.1:24901"
+# 		group_replication_group_seeds = "127.0.0.1:24901,127.0.0.1:24902,127.0.0.1:24903"
+#
+# This configures s1 to use port 24901 for internal group communication with seed members. For each server
+# instance ou want to add to the group, make these changes in the option file of the member.
+#
+# For each member you must ensure a unique address is specified, so use a unique port per instance for
+# group_replicatiton_local_address. usually you want all members to be able to serve as seeds for members
+# that are joining the group and have not got the transactions processed by the group. IN this case,
+# add all of the ports to group_replication_group_seeds as shown above.
+#
+# The remaining steps of SECTION 18.2.1, "DEPLOYING GROUP REPLICATION IN SINGLE-PRIMARY MODE" apply
+# equally to a group which you have deployed lcoally in this way.
+#
+# 18.3 MONITORING GROUP REPLICATION
+#
+# 18.3.1 GROUP REPLICATION SERVER STATES
+# 18.3.2 THE REPLICATION_GROUP_MEMBERS TABLE
+# 18.3.3 THE REPLICATION_GROUP_MEMBER_STATS TABLE
+#
+# Use the performance schema tables to monitor Group Replication, assuming that the Performance Schema is
+# enabled. Group Replication adds the following tables:
+#
+# 		) performance_schema.replication_group_member_stats
+#
+# 		) performance_schema.replication_group_members
+#
+# These performance Schema replication tables also show information about Group Replication:
+#
+# 		) performance_schema.replication_connection_status shows information regarding Group Replication,
+# 			for example the transactions that have been received from the group and queued in the applier
+# 			queue (the relay log)
+#
+# 		) performance_schema.replication_applier_status shows the state of the Group Replication related
+# 			channels and threads if there are many different worker threads applying transactions, then 
+# 			the worker tables can also be used to monitor what each worker thread is doing.
+#
+# The replication channels created by the Group Replication plugin are named:
+#
+# 		) group_replication_recovery - This channel is used for the replication changes that are related
+# 			to the distributed recovery phase.
+#
+# 		) group_replication_applier - this channel is used for the incoming changes from the group.
+# 			This is the channel used to apply transactions coming directly from the group.
+#
+# the following sections describe how to interpret the infrmation avialable.
+#
+# 18.3.1 GROUP REPLICATION SERVER STATES
+#
+# There are various states taht a server instance can be in. If servers are communicating proeprly,
+# all report the same states for all servers. However, if there is a network partition, or a server
+# leaves the group, then different information could be reported, depending on which server is queried.
+#
+# If the server has left the group then it cannot report updated information about the other server's states.
+# If there is a partition, such that quorum is lost, servers are not able to coordinate between themselves.
+#
+# As a consequnece, they cannot guess what the status of different servers is. Therefore, instead of guessing
+# their state they report that some servers are unreachable.
+#
+# TABLE 18.1 SERVER STATE
+#
+# 				FIELD 				Desc 													GROUP SYNCHED
+#
+# 		ONLINE 					Ready to serve 										Yes
+#
+# 		RECOVERING 				State transfer from Donor, becoming member  	No
+#
+# 		OFFLINE 					The Group Replication plugin is loaded but not belonging to any group 			No
+#
+# 		ERROR 					Error, Offline, look at group_replication_exit_state_action,
+# 									can be in Super_read_only=ON or offline_mode=ON
+#
+# 																								No
+#
+# 		UNReACHABLE 			Whenever the local failure detector suspects
+# 									that a given server is not reachable, because
+# 									for example it was disconnected against its will,
+# 									it shhows it as unreachable. 						No
+#
+# 18.3.2 THE REPLICATION_GROUP_MEMBERS TABLE
+#
+# The performance_schema.replication_group_members table is used for monitoring the status of the different
+# server instances that are members of the group. The information in the table is updated whenver there
+# is a view change, for example when the configuration of the group is dynamically changed when a new
+# member joins.
+#
+# At that point, servers exchange some of their metadata to synchronize themselves and continue to cooperate
+# together.
+#
+# The information is shared between all the server instances that are members of the replication group,
+# so information on all the group members can be queried from any member. This table cna be used
+# to get a high level view of the state of a replication group, for example by issuing:
+#
+# 		SELECT * FROM performance_schema.replication_group_members;
+# 		+------------------------+-----------------------------------+-------------+-----------------------------------------------------------+
+# 		|	CHANNEL_NAME 			 | 	MEMBER_ID 							 | MEMBER_HOST | MEMBER_PORT | MEMBER_STATE | MEMBER_ROLE | MEMBER_VERSION |
+# 		+------------------------+-----------------------------------+-------------+-------------+--------------+-------------+----------------+
+# 		| /stuff
+#
+# Based on this result we can see that the group consists of three members, each member's host and port number
+# which clients use to connect to the member, and the server_uuid of hte member. The MEMBER_STATE column
+# shows one of the SECTION 18.3.1, "GROUP REPLICATION SERVER STATES", in this case it shows that all three members
+# 	 in this group are ONLINE, and the MEMBER_ROLE column shows that there are two secondaries, and a single primary.
+#
+# Therefore this group must be running in single-primary mode. The MEMBER_VERSION column can be useful when
+# you are upgrading a group and are combining members running different MySQL versions. see SECTION 18.3.1,
+# "GROUP REPLICATION SERVER STATES" for more information.
+#
+# For more information about the Member_host value and its impact on teh distributed recovery process,
+# see SETION 18.2.1.3, "USER CREDENTIALS"
+#
+# 18.3.3 THE REPLICATION_GROUP_MEMBER_STATS TABLE
+#
+# Each member in a replication group certifies and applies transactions received by teh group. Statistics regarding the
+# certifier and applier procedures are useful to understand how the applier queue is growing, how many conflicts
+# have been found, how many transactions were checked, which transactions are committed everywhere, and so on.
+#
+# The performance_schema.replication_group_member_stats table provides group-level information related to
+# the certificaiton process, and also statistics for the transactions received and originated by each
+# individiual member of the replication group.
+#
+# The information is shared between all teh server instances that are members of the replication group,
+# so information on all the group members can be queried from any member. Note that refreshing
+# of statistics for remote members is controlled by the message period specified in the
+# group_replication_flow_control_period option, so these can differ slightly from the locally
+# collected statistics from the member where teh query is made.
+#
+# TO use this table to monitor a Group Replication member,, issue:
+#
+# 		mysql> SELECT * FROM performance_schema.replication_group_member_stats\G
+#
+# These fields are important for monitoring the performance of the members connected in the group.
+# For example, suppose that one of the group's members always reports a large number of transactions
+# in its queue compared to other members.
+#
+# This means that the member is delayed and is not able to keep up to date with the other members
+# of the group.
+#
+# Based onthis information, you could decide to either remove the member from the group, or delay
+# the processing of transactions on the other members of the group in order to reduce the number
+# of queued transactions.
+#
+# This information can also help you to decide how to adjust the flow control of the Group Replication
+# plugin, see SECTION 18.6.2, "FLOW CONTROL"
+#
+# 18.4 GROUP REPLICATION OPERATIONS
+#
+# 18.4.1 CONFIGURING AN ONLINE GROUP
+# 18.4.2 TRANSACTION CONSISTENCY GUARANTEES
+# 18.4.3 DISTRIBUTED RECOVERY
+# 18.4.4 NETWORKING PARTITIONING
+# 18.4.5 SUPPORT FOR IPV6 AND FOR MIXED IPV6 AND IPV4 GROUPS
+# 18.4.6 USING MYSQL ENTERPRISE BACKUP WITH GROUP REPLICATION
+#
+# This section explains common operations for managing groups.
+#
+# 18.4.1 CONFIGURING AN ONLINE GROUP
+#
+# 18.4.1.1 CHANGING A GROUP's PRIMARY MEMBER 
+# 18.4.1.2 CHANGING A GROUP'S MODE
+# 18.4.1.3 USING GROUP REPLICATION GROUP WRITE CONSENSUS
+# 18.4.1.4 SETTING A GROUP'S COMMUNICATION PROTOCOL VERSION
+#
+# You can configure an online group while Group Replication is running by using a set of UDFs, which rely
+# on a group action coordinator. These UDFs are installed  by the Group Replication plugin in version
+# 8.0.13 and higher. This section describes how changes are made to a running group, and the avaiable UDFs.
+#
+# 	IMPORTANT:
+#
+# 		For the coordinator to be able to configure group wide actions on a running group, all members
+# 		must be running MySQL 8.0.13 or higher and have teh UDFs installed.
+#
+# To use the UDFs, connect to a member of the running group and issue the UDF with the SELECT statement.
+#
+# The Group Replication plugin processes the action and its params and the coordinator sends it to all
+# members which are visible to the member where you issued the UDF.
+#
+# If the action is accepted, all members execute the action and send a termination message
+# when completed.
+#
+# Once all members declare the action as finished,the invoking member returns the results to the client.
+#
+# 
+#  
+# 
+# https://dev.mysql.com/doc/refman/8.0/en/group-replication-deploying-locally.html
 #
