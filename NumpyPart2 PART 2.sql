@@ -77665,8 +77665,506 @@
 #
 # Once all members declare the action as finished,the invoking member returns the results to the client.
 #
+# When configuring a whole group, the distributed nature of the operations means that they interact
+# with many processes of the Group Replication plugin, and therefore you should observe the following:
+#
+# 		You can issue configuration operations everywhere. If you want to make a member A the new 
+# 		primary you do not need ot invoke the operation on member A. All operations are sent and
+# 		executed in a coordinated way on all group members. Also, this distributed execution of
+# 		an operation has a different ramification: if the invoking member dies, any already
+# 		running configuration process continues to run on other members.
+#
+# 		In the unlikely event that hte invoking member dies, you can still use the monitoring
+# 		features to ensure other members complete the operaiton successfully.
+#
 # 
+#
+# All members must be online. TO simplify the migration or election process and guarantee they are
+# as fast as possible, the group must not contain any member currently in the distributed recovery
+# process, otherwise the configuration action is rejected by the member where you issue the statement.
+#
+# No members can join a group during a configuration change. 
+#
+# any members that attempts to join the group during a coordinated configuration change leaves the group
+# and  cancels its join process.
+#
+# ONLY ONE CONFIGURATION AT ONCE. a group which is executing a configuration change cannot accept any
+# other group configuration change, because concurrent configuration operations could lead to member divergence.
+#
+# ALL MEMBERS MUST BE RUNNING MYSQL 8.0.13 or higher. Due to the distributed nature of the configuration
+# actions, all members must recognize them in order to execute them. The operation is therefore rejected
+# if any server running MySQL Server Version 8.0.12 or lower is present in the group.
+#
+# 18.4.1.1 CHANGING A GROUP'S PRIMARY MEMBER
+#
+# This section explains how to change which member of a single-primary group is the primary. The function used to
+# change a group's mode can be run on any member.
+#
+# CHANGING WHICH MEMBER IS PRIMARY
+#
+# Use the GROUP_REPLICAITON_SET_AS_PRIMARY() UDF to change which member is the primary in a single-primary
+# group. This funciton has no effect if used on a member of a multi-primary group.
+#
+# Only a primary member can write to the group, so if an asynch channel is running on that member,
+# no switch is allowed until the asynch channel is stopped.
+#
+# If you issue the UDF on a member running a MySQL Server version from 8.0.17, and all members are running
+# MySQL Server version 8.0.17 or higher, you can only specify a new primary member that is running the 
+# lowest MySQL Server version in the group, based on the patch version.
+#
+# This safeguard is applied to ensure the group maintains compatibility with new functions. If any members
+# is running a MySQL server version between MySQL 8.0.13 and MysQL 8.0.16, this safeguard is not enforced
+# for the group and you can specify any new primary member, but it is recommended to select a primary that
+# is running the lowest MySQL server version in the group.
+#
+# Pass in the server_uuid of the member which you want to become the new primary of the group by issuing:
+#
+# 		SELECT group_replication_set_as_primary(member_uuid);
+#
+# While the action runs, you can check its progress by issuing:
+#
+# 		SELECT event_name, work_completed, work_estimated FROM performance_schema.events_stages_current
+# 		WHERE event_name LIKE "%stage/group_rpl%";
+# 		+----------------------------------------------+-----------------+------------------+
+# 		| event_name 											  |  work_completed |  work_estimated  |
+# 		+----------------------------------------------+-----------------+------------------+
+#  	| Waiting or members to turn on super_read_only| 3 				  | 5 					|
+# 		+----------------------------------------------+-----------------+------------------+
+#
+# 18.4.1.2 CHANGING A GROUP'S MODE
+#
+# This section explains how to change the mode which a group is running in, either single
+# or multi-primary. The functions used to change a group's mode can be run on any member.
+#
+# CHANGING TO SINGLE-PRIMARY MODE
+#
+# Use hte group_replication_switch_to_single_primary_mode() UDF to change a group running
+# in multi-primary mode to single-primary mode by issuing:
+#
+# 		SELECT group_replication_switch_to_single_primary_mode()
+#
+# When you change to single-primary mode, strict consistency checks are also disabled on all
+# group members, as required in single-primary mode (group_replication_enforce_update_everywhere_checks=OFF)
+#
+# If no string is passed in, the election of the new primary in the resulting single-primary group follows
+# the election policies described in SECTION 18.1.3.1, "SINGLE-PRIMARY MODE". To override the election
+# process and configure a specific member of the multi-primary group as teh new primary in teh process,
+# get the server_uuid of the member and pass it to the group_replication_Switch_to_single_primary_mode().
+#
+# For example issue:
+#
+# 		SELECT group_replication_switch_to_single_primary_mode(member_uuid);
+#
+# If you issue the UDF on a memmber running a MySQL Server version from 8.0.17, and all members
+# are running MysQL Server Version 8.0.17 or higher, you can only specify a new primary
+# member that is running the lowest MySQL Server version in teh group, based on the patch version.
+#
+# This saffeguard is applied to ensure the group maintains compatibility with new functions.
+# If you do not specify a new primary member, the election process considers the patch version
+# of the group members.
+#
+# If any member is running a MySQL Server version between MySQL 8.0.13 and MySQL 8.0.16, this safeugard
+# is not enforced for the group and you can specify any new primary member, but it is recommended
+# to select a primary that is running the lowest MySQL Server version in the group.
+#
+# If you do not specify a new primary member, the election process considers only the major version
+# of the group members.
+#
+# While the action runs, you can check its progress by issuing:
+#
+# 		SELECT event_name, work_completed, work_estimated FROM performance_schema.events_stages_current WHERE event_name LIKE "%stage/group_rpl%";
+# 		+------------------------------------------------+-------------------------+------------------------+
+# 		| event_name 												 | work_completed 			| work_estimated 			 |
+# 		+------------------------------------------------+-------------------------+------------------------+
+# 		| stage/group_rpl/Primary switch: waiting for pending transactions to finish| 4 	| 20 				    |
+# 		+---------------------------------------------------------------------------+----+------------------+
+#
+# CHANGING TO MULTI-PRIMARY MODE
+#
+# Use hte group_replication_switch_to_multi_primary_mode() UDF to change a group running in single primary mode
+# to multi-primary mode by issuing:
+#
+# 		SELECT group_replication_switch_to_multi_primary_mode()
+#
+# After some coordinated group operations toe snure that safety and consistency of your data, all members which
+# belong to the group become primaries.
+#
+# When you change a group that was running in single-primary mode to run in multi-primary mode, members
+# running MySQL 8.0.17 or higher are automatically placed in read-only mode if they are running
+# a higher MySQL server version than the lowest version present in the group.
+#
+# Members running MySQL 8.0.16 or lower do not carry out this check, and are always placed in read-write mode.
+#
+# While the action runs, you can check its progress by issuing:
+#
+# 		SELECT event_name, work_completed, work_estimated FROM performance_schema.events_stages_current WHERE event_name LIKE "%stage/group_rpl%";
+# 		+--------------------------------------------------+-----------------------------+----------------------------------+
+# 		| event_name 													| 				work_completed		| work_estimated 						  |
+# 		+--------------------------------------------------+-----------------------------+----------------------------------+
+# 		| stage/group_rpl/Multi-primary Switch: applying buffered transactions | 0 		|  		1 								  |
+# 		+--------------------------------------------------+-----------------------------+----------------------------------+
 #  
+#
+# 18.4.1.3 USING GROUP REPLICATION GROUP WRITE CONSENSUS
+#
+# This section explains how to inspect and configure the maximum number of consesus instances at any time for a 
+# group. This maximum is referred to as the event horizon for a group, and is the maximum number of consensus
+# instances that the group can execute in parallel.
+#
+# This enables you to fine tune the performance of your Group Replication deployment. For example, the default
+# value of 10 is suitable for a group running on a LAN, but for groups operating over a slower network such
+# as a WAN, increase this number to improve performance.
+#
+# INSPECTING A GROUP'S WRITE CONCURRENCY
+#
+# Use hte group_replication_get_write_concurrency() UDF to inspect a group's event horizon value at runtime
+# by issuing:
+#
+# 		SELECT group_replicaiton_get_write_concurrency();
+#
+# CONFIGURING A GROUP'S WRITE CONCURRENCY
+#
+# Use the group_replication_set_write_concurrency() UDF to set the maximum number of consensus instances that
+# the system can execute in parallel by issuing:
+#
+# 		SELECT group_replication_set_write_concurrency(instances);
+#
+# Where instances is the new maximum number of consensus instances. The GROUP_REPLICATION_ADMIN privilege
+# is required to use this UDF.
+#
+# 18.4.1.4 SETTING A GROUP'S COMMUNICATION PROTOCOL VERSION
+#
+# From MySQL 8.0.16, Group Replication has the concept of a communication protocol for the group. The Group
+# Replication communication protocol version can be managed explicitly, and set to acommodate the oldest
+# mysql Server version that you want the group to support.
+#
+# This enables groups to be formed from members at different MySQL Server versions while ensuring backwards compatibility.
+# Versions from MySQL 5.7.14 allow compression of messages, and versions from MySQL 8.0.16 also allow fragmentation
+# of messages. All members of the group must use the same communication protocol version, so that group members
+# can be at different MySQL Server releases but only send messages taht can be undersotod by all group members.
+#
+# A MySQL server at version X ccan only join and reach ONLINE status in a replication group if the group's
+# communicaiton protocol version is less than or equal to X. When a new member joins a replication group,
+# it checks the communication protocol version thati s announced by the existing members of the group.
+#
+# If the joining member supports that version, it joins the group and uses the communication that the group has
+# announced, even if the member supports additional communication capabilities. if the joining member does not
+# support the communication protocol version, it is expelled from the group.
+#
+# If two members attempt to join in the same membership change event, they can only join if the communication
+# protocol version for both members is already compatible with the group's communication protocol version.
+#
+# Members with different communication protocol versions from the group must join in isolation. For example:
+#
+# 		) One MySQL Server 8.0.16 instance can successfully join a group that uses the communicaton protocol version
+# 			5.7.24
+#
+# 		) One MySQL Server 5.7.24 instance cannot successfully join a group that uses the communication protocol
+# 			version 8.0.16
+#
+# 		) Two MySQL Server 8.0.16 instances cannot simultaneously join a group that uses the communication protocol
+# 			version 5.7.24
+#
+# 		) Two MySQL Server 8.0.16 instances can simultaneously join a group that uses the same protocol version or lower
+#
+# YOu can inspect the communication protocol in use by a group by using the group_replication_get_communication_protocol()
+# UDF, which returns the oldest MySQL Server version that the group supports.
+#
+# All existing members of the group return the same communication protocol version. For example:
+#
+# 		SELECT group_replication_get_communication_protocol();
+# 		+---------------------------------------------------------+
+# 		| group_replication_get_communication_protocol() 			 |
+# 		+---------------------------------------------------------+
+# 		| 8.0.16 																 |
+# 		+---------------------------------------------------------+
+#
+# Note that the group_replication_get_communication_protocol() UDF returns the minimum MySQL version
+# that the group supports, which might differ from the version number that was passed to the 
+# group_replicaiton_set_communication_protocol() UDF, and from the MySQL Server version that is installed
+# on the member where you use the UDF.
+#
+# If you need to change the communication protocol version of a group so that members at earlier
+# releases can join, use the GROUP_REPLICAITON_SET_COMMUNICATION_PROTOCOL() UDF to specify the MySQL
+# Server version of the oldest member that you want to allow. This makes the group fall back to a 
+# compatible communication protocol version if possible.
+#
+# The GROUP_REPLICATION_ADMIN privilege is required to use this UDF, and all existing group
+# members must be online when you issue the statement, with no loss of majority. For example:
+#
+# 		SELECT group_replication_set_communication_protocol("5.7.25");
+#
+# If you upgrade all the members of a replication group to a new MySQL Server release,
+# the group's communication protocol version is not automatically upgraded to match.
+# If you no longer need to support members at earlier releases, you can use the 
+# group_replication_set_communication_protocol() UDF to set the communication protcool
+# version to the new MySQL Server version to which you have upgraded the members.
+#
+# For example:
+#
+# 		SELECT group_replication_set_communication_protocol("8.0.16");
+#
+# The group_replication_set_communication_protocol() UDF is implemented as a group aciton;
+# so it is executed at the same time on all members of the group. The group action starts
+# buffering messages and waits for delivery of any outgoing messages that were already in progress
+# to complete, then changes the communication protocol version and sends the buffered messages.
+#
+# If a member attempts to join the group at any time after you change the communication protocol
+# version, the group members announce the new protocol version.
+#
+# MysQL InnoDB cluster automatically and transparently manages the communication protocol versions
+# of its members, whenever the cluster topology is changed using AdminAPI operations. An InnoDB
+# cluster always uses the most recent communicaiton protocol version that is supported by all the
+# instances that are currently part of the cluster or joining it. For details, see InnoDB Cluster
+# and Group Replication Protocol.
+#
+# 18.4.2 TRANSACTION CONSISTENCY GUARANTEES
+#
+# 18.4.2.1 Understanding Transaction Consistency Guarantees
+# 18.4.2.2 Configuring Transaction Consistency Guarantees
+#
+# One of the major implications of a distributed system such as Group Replication is the consistency
+# guarantees that it provides as a group. In other words, the consistency of the global synch
+# of transactions distributed across the members of the group.
+#
+# This section describes how Group Replicaiton handle consistency guarantees depending on the
+# events that occur in a group, and how to best configure your group's consistency guarantees.
+#
+# 18.4.2.1 UNDERSTANDING TRANSACTION CONSISTENCY GUARANTEES
+#
+# In terms of distributed consistency guarantees, either in normal or failure repair-operations,
+# Group REplication has always been ane ventual consistency system. This means that as soon as the
+# incoming traffic slows down or stops, all group members have the same data content.
+#
+# The events that relate to the consistency of a system can be a split into control operaitons,
+# either manual or automatically triggered by failures; and data flow operations.
+#
+# for Group replication, the control operations that can be evaluated in terms of consistency are:
+#
+# 		) a memmber joining or leaving, which is covered by Group Replication's SECTION 18.4.3,
+# 			"DISTRIBUTED RECOVERY" and write protection
+#
+# 		) network failures, which are covered by the fencing modes.
+#
+# 		) In single-primary groups, primary failover, which can also be an operation triggered by
+# 			group_replication_set_as_primary()
+#
+# CONSISTENCY GUARANTEES AND PRIMARY FAILOVER
+#
+# IN a single-primary group, in the event of a primary failover when a ssecondary is promoted
+# to primary, the new primary can either be made available to application traffic immediately,
+# regardless of how large the replication backlog is, or alternatively access to it can
+# be restricted until the backlog has been applied.
+#
+# With the first approach, the group takes the minimum time possible to secure a stable group
+# membership after a primary failure by electing a new primary and then allowing data access
+# immediately while it is still applying any possible backlog from the old primary.
+#
+# Write consistency is ensured, but reads can temporarily retrieve stale data while the new
+# primary applies the backlog. For example, if client C1 wrote A=2 WHERE A=1 on the old primary
+# Just before its fialure, when client c1 is reconnected to the new primary it could potentially
+# read A=1 until the new primary applies its backlog and ccatches up with the state of the old
+# primary before it left the group.
+#
+# With the second alternative, the system secures a stable group membership after the primary failure
+# and elects a new primary inthe same way as the first alternative, but in this case the groups
+# then wait untsil the new primary applies all backlog and only then does it permit data access.
+# Thie snreus that in a situation as described previously, when client C1 is reconnected to the new
+# primary it reads A=2.
+#
+# However, the trade-off is that the time required to failover is then proportional to the size
+# of the backlog, which on a correctly configured group should be small.
+#
+# Prior to MySQL 8.0.14 there was no way to configure the failover policy, by default availability
+# was maximized as described in teh first approach. In a group with members running MySQL 8.0.14
+# and higher, you can configure the level of transaction consistency guarantees provided by members
+# during primary failover using the group_replication_consistency variable. See IMPACT OF CONSISTENCY
+# ON PRIMARY ELECTION.
+#
+# DATA FLOW OPERATIONS
+#
+# Data flow is relevant to group consistency guarantees due to the reads and writes executed against
+# a group, especially when these operaitons are distributed across all members. Data flow operaitons
+# apply to both modes of Group Replication: single-primary and multi-primary, however, to make this
+# explanation clearer it is restricted to single-primary mode.
+#
+# The usual way to split incoming read or write transactions across a single-primary groups's
+# members is to route writes to the primary and evenly distribute reads to the secondaries..
+# Since the group should behave as a single entity, it is reasonable to expect that writes on the
+# primary are instaneously available on the secondaries.
+#
+# Although Group Replication is written using Group CCOmmunicatiton System (GCS) protocols that
+# implement the Paxos algorithm, some parts of Group Replication are asynch, which implies that
+# data is asynch applied to secondaries.
+#
+# This means that a client C2 can write B=2 WHERE B=1 on the primary, immediately connect
+# to a secondary and read B=1. This is because the secondary is still applying backlog,
+# and has not applied the transaction which was applied by the primary.
+#
+# TRANSACTION SYNCHRONIZATION POINTS
+#
+# You configure a group's consistency guarnatee based on the point at which you want to synchronize
+# transactions across the grop. To help you understand the concept, this section simplifies
+# the points of synchronizing transacctions across a group to be at the time of a read operation
+# or at the time of a write opieration.
+#
+# If data is synchronized at the time of a read, teh current client sesson waits until a given
+# point, which is the point in time that all preceding update transactions have been applied,
+# before it can start executing.
+#
+# With this approach, only this session is affected, all other concurrent data operations
+# are not affected.
+#
+# If data is synchronized at the time of write, the writing session waits until all secondaries
+# have written their data. Group Replication uses a total order on writes, and therefore this
+# implies waiting for this and all preceding writes that are in secondaries queues to be applied.
+#
+# Therefore when using this synchronization point, the writing session waits for all secondaries
+# queues to be applied.
+#
+# ANy alternativve ensure sthat in the situation described for client C2 would always read B=2
+# even if immediately connected t oa secondary. Each alternative has its advantages and disadvantages
+#, which are directly related to your system workload.
+#
+# THe following examples describe different typers of workloads and advise which point of
+# synchornization is appropriate.
+#
+# IMAGINE THE FOLLOWING SITUATIONS:
+#
+# 		) you want to load balance your reads without deploying additional restrictions on whch
+# 			server you reaed from to avoid reading stale data, group writes arem uch less
+# 			common than group reads.
+#
+# 		) you havev a group that has predominantly read-only data, you want read-write transaction
+# 			to be applied everywhere once they commit, so that subsequent reads are done on 
+# 			up-to-date data that includes the latest write. This ensures that you do not pay
+# 			the synchronization cost for every RO transaction, but only on RW ones.
+#
+# IN these cases, you should choose to synchronize on writes.
+#
+# Imagine the following situations:
+#
+# 		) you want to load balance your reads without deploying additional restrictions on which server ytou
+# 			read from to avoid reading stale data, group writes are much more common than group reads.
+#
+# 		) you want specific transactions in your workload to always read up-to-date data from the group,
+# 			for example whenever senseitive data is updated (Such as credentials for a file or similar data)
+# 			and you want to enforce that reads retrieve the most up to date value.
+#
+# In these cases, you should choose to synchronize on reads.
+#
+# 18.4.2.2 CONFIGURING TRANSACTION CONSISTENCY GUARANTEES
+#
+# Although the Transaction Synchornization Points section explains that conceptually there are two synchornization
+# points which you can choose: on read or on write, these terms were a simplification and the terms used in
+# Group Replication are: before and after transaction execution.
+#
+# The consistency level can have a different impact on read-only (RO) and read-write(RW) transactons
+# processed by the group as demonstrated in this section.
+#
+# 		) HOw to choose a Consistency Level
+#
+# 		) Impacts of COnsistency Levels
+#
+# 		) IMpact of Consistency on Primary Election
+#
+# THe following list shows the possible consistency levels that you can configure in Group Replication
+# using the group_replication_consistency variable, in order of increasing transaction consistency guarantee:
+#
+#		) EVENTUAL
+#
+# 			Both RO and RW transactions do not wait for preceding transactions to be applied before executing.
+# 			This was the behavior of Group Replication before the group_replicaiton_consistency variable
+# 			was added.
+#
+# 			A RW transaction does not wait for other members to apply a transaction. This means that a transaction
+# 			could be externalized on one member before the others. This also means that in the event
+# 			of a primary failover,, the new primary can accept the new RO and RW transactions before the previous
+# 			primary transactions are all applied.
+#
+# 			RO transactions could result in outdated values, RW transactions could result in rollback due to conflicts.
+#
+# 		) BEFORE_ON_PRIMARY_FAILOVER
+#
+# 			New RO or RW transactions with a newly elected primary that is applying backlog from the old primary
+# 			are held (not applied) until any backlog has been applied. This ensures that when a primary fialover
+# 			happens, intentionally or not,clients always see the latest value on the primary. This guarantees
+# 			consistency, but means that clients must be able to handle the delay in the event that a backlog
+# 			is being applied.
+#
+# 			Usually this delay should be minimal,, but it does depend on the size of the backlog.
+#
+# 		) BEFORE
+#
+# 			A RW transaction waits for all preceding transactions to complete before being applied.
+# 			A RO Transaction waits for all preceding transactions to complete before being executed.
+#
+# 			This nesures that this transaction reads the latest value by only affecting teh latency
+# 			of the transaction. This reduces the overhead of synchronization on every RW transaction,
+# 			by ensuring synchronization is used only on RO transactions.
+#
+# 			This consistency level also includes the consistency guarantees provided by 
+# 			BEFORE_ON_PRIMARY_FAILOVER
+#
+# 		) AFTER
+#
+# 			A RW transaction waits until its changes have been applied to all of the other members.
+# 			This value has no effect on RO transaction. This mode ensures that when a transaction
+# 			is committed on the local member, any subsequent transaction reads the written value or 
+# 			a more recent value on any group member. Use this mode with a group that is used for predominantly
+# 			RO operations to ensure that applied RW transactions are applied everywhere once they
+# 			commit.
+#
+# 			This could be used by your application to ensure that subsequent reads fetch the latest
+# 			data which includes the latest writes. This reduces the overhead of synchornization
+# 			on every RO transaction, by ensuring synchronization is used only on RW transactions.
+#
+# 			This consistency level also includes the consistency guarantees provided by BEFORE_ON_PRIMARY_FAILOVER.
+#
+# 		) BEFORE_AND_AFTER
+#
+# 			A RW transaction waits for 1) all preceding transactions to complete before being applied
+# 			and 2) until its changes have been applied on other members.
+#
+# 			A RO Transaction waits for all preceding transactions to complete before execution
+# 			takes place. This consistency level also includes the consistency guarantees
+# 			provided by BEFORE_ON_PRIMARY_FAILOVER.
+#
+# The BEFORE and BEFORE_AND_AFTER consistency levels can be both used on RO and RW transactions.
+# The AFTER consistency level has no impact on RO transactions, because they do not generate
+# changes.
+#
+# HOW TO CHOOSE A CONSISTENCY LEVEL
+#
+# The different consistency levels provide flexibility to both DBAs, who can use them to set up
+# their infrastructure; and to developers who can use the consistency level that best suits
+# their applications requirements.
+#
+# The following scenarios show how to choose a consistency guarantee level based on how you
+# use your group:
+#
+# 		) SCENARIO 1 you want to load balance your reads without worrying about stale reads,
+# 			your groups write operations are considerably fewer than your group read operations.
+# 			IN this case, you should choose AFTER.
+#
+# 		) SCENARIO 2 you have a data set that applies a lot of writes and you want to do occasional
+# 			reads without having to worry about reading stale data. In this case, you should choose
+# 			BEFORE.
+#
+# 		) SCENARIO 3 you want specific transaactions in your workload to always read up-to-date
+# 			data from the group, so that whenever that sensitive data is updated (such as credentials
+# 			for a file or similar data) you want to enforce that reads always read the most up to
+# 			date value. In this case, you should choose BEFORE.
+#
+# 		) SCENARIO 4 you ahve a group that has predominantly read-only (RO) data, you want your read-write
+# 			(RW) transactions to be applied everywhere once they commit, so that subsequent reads are
+# 			done on up-to-date data that includes your latest writes and you do not pay the synchornization
+# 			on every RO transaction, but only on RW ones.
+#
+# 			iN this case, you should choose AFTER.
+#
+# 		) SCENARIO 5 
+#
+# https://dev.mysql.com/doc/refman/8.0/en/group-replication-configuring-consistency-guarantees.html
 # 
-# https://dev.mysql.com/doc/refman/8.0/en/group-replication-deploying-locally.html
 #
