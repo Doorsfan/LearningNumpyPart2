@@ -78163,8 +78163,506 @@
 #
 # 			iN this case, you should choose AFTER.
 #
-# 		) SCENARIO 5 
+# 		) SCENARIO 5 you have a group that has predominantly read-only data, you want your read-write (RW)
+# 			transactions to always read up-to-date data from the group and ot be applied everywhere once they
+# 			commit, so that subsequent reads are done on up-to-date data that includes your latest write 
+# 			and you do not pay the synch on every read-only (RO) trans, but only on RW Ones.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/group-replication-configuring-consistency-guarantees.html
+# 			In this case, you should choose BEFORE_AND_AFTER.
+#
+# You have the freedom to choose the scope at which the consistency level is enforced. This is important
+# because consistency levels could have a negative impact on group performance if you set them at a global
+# scope.
+#
+# Therefore you can configure the consistency level of a group by using the group_replication_consistency
+# system variable at different scopes.
+#
+# to enforce the consistency level on the current session, use the session scope:
+#
+# 		SET @@SESSION.group_replication_consistency = 'BEFORE';
+#
+# To enfroce the consistency level on all sessions, use the global scope:
+# 
+# 		SET @@GLOBAL.group_replication_consistency = 'BEFORE';
+#
+# The possibility of setting the consistency level on a specific sessions enables you to take advantage
+# of scenarios such as:
+#
+# 		) Scenario 6 A given system handles several instructions that do not require a strong consistency level,
+# 			but one kind of instruction does require strong consistency: managing access permissions to documents;
+# 			in this scenario, the system change access permissions and it wants to be sure that all clients
+# 			see teh correct permission.
+#
+# 			YOu only need to SET @@SESSION.group_replicaiton_consistency= 'AFTER', on those instructions
+# 			and leave the other instructions to run with EVENTUAL set at the global scope.
+#
+# 		) Scenario 7 On the same system as described in Scenario 6, every day an instruction needs to do some
+# 			analytical processing, and as such it requires to always read the most up-to-date data.
+# 			To achieve this, you only need to SET @@SESSION.group_replication_consistency = 'BEFORE' on that
+# 			specific instruction.
+#
+# To summarize, you do not need to run all transactions with a specific consistency level, especially if only
+# some transactions actually require it.
+#
+# Note that all read-write transactions are totally ordered in Group Replication, so even when you set the
+# consistency level to AFTER for the current session this transaction waits until its changes are applied
+# on all members, which means waiting for this and all preceding transactions that could be in teh secondaries
+# queues.
+#
+# IN practice, the consistency level AFTER waits for everything until and including this transaction.
+#
+# IMPACTS OF CONSISTENCY LEVELS
+#
+# Another way to classify the consistency levels is in terms of impact on the group, that is, the repercusssions
+# that the consistency levels have on the other members.
+#
+# The BEFORE consistency level, apart from being ordered on the transaction stream, only impacts on the local
+# member. That is, it does not require coordination with the other members and does not have repercussions on
+# their transactions. In otehr words, BEFORE only impacts the transactions on which it is used.
+#
+# The AFTER and BEFORE_AND_AFTER consistency levels do have side-effects on concurrent transactions executed
+# on other members. These consistency levels make the other members transactions wait if transactions with
+# the EVENTUAL consistency level start while a transaction with AFTER or BEFORE_AND_AFTER is executing.
+#
+# The other members wait until the AFTER transaction is committed on that member, even if the other members
+# transactions have the EVENTUAL consistency level. In otehr words, AFTER and BEFORE_AND_AFTER impact all
+# ONLINE group members.
+#
+# To illustrate this further, imagine a group with 3 members, M1, M2 and M3. On member M1 a client issues:
+#
+# 		SET @@SESSION.group_replication_consistency = AFTER;
+# 		BEGIN;
+# 		INSERT INTO t1 VALUES (1);
+# 		COMMIT;
+#
+# Then, while the above transaction is being applied, on member M2 a client issues:
+#
+# 		SET SESSION group_replication_consistency = EVENTUAL;
+#
+# in this situation, even though the second transactions consistency level is EVENTUAL, because it starts
+# executing while the first transaction is already in the commit phase on M2, the second transaction
+# has to wait for the first transaction to finish the commit and only then can it execute.
+#
+# YOu can only use the consistency levels BEFORE, AFTER and BEFORE_AND_AFTER on ONLINE members,
+# atempting to use them on members in other states causes a session error.
+#
+# Transactions whose consistency level is not EVENTUAL hold execution until a timeout, configured by
+# wait_timeout value is reached, which defaults to 8 hours. If the timeout is reached an ER_GR_HOLD_WAIT_TIMEOUT
+# error is thrown.
+#
+# IMPACT OF CONSISTENCY ON PRIMARY ELECTION
+#
+# This section describes how a group's consistency level impacts on a single-primary group that has elected
+# a new primary. Such a group automaticallyt detects failures and adjusts the view of the members that are active,
+# in other words the membership changes there is a check performed to detect if there is still a primary member in the
+# group.
+#
+# If there is none, a new one is selected from the list of secondary members. Typically, this is known as the secondary
+# promotion.
+#
+# Given the fact that the system detects failure and reconfigures itself automatically, the user may also expect that
+# once the promotion takes place, the new primary is in the exact state, data-wise, as that of the old one. In other
+# words, the user may expect that there is no backlog of replicated transactions to be applied on the new primary
+# once he is able to re ad from and write to it.
+#
+# IN practical terms, the user may expect that once his application fails-over to the new primary, there would be no chance,
+# even if temporarily, to read old data or write into old data records
+#
+# When flow control is activated and properly tuned on a group, there is only a small chance of transiently reading
+# stale data from a newly elected primary immediately after the promotion, as there should not be a backlog, or if
+# there is one it should be small.
+#
+# Moreover, you might have a proxy or middleware layers that govern application accessess to the primary after a promotion
+# and enforce the consistency criteria at that level. If your group members are using MySQL 8.0.14 or higher, you can 
+# specify the behavior of the new primary once it is promoted using the group_replication_consistency variable,
+# which controls whether a newly elected primary blocks both reads and writes until after the backlog is fully
+# applied or if it behaves in the manner of members running MySQL 8.0.13 or earlier.
+#
+# If the group_replication_consistency option was set to BEFORE_ON_PRIMARY_FAILOVER on a newly elected primary
+# which has backlog to apply, and transactions are issued against the new primary while it is still applying
+# the backlog, incoming transactions are blocked until the backlog is fully applied.
+#
+# Thus, the following anomalies are prevented:
+#
+# 		) No stale reads for read-only and read-write transactions. This prevents stale reads from being externalized
+# 			to the application by the new primary.
+#
+# 		) No spurious roll backs for read-write transactions, due to write-write conflicts with replicated read-write
+# 			transactions still in the backlog waiting to be applied.
+#
+# 		) No read skew on read-write transactions such as:
+#
+# 			BEGIN;
+# 			SELECT x FROM t1; -- x=1 because x=2 is in the backlog;
+# 			INSERT x INTO t2;
+# 			COMMIT;
+#
+# 		This query should not cause a conflict but writes outdated values.
+#
+# To summarize, when group_replication_consistency is set to BEFORE_ON_PRIMARY_FAILOVER you are choosing
+# to prioritize consistency over availability, because reads and writes are held whenever a new primary
+# is elected.
+#
+# This is the trade-off you have to consider when configuring your group. It should also be remembered
+# that if flow conttrol is working correctly, backlog should be minimal. Note that the higher consistency
+# levels BEFORE, AFTER and BEFORE_AND_AFTER also include the consistency guarantees provided by BEFORE_ON_PRIMARY_FAILOVER.
+#
+# To guarantee that the group provides the same consistency level regardless of which member is promoted to
+# primary, all members of the group should have BEFORE_ON_PRIMARY_FAILOVER (or a higher consistency level)
+# persistede tto their configuration.
+#
+# For example on each member issue:
+#
+# 		SET PERSIST group_replication_consistency='BEFORE_ON_PRIMARY_FAILOVER';
+#
+# This ensures that the members all behave in the same way, and that the configuration is persisted after a restart
+# of the member.
+#
+# Although all writes are held when using BEFORE_ON_PRIMARY_FAILOVER consistency level, not all reads are blocked
+# to ensure that you can still inspect the server while it is applying backlog after a promotion took place.
+#
+# This is useful for debugging, monitoring, observability and troubleshooting. Some queries that do not modify
+# data are allowed, such as the following:
+#
+# 		) SHOW statements
+#
+# 		) SET statements
+#
+# 		) DO statements
+#
+# 		) EMPTY statements
+#
+# 		) USE statements
+#
+# 		) using SELECT statements against the performance_schema and sys databases
+#
+# 		) using SELECT statements against the PROCESSLIST table from the infoschema database
+#
+# 		) SELECT statements that do not use tables or user defined functions
+#
+# 		) STOP_GROUP_REPLICATION statements
+#
+# 		) SHUTDOWN statements
+#
+# 		) RESET_PERSIST statements
+#
+# A transacction cannot be on-hold forever, and if the time held exceeds wait_timeout it returns an
+# ER_GR_HOLD_WAIT_TIMEOUT error.
+#
+# 18.4.3 DISTRIBUTED RECOVERY
+#
+# 18.4.3.1 CLONING FOR DISTRIBUTED RECOVERY
+# 18.4.3.2 CONFIGURING DISTRIBUTED RECOVERY
+# 18.4.3.3 FAULT TOLERANCE FOR DISTRIBUTED RECOVERY
+# 18.4.3.4 HOW DISTRIBUTED RECOVERY WORKS
+#
+# Whenever a member joins or rejoins in a replication group, it must catch up with the transactions that were
+# applied by the group members before it joined, or while it was away.
+#
+# This process is called distributed recovery.
+#
+# The joining member begins by checking the relay log for its group_replication_applier channel for any
+# transactions that it already recieved from the group but did not yet apply. If the joining member
+# waas in the group previously, it might find unapplied transactions from before it left, in which case
+# it applies these as a first step.
+#
+# A member that is new to the group does not have anything to apply.
+#
+# After this, the joining memmber connects to an online existing memmber to carry out state transfer.
+# The joining member transfers all the transacttions that took place in the group before it joined
+# or while it was away, which are provided by the existing memmber (called the donor)..
+#
+# Next, the joining member applies the transactions that took place in the group while this state
+# transfer was in progress. When this process is complete, the joining member has caught up
+# with the remaining servers in the group, and it begins to participate normally in the group.
+#
+# Group Replicaiton uses a comination of these methods for state transfer during distributed
+# recovery:
+#
+# 		) A remote cloning operation using the clone plugin's function, which is available from
+# 			MySQL 8.0.17..
+# 		
+# 			To enable this method of state transfer, you must install the clone pplugin on the
+# 			group memmbers and the joining member.
+#
+# 			Group Replicaton automatically configures teh required clone plugin settings and manage
+# 			the remote cloning operation.
+#
+# 		) Replicating from a donor's binary log and applying the transactions on the joining member.
+# 			This method uses a standard asynch replication channel named group_replication_recovery
+# 			that is established between the donor and the joining member.
+#
+# Group Replication automatically selects the best combination of these methods for state transfer
+# after you issue START_GROUP_REPLICATION on the joining member.To do this, Group Replication checks
+# which existing memmbers are suitable as donors, how many transacctions the joining member needs
+# from a donor, and whether any required transactions are no longer present in the binary log files
+# on any group member.
+#
+# If the transaction gap between the joining memmber and a suitable donor is large, or if some required
+# transactions are not in any donor's binary log files, Group Replication begins distributed
+# recovery with a remote cloning operation.
+#
+# If there is not a large transaction gap, or if the clone plugin is not installed, Group Replication
+# proceeds directly to state transfer from a donor's binary log.
+#
+# 		) During a remote cloning operation, the existing data on the joining member is removed,
+# 			and replaced witha copy of the donor's data. When the remote cloning operation is complete
+# 			and the joining member has restarted, state transfer from a donor's binary log is carried out
+# 			to get the transactions that the group applied while the remote cloning operation
+# 			was in progress.
+#
+# 		) During state-transfer from a donor's binary log, the joining member replicates and applies
+# 			the required transactions from the donor's binary log ,applying the transactions as they
+# 			are received, up to the point where the binary log records that the joining member joined
+# 			the group (a vview change event). While this is in progress, the joining memmber buffers
+# 			the new transactions that the group applies.
+#
+# 			When state transfer from the binary log is complete, the joining member applies the buffered
+# 			transactions.
+#
+# When the joining member is up to date with all the group's transactions, it is declared online and 
+# can participate in the group as a normal member, and distributed recovery is complete.
+#
+# 18.4.3.1 CLONING FOR DISTRIBUTED RECOVERY
+#
+# MySQL Server's clone plugin is available from MySQL 8.0.17. If you want to use remote cloning
+# operations for distributed recovery in a group, you must set up existing members and joining
+# members beforehand to support this function.
+#
+# If you do not want to use this function in a group, do not set it up, in which case
+# Group Replication only uses state transfer from the binary log.
+#
+# To use cloning, at least one existing group member and the joining memmber must be set up
+# beforehand to support remote cloning operations. As a minimum, you must install the clone
+# plugin on the donor and joining memmber, grant the BACKUP_ADMIN permission to the replication
+# user for distributed recovery and set the group_replication_clone_trheshold system variable
+# to an appropriate level.
+#
+# To ensure the maximum availability of donors, it is advisable to set up all current
+# and future group memmbers to support remote cloning operations.
+#
+# Be aware that a remote cloning operation removes user-created tablespaces and data
+# from the joining memmber before transferring the data from teh donor. If the operation
+# is stopped while in progress, the joining memmber might be left with partial data
+# or no data.
+#
+# This can be repaired by retrying the remote cloning operation, which Group
+# Replication does automatically.
+#
+# 18.4.3.1.1 PREREQUISITES FOR CLONING
+#
+# For full instructions to set up and configure the clone plugin, see SECTION
+# 5.6.7, "THE CLONE PLUGIN". Detailed prerequisites for a remote cloning operaiton
+# are covered in SECTION 5.6.7.3, "CLONING REMOTE DATA".
+#
+# For Group Replication, note the following key points and differences:
+#
+# 		) The donor (an existing group memmber) and the recipient (the joining memmber) must have the
+# 			clone plugin installed and active. For instrucitons to do this, see SECTION 5.6.7.1, "INSTALLING THE CLONE PLUGIN"
+#
+# 		) The donor and the recipient must run on the same operating system, and must have the same MySQL Server
+# 			version (which must be MySQL 8.0.17 or above to support the clone plugin)
+#
+# 			CLoning is therefore not suitable for groups where memmbers run different MySQL Server versions.
+#
+# 		) If distributed recovery is configured to use SSL (group_replication_recovery_use_ssl=ON). Group
+# 			Replication applies this setting for remote cloning operations. Group Replication automatically
+# 			configures the settings for the clone SSL options (clone_ssl_ca, clone_ssl_cert and clone_ssl_key)
+# 			to match your settings for the corresponding Group Replication distributed recovery options
+# 			(group_replication_recovery_ssl_ca, group_replication_recovery_ssl_cert and 
+# 			group_replicaiton_recovery_ssl_key)
+#
+# 		) You do not need to set up a list of valid donors in the clone_valid_donor_list system variable
+# 			for hte purpose of joining a replication group.Group Replication configures this setting
+# 			automatically for you after it selects a donor from the existing group memmbers.
+#
+# 			Note that remote cloning operations use the server's SQL protocol hostname and port.
+#
+# 		) The clone plugin has a number of system variables to manage the network load and performance
+# 			impact of the remote cloning operaiton. Group REplication does not configure these settings,
+# 			so you can review them and set them if you want to, or allow them to default.
+#
+# 			Note that when a remote cloning operaiton is used for distributed recovery, the clone plugin's
+# 			clone_enable_compression setting applies to the operation, rather than the Group Replication
+# 			compression setting.
+#
+# 		) To invoke the remote cloning operation on the recipient, Group Replication uses the internal
+# 			mysql.sesion user, which already has the CLONE_ADMIN privilege, so you do not need to set this up.
+#
+# 		) As the clone user on the donor for the remote cloning operation, Group Replication uses the replication
+# 			user that you set up for distributed recovery (which is covered in SECTION 18.2.1.3, "USER CREDENTIALS")
+#
+# 			You must therefore give the BACKUP_ADMIN privilege to this replication user on all group memmbers that
+# 			support cloning.
+#
+# 			also give the privilege to the replication user on joining members when you are configuring
+# 			them for Group Replication, because they can act as donors after they join the group.
+#
+# 			To give this privilege to the replicaiton user on existing members, you can issue this statement
+# 			on each group member individiually with binary logging disabled, or one group member with binary logging 
+# 			enabled:
+#
+# 				GRANT BACKUP_ADMIN ON *.* TO rpl_user@'%';
+#
+# 18.4.3.1.2 THRESHOLD FOR CLONING
+#
+# When group members have been set up to support cloning, the group_replication_clone_threshold system
+# variable specifies a threshold, expressed as a number of transactions, for the use of a remote
+# cloning operation in distributed recovery.
+#
+# If the gap between the transactions on the donor and the transactions on the joining member
+# is larger than this number, a remote cloning operation is used for state transfer to the joining
+# member when this is technically possible.
+#
+# Group Replication calculates whether the threshold has been exceeded based on the gtid_executed
+# sets of the existing group members. Using a remote cloning operation in the event of a large
+# transaction gap lets you add new members to the group without transferring the group's data
+# to the server manually beforehand, and also enables a member that is very out of date to catch
+# up more efficiently.
+#
+# The default setting for the group_replication_clone_threshold Group Replication system variable
+# is extremely high (the max permitted sequence number for a transaction in a GTID), so it can
+# effectively deactivates cloning wherever state transfer from the binary log is possible.
+#
+# To enable Group Replication to select a remote cloning operation for state transfer where
+# this is more appropriate, set the system variable to specify a number of transactions
+# as the transaction gap above which you want cloning to take place.
+#
+# WARNING:
+#
+# 		Do not use a low setting for group_replication_clone_threshold in an active group.
+# 		If a number of transactions above the threshold takes place in the group while the
+# 		remote cloning operation is in progress, the joining member triggers a remote cloning
+# 		operation again after restarting, and could continue this indefinetly.
+#
+# 		To avoid thi situation, ensure that you set the threshold to a number higher than
+# 		than the number of transactions that you would expect to occur in the group during
+# 		the time taken for the remote cloning operation.
+#
+# Group Replication attempts to execute a remote cloning operation regardless of your
+# threshold when state transfer from a donor's binary log is impossible, for example because
+# the transactions needed by the joining member are not available in the binary log on any
+# existing group memmber.
+#
+# Group Replication identifies this based on the gtid_purged sets of the existing group
+# members. YOu cannot use the group_replicaiton_clone_threshold system variable to deactivate
+# cloning when the required transactions are not available in any member's binary log
+# files, because in that situation cloning is the only alternative to trasnferring data
+# to the joining member manually.
+#
+# 18.4.3.1.3 CLONING OPERATIONS
+#
+# When group memmbers and joining memmbers are set up for cloning, Group REplication manages
+# remote cloning operations for you.
+#
+# A remote cloning operaiton might take some time to complete, depending on the size of the
+# data. See SECTION 5.6.7.9, "MONITORING CLONING OPERATIONS" for information on monitoring
+# the process.
+#
+# NOTE:
+#
+# 		WHen state transfer is complete, Group Replication restarts teh joining member to complete
+# 		the process. If group_replication_start_on_boot=OFF is set on the joining member,
+# 		ytou must issue START_GROUP_REPLICATION manually again following this restart.
+#
+# 		If group_replication_start_on_boot=ON and other settings required to start 
+# 		Group Replication were set in a configuration file or using a SET PERSIST statement,
+# 		you do not need to intervene and the process continues automatically to bring
+# 		the joining member online.
+#
+# A remote cloning operation clones setting sthat are persisted in tables from teh donor to the reecipient,
+# as well as teh data. Group REplication manages the settings that relate specifically to Group Replication
+# channels.
+#
+# Group Replication memmber settings that are persisted in configuration files, such as the group
+# replication local address, are not cloned and are not changed on the joining member.
+#
+# The credentials used by the donor for the group_replication_recovery replication channel
+# (the replication user and password) are trasnferred to and used by the joining member
+# after cloning, and they must be valid there.
+#
+# All group memmbers that received state transfer by a remote cloning operation therefore use the 
+# same replication user and password for distributed recovery. However, Group Replication preserves
+# the channel settings that relate to the use of SSL, so these are unique to the indiviual member.
+#
+# If a PRIVILEGE_CHECKS_USER account has been used to help secure the replication appliers,
+# this user account is not used by the joining member after cloning.
+#
+# You must set up the user manually for the applicable replicatiton channels, as described in
+# 17.3.3, "REPLICATION PRIVILEGE CHECKS"
+#
+# 18.4.3.2 CONFIGURING DISTRIBUTED RECOVERY
+#
+# Several aspects of Group Replication's distributed recovery process can be configured
+# to suit your system.
+#
+# REPLICATION USER FOR DISTRIBUTED RECOVERY
+#
+# Distributed recovery requires a replicaiton user that has the correct permissions so that Group Replicaiton
+# can establish direct member-to-member replication channels. The replication user must also have tthe
+# correct permissions to act as the clone user on teh donor for a remote cloning operation.
+#
+# For instructions to set up this replicaiton user, see SECTION 18.2.1.3, "USER CREDENTIALS"
+#
+# MANUAL STATE TRANSFER
+#
+# State transfer from the binary log is Group Replications base mechanism for distributed recovvery,
+# and if the donors and joining memmbers in your replication group are not set up to support cloning,
+# this is the only avialable option.
+#
+# As state transfer from the binary log is based on classic asynch replication,, it might take a very
+# long time if the server joining the group does not have the group's data at all, or has data taken
+# from a very old backup image.
+#
+# In this situation, it is therefore recommended that before adding a server to teh group, you should
+# set it up with the group's data by transferring a fairly recent snapshot of a server already in the group.
+# This minimizes the time taken for distributed recovery, and reduces the impact on donor servers,
+# since they have to retain and transfer fewer binary log files.
+#
+# NUMBER OF CONNECTION ATTEMPTS
+#
+# For state transfer from the binary log, Group Replication limits the number of attempts a joining member
+# makes when trying to connect to a donor from the pool of donors. IF the connection retry limit is
+# reached without a successful connection, the distributed recovery procedure terminates with an error.
+#
+# Note that this limit specifies the total number of attempts that the joining member makes to connect
+# to a donor. For example, if 2 group members are suitable donors, and the connection retry limit is set
+# to 4, the joining member makes 2 attempts to connect to each of the donors before reaching the limit.
+#
+# The default connection retry limit is 10. YOu can configure this setting using the group_replication_recovery_retry_count
+# system variable. The following command sets the maximum number of attempts to connect to a donor
+# to 5:
+#
+# 		mysql> SET GLOBAL group_replication_recovery_retry_count= 5;
+#
+# For remote cloning operations, this limit does not apply. Group Replicaiton makes only one connection
+# attempt to each suitable donor for cloning, before starting to attempt state transfer
+# from the binary log.
+#
+# SLEEP INTERVAL FOR CONNECTION ATTEMPTS
+#
+# For state transfer from the binary log, the group_replication_recovery_reconnect_interval system variable
+# defines how much time the distributed recovery process should sleep between donor connection attempts.
+#
+# Note that distributed recovery does not sleep after every donor conneciton attempt. As the joining
+# member is connecting to a different serversa nd not to teh same one repaeatly, it can assume that
+# the problem taht affects server A does not affect server B.
+#
+# Distributed recovery therefore suspends only when it has gone through all the possible donors.
+#
+# Once the server joining the group ahs made one atempt to connect to each of the suitable
+# donors in the group, the distributed recovery process sleeps for the number of seconds
+# configured by the group_replication_recovery_reconnect_interval system variable.
+#
+# For example, if 2 group members are suitable donors, and the connection retry limit is set 
+# to 4, the joining member makes one attempt to connect to each of the donors, then sleeps
+# for the connection retry interval, then makes on efurther attempt to connect to each of the
+# donors before reaching the limit.
+#
+# 
+#
+# 
+#
+# https://dev.mysql.com/doc/refman/8.0/en/group-replication-cloning.html
 # 
 #
