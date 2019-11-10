@@ -78659,10 +78659,513 @@
 # for the connection retry interval, then makes on efurther attempt to connect to each of the
 # donors before reaching the limit.
 #
+# The default connection retry interval is 60 seconds, and you can change this value dynamically.
+# The following command sets teh distributed recovery donor connection retry interval to 120 seconds:
+#
+# 		mysql> SET GLOBAL group_replication_recovery_reconnect_interval = 120;
+#
+# For remote cloning operations, this interval does not apply. Group Replication makes only one
+# connection attempt to each suitable donor for cloning, before starting to attempt state transfer
+# from the binary log.
+#
+# MARKING THE JOINING MEMBER ONLINE
+#
+# When distributed recovery has successfully completed state transfer from teh donor t othe joining
+# member, the joining member can be marked as online in the group and ready to participate.
+#
+# By default, this is done after the joining member has received and applied all the transasctions
+# that it wsa missing. Optionally, you can allow a joining member to be marked as online when it has
+# received and certified (that is, completed conflict detection for) all the transactions that it was
+# missing,, but before it has applied them.
+#
+# If you want to do this, use the group_replication_recovery_complete_at system variable to specify
+# the alternative setting TRANSACTIONS_CERTIFIED.
+#
+# SSL AND AUTHENTICATION FOR DISTRIBUTED RECOVERY
+#
+# You can optionally use SSL for distributed recovery connections between group members. SSL for distributed
+# recovery is configured separately from SSL for normal group communications, which is determined
+# by the server's SSL settings and the group_replication_ssl_mode system variable. For distributed
+# recovery connections, dedicated Group Replicaiton distributed recovery SSL system variables are available
+# to configre the use of certificates and ciphers specifically for distributed recovery.
+#
+# By default, SSL is not used for distributed recovery connections. To activate this, set
+# group_replication_recovery_use_ssl=ON, and configure the Group Replication distributed recovery
+# SSL system variables as described in SECTION 18.5.2, "GROUP REPLICATION SECURE SOCKET LAYER
+# (SSL) SUPPORT"
+#
+# You need a replicaiton user that is set up to use SSL.
+#
+# When distributed recovery is configured to use SSL, Group Replication aplies this setting
+# for remote cloning operations, as well as for state transfer from a donor's binary log.
+# Group Replication automatically configures the settings for the clone SSL options
+# (clone_ssl_ca, clone_ssl_cert and clone_ssl_key) to match your settings for the corresponding
+# Group Replication distributed recovery options (group_replication_recovery_ssl_ca,
+# group_replication_recovery_ssl_cert, and group_replication_recovery_ssl_key)
+#
+# If you are not using SSL for distributed recovery (so group_replication_recovery_use_ssl
+# is set to OFF), and the replicaiton user account for Group Replication authenticates with
+# the caching_sha2_password plugin (which is the default in MySQL 8.0) or the sha256_password
+# plugin, RSA key-pairs are used for password exchange.
+#
+# In this case, either use the group_replication_recovery_public_key_path system variable
+# to specify the RSA public key file, or use the group_replication_recovery_get_public_key
+# system variable to specify the RSA Public key file, or use the group_replication_recovery_get_public_key
+# system variable to request the public key from the master, as described in USING GROUP REPLICATION
+# AND THE CACHING SHA-2 USER CREDENTIALS PLUGIN.
+#
+# COMPRESSION FOR DISTRIBUTED RECOVERY
+#
+# From MySQL 8.0.18, you can optionally configure compression for distributed recovery by the method
+# of state transfer from a donors binary log. Compression can benefit distribued recovery where network
+# bandwidth is limited and the donor has to transfer many transactions to the joining memmber.
+#
+# The group_replication_recovery_compression_algorithm and group_replication_recovery_zstd_compression_level
+# system variable configure permitted compression algorithms and the zstd compression level, used when
+# carrying out state transfer from a donor's binary log.
+#
+# For more information, see SECTION 4.2.6, "CONNECTION COMPRESSION CONTROL"
+#
+# Note that these compression settings do not apply for remote cloning operations. When a remote
+# cloning operation is used for distributed recovery, the clone plugin's clone_enable_compression
+# setting applies.
+#
+# 18.4.3.3 FAULT TOLERANCE FOR DISTRIBUTED RECOVERY
+#
+# Group Replication's distributed recovery process has a number of built-in measures to ensure fault
+# tolerance in the event of any prolems during the process.
+#
+# The donor for distributed recovery is selected randomly from the existing list of suitable online group
+# memmbers in the current view. Selecting a random donor means that there is a good chance that the
+# same server is not selected more than once when multiple members enter the group.
+#
+# From MySQL 8.0.17, for state transfer from the binary log, the joiner only selects a donor that is running
+# a lower or equal patch version of MySQL Server compared to itself.
+#
+# For earleir releases, all of the online memmbers are allowed to be a donor. For a remote cloning operation,
+# the joiner only selects a donor that is running the same patch version as itself. Note that when the joining
+# member has restarted at teh end of the operation, it establishes a connection with a new donor for state
+# transfer from the binary log, which might be a different member from the original donor used for the remote
+# cloning operation.
+#
+# In the following situations, Group Replication detects an error in distributed recovery, automatically
+# switches over to a new donor, and retries the state transfer:
+#
+# 		) Connection error - There is an authentication issue or another problem with making the connection
+# 				to a candidate donor.
+#
+# 		) Replicaiton errors - One of the replication threads (the receiver or applier threads) being used
+# 			for state transfer from the binary log fails. Because this method of state transfer uses the existing
+# 			MySQL replication framework, it is possible that some transient errors could cause errors in teh receiver
+# 			or applier threads.
+#
+# 		) Remote cloning operation errors - A remote cloning operation fails or is stopped before it completes
+#
+# 		) Donor leaves the group - The donor leaves the group, or Group Replication is stopped on the donor, while state
+# 			transfer is in progress.
+#
+# In these situations, the new connection following the error is attempted with a new candidate donor. Selecting a 
+# different donor in the event of an error means that there is a chance the new candidate donor does not have the
+# same error.
+#
+# If the clone plugin is installed, Group Replicaiton attempts a remote cloning operation which each of the 
+# suitable online clone-supporting donors first. If all those attempts fail, Group Replication attempts state
+# transfer from the binary log with all the suitable donors in turn, if that is possible.
+#
+# WARNING:
+#
+# 		For a remote cloning operation, user-created tablespaces and data on the recipient (the joining
+ #		member) are dropped before the remote cloning operation begins to transfer the data from teh donor.
+ # 	If the remote cloning operation starts but does not complete, the joining member might be left
+ # 	with a partial set of its original datta files, or with no user data.
+ #
+ # 	Data trasnferred by the donor is removed from the recipient if the cloning operation is stopped
+ # 	before the data is fully cloned. This situation can be repaired by retrying the cloning operation,
+ # 	which Group Replication does automatically.
+ #
+ # IN the following situations, the distributed recovery process cannot be completed, and the joining
+ # memmber leaves the group:
+ #
+ # 		) Purged transactions - Transactions that are required by the joining member are not present in any
+ # 			online group member's binary log files, and the data cannot be obtained by a remote cloning
+ # 			operation (because the clone plugin is not installed, or becuase cloning was attempted with alL
+ # 			possible donors but failed)
+ #
+ # 			The joining member is therefore unable to cathc up with the group
+ #
+ # 	) Conflicting transactions - The joining member already contains some transactions that are not present
+ # 			in the group. If a remote cloning operation was carried out, these transactions would be delted
+ # 			and lost, because the data directory on the joining memmber is erased.
+ #
+ # 		If state trnasfer from a donor's binary log was carried out, these transactions could conflict
+ # 		with the group's transactions.
+ #
+ # 	) Connection retry limit reached - the joining memmber has made all the connection attempts allowed
+ # 		by the connection retry limit. You can configure this using the group_replication_recovery_retry_count
+ # 		system variable (see SECTION 18.4.3.2, "CONFIGURING DISTRIBUTED RECOVERY")
+ #
+ # 	) No more donors - The joining memmber has unsuccessfully attempted a remote cloning operation with each
+ # 		of the online clone-supporting donors in turn (if hte clone plugin is installed), then has unsuccessfully
+ # 		attempted state transfer from teh binary log with each of the suitable online donors in turn, if possible.
+ #
+ # 	) Joining member leaves the group - The joining memmber leaves the group or Group Replication is stopped on the
+ # 			joining member while state trnasfer is in progress.
+ #
+ # If the joining member left the group unintentionally, so in any situation listed above except the last, it proceeds
+ # to take the action specified by the group_replication_exit_state_action system variable.
+ #
+ # 18.4.3.4 HOW DISTRIBUTED RECOVERY WORKS
+ #
+ # When Group Replications distributed recovery process is carrying out state transfer from the binary log, to
+ # synchronize the joining memmber with the dononr up to a specific point in time, the joining memmber and donor
+ # make use of GTIDs (see SECTION 17.1.3, "REPLICATION WITH GLOBAL TRANSACTION IDENTIFIERS")
+ #
+ # However, GTIDs only provide a means to realize which transactions the joining memmber is missing. THey do not
+ # help marking a specific point in time to which the server joining the group must catch up, nor do they
+# convey certificaiton information. This is the job of binary log view markers, which mark view changes in the
+# binary log stream, and also contain additional metadata information, supplying the joining memmber with missing
+# certification related data.
+#
+# This topic explains the role of view changes and the view change identifier, and the steps to carry out state
+# transfer from the binary log.
+#
+# VIEW AND VIEW CHANGES
+#
+# A view corresponds to a group of memmbers participating actively in teh current configuration, in otehr words
+# at a specific point in time. They are functioning correctly and onlien in the group.
+#
+# A view change occurs when a modification to the group configuration happens, such as a member joining or leaving.
+# Any group memmbership change results in an independent view change communicated to all members at teh same
+# logical point in time.
+#
+# A view identifier uniquely identifies a view: it is generated whenever a vview change happens.
+#
+# Att the group communication layer, view changes with their associated view identifiers mark boundaries between
+# the data exchange before and after a memmber joins. This concept is implemented through a binary log event
+# :
+#
+# the "view change log event". The view identifier is recorded to demarcate transactions transmitted before and after
+# changes happen in the group membership.
+#
+# The view identifier itself is built from two parts: a randomly generated part, and a monotonically increasing integer.
+# The randomly generated part is generated when the group is created, and remains unchanged while there is at
+# least one member in the group.
+#
+# The integer is incremented every time a view change happens. Using these two different parts enables the view
+# identifier ot identify incremental group changes caused by members joining or leaving,, and also to identify
+# the situation where all members leave the group in a full group shutdown, so no information remains of what view
+# the group was in.
+#
+# Randomly generating part of the identifier when the group is started from the beginning ensures that the data
+# marker in the binary log remains unique, and an identical identifier is not reused after a full gorup shutdown,
+# as this would cause issues with distributed recovery in teh future.
+#
+# BEGIN: STABLE GROUP
+#
+# All servers are online and processing information transactions from the group. Some servers may be a little behind in
+# terms of transactions replicated, but eventuallly they converge. The group acts as one distributed and replicated
+# database.
+#
+# VIEW CHANGE: A MEMBER JOINS
+#
+# Whenever a new member joins the group and therefore a view change is performed, every online server queues a 
+# view change log event for execution. This is queued because before the view change, several transactions can be
+# queued on the server to be applied and as such, these belong on the old view.
+#
+# Queuing the view change event after them guarantees a correct marking of when this happened.
+#
+# Meanwhile, the joining member selects a suitable donor the donor from the list of online servers as stated
+# by the membership service through the view abstraction. A member joins on view 4 and the online memmbers
+# write a view change event to the binary log.
+#
+# STATE TRANSFER: CATCHING UP
+#
+# If group memmbers and the joining member are set up with the clone plugin (see SECTION 18.4.3.1, "CLONING FOR
+# DISTRIBUTED RECOVERY"), and the difference in transactions between the joining member and the group exceeds
+# the threshold set for a remote cloining operation (group_replication_clone_threshold). Group Replication begins
+# distributed recovery with a remote cloning operation.
+#
+# A remote cloning operation is also carried out if required transactions are no longer present in any group member's
+# binary log files. During a remote cloning operation, the existing data on the joining member is removed, and replaced
+# with a copy of the donor's data. When the remote cloning operaiton is complete and the joining member has restarted,
+# state transfer from a donor's binary log is carried out to get the transactions that the group applied while
+# the remote cloning operation was in progress.
+#
+# If there is not a large transaction gap, or if the clone plugin is not installed,, Group Replication proceeds directly
+# to state transfer from a donor's binary log.
+#
+# For state transfer from a donor's binary log, a connection is established between the joining memmber and the
+# donor and state transfer begins. This interaction with the donor continues until the server joining the group's
+# applier thread processes the view change log event that corresponds to the view change triggered when the 
+# server joining the group came into teh group.
+#
+# In otehr words, the server joining the group replicates from the donor, until it gets to the marker with the
+# view identifier which matches the view marker it is already in.
+#
+# As view identifiers are transmitted to all members in teh group at the same logical time, the server joining
+# the group knows at which view identifier it should stop replicating. This avoids complex GTID set calculations
+# because the view identifier clearly marks which data belongs to each group view.
+#
+# While the server joining the group is replicating from teh donor, it is also caching incoming transactions
+# from the group. Eventually, it stops replicating from teh donor and switches to applying those that are
+# cached.
+#
+# FINISH: CAUGHT UP
+#
+# When the server joining the group recognizes a view change event with the expected viewi dentifier, the
+# connection to the donor is terminated and it starts applying the cached transactions. Although ti a cts
+# as a marker in the binary log, delimiting view changes, the view change log event also plays another
+# role.
+#
+# It conveys the certification information as percived by all servers when the server joining the group
+# entered the group, in other words the last view change. Without it, the server joining the group would
+# not have the necessary information to be able to certify (detect conflicts) subsequent transactions.
+#
+# The duration of the catch up is not deterministic, because it depends on the workload and the rate of
+# incoming transactions to the group. This process is completely onlien and the server joinign the group
+# oes not block any other server in the group while it is catching up.
+#
+# Therefore the number of transactions the server joining the group is behind when it moves to this 
+# stage can, for this reason, vary and thus increase or decrease according to the workload.
+#
+# When the server joining the group reaches zero queued transactions and its stored data is equal
+# to the other members, its public state changes ot online.
+#
+# 18.4.4 NETWORK PARTITIONING
+#
+# The group needs to achieve consensus whenever a change that needs to be replicated happens.
+# This is the case for regular transactions but is also required for group membership changes
+# and some internal messaging that keeps the group consistent.
+#
+# Consensus requires a majority of group members to agree on a given decision. When a 
+# majority of group members is lost, the group is unable to progress and blocks because
+# it cannot secure majority or quorum.
+#
+# Quorum may be lost when there are multiple involuntary failures,,causing a majority of servers
+# to be removed abruptly from the group. For example in a group of 5 servers, if 3 of them become
+# silent at once, the majority is compromised and thus no quorum can be achievved.
+#
+# In fact, the remaining two are not able to tell if the other 3 servers have crashed or whether
+# a network partition has isolated htese 2 alone and therefore the group cannot be reconfigured automatically.
+#
+# On the other hand, if eservers exit the group voluntarily, they instruct the group that it should 
+# reconfigure itself. In practice, this means that a server that is leaving tells others that it is going away.
+#
+# This means that other members can reconfigure the group properly, the consistency of the membership
+# is maintained and the majority is recalculated. For example, in the above scenario of 5 servers
+# where 3 leave at once, if hte 3 leaving servers warn the group that they are leaving, one by one,
+# then the membership is able to adjust itself from 5 to 2, and at the same time, securing quorum
+# while that happens.
+#
+# NOTE:
+#
+# 		Loss of quorum is by itself a side-effect of bad planning. Plan the group size for the number
+# 		of expected failures (regardless whether they are consecutive, happen all at once or are sporadic)
+#
+# The following sections explain what to do if the system partitions in such a way that no quorum is automatically
+# achieved by the servers in teh group.
+#
+# TIP:
+#
+# 		A primary that has been executed from a group after a majority loss followed by a reconfiguration
+# 		can contain exxtra transactions that are not included in the new group. If this
+# 		happens, the attempt to add back the excluded member from the group results in an error
+# 		with the message This member has more executed transactions than those present in teh group.
+#
+# DETECTING PARTITIONS
+#
+# The replication_group_memmbers performance schema table presents the status of each server in teh current
+# view from the perspective of this server. The majority of the time the system does not run into partitioning,
+# and therefore the table shows information that is consistent across all servers in teh group.
+#
+# In other words, the status of each server on this table is agred by all in teh curent view. However,
+# if there is a network partitioning and quorum is lost, then the table shows the status UNREACHABLE
+# for those servers that it cannot contact.
+#
+# This information is exported by the local failure detector built into  Group Replication.
+#
+# To understand this type of network partition the following section describes a scenario where there are
+# initially 5 servers working together correctly, and the changes that then happen to the group once only
+# 2 servers are online.
+#
+# as such, let's assume that there is a group with these 5 servers in it:
+#
+# 		) Server s1 with member identifier <id1>
+#
+# 		) sERVER S2 WITH the member identifier <id2>
+#
+# 		) /ETC For 5 servers)
+#
+# Initially, the group is running fine and the servers are happily communicating with each other. YOu can
+# verify this by logging into s1 and looking at its replication_group_members performance schema table.
+#
+# For example:
+#
+# 		mysql> SELECT MEMBER_ID, MEMBER_STATE, MEMBER_ROLE FROM performance_schema.replication_group_members;
+# 		+-------------------------------------+---------------+-------------+
+# 		| SERVER_ID 								  | MEMBER_STATE 	| MEMBER_ROLE |
+#		+-------------------------------------+---------------+-------------+
+# 		| <id1> 										  | ONLINE 		   | SECONDARY   |
+# 		/etc/
+#
+# However, moments later there is a catastrophic failure and servers s3, s4 and s5 stop unexpectedly.
+# A few seconds after this, looking again at the replication_group_members table on s1 shows that
+# it is still online, but several other members are not.
+#
+# In fact, as seen below they are marked as UNREACHABLE. Moreover, the system could not
+# reconfigure itself to change the membership, because the majority has been lost.
+#
+# 		mysql> SELECT MEMBER_ID, MEMBER_STATE FROM performance_schema.replication_group_members;
+# 		+------------------------------------------+-----------------+
+# 		| MEMBER_ID 										 | MEMBER_STATE 	 |
+# 		+------------------------------------------+-----------------+
+# 		| /id1> 												 | UNREACHABLE 	 |
+# 		| <id2> 												 | ONLINE 			 |
+# 		/ETC/
+#
+# The table shows that s1 is now in a group that has no means of progressing without external
+# intervention, because a majority of hte serversa re unreachable. In this particular case,
+# 	the group membership list needs to eb reset ot allow the system to proceed, which is explained
+# 	in this section.
+#
+# Alternatively, you could also choose to stop Group Replication on s1 and s2 (or stop completely
+# s1 and s2), figure out what happened with s3, s4 and s5 and then restart Group Replication (or the servers)
+#
+# UNBLOCKING A PARTITION
+#
+# Group Replication enables you to reset the group membership list by forcing a specific configuration.
+# For instance in the case above, where s1 and s2 are the only servers online, you could chose to force
+# a membership configuration consisting of only s1 and s2.
+#
+# This requires checking some information about s1 and s2 and then using the group_replication_force_members
+# variable.
+#
+# Suppose that you are back in the situation where s1 and s2 are the only servers left in teh group.
+# Servers s3, s4 and s5 have left the group unexpectedly. To make servers s1 and s2 continue, you want to 
+# force a membership configuration that contains only s1 and s2.
+#
+# WARNING:
+#
+# 		This procedure uses group_replication_force_members and should be considered a last
+# 		resort remedy. It must be used with extreme care and only for overriding loss of quorum.
+#
+# 		If misused, it could create an artificial split-brain scenario or block the entire system altogether.
+#
+# Recall that the system is blocked and the current configuration is the following (as perceived by the
+# local failure detector on s1):
+#
+# 		mysql> SELECT MEMBER_ID, MEMBER_STATE FROM performance_schema.replication_group_members;
+# 		+-------------------------------
+# 		/ETC/
+#
+# The first thing to do is to check what the local address (group communication identifier) for s1 and s3.
+# Log into s1 and s2 and get that information as follows.
+#
+# 		mysql> SELECT @@group_replication_local_address;
+#
+# Once you know the group communication addresses of s1 (127.0.0.1:10000) and s2 (127.0.0.1:10001), you can
+# use that on one of the two servers to inject a new memmbership configuration, thus overriding the existing 
+# one that has lost quorum. To do that on s1:
+#
+# 		mysql> SET GLOBAL group_replication_force_members="127.0.0.1:10000, 127:0.0.1:10001";
+#
+# This unblocks the group by forcing a different configuration. Check replication_group_memers on both
+# s1 and s2 to verify the group membership after this change. First on s1.
+#
+# 		mysql> SELECT MEMBER_ID, MEMBER_STATE FROM performance_schema.replication_group_members;
+# 		/only 2 online now in group, only memmebrs in group/
+#
+# And then on s2:
+#
+#
+# 		mysql> SELECT * FROM performance_schema.replication_group_members;
+# 		/same/
+#
+# When forcing a new membership configuration, make sure that any servers are going to be forced out of the group
+# are indeed stopped. In the scenario depicted above, if s3, s4 and s5 are not really unreachable but instead are
+# online, they may have formed their own functional partition (they are 3 out of 5, hence they ahve majority)
+#
+# IN that case, forcing a group memberhsip list with s1 and s2 could create an artificial split brain situation.
+#
+# Therefore it is important before forcing a new membership configuraiton to ensure that the servers to be excluded
+# are indeed shutdown and if they are not, shut them down before proceeding.
+#
+# After you have used the group_replication_force_members system variable to successfully force a new group
+# membership and unblock the group, ensure that you clear the system variable.
+#
+# group_replicaiton_force_members must be empty in order to issue a START_GROUP_REPLICATION statement.
+#
+# 18.4.5 SUPPORT FOR IPV6 AND FOR MIXED IPV6 AND IPV4 GROUPS
+#
+# From MySQL 8.0.14, Group Replication group members can use Ipv6 addresses as an alternative to IPv4
+# addresses for communications within teh group. To use Ipv6 addresses, the OS on the server host and the
+# MySQL Server instance mustb oth be configured to support Ipv6.
+#
+# For instructions to set up IPv6 support for a server instance, see SECTION 5.1.12, "IPV6 SUPPORT"
+#
+# IPv6 addresses, or host names that resolve to them, can be specified as the network address that the
+# member provides in teh group_replication_local_address option for connections from other members.
+# When specified with a port number, an Ipv6 address must be specified in square brackets, for example:
+#
+# 		group_replication_local_address = "[2001:db8:85a3:8d3:1319:8a2e:370:7348]:33061"
+#
+# The network address or host name specified in group_replication_local_address is used by Group Replication
+# as the unique identifier for a group member within the replication group. If a host name specified
+# as the group Replicaiton local address for a server instance resolves to both an Ipv4 and an ipv6 address,
+# the Ipv4 address is always used for Group Replication connections.
+#
+# The adress or host name specified as the group Replicaiton local address is not the same as the MySQL
+# server SQL protocol host and port, and is not specified in the bind_address system variable for the 
+# server instance.
+#
+# For hte purposes of IP address whitelisting for Group Replication (see SECTION 18.5.1, "GROUP REPLICATION
+# IP ADDRESS WHITELISTING"), the address that you specify fore ach group member in group_replication_local_address
+# must be added to the list for the group_replication_ip_whitelist option on the other servers in the replication group.
+#
+# A replication group can contain a combination of members that present an Ipv6 address as their Group Replication
+# local address, and members that present an IPv4 address. When a server joins such a mixed group, it must make
+# the initial contact with the seed member using the protocool that the seed member advertises in the 
+# group_replicaiton_group_seeds option, whether that is IPv4 or IPV6.
+#
+# If any of the seed members for the group are lsited in the group_replication_group_seeds option with an IPv6
+# address when a joining member has an IPv4 Group Replication local address, or the reverse, you must also
+# set up and whitelistt an alternative address for the joining member for the required protocol (or a host name
+# that resolves to an address for that protocol)
+#
+# If a joining member does not havve a whitelisted address for the appropriate protocol, its connection
+# attempt is refused.
+#
+# The alternative address or host name only needs to be added to the group_replication_ip_whitelist
+# option on the other servers in the replication group, not to the group_replication_local_address
+# value for the joining member (which can only contain a single address)
+#
+# For example, server A is a seed member for a group, and hast the following configuration settgins
+# for Group Replication, so that it is advertising an IPv6 address in the group_replication_group_seeds
+# option:
+#
+# 		group_replication_bootstrap_group=on
+# 		group_replication_local_address="[2001/etc/
+# 		group_replication_group_seeds="2001:/etc/"
+#
+# Server B is a joining member for the group, and has the following configuration settings for Group Replicaiton,
+# so that it has an IPv4 Group Replication local address:
+#
+# 		group_replication_bootstrap_group=off
+# 		group_replication_local_address="203.0.113.21:33061"
+# 		group_replication_group_seeds="[2001/etc/
+#
+# Server B also has an alternative IPv6 address 2001:db8:8b0:40:3d9c:cc43:e006:19e8. For Server B ot join the
+# group successfully, both its IPv4 Group Replication local address, and its alternative Ipv6 address, must be
+# listed in Server A's whitelist, as in teh following example:
+#
+# 		group_replication_ip_whitelist=
+# 		"203.0.113.0/24,2001:db8:85a3:8d3:1319:8a2e:370:7348,
+# 		2001:db8:8b0:40:3d9c:cc43:e006:19e8"
+#
+# As a best practice 
+# 
 # 
 #
-# 
-#
-# https://dev.mysql.com/doc/refman/8.0/en/group-replication-cloning.html
+# https://dev.mysql.com/doc/refman/8.0/en/group-replication-ipv6.html
 # 
 #
