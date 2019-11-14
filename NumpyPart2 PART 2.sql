@@ -79162,10 +79162,512 @@
 # 		"203.0.113.0/24,2001:db8:85a3:8d3:1319:8a2e:370:7348,
 # 		2001:db8:8b0:40:3d9c:cc43:e006:19e8"
 #
-# As a best practice 
-# 
-# 
+# As a best practice for Group Replication IP whitelisting, Server B (and all other group members) should have
+# the same whitelist as Server A, unless security requirements demand otherwise.
 #
-# https://dev.mysql.com/doc/refman/8.0/en/group-replication-ipv6.html
-# 
+# If any or all members of a replicaiton group are using an older MySQL Server version that does not support
+# the use of Ipv6 addresses for Group Replication, a member cannot participate in the group using an Ipv6
+# address (or a host name that resolves to one) as its Group Replication local address.
 #
+# This applies both in the case where at least one existing member uses an Ipv6 adress and a new member that does
+# not support this attempts to join, and in the case where a new member attempts to join using an IPv6 address
+# but the group includes at least one member that does not support this.
+#
+# In each situation, the new member cannot join. To make a joining member present an Ipv4a ddress for group
+# communications, you can either change the value of group_replication_local_address to an Ipv4 address, or configure
+# your DNS to resolve the joining members existing host name to an IPv4 address.
+#
+# After you ahve upgraded every group memmber to a MySQL Server version that supports IPv6 for Group Replication,
+# you can change the group_replication_local_address value for each 	member to an Ipv6 address, or configure
+# your DNS to present an IPv6 adddress. CHanging the value of group_replication_local_address takes effect only
+# when you stop and restart Group Replication.
+#
+# 18.4.6 USING MYSQL ENTERPRISE BACKUP WITH GROUP REPLICATION
+#
+# MySQL Enterprise Bacckup is a commercially licensed backup utility for MySQL Server, available with MySQL
+# Enterprsie Edition. This seciton explains how to back up and subsequently restore a Group Replication
+# member using MySQL Enterprise backup. The same technique can be used to quickly add a new member
+# to a group.
+#
+# BACKING UP A GROUP REPLICATION MEMBER USING MYSQL ENTERPRISE BACKUP
+#
+# BNacking up a Group Replication member is similar ot backing up a stand-alone MySQL instance.
+# The following instructions assume that you area lready familiar with how to use MySQL Enterprise Backup
+# to perform a backup:
+#
+# If that is not hte case, please review the user guide.
+#
+# Consider the following group with three memmbers, s1, s2 and s3, running on hosts with the same names:
+#
+# 		mysql> SELECT member_host, member_port, member_state FROM performance_schema.replication_group_members;
+# 		+-------------------------+---------------------+-------------------+
+# 		| member_host 				  | member_port 			| member_state 	  |
+# 		+-------------------------+---------------------+-------------------+
+# 		| s1 							  | 3306 					| ONLINE 			  |
+# 		| S2 							  | 3306 				   | ONLINE 			  |
+# 		| s3 							  | 3306 					| ONLINE 			  |
+#
+# Using MySQL Enterprise backup, create a backup of s2 by issuing on its host, for example,
+# the following command:
+#
+# 		s2> mysqlbackup --defaults-file=/etc/my.cnf --backup-image=/backups/my.mbi_`date +%d%m_%H%M` \
+# 						 --backup-dir=/backups/backup_`date +%d%m_%H%M` --user=root -p \
+# 		--host=127.0.0.1 backup-to-image
+#
+# NOTES:
+#
+# 		) If the system variable sql_require_primary_key is set to ON for the group, MySQL
+# 			Enterprise backup will not be able to log the backup progress on the servers.
+#
+# 			This is because the backup_progress table on the server is a CSV table, for which primary
+# 			keys aren ot supported.
+#
+# 			In that case, mysqlbackup issues hte following warnings during the backup operation:
+#
+# 				//Error message about requiring PK//
+#
+# 			This does NOT prevent mysqlbackup from finishing the backup though
+#
+# 		) For MySQL Enterprise Backup 8.0.11, when backing up a secondary member, as MySQL
+# 			Enterprise Backup cannot write backup status and metadata to a read-only server
+# 			instance, it issues the following warnings during the backup operation:
+#
+# 				//Warning about RO mode
+#
+# 			YOu can avoid the warning by uising the --no-history-logging option with your backup
+# 			command. This is not an issue for MySQL Enterprise backup 8.0.12 and higher -
+# 			see Using MySQL Enterprise Backup With Group Replication for details
+#
+# RESTORING A FAILED MEMBER
+#
+# Assume one of the members (s3 in the following example) is irreconciably corrupted. The most recent backup
+# of group member s2 can be used to restore s3. Here are the steps for performing the restore:
+#
+# 		1. Copy the backup of s2 onto the host for s3. The exact way to copy the backup dependso nthe OS 
+# 			and tools aavailable to you. In this example, we assume the hosts are both Linux servers and
+# 			use SCP to copy the files between them:
+#
+# 				s2/backups> scp my.mbi_2206_1429 s3:/backups
+#
+# 		2. Restore the backup. Connect to the target host (the host for s3 in this case), and restore the
+# 			backup using MySQL Enterprise Backup. here are the steps:
+#
+# 				a. Stop teh corrupted server, if it is still running. For example, on Linux distributions
+# 					that are systemd:
+#
+# 						s3> systemct1 stop mysqld
+#
+# 				b. Preserve the two configuration files in the corrupted server's data directory, auto.cnf
+# 					and mysqld-auto.cnf (if it exists), by copying them to safe location outside of the data directory.
+#
+# 					This is for preserving the server's UUID and SECTION 5.1.9.3, "PERSISTED SYSTEM VARIABLES"
+# 					(if used), which are needed in the steps below
+#
+# 				c. Delete all contents in the data directory of s3. For example:
+#
+# 					s3> rm -rf /var/lib/mysql/*
+#
+# 					If the system variables innodb_data_home_dir, innodb_log_group_home_dir, and
+#					innodb_undo_directory point to any directories other than the data directory,
+# 					the yshould also be made empty; otherwise, the restore operation fails.
+#
+# 				d. Restore backup of s2 onto the host for s3:
+#
+# 					s3> mysqlbackup --defaults-file=/etc/my.cnf \
+# 						--datadir=/var/lib/mysql \
+# 						--backup-image=/backups/my.mbi_2206_1429 \
+# 					--backup-dir=/tmp/restore_`date +%d%m_%H%M` copy-back-and-apply-log
+#
+# 					NOTE:
+#
+# 						The command above assumes that the binary logs and relay logs on s2 and s3 have
+# 						the same base name and are at the same location on the two servers.
+# 						If these conditions are not met, you should use the --log-bin and --relay-log
+# 						options to restore the binary log and relay log to their original file paths
+# 						on s3.
+#
+# 						For example, if you know that on s3 the binary log's base name is s3-bin and the relay-log's
+# 						base name is s3-relay-bin, your restore command should look like:
+#
+# 							mysqlbackup --defaults-file=/etc/my.cnf \
+# 								--datadir=/var/lib/mysql \
+# 								--backup-image=/backups/my.mbi_2206_1429 	\
+# 								--log-bin=s3-bin --relay-log=s3-relay-bin \
+# 								--backup-dir=/tmp/restore_`date +%d%m_%H%M` copy-back-and-apply-log
+#
+# 						Being able to restore the binary log and relay log to teh right file paths makes the restore
+# 						process easier, if that is impossible for some reason, see REBUILD THE FAILED 
+# 						MEMBER TO REJOIN AS A NEW MEMBER.
+#
+# 		3. Restore the auto.cnf file for s3. To rejoin the replication group, the restored member must have the same
+# 			server_uuid it used ot join the gorup before. Supply the old server UUID by copying the auto.cnf file
+# 			preserved in step 2 above into the data directory of the restored member.
+#
+# 				NOTE:
+#
+# 					If you cannot supply the failed member's original server_uuid to the restored member
+# 					by restoring its old auto.cnf file, you will have to let the restored member join the group
+# 					as a new member; see instructions in REBUILD THE FAILED MEMBER TO REJOIN AS A NEW MEMBER below
+# 					on how to do that.
+#
+# 		4. Restore the mysqld-auto.cnf file for s3 (only required if s3 usedp ersistent system variables) The settings
+# 			for the SECTION 5.1.9.3, "PERSISTED SYSTEM VARIABLES" that were used to configure the failed member must be
+# 			provided to the restored member.
+#
+# 			These settings are to be found in the mysqld-auto.cnf file of the failed server, which you should have
+# 			preserved in step 2 above. Restore the file to the data directory of the restored server.
+#
+# 			See RESTORING PERSISTED SYSTEM VARIABLES on what to do if you do not have a copy of the file.
+#
+# 		5. Start teh restored server. For example, on Linux distrib that use systemd:
+#
+# 			systemctl start mysqld
+#
+# 			NOTE:
+#
+# 				If hte server you are restoring is sa primary member, perform the steps described in
+# 				RESTORING A PRIMARY MEMBER before starting the restored server.
+#
+# 		6. Restart Group Replication. Connect to teh restarted s3 using, for example, a mysql client,
+# 			and issue hte following command:
+#
+# 				mysql> START GROUP_REPLICATION;
+#
+# 			Before the restored instance can become an online member of hte group, it needs to apply any transactions
+# 			that have happened to the group after the backup was taken; this is achieved using Group Replication's
+# 			distribued recovery mechanism, and hte process starts after the START GROUP_REPLICATION statement has
+# 			been issued. To check the member status of the restored instance, issue:
+#
+# 				mysql> SELECT member_host, member_port, member_state FROM performance_schema.replication_group_members;
+# 				+------------------+--------------------+-----------------+
+# 				| member_host 	    | member_port 		 | member_state 	 |
+# 				+------------------+--------------------+-----------------+
+# 				| s1 					 | 3306 					 | ONLINE 			 |
+# 				| s2 					 | 3306 					 | ONLINE 		  	 |
+# 				| s3 					 | 3306 					 | RECOVERING 		 |
+# 				+------------------+--------------------+-----------------+
+#
+# 			This shows that s3 is applying transactions to catch up with the group. Once it has caught up with the 
+# 			rest of the group, its member_state changes to ONLINE:
+#
+# 				//same as before, but with online on s3
+# 				mysql> SELECT member_host, member_port, member_state FROM performance_schema.replication_group_members;
+# 				+-----------------+--------------------+------------------+
+# 				| member_host 		| member_port 			| member_state 	 |
+# 				+-----------------+--------------------+------------------+
+# 				| s1 					| 3306 					| ONLINE 			 |
+# 				| s2 					| 3306 					| ONLINE 			 |
+# 				| s3 					| 3306 					| ONLINE 			 |
+# 				+-----------------+--------------------+------------------+
+#
+# 			NOTE:
+#
+# 				If the server yo uare restoring is ap rimary member, once it has gained synchrony with the 
+# 				group and become ONLINE, perform the steps described at the end of RESTORING A PRIMARY MEMBER 
+# 				to revert the configuration changes you had made to the server before you started it.
+#
+# The member has now been fully restored from the backup and functions as a regular member of the group.
+#
+# REBUILD THE FAILED MEMBER TO REJOIN AS A NEW MEMBER
+#
+# Sometimes, the steps outlined above in Restoring A Failed Member cannot be carried out because,
+# for example, the binary log or relay log is corrupted, or it is just missing form the backup.
+#
+# In such a situation, use the backup to rebuild the member, and then add it to the group as a new member.
+# In the steps below, we assume the rebuilt member will be named s3, like the failed member, and it will
+# be run on teh same host as s3 was:
+#
+# 		1. Copy the backup of s2 onto the host for s3. The eaxct way to copy the backup depends on the OS
+# 			and tools available to you. In this example, we assume the hosts are both Linux servers
+# 			and use SCP to copy the files between them:
+#
+# 				s2/backups> scp my.mbi_2206_1429 s3:/backups
+#
+# 		2. Restore the backup. Connect to the target host (the host for s3 in this case), and restore
+# 			the backup using MySQL ENterprise Backup. Here are the steps:
+#
+# 				a. Stop teh corrupted server, if it is still running. For example, on Linux distributions that use systemd:
+#
+# 					s3> systemctl stop mysqld
+#
+# 				b. Preserve the configuration file mysqld-auto.cnf, if it is found in teh corrupted server's data directory,
+# 					by copying it to a safe location outside of the data directory.
+#
+# 					This is for preserving the server's SECTION 5.1.9.3, "PERSISTED SYSTEM VARIABLES", which are needed later.
+#
+# 				c. Delete all contents in teh data directory of s3. For example:
+#
+# 					s3> rm -rf /var/lib/mysql/*
+#
+# 					If the system variables innodb_data_home_dir, innodb_log_group_home_dir, and
+# 					innodb_undo_directory point to any directories other than the data directory, they should also be made
+# 					empty; otherwise, the restore operation will fail.
+#
+# 			d. Restore the backup of s3 onto the host of s3. With this approach, we are rebuilding s3 as a new member,
+# 				for which we do not need or do not want to use the old binary and relay logs in the backup; therefore
+# 				, if these logs have been included in your backup, exclude them using the --skip-binlog and --skip-relaylog options:
+#
+# 					s3> mysqlbackup --defaults-file=/etc/my.cnf \
+# 						--datadir=/var/lib/mysql \
+# 						--backup-image=/backups/my.mbi_2206_1429 \
+# 						--backup-dir=/tmp/restore_`date +%d%m_%H%M` \
+# 						--skip-binlog --skip-relaylog \
+# 					copy-back-and-apply-log
+#
+# 				NOTE:
+#
+#  				If you ahve healthy binary log and relay logs in the backup that you can transfer onto
+# 					the target host with no issues, you are recommended to follow the easier procedure
+# 					as described in RESTORING A FAILED MEMBER above.
+#
+# 	3. Restore the mysqld-auto.cnf file for s3 (only required if s3 used persistent system variables). The settings
+# 		for the SECTION 5.1.9.3,, "PERSISTED SYSTEM VARIABLES" that were used to configure the failed member
+# 		must be provided to the restored server.
+#
+# 		These settings are to be found in the mysqld-auto.cnf file of the failed server, which
+# 		you should have preserved in step 2 above. Restore the file to the data directory of the restored
+# 		server.
+#
+# 		See RESTORING PERSISTED SYSTEM VARIABLES on what to do if you do not have a copy of the file.
+#
+# 		NOTE:
+#
+# 			Do NOT restore the corrupted server's auto.cnf file to the data directory of the new
+# 			member - when the rebuilt s3 joins the group as a new member, it is going to eb assigned
+# 			a new server UUID..
+#
+# 	4. Start the restored server. For example, on Linux distributions that use systemd:
+#
+# 			systemct1 start mysqld
+#
+# 		NOTE:
+#
+# 			If the server you are restoring is a primary member, perform the steps described in
+# 			RESTORING A PPRIMARY MEMBER before starting the restored server.
+#
+# 	5. Reconfigure the restored member to join Group Replication. Connect t oteh restored
+# 		server wit ha mysql client and reset the master and slave information with the following
+# 		commands:
+#
+# 			mysql> RESET MASTER;
+#
+# 			mysql> RESET SLAVE ALL;
+#
+# 		For the restored server to be able to recover automatically using Group Replication built-in mechanism
+# 		for distributed recovery, configure the server's gtid_executed variable. To do this, use the
+# 		backup_gtid_executed.sql file included in the backup of s2, which is usually restored under
+# 		teh restored members data directory.
+#
+# 		Disable binary logging, use the backup_gtid_executed.sql file to configure gtid_executed
+# 		and then re-enable binary logging by issuing the following statements with your mysql client:
+#
+# 			mysql> SET SQL_LOG_BIN=OFF;
+# 			mysql> SOURCE datadir/backup_gtid_executed.sql
+# 			mysql> SET SQL_LOG_BIN=ON;
+#
+# 		Then, configure the GROUP REPLICATION USER CREDENTIALS on the member:
+#
+# 			mysql> CHANGE MASTER TO MASTER_USER='rpl_user', MASTER_PASSWORD='password' /
+# 						FOR CHANNEL 'group_replication_recovery';
+#
+# 6. Restart Group Replication. Issue the following command to the restored server with your mysql client:
+#
+# 		mysql> START GROUP_REPLICAITON;
+#
+# 		Before the restored instance can become an online member of the group, it needs to apply
+# 		any transactions that have hapened to the group after the backup was taken; this is achieved
+# 		using Group Replication distributed recovery mechanisms, and the process starts after teh
+# 		START GROUP_REPLICATION statement has been issued.
+#
+# 		To check the member status of the restored instance, issue:
+#
+# 			mysql> SELECT member_host, member_port, member_state FROM performance_schema.replication_group_members;
+# 			+------------------------------------------+
+# 			| member_host | member_port | member_state |
+# 			+-------------+-------------+--------------+
+# 			| s1 			  | 		3306   | ONLINE 		 |
+# 			| s2 			  | 		3306   | ONLINE 		 |
+# 			| s3 			  | 		3306 	 | RECOVERING 	 |
+# 			+-------------+-------------+--------------+
+#
+# 		This shows that s3 is applying transactions to catch up with the group.
+# 		Once it has caught up with the rest of the group, its member_state changes to ONLINE:
+#
+# 			mysql> SELECT member_host, member_port, member_state FROM performance_schema.replication_group_members;
+# 			//All 3 online
+#
+# 		NOTE:
+#
+# 			
+#			if the server you are restoring is a primary member, once it hs gained synchrony with the 
+# 			group and become ONLINE, perform the steps described at teh end of RESTORING A PRIMARY
+# 			MEMBER to revert the configuration changes you had made t othe server before you started
+# 			it.
+#
+# 		The member has now been fully restored from the backup from the backup and functions as a regular
+# 		member of the group.
+#
+# REBUILD THE FAILED MEMBER TO REJOIN AS A NEW MEMBER
+#
+# Sometimes, the steps outlined above in RESTORING A FAILED MEMBER cannot be carried out because, for 
+# example,, the binary log or relay log is corrupted, or it is just missing from the backup.
+#
+# In such a situation, use the backup to rebuild the member, and then add it to the group as a new member.
+# In the steps below, we assume the rebuilt member will be named s3, like the failed member, and it will
+# be run on the same host as s3 was:
+#
+# 		1. Copy the backup of s2 onto the host for s3. The exact way to copy the backup depends on the OS
+# 			and tools available to you. IN this example we assume the hosts are both Linux servers and use 
+# 			SCP to copy the files between them:
+#
+# 				s2/backups> scp my.mbi_2206_1429 s3:/backups
+#
+# 		2. Restore the backup. connect to the target host (the host for s3 in this case), and restore
+# 			the backup using MySQL Enterprise backup. Here are the steps:
+#
+# 				a) Stop the corrupted server, if it is still running. For example, on Linux distributions
+# 				that use systemd:
+#
+# 					s3> systemct1 stop mysqld
+#
+# 			b) Preserve the configuration file mysqld-auto.cnf, if it is found in the corrupted servers's
+# 				data directory, by copying it to a safe location outside of the data directory.
+#
+# 				This is for preserving the server's SECTION 5.1.9.3, "PERSISTED SYSTEM VARIABLES", which
+# 				are needed later.
+#
+# 		c) Delete all contents in teh data dir of s3. For example:
+#
+# 				s3> rm -rf /var/lib/mysql/*
+#
+# 			If the system variables innodb_data_home_dir, innodb_log_group_home_dir, and innodb_undo_directory
+# 			point to any directories other than the data directory, they should also be made empty; otherwise,
+# 			the restore operation will fail.
+#
+# 		d) Restore the backup of s2 onto the host of s3. With this approach, we are rebuilding s3 as a new member,
+# 			for which we do not need or do not want to use the old binary and relay logs in the backup; therefore,
+# 			if these logs have been included in your backup, exclude them using the --skip-binlog and --skip-relaylog
+# 			options:
+#
+# 				s3> mysqlbackup --defaults-file=/etc/my.cnf \
+# 					--datadir=/var/lib/mysql \
+# 					--backup-image=/backups/my.mbi_2206_1429 \
+# 					--backup-dir=/tmp/restore_`date +%d%m_%H%M` \
+# 					--skip-binlog --skip-relaylog \
+# 				copy-back-and-apply-log
+#
+# 		NOTE:
+#
+# 			If you have healthyt binary log and relay logs in the backup that you can transfer onto
+# 			the target host with no issues, you are recommended to follow the easier procedure
+# 			as described in RESTORING A FAILED MEMBER above.
+#
+# 	3. Restore the mysqld-auto.cnf file for s3 (only required if s3 used persistent system variables)
+#
+# 		The settings for the SECTION 5.1.9.3,"PERSISTED SYSTEM VARIABLES" that were used t oconfigure
+# 		the failed member must be provided to the restored server. These settings are to be found
+# 		in the mysqld-auto.cnf file of the failed server, which you should have persisted in step 2 above.
+#
+# 		Restore the file to the data directory of the restored server. See RESTORING PERSISTED SYSTEM VARIABLES
+# 		on what to do if you do not have a copy of the file.
+#
+# 		NOTE:
+#
+# 			Do NOT restore the corrupted server's auto.cnf file to the data directory of the new
+# 			member - when the rebuilt s3 joins the group as a new member, it is oging to be assigned
+# 			a new server UUID.
+#
+# 	4. Start the restored server. For example, on Linux distribs that use systemd:
+#
+ #			systemctl start mysqld
+ #
+# 		Note:
+#
+# 			If the server you are restoring is a primary member, perform the steps described in
+# 			RESTORING A PRIMARY MEMBER before starting the restored server.
+#
+# 	5. Reconfigure the restored member to join Group Replication. Connect to the restored server with a mysql
+# 		client and reset the master and slave information with the following commands:
+#
+# 			mysql> RESET MASTER;
+#
+# 			mysql> RESET SLAVE ALL;
+#
+# 		For the restored server to be able to recover automatically using Group Replication's built-in mechanism
+# 		for distributed recovery, configure the server's gtid_executed variable. To do this, use the backup_gtid_executed.sql
+# 		file included in the backup of s2, which is usually restored under the restored member's data directory.
+#
+# 		Disable binary logging, use the backup_gtid_executed.sql file to configure gtid_executed and then re-enable
+# 		binary logging by issuing the following statements with your mysql client:
+#
+# 			mysql> SET SQL_LOG_BIN=OFF;
+# 			mysql> SOURCE datadir/backup_gtid_executed.sql
+# 			mysql> SET SQL_LOG_BIN=ON;
+#
+# 		Then, configure the Group Replication user credentials on the member:
+#
+# 			mysql> CHANGE MASTER TO MASTER_USER='rpl_user', MASTER_PASSWORD='password' /
+# 					FOR CHANNEL 'group_replication_recovery';
+#
+#  6. Restart Group REplication. Issue the following command to the restored server with your mysql client:
+#
+# 			mysql> START GROUP_REPLICATION;;
+#
+# 		Before the second instance can become an online member of the group, it needs to apply any transactions
+# 		that have happened to the group after the backup was taken; this is achieved using Group Replication's
+# 		distributed recovery mechanism, and the process starts after the START GROUP_REPLICATION statement has
+# 		been issued.
+#
+# 		To check the member status of the restored instance, issue:
+#
+# 			mysql> SELECT member_host, member_port, member_state FROM performance_schema.replication_group_members;
+# 			//2 online, 1 recovering
+#
+# 		This shows that s3 is applying transactions to catch up with the group. Once it has caught up with the rest
+# 		of the group, its member_state changes to ONLINE:
+#
+# 			mysql> SELECT member_host, member_port, member_state FROM performance_schema.replication_group_members;
+# 			//all online
+#
+# 		NOTE:
+#
+# 			If the server you are restoring is a primary member, once it has gained synchrony with the
+# 			group and become ONLINE, perform the steps described at the end of RESTORING A PRIMARY MEMBER
+# 			to revert the configuration changes you had made t othe server before you started it.
+#
+# The member has now been restored to the group as a new member.
+#
+# REstoring Persisted System Variables..
+#
+# mysqlbackup does not provide support for backing up or preserving SECTION 5.1.9.3, "PERSISTED SSYTEM VARIABLES"
+# the file mysqld-auto.cnf is not included in a backup.
+#
+# To start the restored member with its persisted variable settings, you need to do one of the following:
+#
+# 		) Preserve a copy of the mysqld-auto.cnf file from the corrupted server, and a copy it to the restored
+# 			server's data directory
+#
+# 		) Copy the mysqld-auto.cnf file from another member of the group into the restored server's data dir,
+# 			if that member has the same persisted system variable settings as teh corrupted member.
+#
+# 		) After the restored server is started and before you restart Group Replication, set all the system variables
+# 			manually to their persisted values through a mysql client.
+#
+# RESTORING A PRIMARY MEMBER.
+#
+# if the restored member is a primary in the group, care must be taken to prevent writes to the restored
+# database during the Group Replication distributed recovery process. Dpeending on how the group is accessed
+# by clients,, there is a possibility of DML statements being executed on the restored member once
+# it becomes accessible on the network, prior to the member finishing its catch-up on teh activities
+# it has missed while off the group.
+#
+# To avoid this, before starting the restored server, configure the following system variables in the
+# server option file:
+#
+# 		group_replication_start_on_boot=OFF
+# 		super_read_only=ON
+# 		event_scheduler=OFF
+#
+# https://dev.mysql.com/doc/refman/8.0/en/group-replication-enterprise-backup.html
+#
+# 
